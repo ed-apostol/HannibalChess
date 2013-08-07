@@ -45,9 +45,9 @@ uint32 isAtt(const position_t *pos, uint32 color, uint64 target) {
 	while (target) {
 		from = popFirstBit(&target);
 		if ((pos->rooks|pos->queens) & pos->color[color]
-				& rookAttacksBB(from, pos->occupied)) return TRUE;
+		& rookAttacksBB(from, pos->occupied)) return TRUE;
 		if ((pos->bishops|pos->queens) & pos->color[color]
-				& bishopAttacksBB(from, pos->occupied)) return TRUE;
+		& bishopAttacksBB(from, pos->occupied)) return TRUE;
 		if (pos->knights & pos->color[color] & KnightMoves[from]) return TRUE;
 		if (pos->kings & pos->color[color] & KingMoves[from]) return TRUE;
 		if (pos->pawns & pos->color[color] & PawnCaps[from][color^1]) return TRUE;
@@ -55,32 +55,32 @@ uint32 isAtt(const position_t *pos, uint32 color, uint64 target) {
 	return FALSE;
 }
 uint32 isSqAtt(const position_t *pos, uint64 occ, int sq,int color) {
-	
+
 	return ((PawnCaps[sq][color^1] & pos->pawns & pos->color[color])) || 
 		(KnightMoves[sq] & pos->knights & pos->color[color]) || 
 		(KingMoves[sq] & pos->kings & pos->color[color]) ||
 		(bishopAttacksBB(sq, occ) & ((pos->bishops | pos->queens) & pos->color[color])) ||
 		(rookAttacksBB(sq, occ) & ((pos->rooks | pos->queens) & pos->color[color]));
-	
+
 	/*
 	return ((
-		(rookAttacksBB(sq, occ) & (pos->rooks | pos->queens)) |
-		(bishopAttacksBB(sq, occ) & (pos->bishops | pos->queens)) |
-		(KnightMoves[sq] & pos->knights) |
-		(KingMoves[sq] & pos->kings) |
-		(PawnCaps[sq][color^1] & pos->pawns)
-		) & pos->color[color])!=0;
-*/
+	(rookAttacksBB(sq, occ) & (pos->rooks | pos->queens)) |
+	(bishopAttacksBB(sq, occ) & (pos->bishops | pos->queens)) |
+	(KnightMoves[sq] & pos->knights) |
+	(KingMoves[sq] & pos->kings) |
+	(PawnCaps[sq][color^1] & pos->pawns)
+	) & pos->color[color])!=0;
+	*/
 }
 /* this determines if the side to move is in check */
 uint32 kingIsInCheck(const position_t *pos) {
 	return isSqAtt(pos,pos->occupied,pos->kpos[pos->side],pos->side^1);
-//    return isAtt(pos, pos->side^1, pos->kings & pos->color[pos->side]);
+	//    return isAtt(pos, pos->side^1, pos->kings & pos->color[pos->side]);
 }
 /* checks if the move attacks the target */
 uint32 isMoveDefence(const position_t *pos, uint32 move, uint64 target) {
 	int from, to, piece;//, sq, dir;
-	
+
 	if (!target) return 0;
 	from = moveFrom(move);
 	if (BitMask[from] & target) return 1;
@@ -88,51 +88,51 @@ uint32 isMoveDefence(const position_t *pos, uint32 move, uint64 target) {
 	piece = pos->pieces[from];
 	switch (piece)
 	{
-		case PAWN:
+	case PAWN:
 		if (PawnCaps[to][pos->side] & target) return 1;
 		break;
-		case KNIGHT:
+	case KNIGHT:
 		if (KnightMoves[to] & target) return 1;
 		break;
-		case BISHOP:
-//        if (MinTwoBits(target))
-//        {
-			if (bishopAttacksBB(to, pos->occupied&~BitMask[from]) & target) return 1;
-/*        }
+	case BISHOP:
+		//        if (MinTwoBits(target))
+		//        {
+		if (bishopAttacksBB(to, pos->occupied&~BitMask[from]) & target) return 1;
+		/*        }
 		else
 		{
-			sq = popFirstBit(&target);
-			dir = DirFromTo[to][sq];
-			if ((dir == 7 || dir == 9) && !(InBetween[to][sq]&pos->occupied&~BitMask[from])) return 1;
+		sq = popFirstBit(&target);
+		dir = DirFromTo[to][sq];
+		if ((dir == 7 || dir == 9) && !(InBetween[to][sq]&pos->occupied&~BitMask[from])) return 1;
 		}*/
 		break;
-		case ROOK:
-  //      if (MinTwoBits(target))
-  //      {
-			if (rookAttacksBB(to, pos->occupied&~BitMask[from]) & target) return 1;
-/*        }
+	case ROOK:
+		//      if (MinTwoBits(target))
+		//      {
+		if (rookAttacksBB(to, pos->occupied&~BitMask[from]) & target) return 1;
+		/*        }
 		else
 		{
-			sq = popFirstBit(&target);
-			dir = abs(Direction[to][sq]);
-			if ((dir == 1 || dir == 8) && !(InBetween[to][sq]&pos->occupied&~BitMask[from])) return 1;
+		sq = popFirstBit(&target);
+		dir = abs(Direction[to][sq]);
+		if ((dir == 1 || dir == 8) && !(InBetween[to][sq]&pos->occupied&~BitMask[from])) return 1;
 		}*/
 		break;
-		case QUEEN:
- //       if (MinTwoBits(target))
-//        {
-			if (queenAttacksBB(to, pos->occupied&~BitMask[from]) & target) return 1;
-	   /* }
-		
+	case QUEEN:
+		//       if (MinTwoBits(target))
+		//        {
+		if (queenAttacksBB(to, pos->occupied&~BitMask[from]) & target) return 1;
+		/* }
+
 		else
 		{
-			sq = popFirstBit(&target);
-			if (Direction[to][sq] && !(InBetween[to][sq]&pos->occupied&~BitMask[from])) return 1;
+		sq = popFirstBit(&target);
+		if (Direction[to][sq] && !(InBetween[to][sq]&pos->occupied&~BitMask[from])) return 1;
 		}*/
 		break;
 	}
 	return 0;
-	
+
 }
 /* this returns the pinned pieces to the King of the side Color */
 uint64 pinnedPieces(const position_t *pos, uint32 c) {
@@ -207,9 +207,9 @@ uint32 moveIsLegal(const position_t *pos, uint32 move, uint64 pinned, uint32 inc
 		b = pos->occupied ^ BitMask[from] ^ BitMask[capsq] ^ BitMask[to];
 		return
 			(!(rookAttacksBB(ksq, b) & (pos->queens | pos->rooks) & pos->color[them]) &&
-			 !(bishopAttacksBB(ksq, b) & (pos->queens | pos->bishops) & pos->color[them]));
+			!(bishopAttacksBB(ksq, b) & (pos->queens | pos->bishops) & pos->color[them]));
 	}
-//    if (from == ksq) return !(isAtt(pos, them, BitMask[to]));
+	//    if (from == ksq) return !(isAtt(pos, them, BitMask[to]));
 	if (from==ksq) return !(isSqAtt(pos,pos->occupied^(pos->kings&pos->color[us]),to,them)); 
 	if (!(pinned & BitMask[from])) return TRUE;
 	if (DirFromTo[from][ksq] == DirFromTo[to][ksq]) return TRUE;
@@ -254,7 +254,7 @@ uint32 moveIsCheck(const position_t *pos, basic_move_t m, uint64 dcc) {
 		if (isEnPassant(m)) {
 			temp ^= BitMask[(SQRANK(from) << 3) + SQFILE(to)];
 			if ((rookAttacksBB(ksq, temp) & (pos->queens | pos->rooks)
-			& pos->color[us]) || (bishopAttacksBB(ksq, temp) & (pos->queens | pos->bishops) & pos->color[us]))
+				& pos->color[us]) || (bishopAttacksBB(ksq, temp) & (pos->queens | pos->bishops) & pos->color[us]))
 				return TRUE;
 		}
 		return FALSE;
@@ -281,7 +281,7 @@ uint32 moveIsCheck(const position_t *pos, basic_move_t m, uint64 dcc) {
 
 	case KING:
 		if ((dcc & BitMask[from]) &&
-				DirFromTo[from][ksq] != DirFromTo[to][ksq]) return TRUE;
+			DirFromTo[from][ksq] != DirFromTo[to][ksq]) return TRUE;
 		temp = pos->occupied ^ BitMask[from] ^ BitMask[to];
 		if (from - to == 2) {
 			if (rookAttacksBB(ksq, temp) & BitMask[from-1]) return TRUE;
@@ -304,18 +304,18 @@ uint32 moveIsCheck(const position_t *pos, basic_move_t m, uint64 dcc) {
 /* not: this needs to be anded afterward with occupied to deal with unoccupied pawn captures and stuff in cases where occupied is not right*/
 /*
 uint64 attackingPiecesAll(const position_t *pos, uint64 occ, uint32 sq) {
-	uint64 attackers = 0;
+uint64 attackers = 0;
 
-	ASSERT(pos != NULL);
-	ASSERT(squareIsOk(sq));
+ASSERT(pos != NULL);
+ASSERT(squareIsOk(sq));
 
-	attackers |= PawnCaps[sq][BLACK] & pos->pawns & pos->color[WHITE];
-	attackers |= PawnCaps[sq][WHITE] & pos->pawns & pos->color[BLACK];
-	attackers |= KnightMoves[sq] & pos->knights;
-	attackers |= KingMoves[sq] & pos->kings;
-	attackers |= bishopAttacksBB(sq, occ) & (pos->bishops | pos->queens);
-	attackers |= rookAttacksBB(sq, occ) & (pos->rooks | pos->queens);
-	return attackers;
+attackers |= PawnCaps[sq][BLACK] & pos->pawns & pos->color[WHITE];
+attackers |= PawnCaps[sq][WHITE] & pos->pawns & pos->color[BLACK];
+attackers |= KnightMoves[sq] & pos->knights;
+attackers |= KingMoves[sq] & pos->kings;
+attackers |= bishopAttacksBB(sq, occ) & (pos->bishops | pos->queens);
+attackers |= rookAttacksBB(sq, occ) & (pos->rooks | pos->queens);
+return attackers;
 }
 */
 /* this returns the bitboard of all pieces of a given side attacking a certain square */
@@ -344,20 +344,20 @@ uint64 behindFigure(const position_t *pos,uint32 from, int dir) {
 	ASSERT(squareIsOk(from));
 	//{SW,W,NW,N,NE,E,SE,S,NO_DIR };//{-9, -1, 7, 8, 9, 1, -7, -8};
 	switch (dir) {
-		case SW: return bishopAttacksBB(from, pos->occupied) & (pos->queens|pos->bishops) & DirBitmap[SW][from];
-		case W: return rookAttacksBB(from, pos->occupied) & (pos->queens|pos->rooks) & DirBitmap[W][from];
-		case NW: return bishopAttacksBB(from, pos->occupied) & (pos->queens|pos->bishops) & DirBitmap[NW][from];
-		case N: return rookAttacksBB(from, pos->occupied) & (pos->queens|pos->rooks) & DirBitmap[N][from];
-		case NE: return bishopAttacksBB(from, pos->occupied) & (pos->queens|pos->bishops) & DirBitmap[NE][from];
-		case E: return rookAttacksBB(from, pos->occupied) & (pos->queens|pos->rooks) & DirBitmap[E][from];
-		case SE: return bishopAttacksBB(from, pos->occupied) & (pos->queens|pos->bishops) & DirBitmap[SE][from];
-		case S: return rookAttacksBB(from, pos->occupied) & (pos->queens|pos->rooks) & DirBitmap[S][from];
+	case SW: return bishopAttacksBB(from, pos->occupied) & (pos->queens|pos->bishops) & DirBitmap[SW][from];
+	case W: return rookAttacksBB(from, pos->occupied) & (pos->queens|pos->rooks) & DirBitmap[W][from];
+	case NW: return bishopAttacksBB(from, pos->occupied) & (pos->queens|pos->bishops) & DirBitmap[NW][from];
+	case N: return rookAttacksBB(from, pos->occupied) & (pos->queens|pos->rooks) & DirBitmap[N][from];
+	case NE: return bishopAttacksBB(from, pos->occupied) & (pos->queens|pos->bishops) & DirBitmap[NE][from];
+	case E: return rookAttacksBB(from, pos->occupied) & (pos->queens|pos->rooks) & DirBitmap[E][from];
+	case SE: return bishopAttacksBB(from, pos->occupied) & (pos->queens|pos->bishops) & DirBitmap[SE][from];
+	case S: return rookAttacksBB(from, pos->occupied) & (pos->queens|pos->rooks) & DirBitmap[S][from];
 	}
-return 0;
+	return 0;
 }
 
 int swap(const position_t *pos, uint32 m) {
-	
+
 	int to = moveTo(m);
 	int from = moveFrom(m);
 	int pc = movePiece(m);
@@ -375,12 +375,12 @@ int swap(const position_t *pos, uint32 m) {
 
 	ASSERT(pos != NULL);
 	ASSERT(moveIsOk(m));
-	
+
 	slist[0] = PcValSEE[moveCapture(m)] + promoValue;
 	occ = pos->occupied ^  BitMask[from];
 
 	if (isEnPassant(m)) occ ^= BitMask[to+((pos->side == WHITE) ? -8 : 8)];
-//	attack = attackingPiecesAll(pos, occ, to) & occ;
+	//	attack = attackingPiecesAll(pos, occ, to) & occ;
 	attack = PawnCaps[to][BLACK] & pos->pawns & pos->color[WHITE];
 	attack |= PawnCaps[to][WHITE] & pos->pawns & pos->color[BLACK];
 	attack |= KnightMoves[to] & pos->knights;
@@ -437,7 +437,7 @@ int swap(const position_t *pos, uint32 m) {
 			lsb = getFirstBit(attack & pos->kings & pos->color[c]);
 		} else break;
 
-	 
+
 		attack ^= BitMask[lsb];
 		n++;
 		c ^= 1;
@@ -449,7 +449,7 @@ int swap(const position_t *pos, uint32 m) {
 	return slist[0];
 }
 int swapSquare(const position_t *pos, uint32 m) {
-	
+
 	int to= moveFrom(m);
 	int pc = movePiece(m);
 	int lastvalue = PcValSEE[pc]; // consider PcValSEE[QUEEN]
@@ -523,7 +523,7 @@ int swapSquare(const position_t *pos, uint32 m) {
 			lsb = getFirstBit(attack & pos->kings & pos->color[c]);
 		} else break;
 
-	 
+
 		attack ^= BitMask[lsb];
 		n++;
 		c ^= 1;

@@ -8,7 +8,7 @@
 /**************************************************/
 
 void quit(void) {
-//    Print(2, "info string Hannibal is quitting.\n");
+	//    Print(2, "info string Hannibal is quitting.\n");
 	fclose(logfile);
 	fclose(errfile);
 	fclose(dumpfile);
@@ -18,7 +18,7 @@ void quit(void) {
 	free(SearchInfo(0).et.table);
 #ifndef TCEC
 	closeBook(&GpolyglotBook);
-   closeLearn(&Glearn);
+	closeLearn(&Glearn);
 	closeBook(&GhannibalBook);
 #endif
 	stopThreads();
@@ -123,9 +123,9 @@ int main(void) {
 		} else if (!memcmp(command, "setoption", 9)) {
 			uciSetOption(command + 10);
 		} else if (!memcmp(command, "testloop", 8)) {
-			#ifdef DEBUG
+#ifdef DEBUG
 			nonUCI(&pos);
-			#endif
+#endif
 		} else if (!memcmp(command, "stop", 4)) {
 			/* no op */
 		} else if (!memcmp(command, "quit", 4)) {

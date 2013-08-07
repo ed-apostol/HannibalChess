@@ -10,13 +10,13 @@
 using namespace std;
 /* some basic definitions */
 #ifndef INLINE
-   #ifdef _MSC_VER
-	  #define INLINE __forceinline
-   #elif defined(__GNUC__)
-	  #define INLINE __inline__ __attribute__((always_inline))
-   #else
-	  #define INLINE inline
-   #endif
+#ifdef _MSC_VER
+#define INLINE __forceinline
+#elif defined(__GNUC__)
+#define INLINE __inline__ __attribute__((always_inline))
+#else
+#define INLINE inline
+#endif
 #endif
 
 #ifndef _MSC_VER
@@ -77,32 +77,32 @@ typedef struct _sort_t{
 }movelist_t;
 
 /* the book entry type *//*
-typedef struct book_entry_t{
-	uint64 key;
-	uint16 move;
-	uint16 weight;
-	uint32 learn;
-}book_entry_t;
-*/
+						 typedef struct book_entry_t{
+						 uint64 key;
+						 uint16 move;
+						 uint16 weight;
+						 uint32 learn;
+						 }book_entry_t;
+						 */
 /* the book type *//*
-typedef struct book_t{
-	FILE *bookfile;
-	int64 size;
-}book_t;
-*/
+				   typedef struct book_t{
+				   FILE *bookfile;
+				   int64 size;
+				   }book_t;
+				   */
 
 struct learn_t {
 	FILE *learnFile;// = NULL; //TODO make sure this is initialized correctly 
 	string name;
-//    char name[MAX_FILENAME_LENGTH];
+	//    char name[MAX_FILENAME_LENGTH];
 };
 struct book_t {
 	BookType type;
 	FILE *bookFile;// = NULL; TODO make sure this is initialized correctly 
 	int64 size;
 	string name;
-//    char name[MAX_FILENAME_LENGTH];
- };
+	//    char name[MAX_FILENAME_LENGTH];
+};
 /* the pawn hash table entry type */
 typedef struct pawn_entry_t{
 	uint32 hashlock;
@@ -112,7 +112,7 @@ typedef struct pawn_entry_t{
 	int8 shelter[2];
 	int8 kshelter[2];
 	int8 qshelter[2];
-//	int8 halfPassed[2]; //currently unused
+	//	int8 halfPassed[2]; //currently unused
 }pawn_entry_t;
 
 /* the pawn hash table type */
@@ -328,14 +328,14 @@ typedef struct {
 	uint64 started; // DEBUG
 	uint64 ended; // DEBUG
 	int64 numsplits; // DEBUG
-//    evaltable_t et;
-//    pawntable_t pt;
+	//    evaltable_t et;
+	//    pawntable_t pt;
 	int num_sp;
 	int evalvalue[MAXPLY];
 	basic_move_t killer1[MAXPLY]; //consider moving
 	basic_move_t killer2[MAXPLY]; //consider moving 
-//    int32 evalgains[1024];
-//    int32 history[1024];
+	//    int32 evalgains[1024];
+	//    int32 history[1024];
 	split_point_t sptable[MaxNumSplitPointsPerThread];
 #ifdef SELF_TUNE2
 	bool playingGame;

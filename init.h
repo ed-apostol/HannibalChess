@@ -50,13 +50,13 @@ int epawn(int sq) {
 }
 
 int mknight(int sq) {
-//    int central[8] = {2,1,0,-1,-1,-1,-1,-1};
+	//    int central[8] = {2,1,0,-1,-1,-1,-1,-1};
 	int file[8] = {-26,-9,2,5,5,2,-9,-26};
 	int rank[8] = {-30,-9,6,16,20,19,11,-11};
 	int f = SQFILE(sq);
 	int r = SQRANK(sq);
 	return (file[f] + rank[r]);
-//    return (central[abs(f-r)] + central[abs(f+r-7)] + file[f] + rank[r]); //CEN
+	//    return (central[abs(f-r)] + central[abs(f+r-7)] + file[f] + rank[r]); //CEN
 }
 int eknight(int sq) {
 	int central[8] = {3,2,1,0,-2,-4,-6,-8};
@@ -117,10 +117,10 @@ int equeen(int sq) {
 #define MKR4 4 //4
 #define MKR5 4 //4
 int mking(int sq) {
-//    int file[8] = {25,30,0,-20,-20,0,30,25};
+	//    int file[8] = {25,30,0,-20,-20,0,30,25};
 	int file[8] = {MKF2-MKF1,MKF2,0,-MKF3,-MKF3,0,MKF2,MKF2-MKF1};
 	int rank[8] = {MKR1,0,-MKR2,-MKR2-MKR3,-MKR2-MKR3-MKR4,-MKR2-MKR3-MKR4-MKR5,-MKR2-MKR3-MKR4-MKR5,-MKR2-MKR3-MKR4-MKR5};
-//   int rank[8] = {3,0,-5,-9,-13,-17,-17,-17};
+	//   int rank[8] = {3,0,-5,-9,-13,-17,-17,-17};
 
 	int f = SQFILE(sq);
 	int r = SQRANK(sq);
@@ -173,17 +173,17 @@ void initPST(uci_option_t *opt) {
 	for (i = 0; i < 8; i++) {
 		for (j = 0; j < 64; j++) {
 			k = ((7 - SQRANK(j)) * 8) + SQFILE(j);/*
-			if (i==KING) {
-					PST(WHITE,i,j,MIDGAME) = (PST(WHITE,i,j,MIDGAME)*opt->king_pos_open_mult)/20;
-					PST(WHITE,i,j,ENDGAME) = (PST(WHITE,i,j,ENDGAME)*opt->king_pos_end_mult)/20;
-			}
-			else {
-				if (i!=KNIGHT || (j!= a8 && j!= h8)) {
-					PST(WHITE,i,j,MIDGAME) = (PST(WHITE,i,j,MIDGAME)*opt->active_piece_open_mult)/20;
-					PST(WHITE,i,j,ENDGAME) = (PST(WHITE,i,j,ENDGAME)*opt->active_piece_end_mult)/20;
-				}
-			}
-			*/
+												  if (i==KING) {
+												  PST(WHITE,i,j,MIDGAME) = (PST(WHITE,i,j,MIDGAME)*opt->king_pos_open_mult)/20;
+												  PST(WHITE,i,j,ENDGAME) = (PST(WHITE,i,j,ENDGAME)*opt->king_pos_end_mult)/20;
+												  }
+												  else {
+												  if (i!=KNIGHT || (j!= a8 && j!= h8)) {
+												  PST(WHITE,i,j,MIDGAME) = (PST(WHITE,i,j,MIDGAME)*opt->active_piece_open_mult)/20;
+												  PST(WHITE,i,j,ENDGAME) = (PST(WHITE,i,j,ENDGAME)*opt->active_piece_end_mult)/20;
+												  }
+												  }
+												  */
 			PST(BLACK,i,k,MIDGAME) = PST(WHITE,i,j,MIDGAME);
 			PST(BLACK,i,k,ENDGAME) = PST(WHITE,i,j,ENDGAME);
 		}
@@ -237,13 +237,13 @@ void InitKingShelter()
 			// WHITE
 			if (ri <= rj)
 			{
-//                if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1)
-			   if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1 && rj == Rank2) //only great protection on 2nd rate...example pawn on g2 protects Kg2/Kg1 equally
+				//                if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1)
+				if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1 && rj == Rank2) //only great protection on 2nd rate...example pawn on g2 protects Kg2/Kg1 equally
 				{
 					kingShelter[WHITE][i] |= BitMask[j];
 				}
-//               if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1)
-			   if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1 && (rj <= Rank3 || abs(ri-rj) <=1) )
+				//               if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1)
+				if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1 && (rj <= Rank3 || abs(ri-rj) <=1) )
 				{
 					kingIndirectShelter[WHITE][i] |= BitMask[j];
 				}
@@ -251,13 +251,13 @@ void InitKingShelter()
 			// BLACK
 			if (ri >= rj)
 			{
-//                if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1)
-			   if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1 && rj == Rank7)
+				//                if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1)
+				if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1 && rj == Rank7)
 				{
-						kingShelter[BLACK][i] |= BitMask[j];
+					kingShelter[BLACK][i] |= BitMask[j];
 				}
-//                if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1)
-			   if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1 && (rj >= Rank6 || abs(ri-rj) <= 1))
+				//                if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1)
+				if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1 && (rj >= Rank6 || abs(ri-rj) <= 1))
 				{
 					kingIndirectShelter[BLACK][i] |= BitMask[j];
 				}
@@ -392,8 +392,8 @@ void initArr(void) {
 	memset(FileMask, 0, sizeof(FileMask));
 	memset(InBetween, 0, sizeof(InBetween));
 	memset(PassedMask, 0, sizeof(PassedMask));
-//    memset(FutilityMarginTable, 0, sizeof(FutilityMarginTable));
-//    memset(ReductionTable, 0, sizeof(ReductionTable));
+	//    memset(FutilityMarginTable, 0, sizeof(FutilityMarginTable));
+	//    memset(ReductionTable, 0, sizeof(ReductionTable));
 
 	for (i = 0; i < 0x40; i++) CastleMask[i] = 0xF;
 
@@ -461,7 +461,7 @@ void initArr(void) {
 			for (m = -1, j = i ;;) {
 				n = j + kingd[k];
 				if (n < 0 || n > 63 || (j % 8 == 0 && n % 8 == 7)
-						|| (j % 8 == 7 && n % 8 == 0))
+					|| (j % 8 == 7 && n % 8 == 0))
 					break;
 				DirFromTo[i][n] = k;
 				DirBitmap[k][i] |= BitMask[n];
@@ -517,8 +517,8 @@ void initArr(void) {
 	/*
 	for (j = 0; j < 32; j++)
 	{
-		LateMovePruningTable[j] = LATE_PRUNE_MIN + ((j * j) / LATE_PRUNE_SCALE);
-		// Print(2, "LateMovePruningTable[%d] = %d\n", j, LateMovePruningTable[j]);
+	LateMovePruningTable[j] = LATE_PRUNE_MIN + ((j * j) / LATE_PRUNE_SCALE);
+	// Print(2, "LateMovePruningTable[%d] = %d\n", j, LateMovePruningTable[j]);
 	}
 	*/
 	for (i = 0; i < 64; i++)

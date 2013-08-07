@@ -24,10 +24,10 @@ INLINE uint isPromote(basic_move_t m) {return (((m)>>17)&1);}
 INLINE uint isEnPassant(basic_move_t m) {return  (((m)>>21)&1);}
 
 /* a utility to print output into different files:
-   bit 0: stdout
-   bit 1: logfile
-   bit 2: errfile
-   bit 3: dumpfile
+bit 0: stdout
+bit 1: logfile
+bit 2: errfile
+bit 3: dumpfile
 */
 void Print(int vb, char *fmt, ...) {
 	va_list ap;
@@ -78,7 +78,7 @@ void showBitboard(uint64 b, int x) {
 		for (i=0; i <= 7; i=i+1) {
 			int sq = fr_square(i, j);
 			uint64 sqBM = BitMask[sq];
-		   if (sqBM & b) {
+			if (sqBM & b) {
 				Print(x,"X");
 			}
 			else Print(x,".");
@@ -111,12 +111,12 @@ char *move2Str(basic_move_t m) {
 
 	if (m == 0) sprintf(str, "%c%c%c%c%c", '0','0','0','0','\0');
 	else sprintf(str, "%c%c%c%c%c",
-					 SQFILE(moveFrom(m)) + 'a',
-					 '1' + SQRANK(moveFrom(m)),
-					 SQFILE(moveTo(m)) + 'a',
-					 '1' + SQRANK(moveTo(m)),
-					 promstr[movePromote(m)]
-					);
+		SQFILE(moveFrom(m)) + 'a',
+		'1' + SQRANK(moveFrom(m)),
+		SQFILE(moveTo(m)) + 'a',
+		'1' + SQRANK(moveTo(m)),
+		promstr[movePromote(m)]
+	);
 	return str;
 }
 
@@ -127,10 +127,10 @@ char *sq2Str(int sq) {
 	/* ASSERT(moveIsOk(m)); */
 
 	sprintf(str, "%c%c%c",
-			SQFILE(sq) + 'a',
-			'1' + SQRANK(sq),
-			'\0'
-		   );
+		SQFILE(sq) + 'a',
+		'1' + SQRANK(sq),
+		'\0'
+		);
 	return str;
 }
 #ifndef TCEC
@@ -146,9 +146,9 @@ string pieceToString(int pc) {
 	return PieceStrings[pc];
 }
 string movenumToStr(int i) {
-//	string s;
-//	sprintf(s,"%d. ", i/2+1);
-//	return s;
+	//	string s;
+	//	sprintf(s,"%d. ", i/2+1);
+	//	return s;
 	string result;//string which will contain the result
 	stringstream convert; // stringstream used for the conversion
 	convert << (i/2+1);//add the value of Number to the characters in the stream
@@ -158,7 +158,7 @@ string movenumToStr(int i) {
 }
 string moveToStr(basic_move_t m) {
 	if (m==0) return "none";
-//    if (m==NULL_MOVE) return "0000";
+	//    if (m==NULL_MOVE) return "0000";
 	string toReturn;
 	toReturn.append(sqToStr(moveFrom(m)));
 	toReturn.append(sqToStr(moveTo(m)));
@@ -199,16 +199,16 @@ void displayBoard(const position_t *pos, int x) {
 	Print(x, "   a b c d e f g h \n\n");
 	Print(x, "FEN %s\n", positionToFEN(pos));
 	Print(x, "%d.%s%s ", (pos->sp)/2
-		  +(pos->side?1:0), pos->side?" ":" ..",
-		  move2Str(pos->posStore.lastmove));
+		+(pos->side?1:0), pos->side?" ":" ..",
+		move2Str(pos->posStore.lastmove));
 	Print(x, "%s, ", pos->side == WHITE ? "WHITE" : "BLACK");
 	Print(x, "Castle = %d, ", pos->posStore.castle);
 	Print(x, "Ep = %d, ", pos->posStore.epsq);
 	Print(x, "Fifty = %d, ", pos->posStore.fifty);
 	Print(x, "Ev = %d, ", eval(pos, 0,&opt, &pes));
 	Print(x, "Ch = %s,\n",
-		  isAtt(pos, pos->side^1, pos->kings&pos->color[pos->side])
-		  ? "T" : "F");
+		isAtt(pos, pos->side^1, pos->kings&pos->color[pos->side])
+		? "T" : "F");
 	Print(x, "H = %s, ", bit2Str(pos->hash));
 	Print(x, "PH = %s\n", bit2Str(pos->posStore.phash));
 }
@@ -245,7 +245,7 @@ int getColor(const position_t *pos, uint32 sq) {
 	}
 }
 int DiffColor(const position_t *pos, uint32 sq,int color) {
-//    uint64 mask = BitMask[sq];
+	//    uint64 mask = BitMask[sq];
 
 	ASSERT(pos != NULL);
 	ASSERT(squareIsOk(sq));
@@ -254,16 +254,16 @@ int DiffColor(const position_t *pos, uint32 sq,int color) {
 }
 /* returns time in milli-seconds */
 uint64 getTime(void) {
-	#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32) || defined(_WIN64)
 	static struct _timeb tv;
 	_ftime(&tv);
 	return(tv.time * 1000 + tv.millitm);
-	#else
+#else
 	static struct timeval tv;
 	static struct timezone tz;
 	gettimeofday (&tv, &tz);
 	return(tv.tv_sec * 1000 + (tv.tv_usec / 1000));
-	#endif
+#endif
 }
 
 /* parse the move from string and returns a move from the
@@ -308,7 +308,7 @@ uint32 parseMove(movelist_t *mvlist, char *s) {
 }
 
 int biosKey(void) {
-	#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32) || defined(_WIN64)
 	/* Windows-version */
 	static int init = 0, pipe;
 	static HANDLE inh;
@@ -330,7 +330,7 @@ int biosKey(void) {
 		GetNumberOfConsoleInputEvents(inh, &dw);
 		return dw <= 1 ? 0 : dw;
 	}
-	#else
+#else
 	/* Non-windows version */
 	fd_set readfds;
 	struct timeval timeout;
@@ -341,7 +341,7 @@ int biosKey(void) {
 	timeout.tv_usec = 0;
 	select(16, &readfds, 0, 0, &timeout);
 	return (FD_ISSET(fileno(stdin), &readfds));
-	#endif
+#endif
 }
 
 int anyRep(const position_t *pos) //this is used for book repetition detection, but should not be used in search
@@ -353,10 +353,10 @@ int anyRep(const position_t *pos) //this is used for book repetition detection, 
 	ASSERT (pos->sp >= pos->posStore.fifty);
 
 	lastCheck = pos->sp - pos->posStore.fifty;
-//	ASSERT (pos->posStore.fifty <= 100);// might not be true, since checks in Qsearch and no
+	//	ASSERT (pos->posStore.fifty <= 100);// might not be true, since checks in Qsearch and no
 	ASSERT (lastCheck < MAX_HASH_STORE);
 
-//	if (lastCheck < 0) lastCheck = 0; // we need this because fen allows fifty to be greater than moves we can check
+	//	if (lastCheck < 0) lastCheck = 0; // we need this because fen allows fifty to be greater than moves we can check
 	for (i = (int)pos->sp-4; i >= lastCheck; i -= 2)
 	{
 		//ASSERT(pos->stack[i] != 0); //hmmm, maybe this is needed?

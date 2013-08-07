@@ -524,7 +524,7 @@ const char *FenStartString[NUM_START_POS] = {
 	"rnbqkbnr/pp1ppp1p/2p3p1/8/3PP2P/8/PPP2PP1/RNBQKBNR b KQkq h3 0 3 ",
 	"r2q1rk1/pb1pbppp/1pn1pn2/2p5/8/1P1P1NP1/PBPNPPBP/R2Q1RK1 w - - 3 9 ",
 	"rnbq1rk1/pp1p1ppp/4pn2/2P3B1/1bP5/2N5/PPQ1PPPP/R3KBNR b KQ - 2 6",
-///// NEW
+	///// NEW
 	"rn1qk2r/1b2bppp/p3pn2/1pp5/3PP3/1BN2N2/PP3PPP/R1BQ1RK1 w kq - 1 11",
 	"r2q1rk1/pb1n1ppp/1p1bpn2/2pp4/2PP4/1PNBPN2/PB3PPP/R2Q1RK1 w - c6 0 10",
 	"r3k2r/2p1qppp/p1n1b3/1pbpP3/4n3/1B2BN2/PPP1QPPP/RN3RK1 w kq - 5 11",
@@ -546,7 +546,7 @@ const char *FenStartString[NUM_START_POS] = {
 	"r1bqr1k1/ppp2pbp/3p1np1/2n5/2P5/1PN2NP1/PB1QPPBP/R3K2R w KQ - 7 11",
 	"r3kbnr/pR3ppp/2n1p3/3pPb2/2pP4/2N1BN2/P1P1BPPP/4K2R w Kkq - 1 11",
 	"r2qk2r/pp2bppp/2n1pnb1/2pp4/4P1P1/2PP1N1P/PPBNQP2/R1B1K2R w KQkq - 1 11",
-	
+
 	"r3k2r/pppb1pb1/2nppq1p/8/3PPP2/2N5/PPPQ3P/2KR1BNR w kq - 1 11",
 	"r2q1rk1/1p1nbppp/p2pbn2/4p3/4P3/1NN1BP2/PPPQ2PP/2KR1B1R w - - 8 11",
 	"r2q1rk1/ppp1bppp/1n2b3/4p3/1P1n4/P1NP1NP1/4PPBP/R1BQ1RK1 w - - 1 11",
@@ -652,8 +652,8 @@ void InitSimilarity(int p) {
 			//if (i!=p) {
 			AllPersonalities[p].updateRatingWeight(sim,AllPersonalities[i],k,true);
 			//}
-		//	Print(3,"%s *** %d ",AllPersonalities[i].PrettyString(),k);
-		//	Print(3,"%f *** %s\n",sim,AllPersonalities[p].PrettyString());
+			//	Print(3,"%s *** %d ",AllPersonalities[i].PrettyString(),k);
+			//	Print(3,"%f *** %s\n",sim,AllPersonalities[p].PrettyString());
 		}
 	}
 }
@@ -670,7 +670,7 @@ void UpdateSimilarity(int p, bool increment) { //increment determines whether to
 }
 bool ToChange(const int games,const int mult) {
 	int ch = 100;
-	
+
 	//more people means generate less people
 	if (numPersonalities >= MAX_PERSONALITIES) ch *=20;
 	else if (numPersonalities > MAX_PERSONALITIES/2) ch *=16;
@@ -784,7 +784,7 @@ void ShowActive() {
 }
 void SetNewGame() { //this should be changed when we do one thread per personality
 	origScore = 0;
-//	transClear();
+	//	transClear();
 	for (int i = 0; i < Guci_options->threads; ++i) {
 		pawnTableClear(&Threads[i].pt);
 		evalTableClear(&Threads[i].et);
@@ -794,8 +794,8 @@ void tuneGo(position_t *pos, int player, int64 nodes) {
 
 	ASSERT(pos != NULL);
 	ASSERT(options != NULL);
-//	uciGo(pos,"nodes 5000");
-//	return;
+	//	uciGo(pos,"nodes 5000");
+	//	return;
 	/* initialization */
 	SearchInfo(player).depth_is_limited = FALSE;
 	SearchInfo(player).depth_limit = MAXPLY;
@@ -815,7 +815,7 @@ void tuneGo(position_t *pos, int player, int64 nodes) {
 	SearchInfo(player).bestmove = 0;
 	SearchInfo(player).pondermove = 0;
 	SearchInfo(player).mate_found = 0;
-	
+
 	memset(Threads[player].history, 0, sizeof(Threads[player].history));
 	memset(Threads[player].evalvalue, 0, sizeof(Threads[player].evalvalue));
 	memset(Threads[player].evalgains, 0, sizeof(Threads[player].evalgains));
@@ -836,7 +836,7 @@ void tuneGo(position_t *pos, int player, int64 nodes) {
 		if (RETURN_MOVE) {
 			Print(3, "bestmove %s", move2Str(SearchInfo(player).bestmove));
 			if (SearchInfo(player).pondermove) Print(3, " ponder %s", move2Str(SearchInfo(player).pondermove));
-			 Print(3, "\n\n");
+			Print(3, "\n\n");
 		}
 		origScore = SearchInfo(player).last_value; // just to be safe
 	}
@@ -845,7 +845,7 @@ double ProbWin(double rating1, double rating2) {
 	double win;
 	double dif = rating1 - rating2;
 	if (dif < 0) dif = -dif;
-//	Print(3,"\n rating dif %f ",dif);
+	//	Print(3,"\n rating dif %f ",dif);
 	if (dif == 0 ) win = 0.5; // should centralize these scores sometime
 	else if (dif < 7.0) win = 0.51;
 	else if (dif < 14.0) win = 0.52;
@@ -921,7 +921,7 @@ void Rate(int player, double expResult, double result, int opp) {
 	{
 		double change = (k) * (result - expResult);
 		AllPersonalities[player].rating += change;
-//		Print(3,"\n%d(%f) changed %f\n",player+1,expResult,change);
+		//		Print(3,"\n%d(%f) changed %f\n",player+1,expResult,change);
 	}
 }
 void Provisional(int player) {
@@ -965,7 +965,7 @@ int PlayTuneGame(int startPos, int player1, int player2) {
 	int activePlayer;
 
 	SetStartingPosition(&pos,startPos);
-//	Print(3,"%s\n",FenStartString[startPos]);
+	//	Print(3,"%s\n",FenStartString[startPos]);
 	activePlayer = (pos.side==WHITE ? player1 : player2);
 	transClear(player1); transClear(player2);
 	while (TRUE) {
@@ -1001,9 +1001,9 @@ int PlayTuneGame(int startPos, int player1, int player2) {
 		} else {
 			origScore = value; // just to be safe
 		}
-//		Print(3,"%d %s ",moves,move2Str(SearchInfo(activePlayer).bestmove));
-//		if (moves%10==9 && pos.side == BLACK) Print(3,"\n");
-//		Print(3,"%d",activePlayer/2);
+		//		Print(3,"%d %s ",moves,move2Str(SearchInfo(activePlayer).bestmove));
+		//		if (moves%10==9 && pos.side == BLACK) Print(3,"\n");
+		//		Print(3,"%d",activePlayer/2);
 		makeMove(&pos, &undo, SearchInfo(activePlayer).bestmove);
 		activePlayer = (pos.side==WHITE ? player1 : player2);
 		if (pos.posStore.fifty==0) {
@@ -1069,8 +1069,8 @@ void InitTune() {
 	MutexInit(SMPLock,NULL);
 	srand(getTime());
 	AllPersonalities[numPersonalities++].SetDefaults(); // lets seed the default
-//	Print(3,"%d %d %d %d %d %d\n",rand(),rand(),rand(),rand(),rand(),rand());
-//	Print(3,"%d %d %d %d %d %d\n",Random(1,10),Random(1,10),Random(1,10),Random(1,10),Random(1,10),Random(1,10));
+	//	Print(3,"%d %d %d %d %d %d\n",rand(),rand(),rand(),rand(),rand(),rand());
+	//	Print(3,"%d %d %d %d %d %d\n",Random(1,10),Random(1,10),Random(1,10),Random(1,10),Random(1,10),Random(1,10));
 }
 bool InUse(int p) {
 	for (int i=0; i < MaxNumOfThreads; i++) {
@@ -1083,7 +1083,7 @@ int PickOpponent() {
 	int score = INT_MAX;
 	if (rand()%SUFFICIENT_DIVERSITY==0) { //give games to default personality
 		Personality DefaultP;
-		 Print(3,"*");
+		Print(3,"*");
 		for (int i = 0; i < numPersonalities; i++) {
 			if (DefaultP.Equal(AllPersonalities[i])) {
 				if (InUse(i)) break;
@@ -1133,8 +1133,8 @@ void NewTuneGame(const int player1) {
 	//OK lets see if we have a large enough pool of players
 	if (numPersonalities < SUFFICIENT_DIVERSITY) {
 		do {
-		personality(player1).Randomize();
-		Print(3,"creating random(%d) %s\n",player1,personality(player1).PrettyString());
+			personality(player1).Randomize();
+			Print(3,"creating random(%d) %s\n",player1,personality(player1).PrettyString());
 		} while (!AddPersonality(player1));
 		do {
 			personality(player2).Randomize();
@@ -1216,14 +1216,14 @@ void NewTuneGame(const int player1) {
 	Print(3,"starting series between %s and ",personality(player1).PrettyString());
 	Print(3,"%s\n",personality(player2).PrettyString());
 	MutexUnlock(SMPLock);
-	
+
 	//now play a rated game
 	PlayRatedGame(position,player1, player2);
 	PlayRatedGame(position,player2, player1);
 
 	MutexLock(SMPLock);
 	//OK, find and copy back results
-	
+
 	for (int i=0; i < numPersonalities; i++) {
 		if (AllPersonalities[i].Equal(personality(player1))) {
 			personality(player1).games = AllPersonalities[i].games;
@@ -1240,7 +1240,7 @@ void NewTuneGame(const int player1) {
 			break;
 		}
 	}
-	
+
 	ShowActive();
 	MutexUnlock(SMPLock);
 }
@@ -1410,7 +1410,7 @@ int PlayGame(position_t *pos, int player1, int player2, int startPos) {
 			pos->stack[0] = pos->hash;
 			pos->sp = 0;
 		}
-//		if (pos->posStore.fifty >= 100) return 0;
+		//		if (pos->posStore.fifty >= 100) return 0;
 
 		if (anyRep(pos)) {
 			return 0;
@@ -1495,7 +1495,7 @@ void Rate(int player, double expResult, double result, int opp) {
 	{
 		double change = (k) * (result - expResult);
 		playerList[player].rating += change;
-//		Print(3,"\n%d(%f) changed %f\n",player+1,expResult,change);
+		//		Print(3,"\n%d(%f) changed %f\n",player+1,expResult,change);
 	}
 }
 void RateDraw(int p1, int p2) {
@@ -1509,7 +1509,7 @@ void RateDraw(int p1, int p2) {
 }
 void RateWin(int winner, int loser) {
 	double winP = ProbWin(playerList[winner].rating,playerList[loser].rating);
-//	Print(3,"\n%d has a %f chance to beat %d\n",winner,winP,loser);
+	//	Print(3,"\n%d has a %f chance to beat %d\n",winner,winP,loser);
 	Rate(winner,winP,1.0,loser);
 	Rate(loser,1.0-winP,0.0,winner);
 	playerList[winner].games +=2;
@@ -1704,8 +1704,8 @@ void selfTune(position_t *pos) {
 			Print(3,"%d--- %f -> %f---------%d--- %f -> %f---------\n",player1+1,startScore1,playerList[player1].rating,
 				player2+1,startScore2,playerList[player2].rating);
 		}
-//		SortPlayers();
-//		ShowBest(10);
+		//		SortPlayers();
+		//		ShowBest(10);
 
 		SortAndTest(pos);
 	}

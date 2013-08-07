@@ -12,7 +12,7 @@ basic_move_t transMove(trans_entry_t * te) {
 }
 /*
 int transMateThreat(trans_entry_t * te) {
-	return (1 & (te->data >> 25));
+return (1 & (te->data >> 25));
 }
 */
 int transDate(trans_entry_t * te) {
@@ -48,8 +48,8 @@ void transSetMove(trans_entry_t * te, uint32 move) {
 }
 /*
 void transSetMateThreat(trans_entry_t * te, uint32 mthreat) {
-	te->data &= 0xfdffffff;
-	te->data |= ((mthreat & 1) << 25);
+te->data &= 0xfdffffff;
+te->data |= ((mthreat & 1) << 25);
 }
 */
 void transSetDate(trans_entry_t * te, uint32 date) {
@@ -85,26 +85,26 @@ trans_entry_t *transProbe(const uint64 hash, const int thread) {
 	trans_entry_t *entry = TransTable(thread).table + (KEY(hash) & TransTable(thread).mask);
 	uint32 locked = LOCK(hash);
 
-	 if (entry->hashlock == locked) {
-			transSetDate(entry, TransTable(thread).date);
-			return entry;
-	 }
-	 entry++;
-	 if (entry->hashlock == locked) {
-			transSetDate(entry,TransTable(thread).date);
-			return entry;
-	 }
-	 entry++;
-	 if (entry->hashlock == locked) {
-			transSetDate(entry, TransTable(thread).date);
-			return entry;
-	 }
-	 entry++;
-	 if (entry->hashlock == locked) {
-			transSetDate(entry, TransTable(thread).date);
-			return entry;
-	 }
-	 return NULL;
+	if (entry->hashlock == locked) {
+		transSetDate(entry, TransTable(thread).date);
+		return entry;
+	}
+	entry++;
+	if (entry->hashlock == locked) {
+		transSetDate(entry,TransTable(thread).date);
+		return entry;
+	}
+	entry++;
+	if (entry->hashlock == locked) {
+		transSetDate(entry, TransTable(thread).date);
+		return entry;
+	}
+	entry++;
+	if (entry->hashlock == locked) {
+		transSetDate(entry, TransTable(thread).date);
+		return entry;
+	}
+	return NULL;
 }
 
 void transStore(const uint64 hash,uint32 bm, const int d, const int min, const int max, const int thread) {
@@ -145,7 +145,7 @@ void transStore(const uint64 hash,uint32 bm, const int d, const int min, const i
 	if (transDate(replace) != TransTable(thread).date) TransTable(thread).used++;
 	transSetHashlock(replace, LOCK(hash));
 	transSetMove(replace, bm);
-//    transSetMateThreat(replace, mt);
+	//    transSetMateThreat(replace, mt);
 	transSetDate(replace, TransTable(thread).date);
 	transSetDepth(replace, d);
 	transSetMovedepth(replace, (bm ? d : 0));
@@ -180,10 +180,10 @@ void initTrans(uint64 target, int thread) {
 	uint64 size=2;
 
 	if (target < MIN_TRANS_SIZE) target = MIN_TRANS_SIZE;
-   
+
 	target *= 1024 * 1024;
 
-//	size should be a factor of 2 for size - 1 to work well I think -SAM
+	//	size should be a factor of 2 for size - 1 to work well I think -SAM
 	while (size * sizeof(trans_entry_t) <= target) size*=2;
 	size = size/2;
 	if (TransTable(thread).table != NULL) {

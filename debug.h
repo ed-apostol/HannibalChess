@@ -33,7 +33,7 @@ int moveIsOk(basic_move_t m) {
 	if (prom < EMPTY || prom > QUEEN) x = FALSE;
 
 	if (x == FALSE) Print(8, "%s: from = %d, to = %d, pc = %d, capt = %d, prom = %d\n",
-							  __FUNCTION__, from, to, pc, capt, prom);
+		__FUNCTION__, from, to, pc, capt, prom);
 	return x;
 }
 
@@ -60,22 +60,22 @@ void flipPosition(const position_t *pos, position_t *clone) {
 
 	clone->book.bookfile = Gbook.bookfile;
 	clone->book.size = Gbook.size;
-	
+
 	clone->pawn_table.table = Gpawn_table.table;
 	clone->pawn_table.size = Gpawn_table.size;
 	clone->pawn_table.mask = Gpawn_table.mask;
-#ifdef EVAL_TABLE
+	#ifdef EVAL_TABLE
 	clone->eval_table.table = Geval_table.table;
 	clone->eval_table.size = Geval_table.size;
 	clone->eval_table.mask = Geval_table.mask;
-#endif
+	#endif
 	clone->trans_table.table = Gtrans_table.table;
 	clone->trans_table.size = Gtrans_table.size;
 	clone->trans_table.mask = Gtrans_table.mask;
 	clone->trans_table.date = Gtrans_table.date;
 	for (c = 0; c < DATESIZE; c++)
-		clone->trans_table.age[c] = Gtrans_table.age[c];
-*/
+	clone->trans_table.age[c] = Gtrans_table.age[c];
+	*/
 	clone->pawns = EmptyBoardBB;
 	clone->knights = EmptyBoardBB;
 	clone->bishops = EmptyBoardBB;
@@ -269,7 +269,7 @@ void positionIsOk(const position_t *pos) {
 	ASSERT(pos->kings & pos->color[pos->side^1]);
 
 	open_score[WHITE] = open_score[BLACK] =
-							end_score[WHITE] = end_score[BLACK] = 0;
+		end_score[WHITE] = end_score[BLACK] = 0;
 	hash = pawnhash = 0;
 	whitebits = pos->color[WHITE];
 	blackbits = pos->color[BLACK];

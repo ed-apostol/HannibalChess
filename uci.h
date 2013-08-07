@@ -97,20 +97,20 @@ void uciSetOption(char string[]) {
 		int newValue  = atoi(value);
 		if (Guci_options->threads + newValue > MaxNumOfThreads) newValue = MaxNumOfThreads - Guci_options->threads;
 		if (newValue != oldValue) {
-			 if (SHOW_LEARNING) Print(3,"info string changing learn threads from %d to %d\n",oldValue,newValue);
+			if (SHOW_LEARNING) Print(3,"info string changing learn threads from %d to %d\n",oldValue,newValue);
 			Guci_options->learnThreads = newValue;
-			
+
 			if (newValue < oldValue) { // go kill all the learning threads
 				for (int i = MaxNumOfThreads - oldValue; i < MaxNumOfThreads - newValue; i++) {
-					 if (SHOW_LEARNING) Print(3,"info string about to stop thread %d\n",i);
+					if (SHOW_LEARNING) Print(3,"info string about to stop thread %d\n",i);
 					SearchInfo(i).thinking_status = STOPPED;
 				}
 			}
 			else if (newValue > oldValue) {
 				for (int i = MaxNumOfThreads-newValue; i < MaxNumOfThreads-oldValue; i++) { //wake up if it needs to
-					 if (SHOW_LEARNING) Print(3,"info string about to wakup thread %d\n",i);
+					if (SHOW_LEARNING) Print(3,"info string about to wakup thread %d\n",i);
 					SetEvent(Threads[i].idle_event);
-					 if (SHOW_LEARNING) Print(3,"info string wokeup thread %d\n",i);
+					if (SHOW_LEARNING) Print(3,"info string wokeup thread %d\n",i);
 				}
 			}
 		}
@@ -128,7 +128,7 @@ void uciSetOption(char string[]) {
 #endif
 		if (newValue > oldValue) {
 			for (int i = oldValue; i < newValue; i++) {
-			   initSearchThread(i);
+				initSearchThread(i);
 			}
 		}
 		Guci_options->threads = newValue;
@@ -152,11 +152,11 @@ void uciParseSearchmoves(movelist_t *ml, char *str, uint32 moves[]) {
 		i = 0;
 		while (*c != '\0' && !isspace(*c) && i < 9) movestr[i++] = *c++;
 		if (i >= 4 && 'a' <= movestr[0] && movestr[0] <= 'h' &&
-				'1' <= movestr[1] && movestr[1] <= '8' &&
-				'a' <= movestr[2] && movestr[2] <= 'h' &&
-				'1' <= movestr[3] && movestr[3] <= '8') {
-			m = parseMove(ml, movestr);
-			if (m) *move++ = m;
+			'1' <= movestr[1] && movestr[1] <= '8' &&
+			'a' <= movestr[2] && movestr[2] <= 'h' &&
+			'1' <= movestr[3] && movestr[3] <= '8') {
+				m = parseMove(ml, movestr);
+				if (m) *move++ = m;
 		} else break;
 		while (isspace(*c)) c++;
 	}
@@ -169,7 +169,7 @@ void uciGo(position_t *pos, char *options) {
 	char *c;
 	int64 mytime = 0, t_inc = 0;
 	int wtime=0, btime=0, winc=0, binc=0, movestogo=0, maxdepth=0, nodes=0, mate=0, movetime=0;
-	 movelist_t ml;
+	movelist_t ml;
 
 	ASSERT(pos != NULL);
 	ASSERT(options != NULL);
@@ -201,7 +201,7 @@ void uciGo(position_t *pos, char *options) {
 	}
 
 	memset(SearchInfo(0).moves, 0, sizeof(SearchInfo(0).moves));
-   
+
 	infinite = strstr(options, "infinite");
 	ponder = strstr(options, "ponder");
 	c = strstr(options, "wtime");
@@ -312,7 +312,7 @@ void uciGo(position_t *pos, char *options) {
 		if (RETURN_MOVE) {
 			Print(3, "bestmove %s", move2Str(SearchInfo(0).bestmove));
 			if (SearchInfo(0).pondermove) Print(3, " ponder %s", move2Str(SearchInfo(0).pondermove));
-			 Print(3, "\n\n");
+			Print(3, "\n\n");
 		}
 		origScore = SearchInfo(0).last_value; // just to be safe
 	}

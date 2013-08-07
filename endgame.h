@@ -28,7 +28,7 @@ void SinglePawnEnding(int attacker,const position_t *p, eval_info_t *ei,int *sco
 	if (PAWN_RANK(pawnSq,attacker) < Rank7) {
 		int pastTarget = targetSq + PAWN_MOVE_INC(attacker);
 		int supportAdvance = (p->kpos[attacker] == pastTarget) ||
-							 (KingMoves[p->kpos[attacker]] & BitMask[pastTarget]);
+			(KingMoves[p->kpos[attacker]] & BitMask[pastTarget]);
 		// is you are 2 in front of pawn black has no draw
 		if (IN_FRONT(SQRANK(p->kpos[attacker]), SQRANK(targetSq),attacker) && supportAdvance) {
 			if (ei->MLindex[defender] == 0) *score += 400*sign[attacker];
@@ -50,7 +50,7 @@ void SinglePawnEnding(int attacker,const position_t *p, eval_info_t *ei,int *sco
 				if ((oppSq == p->kpos[defender]) && mover==attacker)
 					*draw = MAX_DRAW;
 				else if ((KingMoves[p->kpos[defender]] & BitMask[oppSq])
-						 && mover==defender)
+					&& mover==defender)
 					*draw = MAX_DRAW;
 				else if (ei->MLindex[defender] == 0) *score += 400*sign[attacker];
 			}
@@ -91,19 +91,19 @@ void SinglePawnEnding(int attacker,const position_t *p, eval_info_t *ei,int *sco
 		}
 		// if we could control it, we win
 		if (p->kpos[defender] != targetSq && mover == attacker &&
-				KingMoves[p->kpos[attacker]] & KingMoves[targetSq]) {
-			*score += 450 * sign[attacker];
-			return;
+			KingMoves[p->kpos[attacker]] & KingMoves[targetSq]) {
+				*score += 450 * sign[attacker];
+				return;
 		}
 		if (p->kpos[defender] == targetSq) {
 			if (mover==defender && p->kpos[attacker] == targetSq-PAWN_MOVE_INC(attacker)*2)
 				*draw = MAX_DRAW;
 			else if (mover==attacker && p->kpos[attacker] != targetSq-PAWN_MOVE_INC(attacker)*2 &&
-					 (KingMoves[p->kpos[attacker]] & BitMask[pawnSq]))
+				(KingMoves[p->kpos[attacker]] & BitMask[pawnSq]))
 				*draw = MAX_DRAW;
 			else if (ei->MLindex[defender] == 0) *score += 400*sign[attacker];
 		} else if ((PawnCaps[p->kpos[defender]][attacker] & BitMask[targetSq]) &&
-				   mover== defender && (PawnCaps[p->kpos[attacker]][attacker] & BitMask[targetSq])==0)
+			mover== defender && (PawnCaps[p->kpos[attacker]][attacker] & BitMask[targetSq])==0)
 			*draw = MAX_DRAW;
 		else if (DISTANCE(p->kpos[defender],pawnSq)-(mover==defender) < DISTANCE(p->kpos[attacker],targetSq))
 			*draw = MAX_DRAW;
@@ -119,18 +119,18 @@ void DrawnRookPawn(int attacker,const position_t *p, eval_info_t *ei,int *score,
 		if (showEval) Print(3," only a pawn draw? ");
 		qs = PAWN_PROMOTE(FileA,attacker);
 		if (DISTANCE(p->kpos[attacker],qs) > (DISTANCE(p->kpos[defender],qs)-(mover==defender)) && ((bishop==0) ||
-				((bishop & WhiteSquaresBB)==0)!= ((BitMask[qs] & WhiteSquaresBB)==0))) {
-			*draw = MAX_DRAW;
-			if (showEval) Print(3,"YES ");
+			((bishop & WhiteSquaresBB)==0)!= ((BitMask[qs] & WhiteSquaresBB)==0))) {
+				*draw = MAX_DRAW;
+				if (showEval) Print(3,"YES ");
 		}
-//TODO check if we can get to C8 without pawn getting to A7
+		//TODO check if we can get to C8 without pawn getting to A7
 		// do draw when king trapped in front of own pawn
 		else if ((bishop==0) && ((SQFILE(p->kpos[attacker]) == FileA &&
-								  (p->kpos[defender]==p->kpos[attacker]+2 || (mover==defender && DISTANCE(p->kpos[attacker]+2,p->kpos[defender])==1)
-								   || (SQFILE(p->kpos[defender])==FileC && (DISTANCE(p->kpos[defender],qs+2) < DISTANCE(p->kpos[attacker],qs)
-										   || DISTANCE(p->kpos[defender],PAWN_PROMOTE(SQFILE(p->kpos[defender]),attacker)) -(mover==defender) <= 1)))) ||
-								 (p->kpos[defender]==qs+2 && (KingMoves[qs] & pawns)==0)	)) {
-			*draw = MAX_DRAW;
+			(p->kpos[defender]==p->kpos[attacker]+2 || (mover==defender && DISTANCE(p->kpos[attacker]+2,p->kpos[defender])==1)
+			|| (SQFILE(p->kpos[defender])==FileC && (DISTANCE(p->kpos[defender],qs+2) < DISTANCE(p->kpos[attacker],qs)
+			|| DISTANCE(p->kpos[defender],PAWN_PROMOTE(SQFILE(p->kpos[defender]),attacker)) -(mover==defender) <= 1)))) ||
+			(p->kpos[defender]==qs+2 && (KingMoves[qs] & pawns)==0)	)) {
+				*draw = MAX_DRAW;
 		}
 	}
 
@@ -140,15 +140,15 @@ void DrawnRookPawn(int attacker,const position_t *p, eval_info_t *ei,int *score,
 		if (showEval) Print(3," only h pawn draw? ");
 		qs = PAWN_PROMOTE(FileH,attacker);
 		if (DISTANCE(p->kpos[attacker],qs) > DISTANCE(p->kpos[attacker ^ 1],qs) && (bishop==0 ||
-				((bishop & WhiteSquaresBB)==0)!= ((BitMask[qs] & WhiteSquaresBB)==0))) {
-			*draw = MAX_DRAW;
-			if (showEval) Print(3,"YES ");
+			((bishop & WhiteSquaresBB)==0)!= ((BitMask[qs] & WhiteSquaresBB)==0))) {
+				*draw = MAX_DRAW;
+				if (showEval) Print(3,"YES ");
 		} else if (bishop==0 && ((SQFILE(p->kpos[attacker]) == FileH &&
-								  (p->kpos[defender]==p->kpos[attacker]-2 || (mover==defender && DISTANCE(p->kpos[attacker]-2,p->kpos[defender])==1)
-								   || (SQFILE(p->kpos[defender])==FileF && (DISTANCE(p->kpos[defender],qs-2) < DISTANCE(p->kpos[attacker],qs)
-										   || DISTANCE(p->kpos[defender],PAWN_PROMOTE(SQFILE(p->kpos[defender]),attacker)) -(mover==defender) <= 1)))) ||
-								 (p->kpos[defender]==qs-2 && (KingMoves[qs] & pawns)==0)	)) {
-			*draw = MAX_DRAW;
+			(p->kpos[defender]==p->kpos[attacker]-2 || (mover==defender && DISTANCE(p->kpos[attacker]-2,p->kpos[defender])==1)
+			|| (SQFILE(p->kpos[defender])==FileF && (DISTANCE(p->kpos[defender],qs-2) < DISTANCE(p->kpos[attacker],qs)
+			|| DISTANCE(p->kpos[defender],PAWN_PROMOTE(SQFILE(p->kpos[defender]),attacker)) -(mover==defender) <= 1)))) ||
+			(p->kpos[defender]==qs-2 && (KingMoves[qs] & pawns)==0)	)) {
+				*draw = MAX_DRAW;
 		}
 	}
 }
@@ -215,19 +215,19 @@ void BishopEnding(int attacker, const position_t *p, eval_info_t *ei,int *score,
 		qs = PAWN_PROMOTE(FileA,attacker);
 
 		if (MaxOneBit(p->pawns & p->color[attacker] & (~FileABB)) &&
-				DISTANCE(p->kpos[defender],qs) < DISTANCE(p->kpos[attacker],qs) &&
-				((p->bishops & p->color[attacker] & WhiteSquaresBB)==0)!= ((BitMask[qs] & WhiteSquaresBB)==0)) {
-			*draw = MAX_DRAW;
-			if (showEval) Print(3,"a pawn black draw ");
-			return;
+			DISTANCE(p->kpos[defender],qs) < DISTANCE(p->kpos[attacker],qs) &&
+			((p->bishops & p->color[attacker] & WhiteSquaresBB)==0)!= ((BitMask[qs] & WhiteSquaresBB)==0)) {
+				*draw = MAX_DRAW;
+				if (showEval) Print(3,"a pawn black draw ");
+				return;
 		}
 		qs = PAWN_PROMOTE(FileH,attacker);
 		if (MaxOneBit(p->pawns & p->color[attacker] & (~FileHBB)) &&
-				DISTANCE(p->kpos[defender],qs) < DISTANCE(p->kpos[attacker],qs) &&
-				((p->bishops & p->color[attacker] & WhiteSquaresBB)==0)!= ((BitMask[qs] & WhiteSquaresBB)==0)) {
-			*draw = MAX_DRAW;
-			if (showEval) Print(3,"h pawn black draw ");
-			return;
+			DISTANCE(p->kpos[defender],qs) < DISTANCE(p->kpos[attacker],qs) &&
+			((p->bishops & p->color[attacker] & WhiteSquaresBB)==0)!= ((BitMask[qs] & WhiteSquaresBB)==0)) {
+				*draw = MAX_DRAW;
+				if (showEval) Print(3,"h pawn black draw ");
+				return;
 		}
 
 
@@ -273,9 +273,9 @@ void DrawnNP(int attacker, const position_t *p, eval_info_t *ei,int *score, int 
 	int defender = attacker ^ 1;
 	uint64 pawn = (p->pawns & p->color[attacker]);
 	if  (((pawn ^ BitMask[(PAWN_PROMOTE(FileA,attacker)-PAWN_MOVE_INC(attacker))]) == 0
-			&& DISTANCE(p->kpos[defender],PAWN_PROMOTE(FileA,attacker)) <= 1) ||
-			((pawn ^ BitMask[(PAWN_PROMOTE(FileH,attacker)-PAWN_MOVE_INC(attacker))]) == 0
-			 && DISTANCE(p->kpos[defender],PAWN_PROMOTE(FileH,attacker)) <= 1))
+		&& DISTANCE(p->kpos[defender],PAWN_PROMOTE(FileA,attacker)) <= 1) ||
+		((pawn ^ BitMask[(PAWN_PROMOTE(FileH,attacker)-PAWN_MOVE_INC(attacker))]) == 0
+		&& DISTANCE(p->kpos[defender],PAWN_PROMOTE(FileH,attacker)) <= 1))
 		*draw =  MAX_DRAW;
 	// if opponent king is in front and they have a piece, darn drawn
 	if (ei->MLindex[defender] >= MLN) {
@@ -372,66 +372,66 @@ void RookEnding(int attacker, const position_t *p, eval_info_t *ei,int *score, i
 				if (Q_DIST(sq,attacker)==1 &&
 					PAWN_PROMOTE(sq,attacker)==p->kpos[attacker] &&
 					Q_DIST(p->kpos[defender],attacker) <= 1 && DISTANCE(p->kpos[defender],sq) <= 4) {
-					*draw = (DRAWN+DRAWN1)/2;
-					return;
+						*draw = (DRAWN+DRAWN1)/2;
+						return;
 				}
 				// = is ok since shouldering does not rook if opponent king is on rook file
 				if (DISTANCE(p->kpos[defender],promoteSquare) <= Q_DIST(sq,attacker) && 
 					sqFile==SQFILE(p->kpos[attacker])) { //there are many more cases, but want to be a bit conservative
-					
-					*draw = (DRAWN+DRAWN1)/2;
-					return;
+
+						*draw = (DRAWN+DRAWN1)/2;
+						return;
 
 				}
 				if (Q_DIST(sq,attacker)==1 &&
 					PAWN_PROMOTE(sq,attacker)==p->kpos[attacker] &&
 					Q_DIST(p->kpos[defender],attacker) <= 1 && DISTANCE(p->kpos[defender],sq) <= 4) {
-					*draw = (DRAWN+DRAWN1)/2;
-					return;
+						*draw = (DRAWN+DRAWN1)/2;
+						return;
 				}
 
 			}
 		}
 		// if we have a rook in front of a pawn on the 7th
 		if (raSq==PAWN_PROMOTE(raSq,attacker) && (raFile==FileA) &&
-				(BitMask[behindRook] & ei->pawns[attacker])) {
-			// if the king is in good defensive position
-			if (ei->MLindex[attacker] == MLR+MLP) {
-				int kdSq = p->kpos[defender];
-				if (Q_DIST(kdSq,attacker) <= 1 &&
+			(BitMask[behindRook] & ei->pawns[attacker])) {
+				// if the king is in good defensive position
+				if (ei->MLindex[attacker] == MLR+MLP) {
+					int kdSq = p->kpos[defender];
+					if (Q_DIST(kdSq,attacker) <= 1 &&
 						(DISTANCE(kdSq,behindRook) <= 2 || DISTANCE(kdSq,behindRook) >= 6)) {
-					*draw = (DRAWN+DRAWN1)/2;
-					return;
+							*draw = (DRAWN+DRAWN1)/2;
+							return;
+					}
+				} else if ((ei->pawns[attacker] & ~(FileABB | FileGBB))==0 ||
+					(ei->pawns[attacker] & ~(FileABB | FileHBB))==0) {
+						int kdSq = p->kpos[defender];
+						if (showEval) Print(3," RRP draw? ");
+						if (Q_DIST(kdSq,attacker) <= 1 && DISTANCE(kdSq,behindRook) >= 6) {
+							*draw = (DRAWN+DRAWN1)/2;
+							return;
+						}
 				}
-			} else if ((ei->pawns[attacker] & ~(FileABB | FileGBB))==0 ||
-					   (ei->pawns[attacker] & ~(FileABB | FileHBB))==0) {
-				int kdSq = p->kpos[defender];
-				if (showEval) Print(3," RRP draw? ");
-				if (Q_DIST(kdSq,attacker) <= 1 && DISTANCE(kdSq,behindRook) >= 6) {
-					*draw = (DRAWN+DRAWN1)/2;
-					return;
-				}
-			}
 		}
 		if (raSq==PAWN_PROMOTE(raSq,attacker) && (raFile==FileH) &&
-				(BitMask[behindRook] & ei->pawns[attacker])) {
-			// if the king is in good defensive position
-			if (ei->MLindex[attacker] == MLR+MLP) {
-				int kdSq = p->kpos[defender];
-				if (Q_DIST(kdSq,attacker) <= 1 &&
+			(BitMask[behindRook] & ei->pawns[attacker])) {
+				// if the king is in good defensive position
+				if (ei->MLindex[attacker] == MLR+MLP) {
+					int kdSq = p->kpos[defender];
+					if (Q_DIST(kdSq,attacker) <= 1 &&
 						(DISTANCE(kdSq,behindRook) <= 2 || DISTANCE(kdSq,behindRook) >= 6)) {
-					*draw = (DRAWN+DRAWN1)/2;
-					return;
+							*draw = (DRAWN+DRAWN1)/2;
+							return;
+					}
+				} else if ((ei->pawns[attacker] & ~(FileHBB | FileBBB))==0 ||
+					(ei->pawns[attacker] & ~(FileHBB | FileABB))==0) {
+						int kdSq = p->kpos[defender];
+						if (showEval) Print(3," RRP draw? ");
+						if (Q_DIST(kdSq,attacker) <= 1 && DISTANCE(kdSq,behindRook) >= 6) {
+							*draw = (DRAWN+DRAWN1)/2;
+							return;
+						}
 				}
-			} else if ((ei->pawns[attacker] & ~(FileHBB | FileBBB))==0 ||
-					   (ei->pawns[attacker] & ~(FileHBB | FileABB))==0) {
-				int kdSq = p->kpos[defender];
-				if (showEval) Print(3," RRP draw? ");
-				if (Q_DIST(kdSq,attacker) <= 1 && DISTANCE(kdSq,behindRook) >= 6) {
-					*draw = (DRAWN+DRAWN1)/2;
-					return;
-				}
-			}
 		}
 
 		passed = passedA;
@@ -467,10 +467,10 @@ void RookEnding(int attacker, const position_t *p, eval_info_t *ei,int *score, i
 		// pawns on one side is more drawish assuming the defending king is on the same side
 		if ((QUEENSIDE & pawnking)==0 || (KINGSIDE & pawnking)==0 ) { 
 			int pawnsTraded = MAX(4,8 - (ei->MLindex[attacker] - MLR));
-			 // the less unguarded pawns, the more drawish it is
+			// the less unguarded pawns, the more drawish it is
 
 			int unguarded = bitCnt(ei->pawns[defender] & ~(ei->atkkings[defender] | ei->atkpawns[defender] | shiftLeft(ei->pawns[defender],1) |
-									  shiftRight(ei->pawns[defender],1)));
+				shiftRight(ei->pawns[defender],1)));
 			if (showEval) Print(3," unguarded %d ",unguarded);
 
 			if (unguarded==0) {
@@ -500,16 +500,16 @@ void QueenvPawn(int attacker, const position_t *p, eval_info_t *ei, int *score,i
 		// king should be somewhat near pawn I guess
 		// there is one position where this is wrong
 		if ((dDist ==1 && DISTANCE(pSq,(int)GetOnlyBit(p->queens))>1) ||
-				((ei->atkkings[defender] & Rank8ByColorBB[defender]) &&
-				 dDist<=2)) {
-			int eDist = DISTANCE(p->kpos[attacker],pSq);
-			*score /= 5;
-			if (eDist <3) *draw = DRAWISH+5;
-			else {
+			((ei->atkkings[defender] & Rank8ByColorBB[defender]) &&
+			dDist<=2)) {
+				int eDist = DISTANCE(p->kpos[attacker],pSq);
+				*score /= 5;
+				if (eDist <3) *draw = DRAWISH+5;
+				else {
 
-				*draw = SUPER_DRAWISH-1+eDist;
-			}
-			if (showEval) Print(3, "qvPdraw?");
+					*draw = SUPER_DRAWISH-1+eDist;
+				}
+				if (showEval) Print(3, "qvPdraw?");
 		}
 	}
 }
@@ -572,11 +572,11 @@ void DrawnQvREnding(int attacker,const position_t *p, eval_info_t *ei,int *score
 		}
 		// we also need to detect a fortress with the pawn on the 2nd
 		else if (qDist == 6 && (ei->atkpawns[defender] & p->rooks)
-				 && (0 == (p->pawns & rRank))
-				 && DISTANCE(pSq,p->kpos[defender])==1 &&
-				 IN_FRONT(SQRANK(p->kpos[attacker]), SQRANK(pSq),defender)) {
-			*draw = SUPER_DRAWISH;
-			*score /= 4;
+			&& (0 == (p->pawns & rRank))
+			&& DISTANCE(pSq,p->kpos[defender])==1 &&
+			IN_FRONT(SQRANK(p->kpos[attacker]), SQRANK(pSq),defender)) {
+				*draw = SUPER_DRAWISH;
+				*score /= 4;
 		}
 	}
 }
@@ -586,48 +586,48 @@ void evalEndgame(int attacker,const position_t *pos, eval_info_t *ei,int *score,
 	endIndex = ei->endFlags[attacker];
 
 	switch (endIndex) {
-		case 1: // pawn endgames
-			SinglePawnEnding(attacker, pos, ei, score, draw, pos->side);
-			DrawnRookPawn(attacker, pos, ei, score, draw, pos->side);
-			break;
-		case 2: // rook endings
-			RookEnding(attacker, pos, ei, score, draw);
-			break;
-		case 3: // bishop endings
-			BishopEnding(attacker, pos, ei, score,draw);
-			DrawnRookPawn(attacker, pos, ei, score, draw, pos->side);
-			break;
-		case 4: // rook versys pawns endings
-			RookvPawnsEnding(attacker, pos, ei, score, draw, pos->side);
-			break;
-		case 5: // knight + pawn
-			DrawnNP(attacker, pos, ei, score,draw);
-			break;
-		case 6: // Q vs. Rook + Pawn(s)
-			DrawnQvREnding(attacker, pos, ei, score, draw, pos->side);
-			break;
-		case 7: // mate with knight and bishop
-			KnightBishopMate(attacker, pos, score, draw);
-			break;
-		case 8:
-			RookBishopEnding(attacker, pos, ei, score,draw);
-			break;
-		case 9:
-			DrawnRookPawn(attacker, pos, ei, score, draw, pos->side);
-			break;
-		case 10:
-			DrawnRookPawn(attacker, pos, ei, score, draw, pos->side);
-			PawnEnding(attacker, pos, ei, score, draw, pos->side);
-			break;
-		case 11:
-			RookvKnight(attacker, pos, ei, score, draw, pos->side);
-			break;
-		case 12:
-			QueenvPawn(attacker, pos, ei, score,draw);
-			break;
-		case 13:
-			MateNoPawn(attacker,pos,score,draw);
-			break;
+	case 1: // pawn endgames
+		SinglePawnEnding(attacker, pos, ei, score, draw, pos->side);
+		DrawnRookPawn(attacker, pos, ei, score, draw, pos->side);
+		break;
+	case 2: // rook endings
+		RookEnding(attacker, pos, ei, score, draw);
+		break;
+	case 3: // bishop endings
+		BishopEnding(attacker, pos, ei, score,draw);
+		DrawnRookPawn(attacker, pos, ei, score, draw, pos->side);
+		break;
+	case 4: // rook versys pawns endings
+		RookvPawnsEnding(attacker, pos, ei, score, draw, pos->side);
+		break;
+	case 5: // knight + pawn
+		DrawnNP(attacker, pos, ei, score,draw);
+		break;
+	case 6: // Q vs. Rook + Pawn(s)
+		DrawnQvREnding(attacker, pos, ei, score, draw, pos->side);
+		break;
+	case 7: // mate with knight and bishop
+		KnightBishopMate(attacker, pos, score, draw);
+		break;
+	case 8:
+		RookBishopEnding(attacker, pos, ei, score,draw);
+		break;
+	case 9:
+		DrawnRookPawn(attacker, pos, ei, score, draw, pos->side);
+		break;
+	case 10:
+		DrawnRookPawn(attacker, pos, ei, score, draw, pos->side);
+		PawnEnding(attacker, pos, ei, score, draw, pos->side);
+		break;
+	case 11:
+		RookvKnight(attacker, pos, ei, score, draw, pos->side);
+		break;
+	case 12:
+		QueenvPawn(attacker, pos, ei, score,draw);
+		break;
+	case 13:
+		MateNoPawn(attacker,pos,score,draw);
+		break;
 	}
 }
 
