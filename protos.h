@@ -39,27 +39,6 @@ extern uint64 shiftLeft(uint64 b, uint32 i);
 extern uint64 shiftRight(uint64 b, uint32 i);
 
 /* attacks.c */
-extern int key000(uint64 b, int f);
-extern int key090(uint64 b, int f);
-extern int keyDiag(uint64 _b);
-extern int key045(uint64 b, int f);
-extern int key135(uint64 b, int f);
-extern uint64 getLowestBit(uint64 bb);
-extern uint64 _occ_free_board(int bc, int del, uint64 free);
-extern void _init_rays(uint64* rays, uint64 (*rayFunc) (int, uint64, int), int (*key)(uint64, int));
-extern void setBit(int f, uint64 *b);
-extern uint64 _rook0(int f, uint64 board, int t);
-extern uint64 _rook90(int f, uint64 board, int t);
-extern uint64 _bishop45(int f, uint64 board, int t);
-extern uint64 _bishop135(int f, uint64 board, int t);
-extern uint64 rankAttacks(uint64 occ, int sq);
-extern uint64 fileAttacks(uint64 occ, int sq);
-extern uint64 diagonalAttacks(uint64 occ, int sq);
-extern uint64 antiDiagAttacks(uint64 occ, int sq);
-extern uint64 rankAttacksX(uint64 occ, int sq);
-extern uint64 fileAttacksX(uint64 occ, int sq);
-extern uint64 diagonalAttacksX(uint64 occ, int sq);
-extern uint64 antiDiagAttacksX(uint64 occ, int sq);
 extern uint64 bishopAttacksBBX(uint32 from, uint64 occ);
 extern uint64 rookAttacksBBX(uint32 from, uint64 occ);
 extern uint64 bishopAttacksBB(uint32 from, uint64 occ);

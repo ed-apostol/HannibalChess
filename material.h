@@ -341,20 +341,20 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
 void initMaterial(void){
 
 	int win, openscore, midscore1, midscore2, endscore, windex, bindex,phase;
-    int bp, wp, bn, wn, bb, wb, br, wr, bq, wq;
+	int bp, wp, bn, wn, bb, wb, br, wr, bq, wq;
 	int wdraw,bdraw;
 
 
-    for (wq = 0; wq <= 1; wq++)
-    for (bq = 0; bq <= 1; bq++)
-    for (wr = 0; wr <= 2; wr++)
-    for (br = 0; br <= 2; br++)
-    for (wb = 0; wb <= 2; wb++)
-    for (bb = 0; bb <= 2; bb++)
-    for (wn = 0; wn <= 2; wn++)
-    for (bn = 0; bn <= 2; bn++)
-    for (wp = 0; wp <= 8; wp++)
-    for (bp = 0; bp <= 8; bp++){
+	for (wq = 0; wq <= 1; wq++)
+	for (bq = 0; bq <= 1; bq++)
+	for (wr = 0; wr <= 2; wr++)
+	for (br = 0; br <= 2; br++)
+	for (wb = 0; wb <= 2; wb++)
+	for (bb = 0; bb <= 2; bb++)
+	for (wn = 0; wn <= 2; wn++)
+	for (bn = 0; bn <= 2; bn++)
+	for (wp = 0; wp <= 8; wp++)
+	for (bp = 0; bp <= 8; bp++){
 		int wminors = wn + wb;
 		int bminors = bn + bb;
 		int wnonQ = wminors + wr;
@@ -363,71 +363,71 @@ void initMaterial(void){
 		mflag_t wflag = 0;
 		mflag_t bflag = 0; 
 
-        windex = wp * MatSummValue[PAWN] +  wn * MatSummValue[KNIGHT] +  wb * MatSummValue[BISHOP] +
-                wr * MatSummValue[ROOK] + wq * MatSummValue[QUEEN];
-        bindex = bp * MatSummValue[PAWN] + bn * MatSummValue[KNIGHT] + bb * MatSummValue[BISHOP] +
-                br * MatSummValue[ROOK] + bq * MatSummValue[QUEEN];
+		windex = wp * MatSummValue[PAWN] +  wn * MatSummValue[KNIGHT] +  wb * MatSummValue[BISHOP] +
+				wr * MatSummValue[ROOK] + wq * MatSummValue[QUEEN];
+		bindex = bp * MatSummValue[PAWN] + bn * MatSummValue[KNIGHT] + bb * MatSummValue[BISHOP] +
+				br * MatSummValue[ROOK] + bq * MatSummValue[QUEEN];
 		if (wp*MLP + wn*MLN+wb*MLN+wr*MLR+wq*MLQ > 
 			bp + bn*MLN+bb*MLN+br*MLR+bq*MLQ ||
 			(wp + wn*MLN+wb*MLN+wr*MLR+wq*MLQ==
 			wp + wn*MLN+wb*MLN+wr*MLR+wq*MLQ && windex >= bindex)) {
 		phase = SetPhase(wn+wb+bn+bb,wr+br,wq+bq);
-        openscore =
-            ((wq - bq) * QueenValueOpen)
-            + ((wr - br) * RookValueOpen)
-            + ((wb - bb) * BishopValueOpen)
-            + ((wn - bn) * KnightValueOpen)
-            + ((wp - bp) * PawnValueOpen)
-            + ((wb >= 2) * BishopPairBonusOpen)
-            - ((bb >= 2) * BishopPairBonusOpen)
-            + ((wp - 5) * wn * 0) - ((bp - 5) * bn * 0)
-            - ((wp - 5) * wr * 5) + ((bp - 5) * br * 5)
+		openscore =
+			((wq - bq) * QueenValueOpen)
+			+ ((wr - br) * RookValueOpen)
+			+ ((wb - bb) * BishopValueOpen)
+			+ ((wn - bn) * KnightValueOpen)
+			+ ((wp - bp) * PawnValueOpen)
+			+ ((wb >= 2) * BishopPairBonusOpen)
+			- ((bb >= 2) * BishopPairBonusOpen)
+			+ ((wp - 5) * wn * 0) - ((bp - 5) * bn * 0)
+			- ((wp - 5) * wr * 5) + ((bp - 5) * br * 5)
 //            - ((wr==2) * (16-3)) + ((br==2) * (16-3))
 //            - ((wq+wr>2) * 8) + ((bq+br>2) * 8)
 			;
 
-        midscore1 =
-            ((wq - bq) * QueenValueMid1)
-            + ((wr - br) * RookValueMid1)
-            + ((wb - bb) * BishopValueMid1)
-            + ((wn - bn) * KnightValueMid1)
-            + ((wp - bp) * PawnValueMid1)
-            + ((wb >= 2) * BishopPairBonusMid1)
-            - ((bb >= 2) * BishopPairBonusMid1)
-            + ((wp - 5) * wn * 2) - ((bp - 5) * bn * 2)
-            - ((wp - 5) * wr * 4) + ((bp - 5) * br * 4)
+		midscore1 =
+			((wq - bq) * QueenValueMid1)
+			+ ((wr - br) * RookValueMid1)
+			+ ((wb - bb) * BishopValueMid1)
+			+ ((wn - bn) * KnightValueMid1)
+			+ ((wp - bp) * PawnValueMid1)
+			+ ((wb >= 2) * BishopPairBonusMid1)
+			- ((bb >= 2) * BishopPairBonusMid1)
+			+ ((wp - 5) * wn * 2) - ((bp - 5) * bn * 2)
+			- ((wp - 5) * wr * 4) + ((bp - 5) * br * 4)
 //            - ((wr==2) * (20-6)) + ((br==2) * (20-6))
 //            - ((wq+wr>2) * 10) + ((bq+br>2) * 10)
 			;
 
-        midscore2 =
-            ((wq - bq) * QueenValueMid2)
-            + ((wr - br) * RookValueMid2)
-            + ((wb - bb) * BishopValueMid2)
-            + ((wn - bn) * KnightValueMid2)
-            + ((wp - bp) * (PawnValueMid2
+		midscore2 =
+			((wq - bq) * QueenValueMid2)
+			+ ((wr - br) * RookValueMid2)
+			+ ((wb - bb) * BishopValueMid2)
+			+ ((wn - bn) * KnightValueMid2)
+			+ ((wp - bp) * (PawnValueMid2
 
 			)) + ((wb >= 2) * BishopPairBonusMid2)
-            - ((bb >= 2) * BishopPairBonusMid2)
-            + ((wp - 5) * wn * 4) - ((bp - 5) * bn * 4)
-            - ((wp - 5) * wr * 2) + ((bp - 5) * br * 2)
-            - ((wr==2) * (32-10)) + ((br==2) * (32-10))
-            - ((wq+wr>2) * 32) + ((bq+br>2) * 32)
+			- ((bb >= 2) * BishopPairBonusMid2)
+			+ ((wp - 5) * wn * 4) - ((bp - 5) * bn * 4)
+			- ((wp - 5) * wr * 2) + ((bp - 5) * br * 2)
+			- ((wr==2) * (32-10)) + ((br==2) * (32-10))
+			- ((wq+wr>2) * 32) + ((bq+br>2) * 32)
 ;
 
-        endscore =
-            ((wq - bq) * QueenValueEnd)
-            + ((wr - br) * RookValueEnd)
-            + ((wb - bb) * BishopValueEnd)
-            + ((wn - bn) * KnightValueEnd)
-            + ((wp - bp) * (PawnValueEnd
+		endscore =
+			((wq - bq) * QueenValueEnd)
+			+ ((wr - br) * RookValueEnd)
+			+ ((wb - bb) * BishopValueEnd)
+			+ ((wn - bn) * KnightValueEnd)
+			+ ((wp - bp) * (PawnValueEnd
 
-            )) + ((wb >= 2) * BishopPairBonusEnd)
-            - ((bb >= 2) * BishopPairBonusEnd)
-            + ((wp - 5) * wn * 5) - ((bp - 5) * bn * 5)
-            - ((wp - 5) * wr * 0) + ((bp - 5) * br * 0)
-            - ((wr==2) * (48-12)) + ((br==2) * (48-12))
-            - ((wq+wr>2) * 48) + ((bq+br>2) * 48)
+			)) + ((wb >= 2) * BishopPairBonusEnd)
+			- ((bb >= 2) * BishopPairBonusEnd)
+			+ ((wp - 5) * wn * 5) - ((bp - 5) * bn * 5)
+			- ((wp - 5) * wr * 0) + ((bp - 5) * br * 0)
+			- ((wr==2) * (48-12)) + ((br==2) * (48-12))
+			- ((wq+wr>2) * 48) + ((bq+br>2) * 48)
 			;
 
 		// SAM ADJUSTMENTS
@@ -519,19 +519,19 @@ void initMaterial(void){
 			
 		// END OF SAM ADJUSTMENTS TO GENERAL RULES
 
-        if (phase < 8) {
-            endscore *= 8 - phase;
-            midscore2 *= phase;
-            win = (midscore2 + endscore) / 8;
-        } else if (phase < 24) {
-            midscore2 *= 24 - phase;
-            midscore1 *= phase - 8;
-            win = (midscore1 + midscore2) / 16;
-        } else {
-            midscore1 *= 32 - phase;
-            openscore *= phase - 24;
-            win = (openscore + midscore1) / 8;
-        }
+		if (phase < 8) {
+			endscore *= 8 - phase;
+			midscore2 *= phase;
+			win = (midscore2 + endscore) / 8;
+		} else if (phase < 24) {
+			midscore2 *= 24 - phase;
+			midscore1 *= phase - 8;
+			win = (midscore1 + midscore2) / 16;
+		} else {
+			midscore1 *= 32 - phase;
+			openscore *= phase - 24;
+			win = (openscore + midscore1) / 8;
+		}
 		// now adjust draw
 		
 		wdraw = 0;
@@ -564,14 +564,14 @@ void initMaterial(void){
 		if (bdraw == MAX_DRAW && wdraw < MAX_DRAW && win < 10) win=10;
 
 		MaterialTable[windex][bindex].value = win; //SCALE CHANGES
-        MaterialTable[windex][bindex].phase = phase;
-        MaterialTable[windex][bindex].draw[WHITE] = wdraw;
-       MaterialTable[windex][bindex].draw[BLACK] = bdraw;
+		MaterialTable[windex][bindex].phase = phase;
+		MaterialTable[windex][bindex].draw[WHITE] = wdraw;
+	   MaterialTable[windex][bindex].draw[BLACK] = bdraw;
 		// reverse things to make sure everything is nice and symmetrical
 		MaterialTable[bindex][windex].value = -win;
-        MaterialTable[bindex][windex].phase = phase;
-        MaterialTable[bindex][windex].draw[WHITE] = bdraw;
-        MaterialTable[bindex][windex].draw[BLACK] = wdraw;
+		MaterialTable[bindex][windex].phase = phase;
+		MaterialTable[bindex][windex].draw[WHITE] = bdraw;
+		MaterialTable[bindex][windex].draw[BLACK] = wdraw;
 
 
 

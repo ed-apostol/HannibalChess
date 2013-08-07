@@ -9,39 +9,39 @@
 
 void quit(void) {
 //    Print(2, "info string Hannibal is quitting.\n");
-    fclose(logfile);
-    fclose(errfile);
-    fclose(dumpfile);
+	fclose(logfile);
+	fclose(errfile);
+	fclose(dumpfile);
 
-    free(TransTable(0).table);
-    free(SearchInfo(0).pt.table);
-    free(SearchInfo(0).et.table);
+	free(TransTable(0).table);
+	free(SearchInfo(0).pt.table);
+	free(SearchInfo(0).et.table);
 #ifndef TCEC
-    closeBook(&GpolyglotBook);
+	closeBook(&GpolyglotBook);
    closeLearn(&Glearn);
-    closeBook(&GhannibalBook);
+	closeBook(&GhannibalBook);
 #endif
-    stopThreads();
+	stopThreads();
 	exit(EXIT_SUCCESS);
 }
 
 int main(void) {
-    position_t pos;
-    uci_option_t uci_option;
-    char command[8192];
-    char* ptr;
+	position_t pos;
+	uci_option_t uci_option;
+	char command[8192];
+	char* ptr;
 
-    setbuf(stdout, NULL);
-    setbuf(stdin, NULL);
-    setvbuf(stdout, NULL, _IONBF, 0);
-    setvbuf(stdin, NULL, _IONBF, 0);
+	setbuf(stdout, NULL);
+	setbuf(stdin, NULL);
+	setvbuf(stdout, NULL, _IONBF, 0);
+	setvbuf(stdin, NULL, _IONBF, 0);
 
-    logfile = fopen("logfile.txt", "w");
-    errfile = fopen(ERROR_FILE, "a+");
-    dumpfile = fopen("dumpfile.txt", "a+");
+	logfile = fopen("logfile.txt", "w");
+	errfile = fopen(ERROR_FILE, "a+");
+	dumpfile = fopen("dumpfile.txt", "a+");
 
-    Print(3, "Hannibal %s by Sam Hamilton & Edsel Apostol\n", VERSION);
-    Print(3, "Use Universal Chess Interface(UCI) commands\n");
+	Print(3, "Hannibal %s by Sam Hamilton & Edsel Apostol\n", VERSION);
+	Print(3, "Use Universal Chess Interface(UCI) commands\n");
 
 	//Print(1, "split_point_t:%.2fkB\n", (float)sizeof(split_point_t)/(float)1024);
 	//Print(1, "position_t:%.2fkB\n", (float)sizeof(position_t)/(float)1024);
@@ -49,8 +49,8 @@ int main(void) {
 	for (int i=0; i < MaxNumOfThreads;i++) {	//the default is every thread is a normal search
 		SearchInfoMap[i] = &global_search_info;
 	}
-    GhannibalBook.bookFile = NULL;
-    GpolyglotBook.bookFile = NULL;
+	GhannibalBook.bookFile = NULL;
+	GpolyglotBook.bookFile = NULL;
 	Glearn.learnFile = NULL;
 	initBook(DEFAULT_POLYGLOT_BOOK, &GpolyglotBook, POLYGLOT_BOOK);
 	initBook(DEFAULT_HANNIBAL_BOOK, &GhannibalBook, PUCK_BOOK);
@@ -58,7 +58,7 @@ int main(void) {
 	SearchInfo(0).outOfBook = 0;
 #endif
 
-    Guci_options = &uci_option;
+	Guci_options = &uci_option;
 
 	TransTable(0).table = NULL;
 	initTrans(INIT_HASH,0);
@@ -69,16 +69,16 @@ int main(void) {
 
 
 
-    initOption(&uci_option); // this should be initialized first
-    initArr();
-    initPST(Guci_options);
+	initOption(&uci_option); // this should be initialized first
+	initArr();
+	initPST(Guci_options);
 	InitTrapped();
 
 	initSmpVars();
 	initThreads();
 
 
-    initMaterial();
+	initMaterial();
 	InitMateBoost();
 
 
@@ -87,50 +87,50 @@ int main(void) {
 	MeasureSpeed(&pos);
 #else
 	setPosition(&pos,STARTPOS);
-    needReplyReady = FALSE;
-    while (TRUE) {
+	needReplyReady = FALSE;
+	while (TRUE) {
 		if (needReplyReady) {
 			Print(3, "readyok\n");
 			needReplyReady = FALSE;
 		}
-        if (fgets(command, 8192, stdin) == NULL)
-            strcpy(command, "quit\n");
+		if (fgets(command, 8192, stdin) == NULL)
+			strcpy(command, "quit\n");
 
 		ptr = strchr(command, '\n');
 		if (ptr != NULL) *ptr = '\0';
 
 		Print(2, "Command: %s\n", command);
 
-        if (!memcmp(command, "ucinewgame", 10)) {
-            origScore = 0;
-            transClear(0);
+		if (!memcmp(command, "ucinewgame", 10)) {
+			origScore = 0;
+			transClear(0);
 #ifndef TCEC
 			SearchInfo(0).outOfBook = 0;
 			movesSoFar.length = 0;
 #endif
 			pawnTableClear(&SearchInfo(0).pt);
 			evalTableClear(&SearchInfo(0).et);
-        } else if (!memcmp(command, "uci", 3)) {
-            uciStart();
-        } else if (!memcmp(command, "debug", 5)) {
-            /* dummy */
-        } else if (!memcmp(command, "isready", 7)) {
-            Print(3, "readyok\n");
-        } else if (!memcmp(command, "position", 8)) {
-            uciSetPosition(&pos, command + 9);
-        } else if (!memcmp(command, "go", 2)) {
-            uciGo(&pos, command + 3);
-        } else if (!memcmp(command, "setoption", 9)) {
-            uciSetOption(command + 10);
-        } else if (!memcmp(command, "testloop", 8)) {
-            #ifdef DEBUG
-            nonUCI(&pos);
-            #endif
-        } else if (!memcmp(command, "stop", 4)) {
-            /* no op */
-        } else if (!memcmp(command, "quit", 4)) {
-            break;
-        }
+		} else if (!memcmp(command, "uci", 3)) {
+			uciStart();
+		} else if (!memcmp(command, "debug", 5)) {
+			/* dummy */
+		} else if (!memcmp(command, "isready", 7)) {
+			Print(3, "readyok\n");
+		} else if (!memcmp(command, "position", 8)) {
+			uciSetPosition(&pos, command + 9);
+		} else if (!memcmp(command, "go", 2)) {
+			uciGo(&pos, command + 3);
+		} else if (!memcmp(command, "setoption", 9)) {
+			uciSetOption(command + 10);
+		} else if (!memcmp(command, "testloop", 8)) {
+			#ifdef DEBUG
+			nonUCI(&pos);
+			#endif
+		} else if (!memcmp(command, "stop", 4)) {
+			/* no op */
+		} else if (!memcmp(command, "quit", 4)) {
+			break;
+		}
 #ifdef OPTIMIZE
 		else if (!memcmp(command, "optimize1",9)) optimize(&pos, 1);
 		else if (!memcmp(command, "optimize2",9)) optimize(&pos, 2);
@@ -158,7 +158,7 @@ int main(void) {
 		}
 #endif
 		else Print(3, "info string Unknown UCI command.\n");
-    }
+	}
 #endif
-    quit();
+	quit();
 }

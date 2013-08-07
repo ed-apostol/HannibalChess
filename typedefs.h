@@ -11,11 +11,11 @@ using namespace std;
 /* some basic definitions */
 #ifndef INLINE
    #ifdef _MSC_VER
-      #define INLINE __forceinline
+	  #define INLINE __forceinline
    #elif defined(__GNUC__)
-      #define INLINE __inline__ __attribute__((always_inline))
+	  #define INLINE __inline__ __attribute__((always_inline))
    #else
-      #define INLINE inline
+	  #define INLINE inline
    #endif
 #endif
 
@@ -49,64 +49,64 @@ typedef uint32 basic_move_t;
 
 typedef struct
 {
-    basic_move_t moves[MAXPLY+1];
-    int length;
+	basic_move_t moves[MAXPLY+1];
+	int length;
 } continuation_t;
 
 ///* the move structure */
 typedef struct move_t{
-    basic_move_t m;
-    int32 s;
+	basic_move_t m;
+	int32 s;
 }move_t;
 
 /* the structure used in generating moves */
 typedef struct _sort_t{
-    volatile uint32 phase;
-    basic_move_t transmove;
-    basic_move_t killer1;
-    basic_move_t killer2;
-    int32 scout;
-    int32 ply;
-    int32 depth;
-    int32 side;
-    volatile int32 pos;
-    volatile int32 size;
-    volatile int32 startBad;
-    uint64 pinned;
-    move_t list[MAXMOVES];
+	volatile uint32 phase;
+	basic_move_t transmove;
+	basic_move_t killer1;
+	basic_move_t killer2;
+	int32 scout;
+	int32 ply;
+	int32 depth;
+	int32 side;
+	volatile int32 pos;
+	volatile int32 size;
+	volatile int32 startBad;
+	uint64 pinned;
+	move_t list[MAXMOVES];
 }movelist_t;
 
 /* the book entry type *//*
 typedef struct book_entry_t{
-    uint64 key;
-    uint16 move;
-    uint16 weight;
-    uint32 learn;
+	uint64 key;
+	uint16 move;
+	uint16 weight;
+	uint32 learn;
 }book_entry_t;
 */
 /* the book type *//*
 typedef struct book_t{
-    FILE *bookfile;
-    int64 size;
+	FILE *bookfile;
+	int64 size;
 }book_t;
 */
 
 struct learn_t {
-    FILE *learnFile;// = NULL; //TODO make sure this is initialized correctly 
+	FILE *learnFile;// = NULL; //TODO make sure this is initialized correctly 
 	string name;
 //    char name[MAX_FILENAME_LENGTH];
 };
 struct book_t {
-    BookType type;
-    FILE *bookFile;// = NULL; TODO make sure this is initialized correctly 
-    int64 size;
+	BookType type;
+	FILE *bookFile;// = NULL; TODO make sure this is initialized correctly 
+	int64 size;
 	string name;
 //    char name[MAX_FILENAME_LENGTH];
  };
 /* the pawn hash table entry type */
 typedef struct pawn_entry_t{
 	uint32 hashlock;
-    uint64 passedbits;
+	uint64 passedbits;
 	int16 opn;
 	int16 end;
 	int8 shelter[2];
@@ -117,13 +117,13 @@ typedef struct pawn_entry_t{
 
 /* the pawn hash table type */
 typedef struct pawntable_t{
-    pawn_entry_t *table;
-    uint64 size;
-    uint64 mask;
+	pawn_entry_t *table;
+	uint64 size;
+	uint64 mask;
 }pawntable_t;
 
 typedef struct eval_entry_t{
-    uint32 hashlock;
+	uint32 hashlock;
 	int16 value;
 	int8 optimism;
 	int8 pessimism;
@@ -131,39 +131,39 @@ typedef struct eval_entry_t{
 
 typedef struct evaltable_t{
 	eval_entry_t *table;
-    uint64 size;
+	uint64 size;
 	uint64 mask;
 } evaltable_t;
 
 /* the trans table entry type */
 typedef struct trans_entry_t{
-    uint32 hashlock;
-    uint32 data;
-    int16 maxvalue;
-    int16 minvalue;
-    uint8 depth;
-    uint8 movedepth;
-    uint8 maxdepth;
-    uint8 mindepth;
+	uint32 hashlock;
+	uint32 data;
+	int16 maxvalue;
+	int16 minvalue;
+	uint8 depth;
+	uint8 movedepth;
+	uint8 maxdepth;
+	uint8 mindepth;
 }trans_entry_t;
 
 /* the trans table type */
 typedef struct _transtable_t{
-    trans_entry_t *table;
-    uint64 size;
-    uint64 mask;
-    int32 date;
-    uint32 used;
-    int32 age[DATESIZE];
+	trans_entry_t *table;
+	uint64 size;
+	uint64 mask;
+	int32 date;
+	uint32 used;
+	int32 age[DATESIZE];
 }transtable_t;
 
 typedef struct _uci_option_t{
 	int time_buffer;
-    int contempt;
-    int threads;
+	int contempt;
+	int threads;
 #ifndef TCEC
-    int try_book;
-    int book_limit;
+	int try_book;
+	int book_limit;
 	int learnThreads;
 	int usehannibalbook;
 	int learnTime;
@@ -176,120 +176,120 @@ typedef struct _uci_option_t{
 
 /* the eval info structure */
 typedef struct _eval_info_t{
-    uint64 atkall[2];
-    uint64 atkpawns[2];
-    uint64 atkknights[2];
-    uint64 atkbishops[2];
-    uint64 kingatkbishops[2];
-    uint64 atkrooks[2];
-    uint64 kingatkrooks[2];
-    uint64 atkqueens[2];
-    uint64 atkkings[2];
-    uint64 kingzone[2];
-    uint64 kingadj[2];
-    uint64 potentialPawnAttack[2];
-    uint64 pawns[2];
+	uint64 atkall[2];
+	uint64 atkpawns[2];
+	uint64 atkknights[2];
+	uint64 atkbishops[2];
+	uint64 kingatkbishops[2];
+	uint64 atkrooks[2];
+	uint64 kingatkrooks[2];
+	uint64 atkqueens[2];
+	uint64 atkkings[2];
+	uint64 kingzone[2];
+	uint64 kingadj[2];
+	uint64 potentialPawnAttack[2];
+	uint64 pawns[2];
 	int mid_score[2];
 	int end_score[2];
 	int draw[2];
-    int atkcntpcs[2];
-    int phase;
+	int atkcntpcs[2];
+	int phase;
 	int MLindex[2];
 	int flags;
 	int queening;
 	uint8 endFlags[2];
-    pawn_entry_t *pawn_entry;
+	pawn_entry_t *pawn_entry;
 }eval_info_t;
 
 /* the undo structure */
 typedef struct _pos_store_t{
-    uint32 lastmove;
-    int castle;
-    int fifty;
-    int epsq;
-    int open[2];
-    int end[2];
-    int mat_summ[2];
-    uint64 phash;
+	uint32 lastmove;
+	int castle;
+	int fifty;
+	int epsq;
+	int open[2];
+	int end[2];
+	int mat_summ[2];
+	uint64 phash;
 }pos_store_t;
 
 /* the position structure */
 typedef struct _position_t{
-    uint64 pawns;
-    uint64 knights;
-    uint64 bishops;
-    uint64 rooks;
-    uint64 queens;
-    uint64 kings;
-    uint64 color[2];
-    uint64 occupied;
-    int pieces[64];
-    int kpos[2];
+	uint64 pawns;
+	uint64 knights;
+	uint64 bishops;
+	uint64 rooks;
+	uint64 queens;
+	uint64 kings;
+	uint64 color[2];
+	uint64 occupied;
+	int pieces[64];
+	int kpos[2];
 	pos_store_t posStore;
 
-    int side;
-    int ply;
-    int sp;
-    uint64 hash;
-    uint64 stack[MAX_HASH_STORE];
+	int side;
+	int ply;
+	int sp;
+	uint64 hash;
+	uint64 stack[MAX_HASH_STORE];
 }position_t;
 
 typedef uint8 mflag_t;
 
 /* the material info structure */
 typedef struct _material_info_t{
-    int16 value;
-    uint8 phase;
-    uint8 draw[2];
+	int16 value;
+	uint8 phase;
+	uint8 draw[2];
 	mflag_t flags[2];
 }material_info_t;
 
 /* the search data structure */
 typedef struct _search_info_t{
-    int thinking_status;
+	int thinking_status;
 #ifndef TCEC
 	int outOfBook;
 #endif
-    int depth_is_limited;
-    int depth_limit;
-    int moves_is_limited;
-    int time_is_limited;
+	int depth_is_limited;
+	int depth_limit;
+	int moves_is_limited;
+	int time_is_limited;
 
-    int64 time_limit_max;
-    int64 time_limit_abs;
-    int node_is_limited;
-    int64 node_limit;
+	int64 time_limit_max;
+	int64 time_limit_abs;
+	int node_is_limited;
+	int64 node_limit;
 
-    int64 start_time;
-    int64 last_time;
-    int64 alloc_time;
+	int64 start_time;
+	int64 last_time;
+	int64 alloc_time;
 
-    int last_last_value;
-    int last_value;
-    int best_value;
+	int last_last_value;
+	int last_value;
+	int best_value;
 
-    int mate_found;
-    int currmovenumber;
-    int change;
-    int research;
-    int iteration;
+	int mate_found;
+	int currmovenumber;
+	int change;
+	int research;
+	int iteration;
 
 	int legalmoves;
-    basic_move_t bestmove;
-    basic_move_t pondermove;
+	basic_move_t bestmove;
+	basic_move_t pondermove;
 
 	basic_move_t moves[MAXMOVES];
 	bool mvlist_initialized;
 	movelist_t rootmvlist;
-    continuation_t rootPV;
+	continuation_t rootPV;
 #ifdef W_EASY
 	int easy;
 	int maxEasy;
 #endif
-    int32 evalgains[1024];
-    int32 history[1024];
-    evaltable_t et;
-    pawntable_t pt;
+	int32 evalgains[1024];
+	int32 history[1024];
+	evaltable_t et;
+	pawntable_t pt;
 	transtable_t tt;
 }search_info_t;
 
@@ -309,8 +309,8 @@ typedef struct _split_point_t{
 	volatile basic_move_t bestmove;
 	volatile int master;
 	volatile int slaves[MaxNumOfThreads];
-    volatile int cpus;
-    mutex_t lock[1];
+	volatile int cpus;
+	mutex_t lock[1];
 } split_point_t;
 
 typedef struct {
@@ -321,22 +321,22 @@ typedef struct {
 	volatile bool work_assigned;
 	volatile bool cutoff;
 	volatile bool exit_flag;
-    HANDLE idle_event;
-    uint64 nodes;
-    uint64 nodes_since_poll;
-    uint64 nodes_between_polls;
-    uint64 started; // DEBUG
+	HANDLE idle_event;
+	uint64 nodes;
+	uint64 nodes_since_poll;
+	uint64 nodes_between_polls;
+	uint64 started; // DEBUG
 	uint64 ended; // DEBUG
 	int64 numsplits; // DEBUG
 //    evaltable_t et;
 //    pawntable_t pt;
 	int num_sp;
-    int evalvalue[MAXPLY];
-    basic_move_t killer1[MAXPLY]; //consider moving
-    basic_move_t killer2[MAXPLY]; //consider moving 
+	int evalvalue[MAXPLY];
+	basic_move_t killer1[MAXPLY]; //consider moving
+	basic_move_t killer2[MAXPLY]; //consider moving 
 //    int32 evalgains[1024];
 //    int32 history[1024];
-    split_point_t sptable[MaxNumSplitPointsPerThread];
+	split_point_t sptable[MaxNumSplitPointsPerThread];
 #ifdef SELF_TUNE2
 	bool playingGame;
 #endif
@@ -347,34 +347,34 @@ enum directions {SW,W,NW,N,NE,E,SE,S,NO_DIR };//{-9, -1, 7, 8, 9, 1, -7, -8};
 
 /* the squares */
 enum squarenames {
-    a1 = 0, b1, c1, d1, e1, f1, g1, h1,
-    a2, b2, c2, d2, e2, f2, g2, h2,
-    a3, b3, c3, d3, e3, f3, g3, h3,
-    a4, b4, c4, d4, e4, f4, g4, h4,
-    a5, b5, c5, d5, e5, f5, g5, h5,
-    a6, b6, c6, d6, e6, f6, g6, h6,
-    a7, b7, c7, d7, e7, f7, g7, h7,
-    a8, b8, c8, d8, e8, f8, g8, h8
+	a1 = 0, b1, c1, d1, e1, f1, g1, h1,
+	a2, b2, c2, d2, e2, f2, g2, h2,
+	a3, b3, c3, d3, e3, f3, g3, h3,
+	a4, b4, c4, d4, e4, f4, g4, h4,
+	a5, b5, c5, d5, e5, f5, g5, h5,
+	a6, b6, c6, d6, e6, f6, g6, h6,
+	a7, b7, c7, d7, e7, f7, g7, h7,
+	a8, b8, c8, d8, e8, f8, g8, h8
 };
 
 /* the phases used for lazy move generation */
 enum movegen_phases {
-    PH_NONE = 0,
+	PH_NONE = 0,
 	PH_ROOT,
-    PH_EVASION,
-    PH_TRANS,
-    PH_ALL_CAPTURES,
-    PH_ALL_CAPTURES_PURE,
-    PH_GOOD_CAPTURES,
-    PH_GOOD_CAPTURES_PURE,
-    PH_BAD_CAPTURES,
-    PH_KILLER_MOVES,
-    PH_QUIET_MOVES,
-    PH_NONTACTICAL_CHECKS,
-    PH_NONTACTICAL_CHECKS_WIN,
-    PH_NONTACTICAL_CHECKS_PURE,
-    PH_GAINING,
-    PH_END
+	PH_EVASION,
+	PH_TRANS,
+	PH_ALL_CAPTURES,
+	PH_ALL_CAPTURES_PURE,
+	PH_GOOD_CAPTURES,
+	PH_GOOD_CAPTURES_PURE,
+	PH_BAD_CAPTURES,
+	PH_KILLER_MOVES,
+	PH_QUIET_MOVES,
+	PH_NONTACTICAL_CHECKS,
+	PH_NONTACTICAL_CHECKS_WIN,
+	PH_NONTACTICAL_CHECKS_PURE,
+	PH_GAINING,
+	PH_END
 };
 
 #ifdef SELF_TUNE

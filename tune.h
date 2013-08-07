@@ -571,7 +571,7 @@ void SetNewGame() {
 	//TODO consider clearing pawn and eval hash
 }
 int PlayOptimizeGame(position_t *pos, int startPos, int time) {
-    pos_store_t undo;
+	pos_store_t undo;
 	int zeros = 0;
 	int wScore;
 	int bScore;
@@ -792,54 +792,54 @@ void SetNewGame() { //this should be changed when we do one thread per personali
 }
 void tuneGo(position_t *pos, int player, int64 nodes) {
 
-    ASSERT(pos != NULL);
-    ASSERT(options != NULL);
+	ASSERT(pos != NULL);
+	ASSERT(options != NULL);
 //	uciGo(pos,"nodes 5000");
 //	return;
-    /* initialization */
-    SearchInfo(player).depth_is_limited = FALSE;
-    SearchInfo(player).depth_limit = MAXPLY;
-    SearchInfo(player).moves_is_limited = FALSE;
-    SearchInfo(player).time_is_limited = FALSE;
-    SearchInfo(player).time_limit_max = 0;
-    SearchInfo(player).time_limit_abs = 0;
-    SearchInfo(player).node_is_limited = TRUE;
-    SearchInfo(player).node_limit = nodes;
-    SearchInfo(player).start_time = SearchInfo(player).last_time = getTime();
-    SearchInfo(player).alloc_time = 0;
-    SearchInfo(player).best_value = -INF;
-    SearchInfo(player).last_value = -INF;
-    SearchInfo(player).last_last_value = -INF;
-    SearchInfo(player).change = 0;
-    SearchInfo(player).research = 0;
-    SearchInfo(player).bestmove = 0;
-    SearchInfo(player).pondermove = 0;
-    SearchInfo(player).mate_found = 0;
+	/* initialization */
+	SearchInfo(player).depth_is_limited = FALSE;
+	SearchInfo(player).depth_limit = MAXPLY;
+	SearchInfo(player).moves_is_limited = FALSE;
+	SearchInfo(player).time_is_limited = FALSE;
+	SearchInfo(player).time_limit_max = 0;
+	SearchInfo(player).time_limit_abs = 0;
+	SearchInfo(player).node_is_limited = TRUE;
+	SearchInfo(player).node_limit = nodes;
+	SearchInfo(player).start_time = SearchInfo(player).last_time = getTime();
+	SearchInfo(player).alloc_time = 0;
+	SearchInfo(player).best_value = -INF;
+	SearchInfo(player).last_value = -INF;
+	SearchInfo(player).last_last_value = -INF;
+	SearchInfo(player).change = 0;
+	SearchInfo(player).research = 0;
+	SearchInfo(player).bestmove = 0;
+	SearchInfo(player).pondermove = 0;
+	SearchInfo(player).mate_found = 0;
 	
-    memset(Threads[player].history, 0, sizeof(Threads[player].history));
-    memset(Threads[player].evalvalue, 0, sizeof(Threads[player].evalvalue));
-    memset(Threads[player].evalgains, 0, sizeof(Threads[player].evalgains));
-    Threads[player].nodes_since_poll = 0;
-    Threads[player].nodes_between_polls = 8192;
-    Threads[player].nodes = 0;
-    memset(Threads[player].killer1, 0, sizeof(Threads[player].killer1));
-    memset(Threads[player].killer2, 0, sizeof(Threads[player].killer2));
+	memset(Threads[player].history, 0, sizeof(Threads[player].history));
+	memset(Threads[player].evalvalue, 0, sizeof(Threads[player].evalvalue));
+	memset(Threads[player].evalgains, 0, sizeof(Threads[player].evalgains));
+	Threads[player].nodes_since_poll = 0;
+	Threads[player].nodes_between_polls = 8192;
+	Threads[player].nodes = 0;
+	memset(Threads[player].killer1, 0, sizeof(Threads[player].killer1));
+	memset(Threads[player].killer2, 0, sizeof(Threads[player].killer2));
 
-    memset(SearchInfo(player).moves, 0, sizeof(SearchInfo(player).moves));
+	memset(SearchInfo(player).moves, 0, sizeof(SearchInfo(player).moves));
 	SearchInfo(player).thinking_status = THINKING;
-    getBestMove(pos, player);
-    if (!SearchInfo(player).bestmove) {
+	getBestMove(pos, player);
+	if (!SearchInfo(player).bestmove) {
 		if (RETURN_MOVE)
-	        Print(3, "info string No legal move found. Start a new game.\n\n");
-        return;
-    } else {
+			Print(3, "info string No legal move found. Start a new game.\n\n");
+		return;
+	} else {
 		if (RETURN_MOVE) {
-	        Print(3, "bestmove %s", move2Str(SearchInfo(player).bestmove));
-		    if (SearchInfo(player).pondermove) Print(3, " ponder %s", move2Str(SearchInfo(player).pondermove));
+			Print(3, "bestmove %s", move2Str(SearchInfo(player).bestmove));
+			if (SearchInfo(player).pondermove) Print(3, " ponder %s", move2Str(SearchInfo(player).pondermove));
 			 Print(3, "\n\n");
 		}
 		origScore = SearchInfo(player).last_value; // just to be safe
-    }
+	}
 }
 double ProbWin(double rating1, double rating2) {
 	double win;
@@ -954,7 +954,7 @@ void RateWin(int winner, int loser) {
 }
 
 int PlayTuneGame(int startPos, int player1, int player2) {
-    pos_store_t undo;
+	pos_store_t undo;
 	int zeros = 0;
 	int wScore = 0;
 	int bScore = 0;
@@ -1334,7 +1334,7 @@ void SetStartingPosition(position_t *pos,int position) {
 	setPosition(pos, FenStartString[position]);
 }
 int PlayGame(position_t *pos, int player1, int player2, int startPos) {
-    pos_store_t undo;
+	pos_store_t undo;
 	int zeros = 0;
 	int wScore;
 	int bScore;
