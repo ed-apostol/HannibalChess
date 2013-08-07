@@ -52,13 +52,13 @@ static int needReplyReady;
 #define MoveGenPhaseRoot (MoveGenPhaseQuiescencePV+4)
 
 static const int MoveGenPhase[] = {
-	PH_NONE, PH_EVASION, PH_END, //MoveGenPhaseEvasion
-	PH_NONE, PH_TRANS, PH_GOOD_CAPTURES, PH_KILLER_MOVES, PH_QUIET_MOVES, PH_BAD_CAPTURES, PH_END, //MoveGenPhaseStandard
-	PH_NONE, PH_TRANS, PH_ALL_CAPTURES, PH_NONTACTICAL_CHECKS_PURE, PH_GAINING, PH_END, //MoveGenPhaseQuiescenceAndChecksPV
-	PH_NONE, PH_TRANS, PH_GOOD_CAPTURES_PURE, PH_END, //MoveGenPhaseQuiescence
-	PH_NONE, PH_TRANS, PH_GOOD_CAPTURES_PURE, PH_NONTACTICAL_CHECKS_WIN, PH_END, //MoveGenPhaseQuiescenceAndChecks
-	PH_NONE, PH_TRANS, PH_GOOD_CAPTURES_PURE, PH_END, //MoveGenPhaseQuiescencePV
-	PH_NONE, PH_ROOT, PH_END, //MoveGenPhaseRoot
+    PH_NONE, PH_EVASION, PH_END, //MoveGenPhaseEvasion
+    PH_NONE, PH_TRANS, PH_GOOD_CAPTURES, PH_KILLER_MOVES, PH_QUIET_MOVES, PH_BAD_CAPTURES, PH_END, //MoveGenPhaseStandard
+    PH_NONE, PH_TRANS, PH_ALL_CAPTURES, PH_NONTACTICAL_CHECKS_PURE, PH_GAINING, PH_END, //MoveGenPhaseQuiescenceAndChecksPV
+    PH_NONE, PH_TRANS, PH_GOOD_CAPTURES_PURE, PH_END, //MoveGenPhaseQuiescence
+    PH_NONE, PH_TRANS, PH_GOOD_CAPTURES_PURE, PH_NONTACTICAL_CHECKS_WIN, PH_END, //MoveGenPhaseQuiescenceAndChecks
+    PH_NONE, PH_TRANS, PH_GOOD_CAPTURES_PURE, PH_END, //MoveGenPhaseQuiescencePV
+    PH_NONE, PH_ROOT, PH_END, //MoveGenPhaseRoot
 };
 
 /* contains the delta of possible piece moves between two squares,

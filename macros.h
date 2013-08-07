@@ -9,7 +9,7 @@
 
 #ifdef DEBUG
 #define ASSERT(a) { if (!(a)) \
-	Print(4, "file \"%s\", line %d, assertion \"" #a "\" failed\n",__FILE__,__LINE__);}
+    Print(4, "file \"%s\", line %d, assertion \"" #a "\" failed\n",__FILE__,__LINE__);}
 #else
 #define ASSERT(a)
 #endif
@@ -40,13 +40,13 @@
 #define RIGHT               1
 
 enum PieceTypes {
-	EMPTY = 0,
-	PAWN,
-	KNIGHT,
-	BISHOP,
-	ROOK,
-	QUEEN,
-	KING,
+    EMPTY = 0,
+    PAWN,
+    KNIGHT,
+    BISHOP,
+    ROOK,
+    QUEEN,
+    KING,
 };
 
 #define CASTLE              14
@@ -97,10 +97,10 @@ enum PieceTypes {
 #define ENDGAME 1
 
 enum ThinkingStatus {
-	STOPPED = 0,
-	THINKING,
-	PONDERING,
-	ANALYSING
+    STOPPED = 0,
+    THINKING,
+    PONDERING,
+    ANALYSING
 };
 
 #define DATESIZE            16
