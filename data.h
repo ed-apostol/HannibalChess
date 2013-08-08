@@ -38,7 +38,7 @@ static uint64 DirBitmap[NO_DIR+1][64];
 /* the 64 bit attacks between two squares of a valid ray direction */
 static uint64 InBetween[64][64];
 /* */
-#define MAX_FUT_MARGIN 15
+#define MAX_FUT_MARGIN 10
 static int FutilityMarginTable[MAX_FUT_MARGIN+1][64];
 static int ReductionTable[2][64][64];
 static int needReplyReady;

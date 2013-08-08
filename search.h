@@ -433,7 +433,10 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
             }
             if (pos->posStore.lastmove != EMPTY && hashMove == EMPTY
                 && Threads[thread_id].evalvalue[pos->ply] < (rvalue = beta - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0] - opt)) { 
+                    //					score = searchNode<false, false>(pos, rvalue-1, rvalue, depth-4, false, thread_id,true);
                     score = qSearch<FALSE>(pos, rvalue-1, rvalue, 0, FALSE, thread_id);
+                    //					score = qSearch<FALSE>(pos, rvalue-1, rvalue, -100, FALSE, thread_id); //080213opt1 shallow qsearch
+
                     if (score < rvalue) return score;
             }
 
@@ -520,23 +523,26 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
                     if (played > lateMove && !isMoveDefence(pos, move, nullThreatMoveToBit)) continue;
                     int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(played,63)]);
                     score = Threads[thread_id].evalvalue[pos->ply]
+                    //						+ opt //072613 removed 072713
                     + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(played,63)]
                     + SearchInfo(0).evalgains[historyIndex(pos->side, move)];
                     if (score < beta) {
                         if (predictedDepth < 8 && PruneReductionLevel > 1) continue;
-                        if (swap(pos, move) < 0 && predictedDepth < 2) continue;
                         newdepth--;
                     }
                     if (swap(pos, move) < 0) {
+                        if (predictedDepth < 2) continue;
                         newdepth--; 
                     }
                 }
                 int newdepthclone = newdepth;
-                if (PruneReductionLevel==1) {
-                    newdepthclone -= ((ReductionTable[1][MIN(depth,63)][MIN(played,63)] >= 3) ? (ReductionTable[1][MIN(depth,63)][MIN(played,63)] - 2) : 0);
-                }
-                else if (PruneReductionLevel==2) {
-                    newdepthclone -= ReductionTable[(inPv?0:1)][MIN(depth,63)][MIN(played,63)];
+                if (depth >= MIN_REDUCTION_DEPTH || !MIN_REDUCTION_DEPTH /*|| firstExtend*/) { //if the first move is clearly best, can reduce others
+                    if (PruneReductionLevel==1) {
+                        newdepthclone -= ((ReductionTable[1][MIN(depth,63)][MIN(played,63)] >= 3) ? (ReductionTable[1][MIN(depth,63)][MIN(played,63)] - 2) : 0);
+                    }
+                    else if (PruneReductionLevel==2) {
+                        newdepthclone -= ReductionTable[(inPv?0:1)][MIN(depth,63)][MIN(played,63)];
+                    }
                 }
 
                 makeMove(pos, &undo, move);

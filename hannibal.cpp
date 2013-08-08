@@ -28,8 +28,8 @@ can knight catch pawns code from LL
 #define TWEAK_030813 true
 #define OPT_EASY true
 //E7 was 10 150 20 9 10
-#define VERSION            "2013_08_06"
-#define NUM_THREADS			    4
+#define VERSION            "08_04_13"
+#define NUM_THREADS			    1
 #define MIN_SPLIT_DEPTH			4
 #define TCEC true
 

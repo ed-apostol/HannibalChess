@@ -283,8 +283,8 @@ void add_to_learn_begin(learn_t *learn, continuation_t *toLearn) {//we add it to
             int_to_file(learn->learnFile, MOVE_BYTES, r);
         }   
         fclose(tempFile);
+		MutexUnlock(LearningLock);
     }
-	MutexUnlock(LearningLock);
 }
 
 void closeBook(book_t *book) { //TODO consider mutex ramifications
@@ -431,6 +431,7 @@ bool get_continuation_to_learn(learn_t *learn, continuation_t *toLearn) {
     if (f==NULL) {
         cout << "info string NULL learn file\n";
 		MutexUnlock(LearningLock);
+
         return false;
     }
 	rewind(f);

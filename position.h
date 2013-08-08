@@ -56,6 +56,7 @@ void makeNullMove(position_t *pos, pos_store_t *undo) {
 
     pos->hash ^= ZobColor;
     ++pos->ply;
+    pos->stack[++pos->sp] = pos->hash;
     pos->side ^= 1;
 }
 
