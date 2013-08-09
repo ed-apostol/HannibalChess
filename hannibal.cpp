@@ -27,13 +27,12 @@ can knight catch pawns code from LL
 */
 #define TWEAK_030813 true
 #define OPT_EASY true
-//E7 was 10 150 20 9 10
-#define VERSION            "08_04_13"
+#define VERSION            "08_08_13"
 #define NUM_THREADS			    1
 #define MIN_SPLIT_DEPTH			4
 #define TCEC true
 
-#define W_EASY true
+//#define W_EASY true
 //#define DEBUG_EASY true
 #define EASY_INC 10 
 #define EASY_MAX 160 
@@ -64,9 +63,7 @@ can knight catch pawns code from LL
 #define INIT_EVAL 64
 #define INIT_PAWN 32
 #define INIT_HASH 64
-//#define INIT_EVAL 1024
-//#define INIT_PAWN 64
-//#define INIT_HASH 1024
+
 #else
 #define INIT_EVAL 64
 #define INIT_PAWN 32
@@ -96,7 +93,6 @@ can knight catch pawns code from LL
 #define DEBUG_LEARN false
 
 #define ERROR_FILE "errfile.txt"
-////	AddSeed(4,17,5,1, 1,0,0,1,0,0,2,0,2, 0,0,0,0,0,0,0, 19,45,54,25,4, 10,7,2,2,1,0,0,  19, 15483, 0.51);
 
 #ifdef SPEED_TEST
 #define SHOW_SEARCH FALSE
