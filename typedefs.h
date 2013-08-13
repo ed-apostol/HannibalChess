@@ -76,21 +76,6 @@ typedef struct _sort_t{
     move_t list[MAXMOVES];
 }movelist_t;
 
-/* the book entry type *//*
-                         typedef struct book_entry_t{
-                         uint64 key;
-                         uint16 move;
-                         uint16 weight;
-                         uint32 learn;
-                         }book_entry_t;
-                         */
-/* the book type *//*
-                   typedef struct book_t{
-                   FILE *bookfile;
-                   int64 size;
-                   }book_t;
-                   */
-
 struct learn_t {
     FILE *learnFile;// = NULL; //TODO make sure this is initialized correctly 
     string name;
@@ -282,9 +267,8 @@ typedef struct _search_info_t{
     bool mvlist_initialized;
     movelist_t rootmvlist;
     continuation_t rootPV;
-#ifdef W_EASY
-    int easy;
-    int maxEasy;
+#ifdef NEW_EASY
+	int easy;
 #endif
     int32 evalgains[1024];
     int32 history[1024];

@@ -7,7 +7,6 @@
 /*  Description: A chess playing program.         */
 /**************************************************/
 #define MIN_TIME 2
-#define TIME_DIVIDER 30 
 
 void initOption(uci_option_t* opt) {
     //TODO add hash size option

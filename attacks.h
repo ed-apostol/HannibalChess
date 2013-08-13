@@ -355,7 +355,6 @@ uint64 behindFigure(const position_t *pos,uint32 from, int dir) {
     }
     return 0;
 }
-
 int swap(const position_t *pos, uint32 m) {
 
     int to = moveTo(m);

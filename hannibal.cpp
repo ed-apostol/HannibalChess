@@ -27,22 +27,19 @@ can knight catch pawns code from LL
 */
 #define TWEAK_030813 true
 #define OPT_EASY true
-#define VERSION            "08_08_13"
+#define VERSION            "08_11_13"
 #define NUM_THREADS			    1
 #define MIN_SPLIT_DEPTH			4
 #define TCEC true
 
-//#define W_EASY true
+#define WORSE_TIME_BONUS 20 //how many points more than 20 it takes to increase time by alloc to a maximum of 2*alloc
+#define CHANGE_TIME_BONUS 50 //what percentage of alloc to increase if the last move is a change move
+#define LAST_PLY_TIME 40 //what percentage of alloc remaining to be worth trying another complete ply
+#define INCREASE_CHANGE 0 //what percentage of alloc to increase during a change move
+#define TIME_DIVIDER 30 //how many moves we divide remaining time into 
+
+//#define NEW_EASY true
 //#define DEBUG_EASY true
-#define EASY_INC 10 
-#define EASY_MAX 160 
-#define EASY_MIN 60
-#define EASY_MIN_DEPTH 10
-
-#define EASY_TIME 9
-#define EASY_DIVTIME 10
-#define EASY_PLAYED 2
-
 //#define OPTIMIZE true
 //#define DEBUG
 //#define EVAL_DEBUG true
@@ -86,7 +83,6 @@ can knight catch pawns code from LL
 #define LEARN_NODES 10000000
 #define SHOW_LEARNING false
 #define LOG_LEARNING true
-
 #endif
 
 #define DEBUG_BOOK false
