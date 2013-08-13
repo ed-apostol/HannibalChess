@@ -15,9 +15,15 @@
 #define EXTEND_ONLY 0 // 3 means quiesc, pv and non-pv, 2 means both pv and non-pv, 1 means only pv (0-3)
 #define Q_CHECK 1 // implies 1 check 
 #define Q_PVCHECK 2 // implies 2 checks
-//#define Q_HSEARCH 5 // implies searches hash move up to 2 depth
 #define NO_ASP FALSE
 #define MIN_REDUCTION_DEPTH 4 // default is FALSE
+
+#ifdef NEW_EASY
+const int easyTime[2] = {25,20}; //indexed by whether the move is forcing (tactical or escaping)
+const int easyCutoff[2] = {300,150}; //indexed by whether the move is forcing (tactical or escaping)
+const int easyReduction[2] = {2,2};
+const int easyDepth[2] = {14,12}; //NewEasy34 made all factors like new change
+#endif
 
 void ponderHit() { //no pondering in tuning
     int64 time = getTime() - SearchInfo(0).start_time;
@@ -84,42 +90,26 @@ void initNode(position_t *pos, const int thread_id) {
                     Print(1, "\n");
                 }
             }
+			
             if (SearchInfo(thread_id).thinking_status == THINKING && SearchInfo(thread_id).time_is_limited) {
-#ifdef W_EASY
-                int64 easyTime = (SearchInfo(thread_id).alloc_time - (((SearchInfo(thread_id).alloc_time * (int64)SearchInfo(thread_id).easy) / EASY_MAX) * EASY_TIME) / EASY_DIVTIME); 
-                if (SearchInfo(thread_id).easy && SearchInfo(thread_id).research && time2 >= SearchInfo(thread_id).start_time + easyTime) {
-                    setAllThreadsToStop(thread_id);
-#ifdef DEBUG_EASY
-                    Print(2, "info string Easy QUICK1 Move: time spent = %d\n", time2 - SearchInfo(thread_id).start_time);
-#endif
-                }
-                else
-#endif
                     if (time2 > SearchInfo(thread_id).time_limit_max) {
                         if (time2 < SearchInfo(thread_id).time_limit_abs) {
-                            if (SearchInfo(thread_id).best_value != -INF && SearchInfo(thread_id).best_value + 30 <= SearchInfo(thread_id).last_value) {
-                                SearchInfo(thread_id).time_limit_max += ((SearchInfo(thread_id).last_value - SearchInfo(thread_id).best_value - 20) / 10) * SearchInfo(thread_id).alloc_time / 2;
-                                if (SearchInfo(thread_id).time_limit_max > SearchInfo(thread_id).time_limit_abs) SearchInfo(thread_id).time_limit_max = SearchInfo(thread_id).time_limit_abs;
-                                Print(2, "info string Time is extended in search: time = %d\n", time2 - SearchInfo(thread_id).start_time);
-                            } else if (SearchInfo(thread_id).best_value == -INF && SearchInfo(thread_id).last_value + 30 <= SearchInfo(thread_id).last_last_value) {
-                                SearchInfo(thread_id).time_limit_max += ((SearchInfo(thread_id).last_last_value - SearchInfo(thread_id).last_value - 20) / 10) * SearchInfo(thread_id).alloc_time / 2;
-                                if (SearchInfo(thread_id).time_limit_max > SearchInfo(thread_id).time_limit_abs) SearchInfo(thread_id).time_limit_max = SearchInfo(thread_id).time_limit_abs;
-                                Print(2, "info string Time is extended in search: time = %d\n", time2 - SearchInfo(thread_id).start_time);
-                            } else if (SearchInfo(thread_id).research || SearchInfo(thread_id).change) {
-                                SearchInfo(thread_id).time_limit_max += SearchInfo(thread_id).alloc_time / 2;
-                                if (SearchInfo(thread_id).time_limit_max > SearchInfo(thread_id).time_limit_abs) SearchInfo(thread_id).time_limit_max = SearchInfo(thread_id).time_limit_abs;
-                                Print(2, "info string Time is extended in search: time = %d\n", time2 - SearchInfo(thread_id).start_time);
-                            } else {
-                                setAllThreadsToStop(thread_id);
-                                Print(2, "info string Aborting search: time spent = %d\n", time2 - SearchInfo(thread_id).start_time);
-                            }
+							bool gettingWorse = SearchInfo(thread_id).best_value != -INF && SearchInfo(thread_id).best_value + 30 <= SearchInfo(thread_id).last_value;
+							bool wasGettingWorse = SearchInfo(thread_id).best_value == -INF && SearchInfo(thread_id).last_value + 30 <= SearchInfo(thread_id).last_last_value;
+							if (!SearchInfo(thread_id).research && !SearchInfo(thread_id).change && !gettingWorse && ! wasGettingWorse) {
+								setAllThreadsToStop(thread_id);
+							}
+							else if (gettingWorse) {
+								int amountWorse = SearchInfo(thread_id).last_value - SearchInfo(thread_id).best_value;
+								SearchInfo(thread_id).time_limit_max += ((amountWorse - 20) * SearchInfo(thread_id).alloc_time)/WORSE_TIME_BONUS;
+								if (SearchInfo(thread_id).time_limit_max > SearchInfo(thread_id).time_limit_abs) SearchInfo(thread_id).time_limit_max = SearchInfo(thread_id).time_limit_abs;
+							}
                         } else {
                             setAllThreadsToStop(thread_id);
-                            Print(2, "info string Aborting search: time spent = %d\n", time2 - SearchInfo(thread_id).start_time);
                         }
                     }
             }
-        }
+		}
 }
 
 int simpleStalemate(const position_t *pos) {
@@ -231,7 +221,6 @@ int qSearch(position_t *pos, int alpha, int beta, int depth, const int inCheck, 
             if (transMaxvalue(entry) < beta && beta > -MAXEVAL) return transMaxvalue(entry);
         }
         hashMove = transMove(entry);
-        //		hashMove = (depth > -Q_HSEARCH || moveIsTactical(transMove(entry))) ? transMove(entry) : 0; //080213opt1
     }
     if (pos->ply >= MAXPLY-1) return eval(pos, thread_id, &opt, &pes);
     if (!inCheck) {
@@ -266,7 +255,7 @@ int qSearch(position_t *pos, int alpha, int beta, int depth, const int inCheck, 
             moveGivesCheck = moveIsCheck(pos, move, dcc);
             //pruning
             if (prunable && move!=hashMove && !moveGivesCheck && !moveIsPassedPawn(pos, move)) {
-                int scoreAprox = Threads[thread_id].evalvalue[pos->ply] + PawnValueEnd/*+ PawnValueEnd/2 + opt*/ + MaxPieceValue[moveCapture(move)]; //opt1 removed opt
+                int scoreAprox = Threads[thread_id].evalvalue[pos->ply] + PawnValueEnd + MaxPieceValue[moveCapture(move)]; 
                 if (scoreAprox <= alpha) continue; //todo try out opt, tryout see instead of maxpiecevalue
             }
             newdepth = depth - !moveGivesCheck;
@@ -433,10 +422,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
             }
             if (pos->posStore.lastmove != EMPTY && hashMove == EMPTY
                 && Threads[thread_id].evalvalue[pos->ply] < (rvalue = beta - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0] - opt)) { 
-                    //					score = searchNode<false, false>(pos, rvalue-1, rvalue, depth-4, false, thread_id,true);
-                    score = qSearch<FALSE>(pos, rvalue-1, rvalue, 0, FALSE, thread_id);
-                    //					score = qSearch<FALSE>(pos, rvalue-1, rvalue, -100, FALSE, thread_id); //080213opt1 shallow qsearch
-
+                     score = qSearch<FALSE>(pos, rvalue-1, rvalue, 0, FALSE, thread_id);
                     if (score < rvalue) return score;
             }
 
@@ -471,7 +457,6 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
             if (hashMove == EMPTY || hashDepth < newdepth) {
                 int targetScore = alpha;
                 score =	searchSelective<false>(pos, targetScore, newdepth, inCheck, &hashMove, thread_id);
-                //				score = searchNode<false, false>(pos, alpha, beta, newdepth, inCheck, thread_id,false);
                 if (score >= targetScore) {
                     Threads[thread_id].evalvalue[pos->ply] = score;//consider reseting opt and pes
                     hashDepth = newdepth;
@@ -480,7 +465,6 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
             if (hashMove != EMPTY && hashDepth >= newdepth) { 
                 int targetscore = Threads[thread_id].evalvalue[pos->ply] - EXPLORE_CUTOFF;
                 int dif = alpha - Threads[thread_id].evalvalue[pos->ply];
-                //				if (dif > 0) targetscore += dif / 4;
                 score = searchSelective<true>(pos, targetscore, newdepth, inCheck, &hashMove, thread_id);
                 if (score < targetscore) firstExtend = TRUE;
             }
@@ -502,7 +486,6 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
     }
     int pruneable =  prune && MinTwoBits(pos->color[pos->side] & ~(pos->pawns | pos->kings));//TODO try having minimum # pawns as well
     int lateMove = LATE_PRUNE_MIN + ((cutNode && !inPv) ? ((depth * depth) / 4) : (depth * depth));
-    //	if (!firstExtend) lateMove += LATE_PRUNE_MIN;
     hisOn = 0;
     while ((move = sortNext(sp, pos, mvlist, &mvlist_phase, thread_id)) != EMPTY) {
         played++;
@@ -512,7 +495,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
             moveGivesCheck = moveIsCheck(pos, move, dcc);
             newdepth = depth - !(firstExtend && played==1);
             //maybe should check legality here, since its an expensive check and might have been pruned earlier?
-            if (/*inPv && */bestvalue == -INF) { //TODO remove this from loop and do it first
+            if (bestvalue == -INF) { //TODO remove this from loop and do it first
                 makeMove(pos, &undo, move);
                 score = -searchNode<inPv, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, thread_id,(!inPv && !cutNode));
             } 
@@ -734,51 +717,15 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
                 newPV.length = 0;
             } else {
                 score = -INF;
+#ifdef DEBUG_SEE
+				if (depth==1) Print(3,"info string see %s = %d\n",move2Str(move),swap(pos,move));
+#endif
                 makeMove(pos, &undo, move);
                 if (SearchInfo(thread_id).best_value == -INF || score > alpha) {
                     score = -searchNode<true, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, thread_id,false);
                 } else {
                     int newdepthclone = newdepth;
                     if (okToPruneOrReduce) {
-
-                        //SAM not sure how easy interacts with fail lows
-#ifdef W_EASY
-                        newdepthclone -= ReductionTable[0][MIN(depth,63)][MIN(played + (SearchInfo(thread_id).easy/EASY_INC)*EASY_PLAYED ,63)];
-                    }
-                    int easyAlpha = alpha - SearchInfo(thread_id).easy;
-                    score = -searchNode<false, false>(pos, -easyAlpha-1, -easyAlpha, newdepthclone, moveGivesCheck, thread_id,true);
-                    if (SearchInfo(thread_id).thinking_status != STOPPED && newdepthclone < newdepth && score > easyAlpha) {
-                        int64 tempEasy = SearchInfo(thread_id).easy;
-                        SearchInfo(thread_id).easy = 0; //we do this so that easy moves are not detected during researches
-                        //SearchInfo(thread_id).research = 1;
-                        bool first = true;
-                        do {
-                            if (tempEasy) {
-                                if (first) tempEasy -= EASY_INC;
-                                else tempEasy /= 2;
-                                first = false;
-                                if (tempEasy < EASY_MIN) {
-                                    tempEasy = 0;
-                                }
-                                easyAlpha = alpha - tempEasy;
-                                SearchInfo(thread_id).maxEasy = tempEasy;
-#ifdef DEBUG_EASY
-                                Print(3, "info string Easy %d\n",tempEasy);
-#endif
-                            }
-                            if (SearchInfo(thread_id).easy) score = -searchNode<false, false>(pos, -easyAlpha-1, -easyAlpha, newdepthclone, moveGivesCheck, thread_id,false);
-                            else score = -searchNode<false, false>(pos, -easyAlpha-1, -easyAlpha, newdepth, moveGivesCheck, thread_id,false);
-                        } while (SearchInfo(thread_id).thinking_status != STOPPED && tempEasy > 0 && score > easyAlpha);
-                        SearchInfo(thread_id).easy = tempEasy;
-                    }
-
-                    if (SearchInfo(thread_id).thinking_status != STOPPED && score > alpha) {
-                        SearchInfo(thread_id).research = 1;
-                        if (SHOW_SEARCH  && thread_id < Guci_options->threads && getTime() - SearchInfo(thread_id).start_time > 10000) Print(1, "info currmove %s currmovenumber %d\n", move2Str(move), mvlist->pos);
-                        score = -searchNode<true, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, thread_id, false);
-                        SearchInfo(thread_id).research = 0;
-                    }
-#else
                         newdepthclone -= ReductionTable[0][MIN(depth,63)][MIN(played,63)];
                     }
                     score = -searchNode<false, false>(pos, -alpha-1, -alpha, newdepthclone, moveGivesCheck, thread_id,true);
@@ -791,7 +738,6 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
                         score = -searchNode<true, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, thread_id, false);
                         SearchInfo(thread_id).research = 0;
                     }
-#endif
                 }
 
                 if (!NO_ASP && SearchInfo(thread_id).thinking_status != STOPPED && score >= beta) {
@@ -800,6 +746,9 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
                     do { //TODO rewrite this to do alpha and beta adjustments in the same loop
                         if (mvlist->pos > 1) {
                             SearchInfo(thread_id).change = 1;
+#ifdef NEW_EASY
+							if (depth >= 8) SearchInfo(thread_id).easy = 0;
+#endif
                         }
                         SearchInfo(thread_id).bestmove = move;
                         fail_high++;
@@ -856,38 +805,66 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
     mvlist->list[bestmoveindex].s = (int32) maxnodes + 1024;
 
     if (SearchInfo(thread_id).best_value > INF - MAXPLY) SearchInfo(thread_id).mate_found++;
-    if (SearchInfo(thread_id).thinking_status == THINKING || SearchInfo(thread_id).thinking_status == PONDERING) {
+    if (SearchInfo(thread_id).thinking_status == THINKING) {
         if (SearchInfo(thread_id).time_is_limited) {
             time = getTime();
-#ifdef W_EASY
-            int64 easyTime = (SearchInfo(thread_id).alloc_time - (((SearchInfo(thread_id).alloc_time * (int64)SearchInfo(thread_id).easy) / EASY_MAX) * EASY_TIME) / EASY_DIVTIME)/2; 
-            if (depth >= 8 && (SearchInfo(thread_id).legalmoves == 1 || SearchInfo(thread_id).mate_found >= 3) && SearchInfo(thread_id).thinking_status == THINKING) {
-                setAllThreadsToStop(thread_id);
+			bool gettingWorse = (SearchInfo(thread_id).best_value + 30) <= SearchInfo(thread_id).last_value;
+            if (SearchInfo(thread_id).legalmoves == 1 || SearchInfo(thread_id).mate_found >= 3) { 
+                if (depth >= 8) setAllThreadsToStop(thread_id);
             } 
-            else if (SearchInfo(thread_id).easy && time >= SearchInfo(thread_id).start_time + easyTime) {
-                setAllThreadsToStop(thread_id);
-#ifdef DEBUG_EASY
-                Print(3, "info string Easy QUICK2 Move: time spent = %d(%d)\n", time - SearchInfo(thread_id).start_time,easyTime);
+#ifdef NEW_EASY
+			else if (!gettingWorse && SearchInfo(thread_id).easy) {
+				int inCheck = kingIsInCheck(pos);
+				bool forcing = (inCheck  || moveIsTactical(SearchInfo(thread_id).bestmove));
+				if (depth >= easyDepth[forcing] ) {
+					int64 maxEasyTime = SearchInfo(thread_id).start_time + (SearchInfo(thread_id).alloc_time * 40)/100 ; //only check if there is enough time to calculate next ply if needed
+					if (time >= maxEasyTime) SearchInfo(thread_id).easy = 0;
+					else {
+						int64 minEasyTime = SearchInfo(thread_id).start_time + (SearchInfo(thread_id).alloc_time * easyTime[forcing])/100 ; 
+						if (time >= minEasyTime) {
+							SearchInfo(thread_id).easy = 0; //one way or another we will not test for this again
+							int targetScore = SearchInfo(thread_id).best_value - easyCutoff[forcing];
+							int easyDepth = depth - ReductionTable[0][MIN(depth,63)][63]-easyReduction[forcing]; 
+							int easyScore = searchSelective<true>(pos, targetScore, easyDepth, inCheck, &SearchInfo(thread_id).bestmove, thread_id);
+							if (easyScore < targetScore) {
+								setAllThreadsToStop(thread_id);
+	#ifdef DEBUG_EASY
+								 Print(3, "info string stopping %d (%d/%d)\n",easyCutoff[forcing],easyDepth,depth);
+	#endif
+							}
+						}
+					}
+				}
+			}
 #endif
-                Print(2, "info string Easy QUICK2 Move: time spent = %d(%d)\n", time - SearchInfo(thread_id).start_time,easyTime);
-            }
-#endif
-
-            if (SearchInfo(thread_id).thinking_status == THINKING && time >= SearchInfo(thread_id).start_time + (SearchInfo(thread_id).alloc_time / 2)) {
-                if (SearchInfo(thread_id).best_value + 30 <= SearchInfo(thread_id).last_value) {
-                    SearchInfo(thread_id).time_limit_max += ((SearchInfo(thread_id).last_value - SearchInfo(thread_id).best_value - 20) / 10) * SearchInfo(thread_id).alloc_time / 2;
-                    if (SearchInfo(thread_id).time_limit_max > SearchInfo(thread_id).time_limit_abs) SearchInfo(thread_id).time_limit_max = SearchInfo(thread_id).time_limit_abs;
-                } else if (SearchInfo(thread_id).change) {
-                    SearchInfo(thread_id).time_limit_max += SearchInfo(thread_id).alloc_time / 2;
-                    if (SearchInfo(thread_id).time_limit_max > SearchInfo(thread_id).time_limit_abs) SearchInfo(thread_id).time_limit_max = SearchInfo(thread_id).time_limit_abs;
-                } else if (SearchInfo(thread_id).thinking_status == THINKING) { // if we are unlikely to get deeper, save our time
-                    setAllThreadsToStop(thread_id);
-                }
-            }
-        } else if (SearchInfo(thread_id).depth_is_limited && depth >= SearchInfo(thread_id).depth_limit && SearchInfo(thread_id).thinking_status == THINKING) {
+			if (SearchInfo(thread_id).change && time >= SearchInfo(thread_id).start_time + (SearchInfo(thread_id).alloc_time * 10)/100) {
+				SearchInfo(thread_id).time_limit_max += (SearchInfo(thread_id).alloc_time * INCREASE_CHANGE) / 100;
+				if (SearchInfo(thread_id).time_limit_max > SearchInfo(thread_id).time_limit_abs) SearchInfo(thread_id).time_limit_max = SearchInfo(thread_id).time_limit_abs;
+			}
+			if (time + (SearchInfo(thread_id).alloc_time * LAST_PLY_TIME)/100 >= SearchInfo(thread_id).time_limit_max) {
+				int64 addTime = 0;
+				if (gettingWorse) {
+					int amountWorse = SearchInfo(thread_id).last_value - SearchInfo(thread_id).best_value;
+					addTime = ((amountWorse - 20) * SearchInfo(thread_id).alloc_time)/WORSE_TIME_BONUS;
+				}
+				if (SearchInfo(thread_id).change) {
+					addTime += (SearchInfo(thread_id).alloc_time * CHANGE_TIME_BONUS) / 100;
+				}
+				if (addTime) {
+					SearchInfo(thread_id).time_limit_max += addTime;
+					if (SearchInfo(thread_id).time_limit_max > SearchInfo(thread_id).time_limit_abs) SearchInfo(thread_id).time_limit_max = SearchInfo(thread_id).time_limit_abs;
+					if (time + (SearchInfo(thread_id).alloc_time * LAST_PLY_TIME)/100 >= SearchInfo(thread_id).time_limit_abs) {
+						setAllThreadsToStop(thread_id);
+					}
+				}
+				else { // if we are unlikely to get deeper, save our time
+					setAllThreadsToStop(thread_id);
+				}
+			}
+		}
+        } else if (SearchInfo(thread_id).depth_is_limited && depth >= SearchInfo(thread_id).depth_limit) {
             setAllThreadsToStop(thread_id);
         }
-    }
 
     if (SearchInfo(thread_id).best_value != -INF) {
         SearchInfo(thread_id).last_last_value = SearchInfo(thread_id).last_value;
@@ -921,9 +898,8 @@ bool learn_position(position_t *pos,int thread_id, continuation_t *variation) {
     SearchInfo(thread_id).node_limit = LEARN_NODES*(1+Guci_options->learnTime)+(LEARN_NODES*(Guci_options->learnThreads-1))/2; //add a little extra when using more threads
     SearchInfo(thread_id).time_is_limited = FALSE;
     SearchInfo(thread_id).depth_is_limited = FALSE;
-#ifdef W_EASY
     SearchInfo(thread_id).easy = 0;
-#endif
+
     SearchInfo(thread_id).pt.table = NULL;
     initPawnTab(&SearchInfo(thread_id).pt, LEARN_PAWN_HASH_SIZE);
     SearchInfo(thread_id).et.table = NULL;
@@ -1091,32 +1067,9 @@ void getBestMove(position_t *pos, int thread_id) {
     for (int i = 1; i < Guci_options->threads; ++i) SetEvent(Threads[i].idle_event); // SMP 
 
     Threads[thread_id].split_point = &Threads[thread_id].sptable[thread_id];
-
-#ifdef W_EASY
-    SearchInfo(thread_id).easy = 0;
-    SearchInfo(thread_id).maxEasy = EASY_MAX;
-
-    for (id = 1; id < MAXPLY; id++) {
-        if (id >= 6) { // TODO: to be tuned
-#ifdef OPT_EASY
-            if (SearchInfo(thread_id).easy || getTime() < SearchInfo(thread_id).start_time + (SearchInfo(thread_id).alloc_time / 4)) {
-                if (id == EASY_MIN_DEPTH) SearchInfo(thread_id).easy = EASY_MIN; 
-                else if (id > EASY_MIN_DEPTH && SearchInfo(thread_id).easy < SearchInfo(thread_id).maxEasy) SearchInfo(thread_id).easy += EASY_INC;
-            }
-#else
-            if (id == EASY_MIN_DEPTH) SearchInfo(thread_id).easy = EASY_MIN; 
-            else if (id > EASY_MIN_DEPTH && SearchInfo(thread_id).easy < SearchInfo(thread_id).maxEasy) SearchInfo(thread_id).easy += EASY_INC;
+#ifdef NEW_EASY
+	SearchInfo(thread_id).easy = 2;
 #endif
-            alpha = goodAlpha(SearchInfo(thread_id).best_value-16);
-            beta = goodBeta(SearchInfo(thread_id).best_value+16);
-        } else {
-            alpha = -INF;
-            beta = INF;
-        }
-#ifdef DEBUG_EASY
-        Print(3, "info string EasyRoot %d\n",SearchInfo(thread_id).easy);
-#endif
-#else
     for (id = 1; id < MAXPLY; id++) {
         if (id >= 6) { // TODO: to be tuned
             alpha = goodAlpha(SearchInfo(thread_id).best_value-16);
@@ -1125,8 +1078,6 @@ void getBestMove(position_t *pos, int thread_id) {
             alpha = -INF;
             beta = INF;
         }
-#endif
-
         searchRoot(pos, &mvlist, alpha, beta, id, thread_id,-INF);
 
         if (SearchInfo(thread_id).thinking_status == STOPPED) break;
