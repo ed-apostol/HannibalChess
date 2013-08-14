@@ -381,14 +381,14 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
         if (entry != NULL) {
             hashMove = transMove(entry);
             if (!inPv) {
-                if (depth <= transMindepth(entry) && transMinvalue(entry) >= beta && beta < MAXEVAL) {
-                    if (hashMove && hashMove != Threads[thread_id].killer1[pos->ply] && !moveIsTactical(hashMove)) { //good move, so killer move 07/25/13 NEW
+               if (depth <= transMindepth(entry) && transMinvalue(entry) >= beta && beta < MAXEVAL) {
+                    if (hashMove && hashMove != Threads[thread_id].killer1[pos->ply] && !moveIsTactical(hashMove)) { //good move, so killer move
                         Threads[thread_id].killer2[pos->ply] = Threads[thread_id].killer1[pos->ply];
                         Threads[thread_id].killer1[pos->ply] = hashMove;
                     }
                     return transMinvalue(entry);
                 }
-                if (depth <= transMaxdepth(entry) && transMaxvalue(entry) < beta && beta >= -MAXEVAL) {
+                if (depth <= transMaxdepth(entry) && transMaxvalue(entry) < beta  && beta >= -MAXEVAL) {
                     return transMaxvalue(entry);
                 }
             }
@@ -506,14 +506,13 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
                     if (played > lateMove && !isMoveDefence(pos, move, nullThreatMoveToBit)) continue;
                     int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(played,63)]);
                     score = Threads[thread_id].evalvalue[pos->ply]
-                    //						+ opt //072613 removed 072713
                     + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(played,63)]
                     + SearchInfo(0).evalgains[historyIndex(pos->side, move)];
                     if (score < beta) {
                         if (predictedDepth < 8 && PruneReductionLevel > 1) continue;
                         newdepth--;
                     }
-                    if (swap(pos, move) < 0) {
+                   if ((MoveGenPhase[mvlist_phase]==PH_BAD_CAPTURES) || (MoveGenPhase[mvlist_phase]==PH_QUIET_MOVES && swap(pos, move) < 0)) {
                         if (predictedDepth < 2) continue;
                         newdepth--; 
                     }
@@ -795,7 +794,7 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
                 SearchInfo(thread_id).bestmove = 0;
                 return;
             }
-            SearchInfo(thread_id).change = 1;  // TODO: review time management
+            SearchInfo(thread_id).change = 1;
             if (SHOW_SEARCH  && thread_id < Guci_options->threads && depth >= 8) displayPV(pos, &rootPV, depth, old_alpha, beta, SearchInfo(thread_id).best_value);
             fail_low++;
             old_alpha = alpha = goodAlpha(alpha-(24*(1<<(fail_low))));
