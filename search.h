@@ -453,7 +453,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
 
 
         if (depth >= (inPv?EXPLORE_DEPTH_PV:EXPLORE_DEPTH_NOPV) && prune) {
-            newdepth = depth / 2;
+            newdepth = (depth / 2 + (depth-(inPv?EXPLORE_DEPTH_PV:EXPLORE_DEPTH_NOPV)/2))/2;
             if (hashMove == EMPTY || hashDepth < newdepth) {
                 int targetScore = alpha;
                 score =	searchSelective<false>(pos, targetScore, newdepth, inCheck, &hashMove, thread_id);
@@ -462,6 +462,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
                     hashDepth = newdepth;
                 }
             }
+			newdepth = depth / 2; //New line for deeper IID
             if (hashMove != EMPTY && hashDepth >= newdepth) { 
                 int targetscore = Threads[thread_id].evalvalue[pos->ply] - EXPLORE_CUTOFF;
                 int dif = alpha - Threads[thread_id].evalvalue[pos->ply];
@@ -512,19 +513,20 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
                         if (predictedDepth < 8 && PruneReductionLevel > 1) continue;
                         newdepth--;
                     }
-                   if ((MoveGenPhase[mvlist_phase]==PH_BAD_CAPTURES) || (MoveGenPhase[mvlist_phase]==PH_QUIET_MOVES && swap(pos, move) < 0)) {
+                   if (swap(pos, move) < 0) {
                         if (predictedDepth < 2) continue;
                         newdepth--; 
                     }
                 }
                 int newdepthclone = newdepth;
-                if (depth >= MIN_REDUCTION_DEPTH || !MIN_REDUCTION_DEPTH /*|| firstExtend*/) { //if the first move is clearly best, can reduce others
+                if (depth >= MIN_REDUCTION_DEPTH || !MIN_REDUCTION_DEPTH) { 
                     if (PruneReductionLevel==1) {
                         newdepthclone -= ((ReductionTable[1][MIN(depth,63)][MIN(played,63)] >= 3) ? (ReductionTable[1][MIN(depth,63)][MIN(played,63)] - 2) : 0);
                     }
                     else if (PruneReductionLevel==2) {
                         newdepthclone -= ReductionTable[(inPv?0:1)][MIN(depth,63)][MIN(played,63)];
                     }
+					else if (MoveGenPhase[mvlist_phase] == PH_BAD_CAPTURES) newdepthclone--;
                 }
 
                 makeMove(pos, &undo, move);
