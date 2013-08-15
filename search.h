@@ -497,32 +497,28 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
                 score = -searchNode<inPv, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, thread_id,(!inPv && !cutNode));
             } 
             else {
-                int PruneReductionLevel = (inCheck || newdepth >= depth || moveGivesCheck || (MoveGenPhase[mvlist_phase] != PH_QUIET_MOVES && MoveGenPhase[mvlist_phase] != PH_BAD_CAPTURES)) ? 0 : 
-                    (moveIsPassedPawn(pos, move) ? 1 : 2);
                 bool BadCapture = bool(MoveGenPhase[mvlist_phase] == PH_BAD_CAPTURES);
-                if (PruneReductionLevel && !inPv && pruneable) {
+                int OkToPruneOrReduce = (inCheck || newdepth >= depth || moveGivesCheck 
+                    || (MoveGenPhase[mvlist_phase] != PH_QUIET_MOVES && !BadCapture)
+                    || moveIsPassedPawn(pos, move)) ? 0 : 1;
+                if (OkToPruneOrReduce && !inPv && pruneable) {
                     if (!BadCapture && played > lateMove && !isMoveDefence(pos, move, nullThreatMoveToBit)) continue;
                     int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(played,63)]);
                     score = Threads[thread_id].evalvalue[pos->ply]
                     + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(played,63)]
                     + (BadCapture ? PcValSEE[moveCapture(move)] : SearchInfo(0).evalgains[historyIndex(pos->side, move)]);
                     if (score < beta) {
-                        if (predictedDepth < 8 && PruneReductionLevel > 1) continue;
+                        if (predictedDepth < 8) continue;
                         newdepth--;
                     }
-                    if (PruneReductionLevel > 1 && swap(pos, move) < 0) {
-                        if (predictedDepth < 2) continue;
+                    if (swap(pos, move) < 0) {
+                        if (!BadCapture && predictedDepth < 2) continue;
                         newdepth--; 
                     }
                 }
                 int newdepthclone = newdepth;
-                if (depth >= MIN_REDUCTION_DEPTH || !MIN_REDUCTION_DEPTH /*|| firstExtend*/) { //if the first move is clearly best, can reduce others
-                    if (PruneReductionLevel==1) {
-                        newdepthclone -= ((ReductionTable[1][MIN(depth,63)][MIN(played,63)] >= 3) ? (ReductionTable[1][MIN(depth,63)][MIN(played,63)] - 2) : 0);
-                    }
-                    else if (PruneReductionLevel==2) {
-                        newdepthclone -= ReductionTable[(inPv?0:1)][MIN(depth,63)][MIN(played,63)];
-                    }
+                if (!BadCapture && OkToPruneOrReduce && depth >= MIN_REDUCTION_DEPTH) {
+                    newdepthclone -= ReductionTable[(inPv?0:1)][MIN(depth,63)][MIN(played,63)];
                 }
 
                 makeMove(pos, &undo, move);
