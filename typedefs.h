@@ -42,7 +42,7 @@ typedef unsigned __int64	uint64;
 typedef unsigned int		uint;
 #endif
 
-enum NodeType { RootNode = 0, NormalNode, IidNode, VerificationNode };
+enum NodeType { CutNode = -1, PVNode = 0, AllNode };
 enum BookType { POLYGLOT_BOOK, PUCK_BOOK};
 
 typedef uint32 basic_move_t;
@@ -284,8 +284,9 @@ typedef struct _split_point_t{
     _split_point_t* parent;
     movelist_t *parent_movestack;
     int depth;
-    int inCheck;
-    bool inPv;
+    bool inCheck;
+    bool inRoot;
+    NodeType nodeType;
     volatile int alpha;
     volatile int beta;
     volatile int bestvalue;
@@ -295,6 +296,7 @@ typedef struct _split_point_t{
     volatile int slaves[MaxNumOfThreads];
     volatile int cpus;
     mutex_t lock[1];
+    mutex_t updatelock[1];
 } split_point_t;
 
 typedef struct {

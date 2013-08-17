@@ -128,8 +128,8 @@ extern int historyIndex(uint32 side, uint32 move);
 //template <bool inPv>
 //int qSearch(position_t *pos, int alpha, int beta, int depth, int inCheck, const int thread_id);
 
-template<bool inPv, bool inSplitPoint>
-int searchNode(position_t *pos, int alpha, int beta, int depth, int inCheck, int thread_id, const bool cutNode);
+template <bool inRoot, bool inSplitPoint, bool inSingular>
+int searchNode(position_t *pos, int alpha, int beta, const int depth, const bool inCheck, const basic_move_t moveBanned, const int thread_id, NodeType nt);
 extern void getBestMove(position_t *pos, int thread_id);
 
 /* debug.c */

@@ -6,6 +6,7 @@
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
+
 void initSearchThread(int i) {
     memset(Threads[i].evalvalue, 0, sizeof(Threads[i].evalvalue));
     Threads[i].nodes_since_poll = 0;
@@ -14,12 +15,12 @@ void initSearchThread(int i) {
     memset(Threads[i].killer1, 0, sizeof(Threads[i].killer1));
     memset(Threads[i].killer2, 0, sizeof(Threads[i].killer2));
 }
+
 void idleLoop(const int thread_id, split_point_t *master_sp) {
     ASSERT(thread_id < Guci_options->threads || master_sp == NULL);
     Threads[thread_id].running = true;
     while(1) {
         if(Threads[thread_id].exit_flag) break;
-
 #ifndef TCEC
         if (thread_id >= MaxNumOfThreads - Guci_options->learnThreads) { //lets grab something and learn from it
             continuation_t toLearn;
@@ -37,7 +38,6 @@ void idleLoop(const int thread_id, split_point_t *master_sp) {
         }
         else 
 #endif
-        {
             while(thread_id != 0 && master_sp == NULL && 
                 (SearchInfo(thread_id).thinking_status == STOPPED
 #ifndef TCEC
@@ -46,30 +46,27 @@ void idleLoop(const int thread_id, split_point_t *master_sp) {
                 )) {
                     WaitForSingleObject(Threads[thread_id].idle_event, INFINITE);
             }
-            if (thread_id < Guci_options->threads) {
-                if(Threads[thread_id].work_assigned) {
-                    ++Threads[thread_id].started;
-                    Threads[thread_id].work_assigned = false;
-                    split_point_t* sp = Threads[thread_id].split_point;
-                    if (sp->inPv) searchNode<true, true>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, sp->inCheck, thread_id, false);
-                    else searchNode<false, true>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, sp->inCheck, thread_id, false);
-                    MutexLock(SMPLock);
-                    if (Threads[thread_id].cutoff || (sp->master == thread_id && Threads[thread_id].stop)) {
-                        for(int i = 0; i < Guci_options->threads; i++) {
-                            if(i == sp->master || sp->slaves[i])
-                                Threads[i].stop = true;
-                        }
-                    }
-                    sp->cpus--;
-                    sp->slaves[thread_id] = 0;
-                    Threads[thread_id].idle = true;
-                    Threads[thread_id].cutoff = false;
-                    MutexUnlock(SMPLock);
-                    ++Threads[thread_id].ended;
+        if(Threads[thread_id].work_assigned) {
+            ++Threads[thread_id].started;
+            Threads[thread_id].work_assigned = false;
+            split_point_t* sp = Threads[thread_id].split_point;
+            if (sp->inRoot) searchNode<true, true, false>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, sp->inCheck, EMPTY, thread_id, sp->nodeType);
+            else searchNode<false, true, false>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, sp->inCheck, EMPTY, thread_id, sp->nodeType);
+            MutexLock(IdleThreadLock);
+            if (Threads[thread_id].cutoff || (sp->master == thread_id && Threads[thread_id].stop)) {
+                for(int i = 0; i < Guci_options->threads; i++) {
+                    if(i == sp->master || sp->slaves[i])
+                        Threads[i].stop = true;
                 }
-                if(master_sp != NULL && master_sp->cpus == 0) return;
             }
+            sp->cpus--;
+            sp->slaves[thread_id] = 0;
+            Threads[thread_id].idle = true;
+            Threads[thread_id].cutoff = false;
+            MutexUnlock(IdleThreadLock);
+            ++Threads[thread_id].ended;
         }
+        if(master_sp != NULL && master_sp->cpus == 0) return;
     }
     Threads[thread_id].running = false;
 }
@@ -123,23 +120,24 @@ DWORD WINAPI winInitThread(LPVOID n) {
 void initThreads(void) {
     volatile int i;
     DWORD iID[MaxNumOfThreads];
-#ifndef TCEC
-    MutexInit(LearningLock,NULL);
-    MutexInit(BookLock,NULL);
-#endif
-    for (int i = 0; i < MaxNumOfThreads; ++i) {
+    for (i = 0; i < MaxNumOfThreads; ++i) {
         Threads[i].num_sp = 0;
         Threads[i].exit_flag = false;
         Threads[i].idle_event = CreateEvent(0, FALSE, FALSE, 0);
         for (int j = 0; j < MaxNumSplitPointsPerThread; ++j) {
             MutexInit(Threads[i].sptable[j].lock, NULL);
+            MutexInit(Threads[i].sptable[j].updatelock, NULL);
         }
         SearchInfo(i).thinking_status = STOPPED; // SMP HACK
     }
 
-    MutexInit(SMPLock, NULL);
-    //TODO consider add i=0 when dealing with auto-tuning code
+    MutexInit(SplitPointLock, NULL);
+    MutexInit(IdleThreadLock, NULL);
+#ifdef SELF_TUNE2
+    for(i = 0; i < MaxNumOfThreads; i++) {
+#else
     for(i = 1; i < MaxNumOfThreads; i++) {
+#endif
         CreateThread(NULL, 0, winInitThread, (LPVOID)&i, 0, &iID[i]);
         while(!Threads[i].running);
     }
@@ -153,87 +151,88 @@ void stopThreads(void) {
         SetEvent(Threads[i].idle_event);
         for (int j = 0; j < MaxNumSplitPointsPerThread; ++j) {
             MutexDestroy(Threads[i].sptable[j].lock);
+            MutexDestroy(Threads[i].sptable[j].updatelock);
         }
     }
-    MutexDestroy(SMPLock);
-#ifndef TCEC
-    MutexDestroy(LearningLock);
-    MutexDestroy(BookLock);
-#endif
+    MutexDestroy(SplitPointLock);
+    MutexDestroy(IdleThreadLock);
 }
 
 void setAllThreadsToStop(int thread) {
     SearchInfo(thread).thinking_status = STOPPED;
-
-    MutexLock(SMPLock);
+#ifdef SELF_TUNE2
+    Threads[thread].stop = true;
+#else
+    MutexLock(SplitPointLock);
     for (int i = 0; i < Guci_options->threads; i++) {
         Threads[i].stop = true;
     }
-    MutexUnlock(SMPLock);
+    MutexUnlock(SplitPointLock);
+#endif
 }
 
-bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, int* bestvalue, basic_move_t* bestmove, int* played, 
-                         int alpha, int beta, bool pvnode, int depth, int inCheck, const int master) {
-                             split_point_t *split_point;
-                             MutexLock(SMPLock);
-                             if(!idleThreadExists(master) || Threads[master].num_sp >= MaxNumSplitPointsPerThread) {
-                                 MutexUnlock(SMPLock); 
-                                 return false;
-                             }
-                             split_point = &Threads[master].sptable[Threads[master].num_sp];//SAM awful lot of things happening here, maybe a cheaper way?
-                             Threads[master].num_sp++;
-                             split_point->parent = Threads[master].split_point;
-                             split_point->depth = depth;
-                             split_point->alpha = alpha; 
-                             split_point->beta = beta;
-                             split_point->inPv = pvnode;
-                             split_point->bestvalue = *bestvalue;
-                             split_point->bestmove = *bestmove;
-                             split_point->played = *played;
-                             split_point->master = master;
-                             split_point->inCheck = inCheck;
-                             split_point->cpus = 0;
-                             split_point->parent_movestack = mvlist;
-                             for(int i = 0; i < Guci_options->threads; i++) {
-                                 split_point->slaves[i] = 0;
-                                 if(threadIsAvailable(i, master) || i == master) {
-                                     split_point->pos[i] = *p;
-                                     Threads[i].split_point = split_point;
-                                     if(i != master) split_point->slaves[i] = 1;
-                                     split_point->cpus++;
-                                 }
-                             }
-                             for(int i = 0; i < Guci_options->threads; i++) {
-                                 if(i == master || split_point->slaves[i]) {
-                                     Threads[i].work_assigned = true;
-                                     Threads[i].idle = false;
-                                     Threads[i].stop = false;
-                                     Threads[i].cutoff = false;
-                                 }
-                                 if (split_point->slaves[i]) { // copy search stack from master to slaves
-                                     Threads[i].evalvalue[p->ply] = Threads[master].evalvalue[p->ply];
-                                 }
-                             }
-                             MutexUnlock(SMPLock);
+bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, int* bestvalue, basic_move_t* bestmove, int* played, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, const int master) {
+    split_point_t *split_point;
+    MutexLock(SplitPointLock);
+    if(!idleThreadExists(master) || Threads[master].num_sp >= MaxNumSplitPointsPerThread) {
+        MutexUnlock(SplitPointLock); 
+        return false;
+    }
+    split_point = &Threads[master].sptable[Threads[master].num_sp];
+    Threads[master].num_sp++;
+    split_point->parent = Threads[master].split_point;
+    split_point->depth = depth;
+    split_point->alpha = alpha; 
+    split_point->beta = beta;
+    split_point->nodeType = nt;
+    split_point->bestvalue = *bestvalue;
+    split_point->bestmove = *bestmove;
+    split_point->played = *played;
+    split_point->master = master;
+    split_point->inCheck = inCheck;
+    split_point->inRoot = inRoot;
+    split_point->cpus = 0;
+    split_point->parent_movestack = mvlist;
+    for(int i = 0; i < Guci_options->threads; i++) {
+        split_point->slaves[i] = 0;
+        if(threadIsAvailable(i, master) || i == master) {
+            split_point->pos[i] = *p;
+            Threads[i].split_point = split_point;
+            if(i != master) split_point->slaves[i] = 1;
+            split_point->cpus++;
+        }
+    }
+    for(int i = 0; i < Guci_options->threads; i++) {
+        if(i == master || split_point->slaves[i]) {
+            Threads[i].idle = false;
+            Threads[i].stop = false;
+            Threads[i].cutoff = false;
+            Threads[i].work_assigned = true;
+        }
+        if (split_point->slaves[i]) { // copy search stack from master to slaves
+            Threads[i].evalvalue[p->ply] = Threads[master].evalvalue[p->ply];
+        }
+    }
+    MutexUnlock(SplitPointLock);
 
-                             if (SearchInfo(0).thinking_status==STOPPED) {
-                                 setAllThreadsToStop(0);
-                                 return false;
-                             }
+    if (SearchInfo(0).thinking_status==STOPPED) {
+        setAllThreadsToStop(0);
+        return false;
+    }
 
-                             idleLoop(master, split_point);
+    idleLoop(master, split_point);
 
-                             MutexLock(SMPLock);
-                             *bestvalue = split_point->bestvalue;
-                             *bestmove = split_point->bestmove;
-                             *played = split_point->played;
-                             if (SearchInfo(0).thinking_status != STOPPED) {
-                                 Threads[master].stop = false; 
-                                 Threads[master].idle = false;
-                             }
-                             Threads[master].split_point = split_point->parent;
-                             Threads[master].num_sp--;
-                             Threads[master].numsplits++;
-                             MutexUnlock(SMPLock);
-                             return true;
+    MutexLock(SplitPointLock);
+    *bestvalue = split_point->bestvalue;
+    *bestmove = split_point->bestmove;
+    *played = split_point->played;
+    if (SearchInfo(0).thinking_status != STOPPED) {
+        Threads[master].stop = false; 
+        Threads[master].idle = false;
+    }
+    Threads[master].split_point = split_point->parent;
+    Threads[master].num_sp--;
+    Threads[master].numsplits++;
+    MutexUnlock(SplitPointLock);
+    return true;
 }

@@ -36,7 +36,7 @@ int main(void) {
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stdin, NULL, _IONBF, 0);
 
-    logfile = fopen("logfile.txt", "w");
+    logfile = fopen("logfile.txt", "a+");
     errfile = fopen(ERROR_FILE, "a+");
     dumpfile = fopen("dumpfile.txt", "a+");
 
@@ -67,8 +67,6 @@ int main(void) {
     SearchInfo(0).et.table = NULL;
     initEvalTab(&SearchInfo(0).et, INIT_EVAL);
 
-
-
     initOption(&uci_option); // this should be initialized first
     initArr();
     initPST(Guci_options);
@@ -77,11 +75,8 @@ int main(void) {
     initSmpVars();
     initThreads();
 
-
     initMaterial();
     InitMateBoost();
-
-
 
 #ifdef SPEED_TEST
     MeasureSpeed(&pos);
@@ -130,6 +125,10 @@ int main(void) {
             /* no op */
         } else if (!memcmp(command, "quit", 4)) {
             break;
+        } else if (!memcmp(command, "speedup", 7)) {
+            checkSpeedUp(&pos);
+        } else if (!memcmp(command, "split", 5)) {
+            benchSplitDepth(&pos);
         }
 #ifdef OPTIMIZE
         else if (!memcmp(command, "optimize1",9)) optimize(&pos, 1);

@@ -107,5 +107,7 @@ static search_info_t global_search_info;
 static uci_option_t *Guci_options;
 
 thread_t Threads[MaxNumOfThreads];
-mutex_t SMPLock[1];
+mutex_t SplitPointLock[1];
+mutex_t IdleThreadLock[1];
+
 

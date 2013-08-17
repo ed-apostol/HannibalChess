@@ -370,4 +370,5 @@ void uciSetPosition(position_t *pos, char *str) {
             while (isspace(*c)) c++;
         }
     }
+    pos->ply = 0;
 }

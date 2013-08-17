@@ -169,6 +169,7 @@ void transClear(int thread) {
 
     transNewDate(-1,thread);
     if (TransTable(thread).table != NULL) {
+        memset(TransTable(thread).table, 0, (TransTable(thread).size * sizeof(trans_entry_t)));
         for (te = &TransTable(thread).table[0]; te < &TransTable(thread).table[TransTable(thread).size]; te++) {
             transSetMinvalue(te, -INF); // not important now, but perhaps if we use in qsearch or something
             transSetMaxvalue(te, INF); // not important now, but perhaps if we use in qsearch or something
@@ -194,8 +195,8 @@ void initTrans(uint64 target, int thread) {
         free(TransTable(thread).table);
     }
     TransTable(thread).size = size;
-    TransTable(thread).mask = TransTable(thread).size - 1; //size needs to be a power of 2 for the masking to work
-    TransTable(thread).table = (trans_entry_t*) malloc((TransTable(thread).size+3) * sizeof(trans_entry_t)); //associativity of 4 means we need the +3 in theory
+    TransTable(thread).mask = TransTable(thread).size - 4; //size needs to be a power of 2 for the masking to work
+    TransTable(thread).table = (trans_entry_t*) malloc((TransTable(thread).size) * sizeof(trans_entry_t)); //associativity of 4 means we need the +3 in theory
     if (TransTable(thread).table == NULL) {
         Print(3, "info string Not enough memory to allocate transposition table.\n");
     }
