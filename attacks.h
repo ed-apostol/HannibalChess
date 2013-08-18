@@ -217,7 +217,7 @@ uint32 moveIsLegal(const position_t *pos, uint32 move, uint64 pinned, uint32 inc
 }
 
 /* this determines if a move gives check */
-uint32 moveIsCheck(const position_t *pos, basic_move_t m, uint64 dcc) {
+bool moveIsCheck(const position_t *pos, basic_move_t m, uint64 dcc) {
     int us, them, ksq, from, to;
     uint64 temp;
     us = pos->side;

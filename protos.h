@@ -70,7 +70,7 @@ extern uint32 kingIsInCheck(const position_t *pos);
 extern uint64 pinnedPieces(const position_t *pos, uint32 c);
 extern uint64 discoveredCheckCandidates(const position_t *pos, uint32 c);
 extern uint32 moveIsLegal(const position_t *pos, uint32 move, uint64 pinned, uint32 incheck);
-extern uint32 moveIsCheck(const position_t *pos, uint32 m, uint64 dcc);
+extern bool moveIsCheck(const position_t *pos, uint32 m, uint64 dcc);
 extern uint64 attackingPiecesAll(const position_t *pos, uint64 occ, uint32 sq);
 extern uint64 attackingPiecesSide(const position_t *pos, uint32 sq, uint32 side);
 extern int moveAttacksSquare(const position_t *pos, uint32 move, uint32 sq);
