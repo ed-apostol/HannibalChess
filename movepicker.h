@@ -239,8 +239,8 @@ basic_move_t sortNext(split_point_t* sp, position_t *pos, movelist_t *mvlist, in
                     mvlist->list[mvlist->size].m = SearchInfo(thread_id).moves[mvlist->size];
                 }
             } else {
-                // generate all under promotion ONLY IF IN ANALYZE MODE
-                genLegal(pos, mvlist, (SearchInfo(thread_id).depth_is_limited && SearchInfo(thread_id).depth_limit == MAXPLY)); 
+                // generate all legal moves at least in the root
+                genLegal(pos, mvlist, true); 
             }
             scoreRoot(mvlist);
             SearchInfo(thread_id).mvlist_initialized = true;

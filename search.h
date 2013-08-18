@@ -90,20 +90,17 @@ void initNode(position_t *pos, const int thread_id) {
         if (SearchInfo(thread_id).thinking_status == THINKING && SearchInfo(thread_id).time_is_limited) {
             if (time2 > SearchInfo(thread_id).time_limit_max) {
                 if (time2 < SearchInfo(thread_id).time_limit_abs) {
-                    bool gettingWorse = SearchInfo(thread_id).best_value != -INF && SearchInfo(thread_id).best_value + 30 <= SearchInfo(thread_id).last_value;
-                    bool wasGettingWorse = SearchInfo(thread_id).best_value == -INF && SearchInfo(thread_id).last_value + 30 <= SearchInfo(thread_id).last_last_value;
-                    if (!SearchInfo(thread_id).research && !SearchInfo(thread_id).change && !gettingWorse && ! wasGettingWorse) {
-                        setAllThreadsToStop(thread_id);
-                        Print(2, "info string Aborting search: time limit 2\n");
-                    }
-                    else if (gettingWorse) {
-                        int amountWorse = SearchInfo(thread_id).last_value - SearchInfo(thread_id).best_value;
-                        SearchInfo(thread_id).time_limit_max += ((amountWorse - 20) * SearchInfo(thread_id).alloc_time)/WORSE_TIME_BONUS;
-                        if (SearchInfo(thread_id).time_limit_max > SearchInfo(thread_id).time_limit_abs) SearchInfo(thread_id).time_limit_max = SearchInfo(thread_id).time_limit_abs;
+                    if (!SearchInfo(thread_id).research && !SearchInfo(thread_id).change) {
+                        bool gettingWorse = SearchInfo(thread_id).best_value != -INF && SearchInfo(thread_id).best_value + 30 <= SearchInfo(thread_id).last_value;
+                        bool wasGettingWorse = SearchInfo(thread_id).best_value == -INF && SearchInfo(thread_id).last_value + 30 <= SearchInfo(thread_id).last_last_value;
+                        if (!gettingWorse && !wasGettingWorse) {
+                            setAllThreadsToStop(thread_id);
+                            Print(2, "info string Aborting search: time limit 2: %d\n", time2 - SearchInfo(thread_id).start_time);
+                        }
                     }
                 } else {
                     setAllThreadsToStop(thread_id);
-                    Print(2, "info string Aborting search: time limit 1\n");
+                    Print(2, "info string Aborting search: time limit 1: %d\n", time2 - SearchInfo(thread_id).start_time);
                 }
             }
         }
@@ -328,7 +325,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
     initNode(pos, thread_id);
     if (Threads[thread_id].stop) return 0;
 
-    if (!inSingular && !inSplitPoint) {
+    if (!inRoot && !inSingular && !inSplitPoint) {
         entry = transProbe(pos->hash, thread_id);
         if (entry != NULL) {
             hashMove = transMove(entry);
@@ -359,7 +356,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
         if (pos->ply >= MAXPLY-1) return Threads[thread_id].evalvalue[pos->ply];
         updateEvalgains(pos, pos->posStore.lastmove, Threads[thread_id].evalvalue[pos->ply-1], Threads[thread_id].evalvalue[pos->ply], thread_id);
 
-        if (!inRoot && !inPvNode(nt) && !inCheck && prune) {
+        if (!inPvNode(nt) && !inCheck && prune) {
             int rvalue;
             if (inCutNode(nt) && pos->color[pos->side] & ~(pos->pawns | pos->kings) && beta < (rvalue = Threads[thread_id].evalvalue[pos->ply] - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0]))  {
                 return rvalue;
@@ -388,7 +385,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                 }
             }
         }
-        if (!inRoot && !inAllNode(nt) && depth >= (inPvNode(nt)?4:6) && prune) { // IID
+        if (!inAllNode(nt) && depth >= (inPvNode(nt)?4:6) && prune) { // IID
             newdepth = depth / 2;
             if (hashMove == EMPTY || hashDepth < newdepth) {
                 score = searchNode<false, false, false>(pos, alpha, beta, newdepth, inCheck, EMPTY, thread_id, nt);
@@ -399,7 +396,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                 }
             }
         }
-        if (!inRoot && !inAllNode(nt) && depth >= (inPvNode(nt)?EXPLORE_DEPTH_PV:EXPLORE_DEPTH_NOPV) && prune) { // singular extension
+        if (!inAllNode(nt) && depth >= (inPvNode(nt)?EXPLORE_DEPTH_PV:EXPLORE_DEPTH_NOPV) && prune) { // singular extension
             newdepth = depth / 2;
             if (hashMove != EMPTY && hashDepth >= newdepth) { 
                 int targetScore = Threads[thread_id].evalvalue[pos->ply] - EXPLORE_CUTOFF;
@@ -418,8 +415,19 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
         mvlist = sp->parent_movestack;
         played = sp->played;
     } else {
-        sortInit(pos, mvlist, pinnedPieces(pos, pos->side), hashMove, alpha, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), thread_id);
-        firstExtend |= (inCheck && mvlist->size==1);
+        if (inRoot) {
+            mvlist = &SearchInfo(thread_id).rootmvlist;
+            if (!SearchInfo(thread_id).mvlist_initialized) {
+                if ((entry = transProbe(pos->hash, thread_id)) != NULL) hashMove = transMove(entry);
+                sortInit(pos, mvlist, pinnedPieces(pos, pos->side), hashMove, alpha, depth, MoveGenPhaseRoot, thread_id);
+            } else {
+                mvlist->pos = 0;
+                mvlist->phase = MoveGenPhaseRoot + 1;
+            }
+        } else {
+            sortInit(pos, mvlist, pinnedPieces(pos, pos->side), hashMove, alpha, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), thread_id);
+            firstExtend |= (inCheck && mvlist->size==1);
+        }
     }
     int pruneable =  prune && MinTwoBits(pos->color[pos->side] & ~(pos->pawns | pos->kings));
     int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 4) : (depth * depth));
@@ -445,7 +453,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                     if (played > lateMove && !isMoveDefence(pos, move, nullThreatMoveToBit)) continue;
                     int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(played,63)]);
                     score = Threads[thread_id].evalvalue[pos->ply] + opt
-                    + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(played,63)]
+                        + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(played,63)]
                     + SearchInfo(thread_id).evalgains[historyIndex(pos->side, move)];
                     if (score < beta  && !moveIsPassedPawn(pos, move)) {
                         bestvalue = MAX(bestvalue, score);
@@ -477,6 +485,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
             unmakeMove(pos, &undo);
         }
         if (Threads[thread_id].stop) return bestvalue;
+        if (inRoot) mvlist->list[mvlist->pos-1].s = score;
         if (inSplitPoint) MutexLock(sp->updatelock);
         if (score > (inSplitPoint ? sp->bestvalue : bestvalue)) {
             bestvalue = inSplitPoint ? sp->bestvalue = score : score;
@@ -501,13 +510,13 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
             }
         }
         if (inSplitPoint) MutexUnlock(sp->updatelock);
-        if(!inSplitPoint && !inSingular && !Threads[thread_id].stop && !inCheck
+        if(!inRoot && !inSplitPoint && !inSingular && !Threads[thread_id].stop && !inCheck
             && Guci_options->threads > 1 && depth >= Guci_options->min_split_depth && idleThreadExists(thread_id)
             && splitRemainingMoves(pos, mvlist, &bestvalue, &bestmove, &played, alpha, beta, nt, depth, inCheck, inRoot, thread_id)) {
                 break;
         }
     }
-    if (inRoot && !inSplitPoint) {
+    if (inRoot) {
         if (SHOW_SEARCH && depth >= 8 && (!Threads[thread_id].stop || bestvalue != -INF))
             displayPV(pos, &SearchInfo(thread_id).rootPV, depth, oldalpha, beta, bestvalue);
         if (bestvalue <= oldalpha || bestvalue >= beta) SearchInfo(thread_id).research = 1;
@@ -588,37 +597,35 @@ void timeManagement(int depth, int thread_id) {
                     Print(2, "info string Aborting search: legalmove/mate found depth >= 8\n");
                 }
             } 
-            if (SearchInfo(thread_id).change && time >= SearchInfo(thread_id).start_time + (SearchInfo(thread_id).alloc_time * 10)/100) {
-                SearchInfo(thread_id).time_limit_max += (SearchInfo(thread_id).alloc_time * INCREASE_CHANGE) / 100;
-                if (SearchInfo(thread_id).time_limit_max > SearchInfo(thread_id).time_limit_abs) SearchInfo(thread_id).time_limit_max = SearchInfo(thread_id).time_limit_abs;
-            }
             if (time + (SearchInfo(thread_id).alloc_time * LAST_PLY_TIME)/100 >= SearchInfo(thread_id).time_limit_max) {
                 int64 addTime = 0;
                 if (gettingWorse) {
                     int amountWorse = SearchInfo(thread_id).last_value - SearchInfo(thread_id).best_value;
-                    addTime = ((amountWorse - 20) * SearchInfo(thread_id).alloc_time)/WORSE_TIME_BONUS;
+                    addTime += ((amountWorse - 20) * SearchInfo(thread_id).alloc_time)/WORSE_TIME_BONUS;
+                    Print(2, "info string Extending time (root gettingWorse): %d\n", addTime);
                 }
                 if (SearchInfo(thread_id).change) {
                     addTime += (SearchInfo(thread_id).alloc_time * CHANGE_TIME_BONUS) / 100;
+                    Print(2, "info string Extending time (root change): %d\n", addTime);
                 }
                 if (addTime) {
                     SearchInfo(thread_id).time_limit_max += addTime;
                     if (SearchInfo(thread_id).time_limit_max > SearchInfo(thread_id).time_limit_abs) SearchInfo(thread_id).time_limit_max = SearchInfo(thread_id).time_limit_abs;
                     if (time + (SearchInfo(thread_id).alloc_time * LAST_PLY_TIME)/100 >= SearchInfo(thread_id).time_limit_abs) {
                         setAllThreadsToStop(thread_id);
-                        Print(2, "info string Aborting search: root time limit 2\n");
+                        Print(2, "info string Aborting search: root time limit 2: %d\n", time - SearchInfo(thread_id).start_time);
                     }
                 }
                 else { // if we are unlikely to get deeper, save our time
                     setAllThreadsToStop(thread_id);
-                    Print(2, "info string Aborting search: root time limit 1\n");
+                    Print(2, "info string Aborting search: root time limit 1: %d\n", time - SearchInfo(thread_id).start_time);
                 }
             }
         }
     } 
     if (SearchInfo(thread_id).depth_is_limited && depth >= SearchInfo(thread_id).depth_limit) {
         setAllThreadsToStop(thread_id);
-         Print(2, "info string Aborting search: depth limit 1\n");
+        Print(2, "info string Aborting search: depth limit 1\n");
     }
 }
 
