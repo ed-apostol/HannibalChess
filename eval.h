@@ -1139,7 +1139,7 @@ void evalThreats(const position_t *pos, eval_info_t *ei, const int color, int *u
 
         if (threatB) {
             int numThreats = bitCnt(threatB);
-            if (pos->side != color) *upside += ThreatBonus[numThreats]; 
+            //if (pos->side != color) *upside += ThreatBonus[numThreats]; 
             //only really takes double threats for the opponent seriously, since its not handled well by qsearch and such
             numThreats += (pos->side==color);
             ei->mid_score[color] += ThreatBonus[numThreats];
@@ -1591,8 +1591,8 @@ int eval(const position_t *pos, int thread_id, int *optimism, int *pessimism) {
     else if (score > MAXEVAL) score = MAXEVAL;
 
     entry->hashlock = LOCK(pos->hash);
-    entry->optimism = *optimism / 10;
-    entry->pessimism = *pessimism / 10;
+    entry->optimism = *optimism;
+    entry->pessimism = *pessimism;
     entry->value = score;
 
     return score;

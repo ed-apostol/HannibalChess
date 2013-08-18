@@ -251,10 +251,12 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, const bool in
             score = DrawValue[pos->side];
         } else {
             moveGivesCheck = moveIsCheck(pos, move, dcc);
-            //pruning
             if (prunable && move!=hashMove && !moveGivesCheck && !moveIsPassedPawn(pos, move)) {
-                int scoreAprox = Threads[thread_id].evalvalue[pos->ply] + PawnValueEnd + MaxPieceValue[moveCapture(move)]; 
-                if (scoreAprox <= alpha) continue; //todo try out opt, tryout see instead of maxpiecevalue
+                int scoreAprox = Threads[thread_id].evalvalue[pos->ply] + MaxPieceValue[moveCapture(move)] + opt + 50; 
+                if (scoreAprox < beta) {
+                    bestvalue = MAX(bestvalue, scoreAprox);
+                    continue; //todo try out opt, tryout see instead of maxpiecevalue
+                }
             }
             newdepth = depth - !moveGivesCheck;
             makeMove(pos, &undo, move);
@@ -332,17 +334,13 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
             hashMove = transMove(entry);
             if (!inPvNode(nt)) {
                 if (depth <= transMindepth(entry) && transMinvalue(entry) > alpha && alpha < MAXEVAL) {
-                    if (Threads[thread_id].killer1[pos->ply] != hashMove) {
+                    if (hashMove && hashMove != Threads[thread_id].killer1[pos->ply] && !moveIsTactical(hashMove)) { //good move, so killer move 07/25/13 NEW
                         Threads[thread_id].killer2[pos->ply] = Threads[thread_id].killer1[pos->ply];
                         Threads[thread_id].killer1[pos->ply] = hashMove;
                     }
                     return transMinvalue(entry);
                 }
                 if (depth <= transMaxdepth(entry) && transMaxvalue(entry) < beta && beta > -MAXEVAL) {
-                    if (Threads[thread_id].killer1[pos->ply] != hashMove) {
-                        Threads[thread_id].killer2[pos->ply] = Threads[thread_id].killer1[pos->ply];
-                        Threads[thread_id].killer1[pos->ply] = hashMove;
-                    }
                     return transMaxvalue(entry);
                 }
             }
@@ -363,39 +361,29 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
 
         if (!inRoot && !inPvNode(nt) && !inCheck && prune) {
             int rvalue;
-            if (inCutNode(nt) && pos->color[pos->side] & ~(pos->pawns | pos->kings) && beta < (rvalue = Threads[thread_id].evalvalue[pos->ply] - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0] - pes))  {
-                if (hashMove && hashMove != Threads[thread_id].killer1[pos->ply] && !moveIsTactical(hashMove)) { //good move, so killer move 07/25/13 NEW
-                    Threads[thread_id].killer2[pos->ply] = Threads[thread_id].killer1[pos->ply];
-                    Threads[thread_id].killer1[pos->ply] = hashMove;
-                }
+            if (inCutNode(nt) && pos->color[pos->side] & ~(pos->pawns | pos->kings) && beta < (rvalue = Threads[thread_id].evalvalue[pos->ply] - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0]))  {
                 return rvalue;
             }
             if (pos->posStore.lastmove != EMPTY && hashMove == EMPTY
-                && Threads[thread_id].evalvalue[pos->ply] < (rvalue = beta - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0] - opt)) { 
-                    score = searchNode<false, false, false>(pos, rvalue-1, rvalue, depth-4, false, EMPTY, thread_id, nt); // TODO: try qsearch here
+                && Threads[thread_id].evalvalue[pos->ply] < (rvalue = beta - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0])) { 
+                    score = searchNode<false, false, false>(pos, rvalue-1, rvalue, 0, false, EMPTY, thread_id, nt);
                     if (score < rvalue) return score;
             }
             if (inCutNode(nt) && depth >= 2 && (MinTwoBits(pos->color[pos->side] & ~(pos->pawns))) && Threads[thread_id].evalvalue[pos->ply] >= beta) {
                 if (anyRepNoMove(pos,0)) {
                     if (DrawValue[pos->side] >= beta) return DrawValue[pos->side];
                 } else {
-                    int nullDepth = depth - (4 + depth/5 + (Threads[thread_id].evalvalue[pos->ply] - beta > PawnValue));
-                    makeNullMove(pos, &undo);
-                    score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, false, EMPTY, thread_id, invertNode(nt));
-                    if ((entry = transProbe(pos->hash, thread_id)) != NULL && transMove(entry) != EMPTY) {
-                        nullThreatMoveToBit = BitMask[moveTo(transMove(entry))];
-                    }
-                    unmakeNullMove(pos, &undo);
+                    if (depth > 6) score = searchNode<false, false, false>(pos, alpha, beta, depth-6, false, EMPTY, thread_id, nt);
+                    else score = beta;
                     if (score >= beta) {
-                        if (depth <= 6) {
-                            transStore(pos->hash, EMPTY, depth, ((score > oldalpha) ? score : -INF), ((score < beta) ? score : INF), thread_id);
-                            return score;
+                        int nullDepth = depth - (4 + depth/5 + (Threads[thread_id].evalvalue[pos->ply] - beta > PawnValue));
+                        makeNullMove(pos, &undo);
+                        score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, false, EMPTY, thread_id, invertNode(nt));
+                        if ((entry = transProbe(pos->hash, thread_id)) != NULL && transMove(entry) != EMPTY) {
+                            nullThreatMoveToBit = BitMask[moveTo(transMove(entry))];
                         }
-                        score = searchNode<false, false, false>(pos, alpha, beta, depth-6, false, EMPTY, thread_id, nt);
-                        if (score >= beta) {
-                            transStore(pos->hash, EMPTY, depth, ((score > oldalpha) ? score : -INF), ((score < beta) ? score : INF), thread_id);
-                            return score;
-                        }
+                        unmakeNullMove(pos, &undo);
+                        if (score >= beta) return score;
                     }
                 }
             }
@@ -456,15 +444,20 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                 if (!inRoot && !inPvNode(nt) && okToPruneOrReduce && pruneable) {
                     if (played > lateMove && !isMoveDefence(pos, move, nullThreatMoveToBit)) continue;
                     int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(played,63)]);
-                    score = Threads[thread_id].evalvalue[pos->ply] 
+                    score = Threads[thread_id].evalvalue[pos->ply] + opt
                     + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(played,63)]
                     + SearchInfo(thread_id).evalgains[historyIndex(pos->side, move)];
                     if (score < beta  && !moveIsPassedPawn(pos, move)) {
-                        if (predictedDepth < 8) continue;
-                        --newdepthclone;
+                        bestvalue = MAX(bestvalue, score);
+                        if (inSplitPoint) {
+                            MutexLock(sp->updatelock);
+                            sp->bestvalue = MAX(sp->bestvalue, bestvalue);
+                            MutexUnlock(sp->updatelock);
+                        }
+                        continue;
                     }
                     if (inCutNode(nt) && swap(pos, move) < 0) {
-                        if (predictedDepth < 2) continue;
+                        if (predictedDepth < 4) continue;
                         --newdepthclone;
                     }
                 }
@@ -783,7 +776,7 @@ void getBestMove(position_t *pos, int thread_id) {
     if (SearchInfo(thread_id).thinking_status != PONDERING) SearchInfo(thread_id).outOfBook++;
 #endif
 
-	// SMP 
+    // SMP 
     initSmpVars();
     for (int i = 1; i < Guci_options->threads; ++i) SetEvent(Threads[i].idle_event);
     Threads[thread_id].split_point = &Threads[thread_id].sptable[0];
