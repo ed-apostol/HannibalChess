@@ -267,9 +267,7 @@ typedef struct _search_info_t{
     bool mvlist_initialized;
     movelist_t rootmvlist;
     continuation_t rootPV;
-#ifdef NEW_EASY
-	int easy;
-#endif
+	bool try_easy;
     int32 evalgains[1024];
     int32 history[1024];
     evaltable_t et;

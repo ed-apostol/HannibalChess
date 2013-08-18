@@ -52,7 +52,7 @@ void idleLoop(const int thread_id, split_point_t *master_sp) {
             split_point_t* sp = Threads[thread_id].split_point;
             if (sp->inRoot) searchNode<true, true, false>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, sp->inCheck, EMPTY, thread_id, sp->nodeType);
             else searchNode<false, true, false>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, sp->inCheck, EMPTY, thread_id, sp->nodeType);
-            MutexLock(IdleThreadLock);
+            MutexLock(SMPLock);
             if (Threads[thread_id].cutoff || (sp->master == thread_id && Threads[thread_id].stop)) {
                 for(int i = 0; i < Guci_options->threads; i++) {
                     if(i == sp->master || sp->slaves[i])
@@ -63,7 +63,7 @@ void idleLoop(const int thread_id, split_point_t *master_sp) {
             sp->slaves[thread_id] = 0;
             Threads[thread_id].idle = true;
             Threads[thread_id].cutoff = false;
-            MutexUnlock(IdleThreadLock);
+            MutexUnlock(SMPLock);
             ++Threads[thread_id].ended;
         }
         if(master_sp != NULL && master_sp->cpus == 0) return;
@@ -131,8 +131,7 @@ void initThreads(void) {
         SearchInfo(i).thinking_status = STOPPED; // SMP HACK
     }
 
-    MutexInit(SplitPointLock, NULL);
-    MutexInit(IdleThreadLock, NULL);
+    MutexInit(SMPLock, NULL);
 #ifdef SELF_TUNE2
     for(i = 0; i < MaxNumOfThreads; i++) {
 #else
@@ -154,8 +153,7 @@ void stopThreads(void) {
             MutexDestroy(Threads[i].sptable[j].updatelock);
         }
     }
-    MutexDestroy(SplitPointLock);
-    MutexDestroy(IdleThreadLock);
+    MutexDestroy(SMPLock);
 }
 
 void setAllThreadsToStop(int thread) {
@@ -163,19 +161,19 @@ void setAllThreadsToStop(int thread) {
 #ifdef SELF_TUNE2
     Threads[thread].stop = true;
 #else
-    MutexLock(SplitPointLock);
+    MutexLock(SMPLock);
     for (int i = 0; i < Guci_options->threads; i++) {
         Threads[i].stop = true;
     }
-    MutexUnlock(SplitPointLock);
+    MutexUnlock(SMPLock);
 #endif
 }
 
 bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, int* bestvalue, basic_move_t* bestmove, int* played, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, const int master) {
     split_point_t *split_point;
-    MutexLock(SplitPointLock);
+    MutexLock(SMPLock);
     if(!idleThreadExists(master) || Threads[master].num_sp >= MaxNumSplitPointsPerThread) {
-        MutexUnlock(SplitPointLock); 
+        MutexUnlock(SMPLock); 
         return false;
     }
     split_point = &Threads[master].sptable[Threads[master].num_sp];
@@ -213,7 +211,7 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, int* bestvalue
             Threads[i].evalvalue[p->ply] = Threads[master].evalvalue[p->ply];
         }
     }
-    MutexUnlock(SplitPointLock);
+    MutexUnlock(SMPLock);
 
     if (SearchInfo(0).thinking_status==STOPPED) {
         setAllThreadsToStop(0);
@@ -222,7 +220,7 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, int* bestvalue
 
     idleLoop(master, split_point);
 
-    MutexLock(SplitPointLock);
+    MutexLock(SMPLock);
     *bestvalue = split_point->bestvalue;
     *bestmove = split_point->bestmove;
     *played = split_point->played;
@@ -233,6 +231,6 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, int* bestvalue
     Threads[master].split_point = split_point->parent;
     Threads[master].num_sp--;
     Threads[master].numsplits++;
-    MutexUnlock(SplitPointLock);
+    MutexUnlock(SMPLock);
     return true;
 }

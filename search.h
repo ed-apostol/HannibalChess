@@ -786,6 +786,7 @@ void getBestMove(position_t *pos, int thread_id) {
     Threads[thread_id].split_point = &Threads[thread_id].sptable[0];
     SearchInfo(thread_id).mvlist_initialized = false;
 
+    SearchInfo(thread_id).try_easy = true;
     for (id = 1; id < MAXPLY; id++) {
         int faillow = 0, failhigh = 0;
         SearchInfo(thread_id).iteration = id;
@@ -810,7 +811,21 @@ void getBestMove(position_t *pos, int thread_id) {
             } else if(SearchInfo(thread_id).best_value >= beta) {
                 if (SearchInfo(thread_id).best_value >= beta)  beta = SearchInfo(thread_id).best_value+(16<<++failhigh);
                 if (beta > RookValue) beta = INF;
-            } else break;
+            } else {
+                if (SearchInfo(thread_id).try_easy && id >= 12 && SearchInfo(thread_id).start_time + getTime() >= (SearchInfo(thread_id).time_limit_max * 20) / 100) {
+                    SearchInfo(thread_id).try_easy = false;
+                    Print(3, "info string Trying easy move 1\n");
+                    int rbeta = SearchInfo(thread_id).best_value - 50; // TODO: to be tuned
+                    int value = searchNode<false, false, true>(pos, rbeta-1, rbeta, id-3, inCheck, SearchInfo(thread_id).bestmove, thread_id, CutNode);
+                    if (SearchInfo(thread_id).thinking_status == STOPPED) break;
+                    Print(3, "info string Trying easy move 2: bestvalue = %d, value = %d\n", SearchInfo(thread_id).best_value, value);
+                    if (value <= rbeta) {
+                        setAllThreadsToStop(thread_id);
+                        Print(3, "info string Aborting search: easy move\n");
+                    }
+                }
+                break;
+            }
         }
         if (SearchInfo(thread_id).thinking_status == STOPPED) break;
         repopulateHash(pos, &SearchInfo(thread_id).rootPV, id);
