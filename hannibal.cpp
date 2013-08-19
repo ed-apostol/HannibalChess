@@ -31,9 +31,8 @@ can knight catch pawns code from LL
 #define NUM_THREADS			    4
 #define MIN_SPLIT_DEPTH			5
 #define TCEC true
-#define SPEED_TEST
 
-
+//#define SPEED_TEST
 //#define NEW_EASY true
 //#define DEBUG_EASY true
 //#define OPTIMIZE true

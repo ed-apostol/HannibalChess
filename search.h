@@ -248,7 +248,7 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, const bool in
         } else {
             moveGivesCheck = moveIsCheck(pos, move, dcc);
             if (prunable && move != hashMove && !moveGivesCheck && (movePiece(move) != PAWN || !moveIsPassedPawn(pos, move))) {
-                int scoreAprox = Threads[thread_id].evalvalue[pos->ply] + MaxPieceValue[moveCapture(move)] + opt + 50; 
+                int scoreAprox = Threads[thread_id].evalvalue[pos->ply] + MaxPieceValue[moveCapture(move)] + PawnValueEnd; 
                 if (scoreAprox < beta) {
                     bestvalue = MAX(bestvalue, scoreAprox);
                     continue; //todo try out opt, tryout see instead of maxpiecevalue
@@ -284,10 +284,10 @@ int searchNode(position_t *pos, int alpha, int beta, const int depth, const bool
     }
 }
 
-INLINE bool inPvNode(NodeType nt) { return (nt==PVNode);}
-INLINE bool inCutNode(NodeType nt) { return (nt==CutNode);}
-INLINE bool inAllNode(NodeType nt) { return (nt==AllNode);}
-INLINE NodeType invertNode(NodeType nt) { return ((nt==PVNode) ? PVNode : ((nt==CutNode) ? AllNode : CutNode));}
+inline bool inPvNode(NodeType nt) { return (nt==PVNode);}
+inline bool inCutNode(NodeType nt) { return (nt==CutNode);}
+inline bool inAllNode(NodeType nt) { return (nt==AllNode);}
+inline NodeType invertNode(NodeType nt) { return ((nt==PVNode) ? PVNode : ((nt==CutNode) ? AllNode : CutNode));}
 
 template<bool inRoot, bool inSplitPoint, bool inCheck, bool inSingular>
 int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const basic_move_t bannedMove, const int thread_id, NodeType nt) {
@@ -357,20 +357,20 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
 
         if (!inPvNode(nt) && !inCheck && prune) {
             int rvalue;
-            if (inCutNode(nt) && pos->color[pos->side] & ~(pos->pawns | pos->kings) 
+            if (inCutNode(nt) && depth <= 3 && pos->color[pos->side] & ~(pos->pawns | pos->kings) 
             && beta < (rvalue = Threads[thread_id].evalvalue[pos->ply] - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0]))  {
                 return rvalue;
             }
-            if (hashMove == EMPTY && !(Rank7ByColorBB[pos->side] & pos->pawns)
+            if (depth <= 3 && hashMove == EMPTY && !(Rank7ByColorBB[pos->side] & pos->pawns)
             && Threads[thread_id].evalvalue[pos->ply] < (rvalue = beta - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0])) { 
                 score = searchNode<false, false, false>(pos, rvalue-1, rvalue, 0, false, EMPTY, thread_id, nt);
                 if (score < rvalue) return score;
             }
             if (inCutNode(nt) && depth >= 2 && (MinTwoBits(pos->color[pos->side] & ~(pos->pawns))) && Threads[thread_id].evalvalue[pos->ply] >= beta) {
-                int nullDepth = depth - (3 + depth/4 + (Threads[thread_id].evalvalue[pos->ply] - beta > PawnValue));
-                if (depth < 12) score = beta;
-                else score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, false, EMPTY, thread_id, AllNode);
+                if (depth > 6) score = searchNode<false, false, false>(pos, alpha, beta, depth - 6, false, EMPTY, thread_id, AllNode);
+                else score = beta;
                 if (score >= beta) {
+                    int nullDepth = depth - (4 + depth/5 + (Threads[thread_id].evalvalue[pos->ply] - beta > PawnValue));
                     makeNullMove(pos, &undo);
                     score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, false, EMPTY, thread_id, AllNode);
                     if ((entry = transProbe(pos->hash, thread_id)) != NULL && transMove(entry) != EMPTY) {
@@ -447,29 +447,33 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                 makeMove(pos, &undo, move);
                 score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, EMPTY, thread_id, invertNode(nt));
             } else {
-                int okToPruneOrReduce = (newdepth >= depth || inCheck || moveGivesCheck || MoveGenPhase[mvlist_phase] != PH_QUIET_MOVES) ? 0 : 1;
-                int newdepthclone = newdepth;
-                if (!inRoot && !inPvNode(nt) && okToPruneOrReduce && pruneable) {
+                int PruneReductionLevel = (inCheck || newdepth >= depth || moveGivesCheck || MoveGenPhase[mvlist_phase] != PH_QUIET_MOVES ) ? 0 : 
+                    (moveIsPassedPawn(pos, move) ? 1 : 2);
+                if (!inRoot && !inPvNode(nt) && PruneReductionLevel && pruneable) {
                     if (played > lateMove && !isMoveDefence(pos, move, nullThreatMoveToBit)) continue;
                     int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(played,63)]);
                     score = Threads[thread_id].evalvalue[pos->ply]
-                        + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(played,63)]
-                        + SearchInfo(thread_id).evalgains[historyIndex(pos->side, move)];
-                    if (score < beta  && !moveIsPassedPawn(pos, move)) {
-                        bestvalue = MAX(bestvalue, score);
-                        if (inSplitPoint) {
-                            MutexLock(sp->updatelock);
-                            sp->bestvalue = MAX(sp->bestvalue, bestvalue);
-                            MutexUnlock(sp->updatelock);
-                        }
-                        continue;
+                    + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(played,63)]
+                    + SearchInfo(0).evalgains[historyIndex(pos->side, move)];
+                    if (score < beta) {
+                        if (predictedDepth < 8 && PruneReductionLevel > 1) continue;
+                        newdepth--;
                     }
-                    if (inCutNode(nt) && swap(pos, move) < 0) {
-                        if (predictedDepth < 4) continue;
-                        newdepthclone--;
+                   if (swap(pos, move) < 0) {
+                        if (predictedDepth < 2) continue;
+                        newdepth--; 
                     }
                 }
-                if (okToPruneOrReduce && depth >= MIN_REDUCTION_DEPTH) newdepthclone -= ReductionTable[(inPvNode(nt)?0:1)][MIN(depth,63)][MIN(played,63)];
+                int newdepthclone = newdepth;
+                if (depth >= MIN_REDUCTION_DEPTH || !MIN_REDUCTION_DEPTH) { 
+                    if (PruneReductionLevel==1) {
+                        newdepthclone -= ((ReductionTable[1][MIN(depth,63)][MIN(played,63)] >= 3) ? (ReductionTable[1][MIN(depth,63)][MIN(played,63)] - 2) : 0);
+                    }
+                    else if (PruneReductionLevel==2) {
+                        newdepthclone -= ReductionTable[(inPvNode(nt)?0:1)][MIN(depth,63)][MIN(played,63)];
+                    }
+                    else if (MoveGenPhase[mvlist_phase] == PH_BAD_CAPTURES) newdepthclone--;
+                }
                 makeMove(pos, &undo, move);
                 if (inSplitPoint) alpha = sp->alpha;
                 score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepthclone, moveGivesCheck, EMPTY, thread_id, CutNode);
