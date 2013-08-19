@@ -1591,8 +1591,8 @@ int eval(const position_t *pos, int thread_id, int *optimism, int *pessimism) {
     else if (score > MAXEVAL) score = MAXEVAL;
 
     entry->hashlock = LOCK(pos->hash);
-    entry->optimism = *optimism;
-    entry->pessimism = *pessimism;
+    entry->optimism = MIN(127, *optimism);
+    entry->pessimism = MIN(127, *pessimism);
     entry->value = score;
 
     return score;

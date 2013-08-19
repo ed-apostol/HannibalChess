@@ -367,21 +367,17 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                 if (score < rvalue) return score;
             }
             if (inCutNode(nt) && depth >= 2 && (MinTwoBits(pos->color[pos->side] & ~(pos->pawns))) && Threads[thread_id].evalvalue[pos->ply] >= beta) {
-                if (anyRepNoMove(pos,0)) {
-                    if (DrawValue[pos->side] >= beta) return DrawValue[pos->side];
-                } else {
-                    if (depth > 6) score = searchNode<false, false, false>(pos, alpha, beta, depth-6, false, EMPTY, thread_id, AllNode);
-                    else score = beta;
-                    if (score >= beta) {
-                        int nullDepth = depth - (4 + depth/5 + (Threads[thread_id].evalvalue[pos->ply] - beta > PawnValue));
-                        makeNullMove(pos, &undo);
-                        score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, false, EMPTY, thread_id, AllNode);
-                        if ((entry = transProbe(pos->hash, thread_id)) != NULL && transMove(entry) != EMPTY) {
-                            nullThreatMoveToBit = BitMask[moveTo(transMove(entry))];
-                        }
-                        unmakeNullMove(pos, &undo);
-                        if (score >= beta) return score;
+                if (depth > 6) score = searchNode<false, false, false>(pos, alpha, beta, depth - 6, false, EMPTY, thread_id, AllNode);
+                else score = beta;
+                if (score >= beta) {
+                    int nullDepth = depth - (4 + depth/5 + (Threads[thread_id].evalvalue[pos->ply] - beta > PawnValue));
+                    makeNullMove(pos, &undo);
+                    score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, false, EMPTY, thread_id, AllNode);
+                    if ((entry = transProbe(pos->hash, thread_id)) != NULL && transMove(entry) != EMPTY) {
+                        nullThreatMoveToBit = BitMask[moveTo(transMove(entry))];
                     }
+                    unmakeNullMove(pos, &undo);
+                    if (score >= beta) return score;
                 }
             }
         }
@@ -464,7 +460,10 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                         }
                         continue;
                     }
-                    if (inCutNode(nt) && swap(pos, move) < 0 && predictedDepth < 4) continue;
+                    if (inCutNode(nt) && swap(pos, move) < 0) {
+                        if (predictedDepth < 4) continue;
+                        newdepthclone--;
+                    }
                 }
                 if (okToPruneOrReduce && depth >= MIN_REDUCTION_DEPTH) newdepthclone -= ReductionTable[(inPvNode(nt)?0:1)][MIN(depth,63)][MIN(played,63)];
                 makeMove(pos, &undo, move);
@@ -506,6 +505,9 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                 if (inPvNode(nt) && bestvalue < beta) {
                     alpha = inSplitPoint ? sp->alpha = bestvalue : bestvalue;
                 } else {
+                    if (inRoot) {
+                        for (int i = mvlist->pos; i < mvlist->size; ++i) mvlist->list[i].s = -INF;
+                    }
                     if (inSplitPoint) {
                         Threads[thread_id].cutoff = true;
                         MutexUnlock(sp->updatelock);
