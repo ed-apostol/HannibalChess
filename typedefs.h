@@ -271,7 +271,7 @@ typedef struct _search_info_t{
     bool mvlist_initialized;
     movelist_t rootmvlist;
     continuation_t rootPV;
-	int32 evalgains[1024];
+    int32 evalgains[1024];
     int32 history[1024];
     evaltable_t et;
     pawntable_t pt;
@@ -296,7 +296,7 @@ typedef struct _split_point_t{
     volatile int master;
     volatile int slaves[MaxNumOfThreads];
     volatile int cpus;
-    mutex_t lock[1];
+    mutex_t movelistlock[1];
     mutex_t updatelock[1];
 } split_point_t;
 

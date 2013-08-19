@@ -173,10 +173,10 @@ void updateEvalgains(const position_t *pos, uint32 move, int before, int after, 
         && before != -INF
         && after != -INF
         && !moveIsTactical(move)) {
-            if (-(before + after) >= SearchInfo(0).evalgains[historyIndex(pos->side^1, move)])
-                SearchInfo(0).evalgains[historyIndex(pos->side^1, move)] = -(before + after);
+            if (-(before + after) >= SearchInfo(thread_id).evalgains[historyIndex(pos->side^1, move)])
+                SearchInfo(thread_id).evalgains[historyIndex(pos->side^1, move)] = -(before + after);
             else
-                SearchInfo(0).evalgains[historyIndex(pos->side^1, move)]--;
+                SearchInfo(thread_id).evalgains[historyIndex(pos->side^1, move)]--;
     }
 }
 
@@ -357,20 +357,20 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
 
         if (!inPvNode(nt) && !inCheck && prune) {
             int rvalue;
-            if (inCutNode(nt) && depth <= 3 && pos->color[pos->side] & ~(pos->pawns | pos->kings) 
+            if (inCutNode(nt) && pos->color[pos->side] & ~(pos->pawns | pos->kings) 
             && beta < (rvalue = Threads[thread_id].evalvalue[pos->ply] - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0]))  {
                 return rvalue;
             }
-            if (depth <= 3 && hashMove == EMPTY && !(Rank7ByColorBB[pos->side] & pos->pawns)
+            if (hashMove == EMPTY && !(Rank7ByColorBB[pos->side] & pos->pawns)
             && Threads[thread_id].evalvalue[pos->ply] < (rvalue = beta - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0])) { 
                 score = searchNode<false, false, false>(pos, rvalue-1, rvalue, 0, false, EMPTY, thread_id, nt);
                 if (score < rvalue) return score;
             }
             if (inCutNode(nt) && depth >= 2 && (MinTwoBits(pos->color[pos->side] & ~(pos->pawns))) && Threads[thread_id].evalvalue[pos->ply] >= beta) {
-                if (depth > 6) score = searchNode<false, false, false>(pos, alpha, beta, depth - 6, false, EMPTY, thread_id, AllNode);
-                else score = beta;
+                int nullDepth = depth - (3 + depth/4 + (Threads[thread_id].evalvalue[pos->ply] - beta > PawnValue));
+                if (depth < 12) score = beta;
+                else score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, false, EMPTY, thread_id, AllNode);
                 if (score >= beta) {
-                    int nullDepth = depth - (4 + depth/5 + (Threads[thread_id].evalvalue[pos->ply] - beta > PawnValue));
                     makeNullMove(pos, &undo);
                     score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, false, EMPTY, thread_id, AllNode);
                     if ((entry = transProbe(pos->hash, thread_id)) != NULL && transMove(entry) != EMPTY) {
@@ -381,7 +381,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                 }
             }
         }
-        if (!inAllNode(nt) && depth >= (inPvNode(nt)?4:6) && prune) { // IID
+        if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt)?4:6) && prune) { // IID
             newdepth = depth / 2;
             if (hashMove == EMPTY || hashDepth < newdepth) {
                 score = searchNode<false, false, false>(pos, alpha, beta, newdepth, inCheck, EMPTY, thread_id, nt);
@@ -392,7 +392,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                 }
             }
         }
-        if (!inAllNode(nt) && depth >= (inPvNode(nt)?EXPLORE_DEPTH_PV:EXPLORE_DEPTH_NOPV) && prune) { // singular extension
+        if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt)?EXPLORE_DEPTH_PV:EXPLORE_DEPTH_NOPV) && prune) { // singular extension
             newdepth = depth / 2;
             if (hashMove != EMPTY && hashDepth >= newdepth) { 
                 int targetScore = Threads[thread_id].evalvalue[pos->ply] - EXPLORE_CUTOFF;
@@ -429,7 +429,11 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
     int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 4) : (depth * depth));
     int hisOn = 0;
     while ((move = sortNext(sp, pos, mvlist, &mvlist_phase, thread_id)) != EMPTY) {
-        played++;
+        if (inSplitPoint) {
+            MutexLock(sp->updatelock);
+            played = ++sp->played;
+            MutexUnlock(sp->updatelock);
+        } else ++played;
         if (inSingular && move == bannedMove) continue;
         if (hisOn < 64 && !moveIsTactical(move)) {
             hisMoves[hisOn++] = move;
@@ -528,8 +532,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
             displayPV(pos, &SearchInfo(thread_id).rootPV, depth, oldalpha, beta, bestvalue);
         if (bestvalue <= oldalpha || bestvalue >= beta) SearchInfo(thread_id).research = 1;
     }
-    if(inSplitPoint) sp->played = played;
-    else if (!inSingular || bannedMove == EMPTY) {
+    if (!inSingular || bannedMove == EMPTY) {
         if (played == 0) {
             if (inCheck) return -INF + pos->ply;
             else return DrawValue[pos->side];
@@ -883,7 +886,7 @@ void checkSpeedUp(position_t* pos) {
     float timeSpeedupSum[NUMVAL];
     float nodesSpeedupSum[NUMVAL];
     char tempStr[256] = {0};
-    char* command = "movedepth 22";
+    char* command = "movedepth 21";
 
     for (int j = 0; j < NUMVAL; ++j) {
         timeSpeedupSum[j] = 0.0;

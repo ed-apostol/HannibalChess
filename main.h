@@ -78,9 +78,6 @@ int main(void) {
     initMaterial();
     InitMateBoost();
 
-#ifdef SPEED_TEST
-    MeasureSpeed(&pos);
-#else
     setPosition(&pos,STARTPOS);
     needReplyReady = FALSE;
     while (TRUE) {
@@ -158,6 +155,5 @@ int main(void) {
 #endif
         else Print(3, "info string Unknown UCI command.\n");
     }
-#endif
     quit();
 }

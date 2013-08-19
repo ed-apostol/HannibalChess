@@ -125,7 +125,7 @@ void initThreads(void) {
         Threads[i].exit_flag = false;
         Threads[i].idle_event = CreateEvent(0, FALSE, FALSE, 0);
         for (int j = 0; j < MaxNumSplitPointsPerThread; ++j) {
-            MutexInit(Threads[i].sptable[j].lock, NULL);
+            MutexInit(Threads[i].sptable[j].movelistlock, NULL);
             MutexInit(Threads[i].sptable[j].updatelock, NULL);
         }
         SearchInfo(i).thinking_status = STOPPED; // SMP HACK
@@ -149,7 +149,7 @@ void stopThreads(void) {
         Threads[i].work_assigned = false;
         SetEvent(Threads[i].idle_event);
         for (int j = 0; j < MaxNumSplitPointsPerThread; ++j) {
-            MutexDestroy(Threads[i].sptable[j].lock);
+            MutexDestroy(Threads[i].sptable[j].movelistlock);
             MutexDestroy(Threads[i].sptable[j].updatelock);
         }
     }

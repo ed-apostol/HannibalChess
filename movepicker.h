@@ -97,7 +97,7 @@ void scoreNonCaptures(const position_t *pos, movelist_t *mvlist, int thread_id) 
     ASSERT(mvlist != NULL);
 
     for (m = &mvlist->list[mvlist->pos]; m < &mvlist->list[mvlist->size]; m++) {
-        m->s = SearchInfo(0).history[historyIndex(mvlist->side, m->m)]; // TODO: change history with evalgains
+        m->s = SearchInfo(thread_id).history[historyIndex(mvlist->side, m->m)]; // TODO: change history with evalgains
     }
 }
 
@@ -117,7 +117,7 @@ void scoreAll(const position_t *pos, movelist_t *mvlist, int thread_id) {
         else if (m->m == mvlist->killer1) m->s = MAXHIST + 4;
         else if (m->m == mvlist->killer2) m->s = MAXHIST + 2;
         else {
-            m->s = SearchInfo(0).history[historyIndex(mvlist->side, m->m)]; // TODO: change history with evalgains
+            m->s = SearchInfo(thread_id).history[historyIndex(mvlist->side, m->m)]; // TODO: change history with evalgains
         }
     }
 }
@@ -129,7 +129,7 @@ void scoreAllQ(movelist_t *mvlist, int thread_id) {
 
     for (m = &mvlist->list[mvlist->pos]; m < &mvlist->list[mvlist->size]; m++) {
         if (moveIsTactical(m->m))  m->s = MAXHIST + (moveCapture(m->m) * 6) + movePromote(m->m) - movePiece(m->m);
-        else m->s = SearchInfo(0).history[historyIndex(mvlist->side, m->m)]; // TODO: change history with evalgains
+        else m->s = SearchInfo(thread_id).history[historyIndex(mvlist->side, m->m)]; // TODO: change history with evalgains
     }
 }
 
@@ -147,10 +147,10 @@ void scoreRoot(movelist_t *mvlist) {
 
 basic_move_t sortNext(split_point_t* sp, position_t *pos, movelist_t *mvlist, int *phase, int thread_id) {
     basic_move_t move;
-    if (sp != NULL) MutexLock(sp->lock);
+    if (sp != NULL) MutexLock(sp->movelistlock);
     *phase = mvlist->phase;
     if (MoveGenPhase[mvlist->phase] == PH_END) {  // SMP hack
-        if (sp != NULL) MutexUnlock(sp->lock);
+        if (sp != NULL) MutexUnlock(sp->movelistlock);
         return EMPTY;
     }
     while (TRUE) {
@@ -221,10 +221,10 @@ basic_move_t sortNext(split_point_t* sp, position_t *pos, movelist_t *mvlist, in
                 break;
             default:
                 // can't get here
-                if (sp != NULL) MutexUnlock(sp->lock);
+                if (sp != NULL) MutexUnlock(sp->movelistlock);
                 return EMPTY;
             }
-            if (sp != NULL) MutexUnlock(sp->lock);
+            if (sp != NULL) MutexUnlock(sp->movelistlock);
             return move;
         }
 
@@ -301,7 +301,7 @@ basic_move_t sortNext(split_point_t* sp, position_t *pos, movelist_t *mvlist, in
             break;
         default:
             ASSERT(MoveGenPhase[mvlist->phase] == PH_END);
-            if (sp != NULL) MutexUnlock(sp->lock);
+            if (sp != NULL) MutexUnlock(sp->movelistlock);
             return EMPTY;
         }
     }
