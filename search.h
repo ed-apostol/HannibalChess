@@ -447,33 +447,29 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                 makeMove(pos, &undo, move);
                 score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, EMPTY, thread_id, invertNode(nt));
             } else {
-                int PruneReductionLevel = (inCheck || newdepth >= depth || moveGivesCheck || MoveGenPhase[mvlist_phase] != PH_QUIET_MOVES ) ? 0 : 
-                    (moveIsPassedPawn(pos, move) ? 1 : 2);
-                if (!inRoot && !inPvNode(nt) && PruneReductionLevel && pruneable) {
+                int okToPruneOrReduce = (newdepth >= depth || inCheck || moveGivesCheck || MoveGenPhase[mvlist_phase] != PH_QUIET_MOVES) ? 0 : 1;
+                int newdepthclone = newdepth;
+                if (!inRoot && !inPvNode(nt) && okToPruneOrReduce && pruneable) {
                     if (played > lateMove && !isMoveDefence(pos, move, nullThreatMoveToBit)) continue;
                     int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(played,63)]);
                     score = Threads[thread_id].evalvalue[pos->ply]
-                    + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(played,63)]
-                    + SearchInfo(0).evalgains[historyIndex(pos->side, move)];
-                    if (score < beta) {
-                        if (predictedDepth < 8 && PruneReductionLevel > 1) continue;
-                        newdepth--;
+                        + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(played,63)]
+                        + SearchInfo(thread_id).evalgains[historyIndex(pos->side, move)];
+                    if (score < beta  && !moveIsPassedPawn(pos, move)) {
+                        bestvalue = MAX(bestvalue, score);
+                        if (inSplitPoint) {
+                            MutexLock(sp->updatelock);
+                            sp->bestvalue = MAX(sp->bestvalue, bestvalue);
+                            MutexUnlock(sp->updatelock);
+                        }
+                        continue;
                     }
-                   if (swap(pos, move) < 0) {
-                        if (predictedDepth < 2) continue;
-                        newdepth--; 
+                    if (inCutNode(nt) && swap(pos, move) < 0) {
+                        if (predictedDepth < 4) continue;
+                        newdepthclone--;
                     }
                 }
-                int newdepthclone = newdepth;
-                if (depth >= MIN_REDUCTION_DEPTH || !MIN_REDUCTION_DEPTH) { 
-                    if (PruneReductionLevel==1) {
-                        newdepthclone -= ((ReductionTable[1][MIN(depth,63)][MIN(played,63)] >= 3) ? (ReductionTable[1][MIN(depth,63)][MIN(played,63)] - 2) : 0);
-                    }
-                    else if (PruneReductionLevel==2) {
-                        newdepthclone -= ReductionTable[(inPvNode(nt)?0:1)][MIN(depth,63)][MIN(played,63)];
-                    }
-                    else if (MoveGenPhase[mvlist_phase] == PH_BAD_CAPTURES) newdepthclone--;
-                }
+                if (okToPruneOrReduce && depth >= MIN_REDUCTION_DEPTH) newdepthclone -= ReductionTable[(inPvNode(nt)?0:1)][MIN(depth,63)][MIN(played,63)];
                 makeMove(pos, &undo, move);
                 if (inSplitPoint) alpha = sp->alpha;
                 score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepthclone, moveGivesCheck, EMPTY, thread_id, CutNode);
