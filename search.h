@@ -727,17 +727,24 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
                 } else {
                     int newdepthclone = newdepth;
                     if (okToPruneOrReduce) {
-                        newdepthclone -= ReductionTable[0][MIN(depth,63)][MIN(played,63)];
+						if (SearchInfo(thread_id).change || SearchInfo(thread_id).research)
+							newdepthclone -= ReductionTable[0][MIN(depth,63)][MIN((played),63)];
+						else
+							 newdepthclone -= ReductionTable[0][MIN(depth,63)][MIN((played+SearchInfo(thread_id).conseqUnchanged),63)];//HannibalUnch10
                     }
                     score = -searchNode<false, false>(pos, -alpha-1, -alpha, newdepthclone, moveGivesCheck, thread_id,true);
                     if (SearchInfo(thread_id).thinking_status != STOPPED && newdepthclone < newdepth && score > alpha) {
                         score = -searchNode<false, false>(pos, -alpha-1, -alpha, newdepth, moveGivesCheck, thread_id,false);
                     }
                     if (SearchInfo(thread_id).thinking_status != STOPPED && score > alpha) {
-                        SearchInfo(thread_id).research = 1;
                         if (SHOW_SEARCH && getTime() - SearchInfo(thread_id).start_time > 10000) Print(1, "info currmove %s currmovenumber %d\n", move2Str(move), mvlist->pos);
-                        score = -searchNode<true, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, thread_id, false);
-                        SearchInfo(thread_id).research = 0;
+						if (SearchInfo(thread_id).research) 
+							score = -searchNode<true, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, thread_id, false);
+						else {
+							SearchInfo(thread_id).research = 1;
+							score = -searchNode<true, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, thread_id, false);
+							SearchInfo(thread_id).research = 0;
+						}
                     }
                 }
 
@@ -796,7 +803,7 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
                 SearchInfo(thread_id).bestmove = 0;
                 return;
             }
-            SearchInfo(thread_id).change = 1;
+            SearchInfo(thread_id).research = 1;
             if (SHOW_SEARCH  && thread_id < Guci_options->threads && depth >= 8) displayPV(pos, &rootPV, depth, old_alpha, beta, SearchInfo(thread_id).best_value);
             fail_low++;
             old_alpha = alpha = goodAlpha(alpha-(24*(1<<(fail_low))));
@@ -809,10 +816,35 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
     if (SearchInfo(thread_id).thinking_status == THINKING) {
         if (SearchInfo(thread_id).time_is_limited) {
             time = getTime();
+			int64 adjustTime = 0;
 			bool gettingWorse = (SearchInfo(thread_id).best_value + 30) <= SearchInfo(thread_id).last_value;
-            if (SearchInfo(thread_id).legalmoves == 1 || SearchInfo(thread_id).mate_found >= 3) { 
-                if (depth >= 8) setAllThreadsToStop(thread_id);
-            } 
+			if (depth >= 8) {
+				if (SearchInfo(thread_id).legalmoves == 1 || SearchInfo(thread_id).mate_found >= 3) { 
+					 setAllThreadsToStop(thread_id);
+				} 
+				if (SearchInfo(thread_id).change) {
+					SearchInfo(thread_id).easy = EASY_FALSE;
+					SearchInfo(thread_id).conseqUnchanged = 0;
+				}
+				if ( time-SearchInfo(thread_id).start_time >= (SearchInfo(thread_id).alloc_time * 5)/100 && SearchInfo(thread_id).easy) {
+					if (!gettingWorse) {
+						if (time-SearchInfo(thread_id).start_time < (SearchInfo(thread_id).alloc_time * 40)/100) {
+							if (SearchInfo(thread_id).conseqUnchanged >= 3) {
+								int targetScore = SearchInfo(thread_id).best_value - 20;
+								int easyDepth = depth-3; 
+								int inCheck = kingIsInCheck(pos);
+								int easyScore = searchSelective<true>(pos, targetScore, easyDepth, inCheck, &SearchInfo(thread_id).bestmove, thread_id);
+								if (easyScore < targetScore) {
+									setAllThreadsToStop(thread_id);
+								}
+								else SearchInfo(thread_id).easy = EASY_FALSE;
+							}
+							SearchInfo(thread_id).conseqUnchanged++; 
+						}
+					}
+
+				}
+			}
 #ifdef NEW_EASY
 			else if (!gettingWorse && SearchInfo(thread_id).easy) {
 				int inCheck = kingIsInCheck(pos);
@@ -838,11 +870,7 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
 				}
 			}
 #endif
-			if (SearchInfo(thread_id).change && time >= SearchInfo(thread_id).start_time + (SearchInfo(thread_id).alloc_time * 10)/100) {
-				SearchInfo(thread_id).time_limit_max += (SearchInfo(thread_id).alloc_time * INCREASE_CHANGE) / 100;
-				if (SearchInfo(thread_id).time_limit_max > SearchInfo(thread_id).time_limit_abs) SearchInfo(thread_id).time_limit_max = SearchInfo(thread_id).time_limit_abs;
-			}
-			if (time + (SearchInfo(thread_id).alloc_time * LAST_PLY_TIME)/100 >= SearchInfo(thread_id).time_limit_max) {
+			if (time + adjustTime + (SearchInfo(thread_id).alloc_time * LAST_PLY_TIME)/100 >= SearchInfo(thread_id).time_limit_max) {
 				int64 addTime = 0;
 				if (gettingWorse) {
 					int amountWorse = SearchInfo(thread_id).last_value - SearchInfo(thread_id).best_value;
@@ -1071,6 +1099,10 @@ void getBestMove(position_t *pos, int thread_id) {
 #ifdef NEW_EASY
 	SearchInfo(thread_id).easy = 2;
 #endif
+#ifdef SUPER_EASY
+	SearchInfo(thread_id).easy = EASY_UNKNOWN; 
+#endif
+	SearchInfo(thread_id).conseqUnchanged = 0;
     for (id = 1; id < MAXPLY; id++) {
         if (id >= 6) { // TODO: to be tuned
             alpha = goodAlpha(SearchInfo(thread_id).best_value-16);

@@ -267,6 +267,10 @@ typedef struct _search_info_t{
     bool mvlist_initialized;
     movelist_t rootmvlist;
     continuation_t rootPV;
+	int conseqUnchanged; //SAM_PATH 08/17/13W
+#ifdef SUPER_EASY
+	int easy;
+#endif
 #ifdef NEW_EASY
 	int easy;
 #endif
