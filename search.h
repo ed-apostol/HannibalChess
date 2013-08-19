@@ -629,10 +629,11 @@ void timeManagement(int depth, int thread_id) {
             && SearchInfo(thread_id).try_easy 
             && SearchInfo(thread_id).iteration >= 12
             && SearchInfo(thread_id).best_value > -MAXEVAL
+            && SearchInfo(thread_id).rbestscore2 != -INF
             && time + (SearchInfo(thread_id).alloc_time * 80)/100 >= SearchInfo(thread_id).time_limit_max) {
                 SearchInfo(thread_id).try_easy = false;
                 Print(3, "info string Trying easy: score1: %d, score2: %d\n", SearchInfo(thread_id).rbestscore1, SearchInfo(thread_id).rbestscore2);
-                if (SearchInfo(thread_id).rbestscore1 >= SearchInfo(thread_id).rbestscore2 + 30) { //PawnValueEnd) { // use lower values for debugging
+                if (SearchInfo(thread_id).rbestscore1 >= SearchInfo(thread_id).rbestscore2 + PawnValueEnd) { // TODO: to be tuned
                     setAllThreadsToStop(thread_id);
                     Print(3, "info string Aborting search: easy move: score1: %d, score2: %d, %d ms\n",
                         SearchInfo(thread_id).rbestscore1, SearchInfo(thread_id).rbestscore2, time - SearchInfo(thread_id).start_time);
