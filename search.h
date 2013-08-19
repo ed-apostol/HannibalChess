@@ -812,11 +812,13 @@ void getBestMove(position_t *pos, int thread_id) {
                 if (SearchInfo(thread_id).best_value >= beta)  beta = SearchInfo(thread_id).best_value+(16<<++failhigh);
                 if (beta > RookValue) beta = INF;
             } else {
-                if (SearchInfo(thread_id).try_easy && !SearchInfo(thread_id).change && id >= 12 
-                && getTime() + (SearchInfo(thread_id).alloc_time * 70)/100 >= SearchInfo(thread_id).time_limit_max) {
+                if (SearchInfo(thread_id).try_easy && id >= 12 
+                && SearchInfo(thread_id).thinking_status != STOPPED
+                && SearchInfo(thread_id).best_value > -MAXEVAL
+                && getTime() + (SearchInfo(thread_id).alloc_time * 20)/100 >= SearchInfo(thread_id).time_limit_max) {
                     SearchInfo(thread_id).try_easy = false;
                     Print(3, "info string Trying easy move 1\n");
-                    int rbeta = SearchInfo(thread_id).best_value - 50; // TODO: to be tuned
+                    int rbeta = SearchInfo(thread_id).best_value - PawnValueEnd; // TODO: to be tuned
                     int value = searchNode<false, false, true>(pos, rbeta-1, rbeta, id-3, inCheck, SearchInfo(thread_id).bestmove, thread_id, AllNode);
                     if (SearchInfo(thread_id).thinking_status == STOPPED) break;
                     Print(3, "info string Trying easy move 2: bestvalue = %d, value = %d\n", SearchInfo(thread_id).best_value, value);
