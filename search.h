@@ -482,7 +482,15 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
             unmakeMove(pos, &undo);
         }
         if (Threads[thread_id].stop) return bestvalue;
-        if (inRoot) mvlist->list[mvlist->pos-1].s = score;
+        if (inRoot) {
+            mvlist->list[mvlist->pos-1].s = score;
+            if (score > SearchInfo(thread_id).rbestscore1) {
+                SearchInfo(thread_id).rbestscore1 = score;
+            } 
+            if (score > SearchInfo(thread_id).rbestscore2 && score < SearchInfo(thread_id).rbestscore1) {
+                SearchInfo(thread_id).rbestscore2 = score;
+            }
+        }
         if (inSplitPoint) MutexLock(sp->updatelock);
         if (score > (inSplitPoint ? sp->bestvalue : bestvalue)) {
             bestvalue = inSplitPoint ? sp->bestvalue = score : score;
@@ -616,6 +624,18 @@ void timeManagement(int depth, int thread_id) {
                 else { // if we are unlikely to get deeper, save our time
                     setAllThreadsToStop(thread_id);
                     Print(2, "info string Aborting search: root time limit 1: %d\n", time - SearchInfo(thread_id).start_time);
+                }
+            } else if (!gettingWorse 
+            && SearchInfo(thread_id).try_easy 
+            && SearchInfo(thread_id).iteration >= 12
+            && SearchInfo(thread_id).best_value > -MAXEVAL
+            && time + (SearchInfo(thread_id).alloc_time * 80)/100 >= SearchInfo(thread_id).time_limit_max) {
+                SearchInfo(thread_id).try_easy = false;
+                Print(3, "info string Trying easy: score1: %d, score2: %d\n", SearchInfo(thread_id).rbestscore1, SearchInfo(thread_id).rbestscore2);
+                if (SearchInfo(thread_id).rbestscore1 >= SearchInfo(thread_id).rbestscore2 + 30) { //PawnValueEnd) { // use lower values for debugging
+                    setAllThreadsToStop(thread_id);
+                    Print(3, "info string Aborting search: easy move: score1: %d, score2: %d, %d ms\n",
+                        SearchInfo(thread_id).rbestscore1, SearchInfo(thread_id).rbestscore2, time - SearchInfo(thread_id).start_time);
                 }
             }
         }
@@ -803,6 +823,8 @@ void getBestMove(position_t *pos, int thread_id) {
             if (beta > RookValue) beta = INF;
         }
         while (true) {
+            SearchInfo(thread_id).rbestscore1 = -INF;
+            SearchInfo(thread_id).rbestscore2 = -INF;
             SearchInfo(thread_id).best_value = searchNode<true, false, false>(pos, alpha, beta, id, inCheck, EMPTY, thread_id, PVNode);
             if (SearchInfo(thread_id).thinking_status == STOPPED) break;
             if(SearchInfo(thread_id).best_value <= alpha) {
@@ -811,24 +833,7 @@ void getBestMove(position_t *pos, int thread_id) {
             } else if(SearchInfo(thread_id).best_value >= beta) {
                 if (SearchInfo(thread_id).best_value >= beta)  beta = SearchInfo(thread_id).best_value+(16<<++failhigh);
                 if (beta > RookValue) beta = INF;
-            } else {
-                if (SearchInfo(thread_id).try_easy && id >= 12 
-                && SearchInfo(thread_id).thinking_status != STOPPED
-                && SearchInfo(thread_id).best_value > -MAXEVAL
-                && getTime() + (SearchInfo(thread_id).alloc_time * 20)/100 >= SearchInfo(thread_id).time_limit_max) {
-                    SearchInfo(thread_id).try_easy = false;
-                    Print(3, "info string Trying easy move 1\n");
-                    int rbeta = SearchInfo(thread_id).best_value - PawnValueEnd; // TODO: to be tuned
-                    int value = searchNode<false, false, true>(pos, rbeta-1, rbeta, id-3, inCheck, SearchInfo(thread_id).bestmove, thread_id, AllNode);
-                    if (SearchInfo(thread_id).thinking_status == STOPPED) break;
-                    Print(3, "info string Trying easy move 2: bestvalue = %d, value = %d\n", SearchInfo(thread_id).best_value, value);
-                    if (value < rbeta) {
-                        setAllThreadsToStop(thread_id);
-                        Print(3, "info string Aborting search: easy move\n");
-                    }
-                }
-                break;
-            }
+            } else break;
         }
         if (SearchInfo(thread_id).thinking_status == STOPPED) break;
         repopulateHash(pos, &SearchInfo(thread_id).rootPV, id);
