@@ -368,8 +368,8 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                     if (score < rvalue) return score;
             }
             if (inCutNode(nt) && depth >= 2 && (MinTwoBits(pos->color[pos->side] & ~(pos->pawns))) && Threads[thread_id].evalvalue[pos->ply] >= beta) {
-                int nullDepth = depth - (4 + depth/5 + (Threads[thread_id].evalvalue[pos->ply] - beta > PawnValue));
-                if (nullDepth >= 6) score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, false, EMPTY, thread_id, AllNode);
+                int nullDepth = depth - (3 + depth/4 + (Threads[thread_id].evalvalue[pos->ply] - beta > PawnValue));
+                if (depth >= 12) score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, false, EMPTY, thread_id, AllNode);
                 else score = beta;
                 if (score >= beta) {
                     makeNullMove(pos, &undo);
@@ -633,7 +633,6 @@ void timeManagement(int depth, int thread_id) {
             && SearchInfo(thread_id).rbestscore2 != -INF
             && time + (SearchInfo(thread_id).alloc_time * 80)/100 >= SearchInfo(thread_id).time_limit_max) {
                 SearchInfo(thread_id).try_easy = false;
-                Print(3, "info string Trying easy: score1: %d, score2: %d\n", SearchInfo(thread_id).rbestscore1, SearchInfo(thread_id).rbestscore2);
                 if (SearchInfo(thread_id).rbestscore1 >= SearchInfo(thread_id).rbestscore2 + PawnValueEnd) { // TODO: to be tuned
                     setAllThreadsToStop(thread_id);
                     Print(3, "info string Aborting search: easy move: score1: %d, score2: %d, %d ms\n",
