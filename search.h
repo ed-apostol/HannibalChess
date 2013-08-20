@@ -364,7 +364,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
             }
             if (pos->posStore.lastmove != EMPTY && hashMove == EMPTY
                 && Threads[thread_id].evalvalue[pos->ply] < (rvalue = beta - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0] - opt)) { 
-                    score = searchNode<false, false, false>(pos, rvalue-1, rvalue, depth-4, false, EMPTY, thread_id, nt); // TODO: try qsearch here
+                    score = searchNode<false, false, false>(pos, rvalue-1, rvalue, 0, false, EMPTY, thread_id, nt); // TODO: try qsearch here
                     if (score < rvalue) return score;
             }
             if (inCutNode(nt) && depth >= 2 && (MinTwoBits(pos->color[pos->side] & ~(pos->pawns))) && Threads[thread_id].evalvalue[pos->ply] >= beta) {
