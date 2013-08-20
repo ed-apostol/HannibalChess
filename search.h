@@ -368,27 +368,17 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                     if (score < rvalue) return score;
             }
             if (inCutNode(nt) && depth >= 2 && (MinTwoBits(pos->color[pos->side] & ~(pos->pawns))) && Threads[thread_id].evalvalue[pos->ply] >= beta) {
-                if (anyRepNoMove(pos,0)) {
-                    if (DrawValue[pos->side] >= beta) return DrawValue[pos->side];
-                } else {
-                    int nullDepth = depth - (4 + depth/5 + (Threads[thread_id].evalvalue[pos->ply] - beta > PawnValue));
+                int nullDepth = depth - (4 + depth/5 + (Threads[thread_id].evalvalue[pos->ply] - beta > PawnValue));
+                if (nullDepth >= 6) score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, false, EMPTY, thread_id, AllNode);
+                else score = beta;
+                if (score >= beta) {
                     makeNullMove(pos, &undo);
                     score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, false, EMPTY, thread_id, invertNode(nt));
                     if ((entry = transProbe(pos->hash, thread_id)) != NULL && transMove(entry) != EMPTY) {
                         nullThreatMoveToBit = BitMask[moveTo(transMove(entry))];
                     }
                     unmakeNullMove(pos, &undo);
-                    if (score >= beta) {
-                        if (depth <= 6) {
-                            transStore(pos->hash, EMPTY, depth, ((score > oldalpha) ? score : -INF), ((score < beta) ? score : INF), thread_id);
-                            return score;
-                        }
-                        score = searchNode<false, false, false>(pos, alpha, beta, depth-6, false, EMPTY, thread_id, nt);
-                        if (score >= beta) {
-                            transStore(pos->hash, EMPTY, depth, ((score > oldalpha) ? score : -INF), ((score < beta) ? score : INF), thread_id);
-                            return score;
-                        }
-                    }
+                    if (score >= beta) return score;
                 }
             }
         }
