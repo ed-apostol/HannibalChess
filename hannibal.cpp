@@ -37,13 +37,13 @@ can knight catch pawns code from LL
 #define LAST_PLY_TIME 40 //what percentage of alloc remaining to be worth trying another complete ply
 #define TIME_DIVIDER 30 //how many moves we divide remaining time into 
 
-#define EASY_PLY_TIME1 40
+#define EASY_PLY_TIME1 60
 #define EAST_CUTOFF1 20
 
-#define EASY_PLY_TIME2 30
+#define EASY_PLY_TIME2 70
 #define EAST_CUTOFF2 60
 
-#define EASY_PLY_TIME3 20
+#define EASY_PLY_TIME3 80
 #define EAST_CUTOFF3 150
 //#define SPEEDUP
 //#define OPTIMIZE true
