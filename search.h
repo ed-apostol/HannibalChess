@@ -247,10 +247,9 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, const bool in
             score = DrawValue[pos->side];
         } else {
             moveGivesCheck = moveIsCheck(pos, move, dcc);
-            //pruning
             if (prunable && move!=hashMove && !moveGivesCheck && !moveIsPassedPawn(pos, move)) {
                 int scoreAprox = Threads[thread_id].evalvalue[pos->ply] + PawnValueEnd + MaxPieceValue[moveCapture(move)]; 
-                if (scoreAprox <= alpha) continue; //todo try out opt, tryout see instead of maxpiecevalue
+                if (scoreAprox < beta) continue;
             }
             newdepth = depth - !moveGivesCheck;
             makeMove(pos, &undo, move);
@@ -364,7 +363,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
             }
             if (pos->posStore.lastmove != EMPTY && hashMove == EMPTY
                 && Threads[thread_id].evalvalue[pos->ply] < (rvalue = beta - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0] - opt)) { 
-                    score = searchNode<false, false, false>(pos, rvalue-1, rvalue, depth-4, false, EMPTY, thread_id, nt); // TODO: try qsearch here
+                    score = searchNode<false, false, false>(pos, rvalue-1, rvalue, depth-4, false, EMPTY, thread_id, nt);
                     if (score < rvalue) return score;
             }
             if (inCutNode(nt) && depth >= 2 && (MinTwoBits(pos->color[pos->side] & ~(pos->pawns))) && Threads[thread_id].evalvalue[pos->ply] >= beta) {
@@ -453,10 +452,10 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                 if (!inRoot && !inPvNode(nt) && okToPruneOrReduce && pruneable) {
                     if (played > lateMove && !isMoveDefence(pos, move, nullThreatMoveToBit)) continue;
                     int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(played,63)]);
-                    score = Threads[thread_id].evalvalue[pos->ply] 
+                    int scoreAprox = Threads[thread_id].evalvalue[pos->ply] 
                     + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(played,63)]
                     + SearchInfo(thread_id).evalgains[historyIndex(pos->side, move)];
-                    if (score < beta  && !moveIsPassedPawn(pos, move)) {
+                    if (scoreAprox < beta  && !moveIsPassedPawn(pos, move)) {
                         continue;
                     }
                     if (inCutNode(nt) && swap(pos, move) < 0) {
@@ -527,7 +526,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
             displayPV(pos, &SearchInfo(thread_id).rootPV, depth, oldalpha, beta, bestvalue);
         if (bestvalue <= oldalpha || bestvalue >= beta) SearchInfo(thread_id).research = 1;
     }
-    if (!inSingular || bannedMove == EMPTY) {
+    if (!inSplitPoint && (!inSingular || bannedMove == EMPTY)) {
         if (played == 0) {
             if (inCheck) return -INF + pos->ply;
             else return DrawValue[pos->side];
@@ -938,6 +937,7 @@ void checkSpeedUp(position_t* pos) {
 
 void benchSplitDepth(position_t* pos) {
     const int NUMPOS = 4;
+    const int NUMSPLIT = 11;
     char* fenPos[NUMPOS] = {
         "r2qkb1r/pp3p1p/2p2n2/nB1P4/3P1Qb1/2N2p2/PPP3PP/R1B1R1K1 b kq - 2 12",
         "r4b1r/p1kq1p1p/8/np6/3P1R2/5Q2/PPP3PP/R1B3K1 b - - 2 18",
@@ -945,8 +945,8 @@ void benchSplitDepth(position_t* pos) {
         "3q4/p3b2p/1k6/2P1Q3/p2P4/8/1P4PP/6K1 b - - 0 30",
     };
     char command[1024] = {0};
-    uint64 timeSum[15];
-    uint64 nodesSum[15];
+    uint64 timeSum[NUMSPLIT];
+    uint64 nodesSum[NUMSPLIT];
     for (int i = 1; i <= 14; ++i) {
         timeSum[i] = nodesSum[i] = 0;
     }
@@ -954,7 +954,7 @@ void benchSplitDepth(position_t* pos) {
     uciSetOption("name Threads value 7");
     for (int posIdx = 0; posIdx < NUMPOS; ++posIdx) {
         Print(5, "\n\nPos#%d: %s\n", posIdx+1, fenPos[posIdx]);
-        for (int i = 1; i <= 14; ++i) {
+        for (int i = 1; i < NUMSPLIT; ++i) {
             sprintf(command, "name Min Split Depth value %d", i);
             uciSetOption(command);
             transClear(0);
@@ -975,7 +975,7 @@ void benchSplitDepth(position_t* pos) {
         }
     }
     Print(5, "\n\nAverage:\n");
-    for (int i = 1; i <= 14; ++i) {
+    for (int i = 1; i < NUMSPLIT; ++i) {
         Print(5, "SplitDepth: %d Time: %d Knps: %d\n", i, timeSum[i]/NUMPOS, nodesSum[i]/NUMPOS);
     }
     Print(5, "\n\n");
