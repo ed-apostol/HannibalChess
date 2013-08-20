@@ -817,8 +817,7 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
 				if (SearchInfo(thread_id).legalmoves == 1 || SearchInfo(thread_id).mate_found >= 3) { 
 					 setAllThreadsToStop(thread_id);
 				}
-				
-				if (!gettingWorse && !SearchInfo(thread_id).change) { //TODO consider not doing if we just changed move
+				if (!gettingWorse && depth >= 12) { //TODO consider not doing if we just changed move
 					int64 timeExpended = time - SearchInfo(thread_id).start_time;
 					if (timeExpended > (SearchInfo(thread_id).alloc_time * EASY_PLY_TIME1)/100 && SearchInfo(thread_id).best_value > SearchInfo(thread_id).best_value2 + EAST_CUTOFF1) {
 						setAllThreadsToStop(thread_id);
