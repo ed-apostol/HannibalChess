@@ -252,6 +252,7 @@ typedef struct _search_info_t{
     int last_last_value;
     int last_value;
     int best_value;
+	int best_value2;
 
     int mate_found;
     int currmovenumber;
@@ -267,13 +268,7 @@ typedef struct _search_info_t{
     bool mvlist_initialized;
     movelist_t rootmvlist;
     continuation_t rootPV;
-	int conseqUnchanged; //SAM_PATH 08/17/13W
-#ifdef SUPER_EASY
-	int easy;
-#endif
-#ifdef NEW_EASY
-	int easy;
-#endif
+
     int32 evalgains[1024];
     int32 history[1024];
     evaltable_t et;
