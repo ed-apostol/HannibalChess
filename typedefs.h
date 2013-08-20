@@ -252,13 +252,15 @@ typedef struct _search_info_t{
     int last_last_value;
     int last_value;
     int best_value;
-	int best_value2;
+    int best_value2;
 
     int mate_found;
     int currmovenumber;
     int change;
     int research;
     int iteration;
+
+    bool try_easy;
 
     int legalmoves;
     basic_move_t bestmove;
@@ -268,7 +270,6 @@ typedef struct _search_info_t{
     bool mvlist_initialized;
     movelist_t rootmvlist;
     continuation_t rootPV;
-
     int32 evalgains[1024];
     int32 history[1024];
     evaltable_t et;
@@ -293,7 +294,8 @@ typedef struct _split_point_t{
     volatile int master;
     volatile int slaves[MaxNumOfThreads];
     volatile int cpus;
-    mutex_t lock[1];
+    mutex_t movelistlock[1];
+    mutex_t updatelock[1];
 } split_point_t;
 
 typedef struct {
@@ -398,6 +400,3 @@ typedef struct player_t { //if you put an array in here you need to change the c
     double rating;
 }player_t;
 #endif
-
-
-

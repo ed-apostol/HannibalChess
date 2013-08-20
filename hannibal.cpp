@@ -26,17 +26,17 @@ can knight catch pawns code from LL
 //68 at 3:29
 */
 #define TWEAK_030813 true
-#define VERSION            "08_18_13"
+#define VERSION            "m1_SMPFix_SEM"
 #define NUM_THREADS			    1
 #define MIN_SPLIT_DEPTH			4
 #define TCEC true
+//#define TESTING true
 
 #define WORSE_TIME_BONUS 20 //how many points more than 20 it takes to increase time by alloc to a maximum of 2*alloc
 #define CHANGE_TIME_BONUS 50 //what percentage of alloc to increase if the last move is a change move
 #define LAST_PLY_TIME 40 //what percentage of alloc remaining to be worth trying another complete ply
 #define TIME_DIVIDER 30 //how many moves we divide remaining time into 
 
-//EEASY3
 #define EASY_PLY_TIME1 40
 #define EAST_CUTOFF1 20
 
@@ -45,18 +45,7 @@ can knight catch pawns code from LL
 
 #define EASY_PLY_TIME3 20
 #define EAST_CUTOFF3 150
-
-/*
-//EEASY 4
-#define EASY_PLY_TIME1 40
-#define EAST_CUTOFF1 20
-
-#define EASY_PLY_TIME2 30
-#define EAST_CUTOFF2 60
-
-#define EASY_PLY_TIME3 20
-#define EAST_CUTOFF3 150
-*/
+//#define SPEEDUP
 //#define OPTIMIZE true
 //#define DEBUG
 //#define EVAL_DEBUG true
@@ -107,9 +96,9 @@ can knight catch pawns code from LL
 
 #define ERROR_FILE "errfile.txt"
 
-#ifdef SPEED_TEST
+#ifdef SPEEDUP
 #define SHOW_SEARCH FALSE
-#define RETURN_MOVE TRUE
+#define RETURN_MOVE FALSE
 #else
 #ifdef SELF_TUNE2
 #define SHOW_SEARCH FALSE

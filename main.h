@@ -77,15 +77,9 @@ int main(void) {
     initSmpVars();
     initThreads();
 
-
     initMaterial();
     InitMateBoost();
 
-
-
-#ifdef SPEED_TEST
-    MeasureSpeed(&pos);
-#else
     setPosition(&pos,STARTPOS);
     needReplyReady = FALSE;
     while (TRUE) {
@@ -122,15 +116,23 @@ int main(void) {
             uciGo(&pos, command + 3);
         } else if (!memcmp(command, "setoption", 9)) {
             uciSetOption(command + 10);
-        } else if (!memcmp(command, "testloop", 8)) {
 #ifdef DEBUG
+		} else if (!memcmp(command, "testloop", 8)) {
+
             nonUCI(&pos);
 #endif
         } else if (!memcmp(command, "stop", 4)) {
             /* no op */
         } else if (!memcmp(command, "quit", 4)) {
             break;
-        }
+#ifdef TESTING
+        } else if (!memcmp(command, "speedup", 7)) {
+            checkSpeedUp(&pos);
+        } else if (!memcmp(command, "split", 5)) {
+            benchSplitDepth(&pos);
+        
+#endif
+		}
 #ifdef OPTIMIZE
         else if (!memcmp(command, "optimize1",9)) optimize(&pos, 1);
         else if (!memcmp(command, "optimize2",9)) optimize(&pos, 2);
@@ -159,6 +161,5 @@ int main(void) {
 #endif
         else Print(3, "info string Unknown UCI command.\n");
     }
-#endif
     quit();
 }
