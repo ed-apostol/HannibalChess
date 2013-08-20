@@ -147,10 +147,10 @@ void scoreRoot(movelist_t *mvlist) {
 
 basic_move_t sortNext(split_point_t* sp, position_t *pos, movelist_t *mvlist, int *phase, int thread_id) {
     basic_move_t move;
-    if (sp != NULL) MutexLock(sp->lock);
+    if (sp != NULL) MutexLock(sp->movelistlock);
     *phase = mvlist->phase;
     if (MoveGenPhase[mvlist->phase] == PH_END) {  // SMP hack
-        if (sp != NULL) MutexUnlock(sp->lock);
+        if (sp != NULL) MutexUnlock(sp->movelistlock);
         return EMPTY;
     }
     while (TRUE) {
@@ -221,10 +221,10 @@ basic_move_t sortNext(split_point_t* sp, position_t *pos, movelist_t *mvlist, in
                 break;
             default:
                 // can't get here
-                if (sp != NULL) MutexUnlock(sp->lock);
+                if (sp != NULL) MutexUnlock(sp->movelistlock);
                 return EMPTY;
             }
-            if (sp != NULL) MutexUnlock(sp->lock);
+            if (sp != NULL) MutexUnlock(sp->movelistlock);
             return move;
         }
 
@@ -301,7 +301,7 @@ basic_move_t sortNext(split_point_t* sp, position_t *pos, movelist_t *mvlist, in
             break;
         default:
             ASSERT(MoveGenPhase[mvlist->phase] == PH_END);
-            if (sp != NULL) MutexUnlock(sp->lock);
+            if (sp != NULL) MutexUnlock(sp->movelistlock);
             return EMPTY;
         }
     }

@@ -18,13 +18,6 @@
 #define NO_ASP FALSE
 #define MIN_REDUCTION_DEPTH 4 // default is FALSE
 
-#ifdef NEW_EASY
-const int easyTime[2] = {25,20}; //indexed by whether the move is forcing (tactical or escaping)
-const int easyCutoff[2] = {300,150}; //indexed by whether the move is forcing (tactical or escaping)
-const int easyReduction[2] = {2,2};
-const int easyDepth[2] = {14,12}; //NewEasy34 made all factors like new change
-#endif
-
 void ponderHit() { //no pondering in tuning
     int64 time = getTime() - SearchInfo(0).start_time;
 
@@ -489,7 +482,11 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
     int lateMove = LATE_PRUNE_MIN + ((cutNode && !inPv) ? ((depth * depth) / 4) : (depth * depth));
     hisOn = 0;
     while ((move = sortNext(sp, pos, mvlist, &mvlist_phase, thread_id)) != EMPTY) {
-        played++;
+        if (inSplitPoint) {
+            MutexLock(sp->updatelock);
+            played = ++sp->played;
+            MutexUnlock(sp->updatelock);
+        } else ++played;
         if (anyRepNoMove(pos,move)) { 
             score = DrawValue[pos->side];
         } else {
@@ -541,6 +538,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
             unmakeMove(pos, &undo);
         }
         if (Threads[thread_id].stop) return bestvalue;
+        if (inSplitPoint) MutexLock(sp->updatelock);
         if (score > bestvalue) {
             bestvalue = score;
             if (inSplitPoint) {
@@ -552,7 +550,10 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
                 if (inSplitPoint) sp->bestmove = move;
                 alpha = bestvalue;
                 if (alpha >= beta) {
-                    if (inSplitPoint) Threads[thread_id].cutoff = true;
+                    if (inSplitPoint) {
+                        Threads[thread_id].cutoff = true;
+                        MutexUnlock(sp->updatelock);
+                    }
                     break;
                 }
                 if (inSplitPoint) {
@@ -561,6 +562,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
                 }
             }
         }
+        if (inSplitPoint) MutexUnlock(sp->updatelock);
         if (hisOn < 64 && !moveIsTactical(move)) { //putting it after best move check ensures we do not mess with best move
             hisMoves[hisOn++] = move;
         }
@@ -573,8 +575,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
                 break;
         }
     }
-    if(inSplitPoint) sp->played = played;
-    else {
+    if (!inSplitPoint) {
         if (played == 0) {
             if (inCheck) return -INF + pos->ply;
             else return DrawValue[pos->side];
@@ -678,6 +679,8 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
     SearchInfo(thread_id).iteration = depth;
     SearchInfo(thread_id).change = 0;
     SearchInfo(thread_id).research = 0;
+    SearchInfo(thread_id).rbestscore1 = -INF;
+    SearchInfo(thread_id).rbestscore2 = -INF;
 
     maxnodes = 0;
     bestmoveindex = 0;
@@ -747,9 +750,6 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
                     do { //TODO rewrite this to do alpha and beta adjustments in the same loop
                         if (mvlist->pos > 1) {
                             SearchInfo(thread_id).change = 1;
-#ifdef NEW_EASY
-                            if (depth >= 8) SearchInfo(thread_id).easy = 0;
-#endif
                         }
                         SearchInfo(thread_id).bestmove = move;
                         fail_high++;
@@ -775,6 +775,12 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
 #endif
             mvlist->list[mvlist->pos-1].s = ((sum_nodes - lastnodes) >> 13);
             if (mvlist->list[mvlist->pos-1].s > maxnodes) maxnodes = mvlist->list[mvlist->pos-1].s;
+            if (score > SearchInfo(thread_id).rbestscore1) {
+                SearchInfo(thread_id).rbestscore1 = score;
+            } 
+            if (score > SearchInfo(thread_id).rbestscore2 && score < SearchInfo(thread_id).rbestscore1) {
+                SearchInfo(thread_id).rbestscore2 = score;
+            }
             if (score > SearchInfo(thread_id).best_value) {
                 bestmoveindex = mvlist->pos-1;
                 SearchInfo(thread_id).best_value = score;
@@ -813,31 +819,6 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
             if (SearchInfo(thread_id).legalmoves == 1 || SearchInfo(thread_id).mate_found >= 3) { 
                 if (depth >= 8) setAllThreadsToStop(thread_id);
             } 
-#ifdef NEW_EASY
-            else if (!gettingWorse && SearchInfo(thread_id).easy) {
-                int inCheck = kingIsInCheck(pos);
-                bool forcing = (inCheck  || moveIsTactical(SearchInfo(thread_id).bestmove));
-                if (depth >= easyDepth[forcing] ) {
-                    int64 maxEasyTime = SearchInfo(thread_id).start_time + (SearchInfo(thread_id).alloc_time * 40)/100 ; //only check if there is enough time to calculate next ply if needed
-                    if (time >= maxEasyTime) SearchInfo(thread_id).easy = 0;
-                    else {
-                        int64 minEasyTime = SearchInfo(thread_id).start_time + (SearchInfo(thread_id).alloc_time * easyTime[forcing])/100 ; 
-                        if (time >= minEasyTime) {
-                            SearchInfo(thread_id).easy = 0; //one way or another we will not test for this again
-                            int targetScore = SearchInfo(thread_id).best_value - easyCutoff[forcing];
-                            int easyDepth = depth - ReductionTable[0][MIN(depth,63)][63]-easyReduction[forcing]; 
-                            int easyScore = searchSelective<true>(pos, targetScore, easyDepth, inCheck, &SearchInfo(thread_id).bestmove, thread_id);
-                            if (easyScore < targetScore) {
-                                setAllThreadsToStop(thread_id);
-#ifdef DEBUG_EASY
-                                Print(3, "info string stopping %d (%d/%d)\n",easyCutoff[forcing],easyDepth,depth);
-#endif
-                            }
-                        }
-                    }
-                }
-            }
-#endif
             if (SearchInfo(thread_id).change && time >= SearchInfo(thread_id).start_time + (SearchInfo(thread_id).alloc_time * 10)/100) {
                 SearchInfo(thread_id).time_limit_max += (SearchInfo(thread_id).alloc_time * INCREASE_CHANGE) / 100;
                 if (SearchInfo(thread_id).time_limit_max > SearchInfo(thread_id).time_limit_abs) SearchInfo(thread_id).time_limit_max = SearchInfo(thread_id).time_limit_abs;
@@ -860,6 +841,18 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
                 }
                 else { // if we are unlikely to get deeper, save our time
                     setAllThreadsToStop(thread_id);
+                }
+            } else if (!gettingWorse 
+            && SearchInfo(thread_id).try_easy 
+            && SearchInfo(thread_id).iteration >= 12
+            && SearchInfo(thread_id).best_value > -MAXEVAL
+            && SearchInfo(thread_id).rbestscore2 != -INF
+            && time + (SearchInfo(thread_id).alloc_time * 80)/100 >= SearchInfo(thread_id).time_limit_max) {
+                SearchInfo(thread_id).try_easy = false;
+                if (SearchInfo(thread_id).rbestscore1 >= SearchInfo(thread_id).rbestscore2 + PawnValueEnd) { // TODO: to be tuned
+                    setAllThreadsToStop(thread_id);
+                    Print(1, "info string Aborting search: easy move: score1: %d, score2: %d, %d ms\n",
+                        SearchInfo(thread_id).rbestscore1, SearchInfo(thread_id).rbestscore2, time - SearchInfo(thread_id).start_time);
                 }
             }
         }
@@ -1067,10 +1060,8 @@ void getBestMove(position_t *pos, int thread_id) {
     // wake up sleeping threads
     for (int i = 1; i < Guci_options->threads; ++i) SetEvent(Threads[i].idle_event); // SMP 
 
+    SearchInfo(thread_id).try_easy = true;
     Threads[thread_id].split_point = &Threads[thread_id].sptable[thread_id];
-#ifdef NEW_EASY
-    SearchInfo(thread_id).easy = 2;
-#endif
     for (id = 1; id < MAXPLY; id++) {
         if (id >= 6) { // TODO: to be tuned
             alpha = goodAlpha(SearchInfo(thread_id).best_value-16);

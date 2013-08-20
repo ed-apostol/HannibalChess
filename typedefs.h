@@ -259,6 +259,10 @@ typedef struct _search_info_t{
     int research;
     int iteration;
 
+    bool try_easy;
+    int rbestscore1;
+    int rbestscore2;
+
     int legalmoves;
     basic_move_t bestmove;
     basic_move_t pondermove;
@@ -267,9 +271,6 @@ typedef struct _search_info_t{
     bool mvlist_initialized;
     movelist_t rootmvlist;
     continuation_t rootPV;
-#ifdef NEW_EASY
-	int easy;
-#endif
     int32 evalgains[1024];
     int32 history[1024];
     evaltable_t et;
@@ -294,7 +295,8 @@ typedef struct _split_point_t{
     volatile int master;
     volatile int slaves[MaxNumOfThreads];
     volatile int cpus;
-    mutex_t lock[1];
+    mutex_t movelistlock[1];
+    mutex_t updatelock[1];
 } split_point_t;
 
 typedef struct {

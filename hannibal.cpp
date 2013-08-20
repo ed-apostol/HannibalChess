@@ -28,7 +28,7 @@ can knight catch pawns code from LL
 #define TWEAK_030813 true
 #define OPT_EASY true
 #define VERSION            "m1_SMPFix_EM"
-#define NUM_THREADS			    4
+#define NUM_THREADS			    1
 #define MIN_SPLIT_DEPTH			4
 #define TCEC true
 
@@ -38,7 +38,6 @@ can knight catch pawns code from LL
 #define INCREASE_CHANGE 0 //what percentage of alloc to increase during a change move
 #define TIME_DIVIDER 30 //how many moves we divide remaining time into 
 
-//#define NEW_EASY true
 //#define DEBUG_EASY true
 //#define OPTIMIZE true
 //#define DEBUG
