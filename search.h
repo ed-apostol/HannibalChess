@@ -856,7 +856,8 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
                 }
             }
         }
-    } else if (SearchInfo(thread_id).depth_is_limited && depth >= SearchInfo(thread_id).depth_limit) {
+    } 
+    if (SearchInfo(thread_id).depth_is_limited && depth >= SearchInfo(thread_id).depth_limit) {
         setAllThreadsToStop(thread_id);
     }
 
@@ -1097,3 +1098,115 @@ void getBestMove(position_t *pos, int thread_id) {
     //}
 }
 
+void checkSpeedUp(position_t* pos) {
+    const int NUMPOS = 4;
+    const int NUMVAL = 5;
+    char* fenPos[NUMPOS] = {
+        "r2qkb1r/pp3p1p/2p2n2/nB1P4/3P1Qb1/2N2p2/PPP3PP/R1B1R1K1 b kq - 2 12",
+        "r4b1r/p1kq1p1p/8/np6/3P1R2/5Q2/PPP3PP/R1B3K1 b - - 2 18",
+        "4qRr1/p3b2p/1kn5/1p2B3/3P4/2P2Q2/PP4PP/4R1K1 b - - 0 24",
+        "3q4/p3b2p/1k6/2P1Q3/p2P4/8/1P4PP/6K1 b - - 0 30",
+    };
+    float timeSpeedupSum[NUMVAL];
+    float nodesSpeedupSum[NUMVAL];
+    char tempStr[256] = {0};
+    char* command = "movedepth 21";
+
+    for (int j = 0; j < NUMVAL; ++j) {
+        timeSpeedupSum[j] = 0.0;
+        nodesSpeedupSum[j] = 0.0;
+    }
+
+    for (int i = 0; i < NUMPOS; ++i) {
+        uciSetOption("name Threads value 1");
+        transClear(0);
+        for (int k = 0; k < Guci_options->threads; ++k) {
+            pawnTableClear(&SearchInfo(0).pt);
+            evalTableClear(&SearchInfo(0).et);
+        }
+        Print(5, "\n\nPos#%d: %s\n", i+1, fenPos[i]);
+        uciSetPosition(pos, fenPos[i]);
+        int64 startTime = getTime();
+        uciGo(pos, command);
+        int64 spentTime1 = getTime() - startTime;
+        uint64 nodes1 = Threads[0].nodes / spentTime1;
+        float timeSpeedUp = (float)spentTime1/1000.0;
+        timeSpeedupSum[0] += timeSpeedUp;
+        float nodesSpeedup = (float)nodes1;
+        nodesSpeedupSum[0] += nodesSpeedup;
+        Print(5, "Base: %0.2fs %dknps\n", timeSpeedUp, nodes1);
+
+        for (int j = 2; j <= 8; j += 2) {
+            sprintf(tempStr, "name Threads value %d\n", j);
+            uciSetOption(tempStr);
+            transClear(0);
+            for (int k = 0; k < Guci_options->threads; ++k) {
+                pawnTableClear(&SearchInfo(0).pt);
+                evalTableClear(&SearchInfo(0).et);
+            }
+            uciSetPosition(pos, fenPos[i]);
+            startTime = getTime();
+            uciGo(pos, command);
+            int64 spentTime = getTime() - startTime;
+            uint64 nodes = 0;
+            for (int i = 0; i < Guci_options->threads; ++i) nodes += Threads[i].nodes;
+            nodes /= spentTime;
+            timeSpeedUp = (float)spentTime1 / (float)spentTime;
+            timeSpeedupSum[j/2] += timeSpeedUp;
+            nodesSpeedup = (float)nodes / (float)nodes1;
+            nodesSpeedupSum[j/2] += nodesSpeedup;
+            Print(5, "Thread: %d SpeedUp: %0.2f %0.2f\n", j, timeSpeedUp, nodesSpeedup);
+        }
+    }
+    Print(5, "\n\n");
+    Print(5, "\n\nAvg Base: %0.2fs %dknps\n", timeSpeedupSum[0]/NUMPOS, (int)nodesSpeedupSum[0]/NUMPOS);
+    for (int j = 2; j <= 8; j += 2) {
+        Print(5, "Thread: %d Avg SpeedUp: %0.2f %0.2f\n", j, timeSpeedupSum[j/2]/NUMPOS, nodesSpeedupSum[j/2]/NUMPOS);
+    }
+    Print(5, "\n\n");
+}
+
+void benchSplitDepth(position_t* pos) {
+    const int NUMPOS = 4;
+    char* fenPos[NUMPOS] = {
+        "r2qkb1r/pp3p1p/2p2n2/nB1P4/3P1Qb1/2N2p2/PPP3PP/R1B1R1K1 b kq - 2 12",
+        "r4b1r/p1kq1p1p/8/np6/3P1R2/5Q2/PPP3PP/R1B3K1 b - - 2 18",
+        "4qRr1/p3b2p/1kn5/1p2B3/3P4/2P2Q2/PP4PP/4R1K1 b - - 0 24",
+        "3q4/p3b2p/1k6/2P1Q3/p2P4/8/1P4PP/6K1 b - - 0 30",
+    };
+    char command[1024] = {0};
+    uint64 timeSum[15];
+    uint64 nodesSum[15];
+    for (int i = 1; i <= 14; ++i) {
+        timeSum[i] = nodesSum[i] = 0;
+    }
+
+    uciSetOption("name Threads value 7");
+    for (int posIdx = 0; posIdx < NUMPOS; ++posIdx) {
+        Print(5, "\n\nPos#%d: %s\n", posIdx+1, fenPos[posIdx]);
+        for (int i = 1; i <= 14; ++i) {
+            sprintf(command, "name Min Split Depth value %d", i);
+            uciSetOption(command);
+            transClear(0);
+            for (int k = 0; k < Guci_options->threads; ++k) {
+                pawnTableClear(&SearchInfo(0).pt);
+                evalTableClear(&SearchInfo(0).et);
+            }
+            uciSetPosition(pos, fenPos[posIdx]);
+            int64 startTime = getTime();
+            uciGo(pos, "movedepth 20");
+            int64 spentTime = getTime() - startTime;
+            timeSum[i] += spentTime;
+            uint64 nodes = 0;
+            for (int k = 0; k < Guci_options->threads; ++k) nodes += Threads[k].nodes;
+            nodes /= spentTime;
+            nodesSum[i] += nodes;
+            Print(5, "Threads: 7: SplitDepth: %d Time: %d Knps: %d\n", i, spentTime, nodes);
+        }
+    }
+    Print(5, "\n\nAverage:\n");
+    for (int i = 1; i <= 14; ++i) {
+        Print(5, "SplitDepth: %d Time: %d Knps: %d\n", i, timeSum[i]/NUMPOS, nodesSum[i]/NUMPOS);
+    }
+    Print(5, "\n\n");
+}

@@ -38,6 +38,7 @@ can knight catch pawns code from LL
 #define INCREASE_CHANGE 0 //what percentage of alloc to increase during a change move
 #define TIME_DIVIDER 30 //how many moves we divide remaining time into 
 
+//#define SPEEDUP
 //#define DEBUG_EASY true
 //#define OPTIMIZE true
 //#define DEBUG
@@ -89,9 +90,9 @@ can knight catch pawns code from LL
 
 #define ERROR_FILE "errfile.txt"
 
-#ifdef SPEED_TEST
+#ifdef SPEEDUP
 #define SHOW_SEARCH FALSE
-#define RETURN_MOVE TRUE
+#define RETURN_MOVE FALSE
 #else
 #ifdef SELF_TUNE2
 #define SHOW_SEARCH FALSE

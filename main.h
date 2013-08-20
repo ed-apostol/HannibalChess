@@ -77,15 +77,9 @@ int main(void) {
     initSmpVars();
     initThreads();
 
-
     initMaterial();
     InitMateBoost();
 
-
-
-#ifdef SPEED_TEST
-    MeasureSpeed(&pos);
-#else
     setPosition(&pos,STARTPOS);
     needReplyReady = FALSE;
     while (TRUE) {
@@ -130,6 +124,10 @@ int main(void) {
             /* no op */
         } else if (!memcmp(command, "quit", 4)) {
             break;
+        } else if (!memcmp(command, "speedup", 7)) {
+            checkSpeedUp(&pos);
+        } else if (!memcmp(command, "split", 5)) {
+            benchSplitDepth(&pos);
         }
 #ifdef OPTIMIZE
         else if (!memcmp(command, "optimize1",9)) optimize(&pos, 1);
@@ -159,6 +157,5 @@ int main(void) {
 #endif
         else Print(3, "info string Unknown UCI command.\n");
     }
-#endif
     quit();
 }

@@ -169,6 +169,7 @@ void transClear(int thread) {
 
     transNewDate(-1,thread);
     if (TransTable(thread).table != NULL) {
+        memset(TransTable(thread).table, 0, (TransTable(thread).size * sizeof(trans_entry_t)));
         for (te = &TransTable(thread).table[0]; te < &TransTable(thread).table[TransTable(thread).size]; te++) {
             transSetMinvalue(te, -INF); // not important now, but perhaps if we use in qsearch or something
             transSetMaxvalue(te, INF); // not important now, but perhaps if we use in qsearch or something
