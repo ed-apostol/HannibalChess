@@ -247,12 +247,10 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, const bool in
             score = DrawValue[pos->side];
         } else {
             moveGivesCheck = moveIsCheck(pos, move, dcc);
-            if (prunable && move != hashMove && !moveGivesCheck && (movePiece(move) != PAWN || !moveIsPassedPawn(pos, move))) {
-                int scoreAprox = Threads[thread_id].evalvalue[pos->ply] + MaxPieceValue[moveCapture(move)] + PawnValueEnd; 
-                if (scoreAprox < beta) {
-                    bestvalue = MAX(bestvalue, scoreAprox);
-                    continue; //todo try out opt, tryout see instead of maxpiecevalue
-                }
+            //pruning
+            if (prunable && move!=hashMove && !moveGivesCheck && !moveIsPassedPawn(pos, move)) {
+                int scoreAprox = Threads[thread_id].evalvalue[pos->ply] + PawnValueEnd + MaxPieceValue[moveCapture(move)]; 
+                if (scoreAprox <= alpha) continue; //todo try out opt, tryout see instead of maxpiecevalue
             }
             newdepth = depth - !moveGivesCheck;
             makeMove(pos, &undo, move);
@@ -355,29 +353,42 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
         if (pos->ply >= MAXPLY-1) return Threads[thread_id].evalvalue[pos->ply];
         updateEvalgains(pos, pos->posStore.lastmove, Threads[thread_id].evalvalue[pos->ply-1], Threads[thread_id].evalvalue[pos->ply], thread_id);
 
-        if (!inPvNode(nt) && !inCheck && prune) {
+        if (!inRoot && !inPvNode(nt) && !inCheck && prune) {
             int rvalue;
-            if (inCutNode(nt) && depth <= 3 && pos->color[pos->side] & ~(pos->pawns | pos->kings) 
-            && beta < (rvalue = Threads[thread_id].evalvalue[pos->ply] - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0]))  {
+            if (inCutNode(nt) && pos->color[pos->side] & ~(pos->pawns | pos->kings) && beta < (rvalue = Threads[thread_id].evalvalue[pos->ply] - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0] - pes))  {
+                if (hashMove && hashMove != Threads[thread_id].killer1[pos->ply] && !moveIsTactical(hashMove)) { //good move, so killer move 07/25/13 NEW
+                    Threads[thread_id].killer2[pos->ply] = Threads[thread_id].killer1[pos->ply];
+                    Threads[thread_id].killer1[pos->ply] = hashMove;
+                }
                 return rvalue;
             }
-            if (depth <= 3 && hashMove == EMPTY && !(Rank7ByColorBB[pos->side] & pos->pawns)
-            && Threads[thread_id].evalvalue[pos->ply] < (rvalue = beta - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0])) { 
-                score = searchNode<false, false, false>(pos, rvalue-1, rvalue, 0, false, EMPTY, thread_id, nt);
-                if (score < rvalue) return score;
+            if (pos->posStore.lastmove != EMPTY && hashMove == EMPTY
+                && Threads[thread_id].evalvalue[pos->ply] < (rvalue = beta - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0] - opt)) { 
+                    score = searchNode<false, false, false>(pos, rvalue-1, rvalue, depth-4, false, EMPTY, thread_id, nt); // TODO: try qsearch here
+                    if (score < rvalue) return score;
             }
             if (inCutNode(nt) && depth >= 2 && (MinTwoBits(pos->color[pos->side] & ~(pos->pawns))) && Threads[thread_id].evalvalue[pos->ply] >= beta) {
-                if (depth > 6) score = searchNode<false, false, false>(pos, alpha, beta, depth - 6, false, EMPTY, thread_id, AllNode);
-                else score = beta;
-                if (score >= beta) {
+                if (anyRepNoMove(pos,0)) {
+                    if (DrawValue[pos->side] >= beta) return DrawValue[pos->side];
+                } else {
                     int nullDepth = depth - (4 + depth/5 + (Threads[thread_id].evalvalue[pos->ply] - beta > PawnValue));
                     makeNullMove(pos, &undo);
-                    score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, false, EMPTY, thread_id, AllNode);
+                    score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, false, EMPTY, thread_id, invertNode(nt));
                     if ((entry = transProbe(pos->hash, thread_id)) != NULL && transMove(entry) != EMPTY) {
                         nullThreatMoveToBit = BitMask[moveTo(transMove(entry))];
                     }
                     unmakeNullMove(pos, &undo);
-                    if (score >= beta) return score;
+                    if (score >= beta) {
+                        if (depth <= 6) {
+                            transStore(pos->hash, EMPTY, depth, ((score > oldalpha) ? score : -INF), ((score < beta) ? score : INF), thread_id);
+                            return score;
+                        }
+                        score = searchNode<false, false, false>(pos, alpha, beta, depth-6, false, EMPTY, thread_id, nt);
+                        if (score >= beta) {
+                            transStore(pos->hash, EMPTY, depth, ((score > oldalpha) ? score : -INF), ((score < beta) ? score : INF), thread_id);
+                            return score;
+                        }
+                    }
                 }
             }
         }
@@ -452,21 +463,16 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                 if (!inRoot && !inPvNode(nt) && okToPruneOrReduce && pruneable) {
                     if (played > lateMove && !isMoveDefence(pos, move, nullThreatMoveToBit)) continue;
                     int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(played,63)]);
-                    score = Threads[thread_id].evalvalue[pos->ply]
-                        + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(played,63)]
-                        + SearchInfo(thread_id).evalgains[historyIndex(pos->side, move)];
+                    score = Threads[thread_id].evalvalue[pos->ply] 
+                    + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(played,63)]
+                    + SearchInfo(thread_id).evalgains[historyIndex(pos->side, move)];
                     if (score < beta  && !moveIsPassedPawn(pos, move)) {
-                        bestvalue = MAX(bestvalue, score);
-                        if (inSplitPoint) {
-                            MutexLock(sp->updatelock);
-                            sp->bestvalue = MAX(sp->bestvalue, bestvalue);
-                            MutexUnlock(sp->updatelock);
-                        }
-                        continue;
+                        if (predictedDepth < 8) continue;
+                        --newdepthclone;
                     }
                     if (inCutNode(nt) && swap(pos, move) < 0) {
-                        if (predictedDepth < 4) continue;
-                        newdepthclone--;
+                        if (predictedDepth < 2) continue;
+                        --newdepthclone;
                     }
                 }
                 if (okToPruneOrReduce && depth >= MIN_REDUCTION_DEPTH) newdepthclone -= ReductionTable[(inPvNode(nt)?0:1)][MIN(depth,63)][MIN(played,63)];
