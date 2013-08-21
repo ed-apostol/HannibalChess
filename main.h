@@ -129,7 +129,7 @@ int main(void) {
         } else if (!memcmp(command, "speedup", 7)) {
             checkSpeedUp(&pos);
         } else if (!memcmp(command, "split", 5)) {
-            benchSplitDepth(&pos);
+            benchSplitDepth(&pos, command+5);
         
 #endif
 		}
