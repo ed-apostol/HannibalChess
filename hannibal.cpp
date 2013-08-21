@@ -27,7 +27,7 @@ can knight catch pawns code from LL
 */
 #define TWEAK_030813 true
 #define OPT_EASY true
-#define VERSION            "20130821_nr"
+#define VERSION            "20130822_nr"
 #define NUM_THREADS			    4
 #define MIN_SPLIT_DEPTH			5
 #define TCEC true

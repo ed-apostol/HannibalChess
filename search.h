@@ -421,7 +421,6 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
             firstExtend |= (inCheck && mvlist->size==1);
         }
     }
-    int pruneable =  prune && MinTwoBits(pos->color[pos->side] & ~(pos->pawns | pos->kings));
     int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 4) : (depth * depth));
     int hisOn = 0;
     while ((move = sortNext(sp, pos, mvlist, &mvlist_phase, thread_id)) != EMPTY) {
@@ -445,18 +444,15 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
             } else {
                 int okToPruneOrReduce = (newdepth >= depth || inCheck || moveGivesCheck || MoveGenPhase[mvlist_phase] != PH_QUIET_MOVES) ? 0 : 1;
                 int newdepthclone = newdepth;
-                if (!inRoot && !inPvNode(nt) && okToPruneOrReduce && pruneable) {
+                if (!inRoot && !inPvNode(nt) && okToPruneOrReduce) {
                     if (played > lateMove && !isMoveDefence(pos, move, nullThreatMoveToBit)) continue;
                     int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(played,63)]);
                     int scoreAprox = Threads[thread_id].evalvalue[pos->ply] 
                     + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(played,63)]
                     + SearchInfo(thread_id).evalgains[historyIndex(pos->side, move)];
-                    if (scoreAprox < beta  && !moveIsPassedPawn(pos, move)) {
-                        continue;
-                    }
-                    if (inCutNode(nt) && swap(pos, move) < 0) {
-                        if (predictedDepth < 4) continue;
-                        --newdepthclone;
+                    if (scoreAprox < beta) {
+                          if (!moveIsPassedPawn(pos, move)) continue;
+                          --newdepthclone;
                     }
                 }
                 if (okToPruneOrReduce && depth >= MIN_REDUCTION_DEPTH) newdepthclone -= ReductionTable[(inPvNode(nt)?0:1)][MIN(depth,63)][MIN(played,63)];
