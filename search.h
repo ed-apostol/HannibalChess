@@ -605,12 +605,15 @@ void timeManagement(int depth, int thread_id) {
                     return;
                 }
             } 
-            if ((SearchInfo(thread_id).time_limit_max - time) < lastSearchTime) {
+            if ((time - SearchInfo(thread_id).start_time) > ((SearchInfo(thread_id).time_limit_max - SearchInfo(thread_id).start_time) * 60) / 100) {
                 int64 addTime = 0;
                 if (gettingWorse) {
                     int amountWorse = SearchInfo(thread_id).last_value - SearchInfo(thread_id).best_value;
                     addTime += ((amountWorse - 20) * SearchInfo(thread_id).alloc_time)/WORSE_TIME_BONUS;
                     Print(2, "info string Extending time (root gettingWorse): %d\n", addTime);
+                }
+                if (SearchInfo(thread_id).change) {
+                    addTime += (SearchInfo(thread_id).alloc_time * CHANGE_TIME_BONUS) / 100;
                 }
                 if (addTime > 0) {
                     SearchInfo(thread_id).time_limit_max += addTime;
