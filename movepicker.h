@@ -244,6 +244,7 @@ basic_move_t sortNext(split_point_t* sp, position_t *pos, movelist_t *mvlist, in
             }
             scoreRoot(mvlist);
             SearchInfo(thread_id).mvlist_initialized = true;
+            SearchInfo(thread_id).legalmoves = mvlist->size;
             break;
         case PH_EVASION:
             genEvasions(pos, mvlist);

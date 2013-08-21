@@ -30,7 +30,7 @@ void ponderHit() { //no pondering in tuning
     if ((SearchInfo(0).iteration >= 8 && (SearchInfo(0).legalmoves == 1 || SearchInfo(0).mate_found >= 3)) ||
         (time > SearchInfo(0).time_limit_abs)) {
             setAllThreadsToStop(0);
-            Print(2, "info string Has searched enough the ponder move: aborting\n");
+            Print(3, "info string Has searched enough the ponder move: aborting\n");
     } else {
         SearchInfo(0).thinking_status = THINKING;
         Print(2, "info string Switch from pondering to thinking\n");
@@ -49,7 +49,7 @@ void check4Input(position_t *pos) {
             quit();
         } else if (!memcmp(input, "stop", 4)) {
             setAllThreadsToStop(0);
-            Print(2, "info string Aborting search: stop\n");
+            Print(3, "info string Aborting search: stop\n");
             return;
         } else if (!memcmp(input, "ponderhit", 9)) {
             ponderHit();
@@ -95,12 +95,12 @@ void initNode(position_t *pos, const int thread_id) {
                         bool wasGettingWorse = SearchInfo(thread_id).best_value == -INF && SearchInfo(thread_id).last_value + 30 <= SearchInfo(thread_id).last_last_value;
                         if (!gettingWorse && !wasGettingWorse) {
                             setAllThreadsToStop(thread_id);
-                            Print(2, "info string Aborting search: time limit 2: %d\n", time2 - SearchInfo(thread_id).start_time);
+                            Print(3, "info string Aborting search: time limit 2: wasted=%d\n", time2 - SearchInfo(thread_id).rootlasttime);
                         }
                     }
                 } else {
                     setAllThreadsToStop(thread_id);
-                    Print(2, "info string Aborting search: time limit 1: %d\n", time2 - SearchInfo(thread_id).start_time);
+                    Print(3, "info string Aborting search: time limit 1: %d\n", time2 - SearchInfo(thread_id).start_time);
                 }
             }
         }
@@ -482,9 +482,9 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
         if (inRoot) {
             mvlist->list[mvlist->pos-1].s = score;
             if (score > SearchInfo(thread_id).rbestscore1) {
+                SearchInfo(thread_id).rbestscore2 = SearchInfo(thread_id).rbestscore1;
                 SearchInfo(thread_id).rbestscore1 = score;
-            } 
-            if (score > SearchInfo(thread_id).rbestscore2 && score < SearchInfo(thread_id).rbestscore1) {
+            } else if (score > SearchInfo(thread_id).rbestscore2) {
                 SearchInfo(thread_id).rbestscore2 = score;
             }
         }
@@ -594,54 +594,63 @@ void timeManagement(int depth, int thread_id) {
     if (SearchInfo(thread_id).thinking_status == THINKING) {
         if (SearchInfo(thread_id).time_is_limited) {
             int64 time = getTime();
+            int64 lastSearchTime = time - SearchInfo(thread_id).rootlasttime;
+            SearchInfo(thread_id).rootlasttime = time;
             bool gettingWorse = (SearchInfo(thread_id).best_value + 30) <= SearchInfo(thread_id).last_value;
+
             if (SearchInfo(thread_id).legalmoves == 1 || SearchInfo(thread_id).mate_found >= 3) { 
                 if (depth >= 8) {
                     setAllThreadsToStop(thread_id);
-                    Print(2, "info string Aborting search: legalmove/mate found depth >= 8\n");
+                    Print(3, "info string Aborting search: legalmove/mate found depth >= 8\n");
+                    return;
                 }
             } 
-            if (time + (SearchInfo(thread_id).alloc_time * LAST_PLY_TIME)/100 >= SearchInfo(thread_id).time_limit_max) {
+            if ((SearchInfo(thread_id).time_limit_max - time) < lastSearchTime) {
                 int64 addTime = 0;
                 if (gettingWorse) {
                     int amountWorse = SearchInfo(thread_id).last_value - SearchInfo(thread_id).best_value;
                     addTime += ((amountWorse - 20) * SearchInfo(thread_id).alloc_time)/WORSE_TIME_BONUS;
                     Print(2, "info string Extending time (root gettingWorse): %d\n", addTime);
                 }
-                if (SearchInfo(thread_id).change) {
-                    addTime += (SearchInfo(thread_id).alloc_time * CHANGE_TIME_BONUS) / 100;
-                    Print(2, "info string Extending time (root change): %d\n", addTime);
-                }
-                if (addTime) {
+                if (addTime > 0) {
                     SearchInfo(thread_id).time_limit_max += addTime;
-                    if (SearchInfo(thread_id).time_limit_max > SearchInfo(thread_id).time_limit_abs) SearchInfo(thread_id).time_limit_max = SearchInfo(thread_id).time_limit_abs;
-                    if (time + (SearchInfo(thread_id).alloc_time * LAST_PLY_TIME)/100 >= SearchInfo(thread_id).time_limit_abs) {
-                        setAllThreadsToStop(thread_id);
-                        Print(2, "info string Aborting search: root time limit 2: %d\n", time - SearchInfo(thread_id).start_time);
-                    }
-                }
-                else { // if we are unlikely to get deeper, save our time
+                    if (SearchInfo(thread_id).time_limit_max > SearchInfo(thread_id).time_limit_abs) 
+                        SearchInfo(thread_id).time_limit_max = SearchInfo(thread_id).time_limit_abs;
+                } else { // if we are unlikely to get deeper, save our time
                     setAllThreadsToStop(thread_id);
-                    Print(2, "info string Aborting search: root time limit 1: %d\n", time - SearchInfo(thread_id).start_time);
+                    Print(3, "info string Aborting search: root time limit 1: %d\n", time - SearchInfo(thread_id).start_time);
+                    return;
                 }
-            } else if (!gettingWorse 
-            && SearchInfo(thread_id).try_easy 
-            && SearchInfo(thread_id).iteration >= 12
-            && SearchInfo(thread_id).best_value > -MAXEVAL
-            && SearchInfo(thread_id).rbestscore2 != -INF
-            && time + (SearchInfo(thread_id).alloc_time * 80)/100 >= SearchInfo(thread_id).time_limit_max) {
-                SearchInfo(thread_id).try_easy = false;
-                if (SearchInfo(thread_id).rbestscore1 >= SearchInfo(thread_id).rbestscore2 + PawnValueEnd) { // TODO: to be tuned
+            }
+
+            if (!gettingWorse && depth >= 8) {
+                static const int EASY_PLY_TIME1 = 20;
+                static const int EASY_CUTOFF1 = 120;
+                static const int EASY_PLY_TIME2 = 30;
+                static const int EASY_CUTOFF2 = 60;
+
+                int64 timeLimit = SearchInfo(thread_id).time_limit_max - SearchInfo(thread_id).start_time;
+                int64 timeExpended = time - SearchInfo(thread_id).start_time;
+
+                if (timeExpended > (timeLimit * EASY_PLY_TIME1)/100 && SearchInfo(thread_id).rbestscore1 > SearchInfo(thread_id).rbestscore2 + EASY_CUTOFF1) {
                     setAllThreadsToStop(thread_id);
-                    Print(3, "info string Aborting search: easy move: score1: %d, score2: %d, %d ms\n",
+                    Print(3, "info string Aborting search: easy move1: score1: %d score2: %d time: %d\n", 
                         SearchInfo(thread_id).rbestscore1, SearchInfo(thread_id).rbestscore2, time - SearchInfo(thread_id).start_time);
+                    return;
+                }
+                if (timeExpended > (timeLimit * EASY_PLY_TIME2)/100 && SearchInfo(thread_id).rbestscore1 > SearchInfo(thread_id).rbestscore2 + EASY_CUTOFF2) {
+                    setAllThreadsToStop(thread_id);
+                    Print(3, "info string Aborting search: easy move2: score1: %d score2: %d time: %d\n", 
+                        SearchInfo(thread_id).rbestscore1, SearchInfo(thread_id).rbestscore2, time - SearchInfo(thread_id).start_time);
+                    return;
                 }
             }
         }
     } 
     if (SearchInfo(thread_id).depth_is_limited && depth >= SearchInfo(thread_id).depth_limit) {
         setAllThreadsToStop(thread_id);
-        Print(2, "info string Aborting search: depth limit 1\n");
+        Print(3, "info string Aborting search: depth limit 1\n");
+        return;
     }
 }
 
@@ -804,6 +813,7 @@ void getBestMove(position_t *pos, int thread_id) {
     for (int i = 1; i < Guci_options->threads; ++i) SetEvent(Threads[i].idle_event);
     Threads[thread_id].split_point = &Threads[thread_id].sptable[0];
     SearchInfo(thread_id).mvlist_initialized = false;
+    SearchInfo(thread_id).rootlasttime = getTime();
 
     SearchInfo(thread_id).try_easy = true;
     for (id = 1; id < MAXPLY; id++) {
@@ -847,7 +857,7 @@ void getBestMove(position_t *pos, int thread_id) {
         if ((SearchInfo(thread_id).depth_is_limited || SearchInfo(thread_id).time_is_limited) && SearchInfo(thread_id).thinking_status == THINKING) {
             SearchInfo(thread_id).thinking_status = STOPPED;
             setAllThreadsToStop(thread_id);
-            Print(2, "info string Aborting search: end of getBestMove: id=%d, best_value = %d sp = %d, ply = %d\n", 
+            Print(3, "info string Aborting search: end of getBestMove: id=%d, best_value = %d sp = %d, ply = %d\n", 
                 id, SearchInfo(thread_id).best_value, pos->sp, pos->ply);
         } else {
             Print(3, "info string Waiting for stop, quit, or ponderhit\n");
@@ -855,7 +865,7 @@ void getBestMove(position_t *pos, int thread_id) {
                 check4Input(pos);
             } while (SearchInfo(thread_id).thinking_status != STOPPED);
             setAllThreadsToStop(thread_id);
-            Print(2, "info string Aborting search: end of waiting for stop/quit/ponderhit\n");
+            Print(3, "info string Aborting search: end of waiting for stop/quit/ponderhit\n");
         }
     }
 
