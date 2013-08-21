@@ -24,6 +24,8 @@
 #define INCREASE_CHANGE 0 //what percentage of alloc to increase during a change move
 #define TIME_DIVIDER 30 //how many moves we divide remaining time into 
 
+const int WORSE_SCORE_CUTOFF = 20;
+
 void ponderHit() { //no pondering in tuning
     int64 time = getTime() - SearchInfo(0).start_time;
 
@@ -91,11 +93,11 @@ void initNode(position_t *pos, const int thread_id) {
             if (time2 > SearchInfo(thread_id).time_limit_max) {
                 if (time2 < SearchInfo(thread_id).time_limit_abs) {
                     if (!SearchInfo(thread_id).research && !SearchInfo(thread_id).change) {
-                        bool gettingWorse = SearchInfo(thread_id).best_value != -INF && SearchInfo(thread_id).best_value + 30 <= SearchInfo(thread_id).last_value;
-                        bool wasGettingWorse = SearchInfo(thread_id).best_value == -INF && SearchInfo(thread_id).last_value + 30 <= SearchInfo(thread_id).last_last_value;
-                        if (!gettingWorse && !wasGettingWorse) {
+                        bool gettingWorse = SearchInfo(thread_id).best_value != -INF && SearchInfo(thread_id).best_value + WORSE_SCORE_CUTOFF <= SearchInfo(thread_id).last_value;
+                        bool wasGettingWorse = SearchInfo(thread_id).best_value == -INF && SearchInfo(thread_id).last_value + WORSE_SCORE_CUTOFF <= SearchInfo(thread_id).last_last_value;
+                        if (!gettingWorse && !wasGettingWorse) { 
                             setAllThreadsToStop(thread_id);
-                            Print(3, "info string Aborting search: time limit 2: wasted=%d\n", time2 - SearchInfo(thread_id).rootlasttime);
+                            Print(3, "info string Aborting search: time limit 2: %d\n", time2 - SearchInfo(thread_id).start_time);
                         }
                     }
                 } else {
@@ -119,12 +121,6 @@ int simpleStalemate(const position_t *pos) {
         if (!isSqAtt(pos,pos->occupied,to,pos->side^1)) return FALSE;
     }
     return TRUE;
-}
-
-void copyPV(continuation_t *pv, continuation_t *newpv) {
-    if (newpv->length)
-        memcpy(&(pv->moves[0]),&newpv->moves,newpv->length*sizeof(uint32));
-    pv->length = newpv->length;
 }
 
 void displayPV(const position_t *pos, continuation_t *pv, int depth, int alpha, int beta, int score) {
@@ -532,7 +528,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
             else return DrawValue[pos->side];
         }
         if (Threads[thread_id].stop) return 0;
-        if (bestmove != EMPTY && !moveIsTactical(bestmove) && bestvalue >= beta) { //> alpha account for pv better maybe? Sam
+        if (!inRoot && bestmove != EMPTY && !moveIsTactical(bestmove) && bestvalue >= beta) { //> alpha account for pv better maybe? Sam
             int index = historyIndex(pos->side, bestmove);
             int hisDepth = MIN(depth,MAX_HDEPTH);
             SearchInfo(thread_id).history[index] += hisDepth * hisDepth;
@@ -594,9 +590,7 @@ void timeManagement(int depth, int thread_id) {
     if (SearchInfo(thread_id).thinking_status == THINKING) {
         if (SearchInfo(thread_id).time_is_limited) {
             int64 time = getTime();
-            int64 lastSearchTime = time - SearchInfo(thread_id).rootlasttime;
-            SearchInfo(thread_id).rootlasttime = time;
-            bool gettingWorse = (SearchInfo(thread_id).best_value + 30) <= SearchInfo(thread_id).last_value;
+            bool gettingWorse = (SearchInfo(thread_id).best_value + WORSE_SCORE_CUTOFF) <= SearchInfo(thread_id).last_value;
 
             if (SearchInfo(thread_id).legalmoves == 1 || SearchInfo(thread_id).mate_found >= 3) { 
                 if (depth >= 8) {
@@ -609,7 +603,7 @@ void timeManagement(int depth, int thread_id) {
                 int64 addTime = 0;
                 if (gettingWorse) {
                     int amountWorse = SearchInfo(thread_id).last_value - SearchInfo(thread_id).best_value;
-                    addTime += ((amountWorse - 20) * SearchInfo(thread_id).alloc_time)/WORSE_TIME_BONUS;
+                    addTime += ((amountWorse - (WORSE_SCORE_CUTOFF - 10)) * SearchInfo(thread_id).alloc_time)/WORSE_TIME_BONUS;
                     Print(2, "info string Extending time (root gettingWorse): %d\n", addTime);
                 }
                 if (SearchInfo(thread_id).change) {
@@ -816,7 +810,6 @@ void getBestMove(position_t *pos, int thread_id) {
     for (int i = 1; i < Guci_options->threads; ++i) SetEvent(Threads[i].idle_event);
     Threads[thread_id].split_point = &Threads[thread_id].sptable[0];
     SearchInfo(thread_id).mvlist_initialized = false;
-    SearchInfo(thread_id).rootlasttime = getTime();
 
     SearchInfo(thread_id).try_easy = true;
     for (id = 1; id < MAXPLY; id++) {
@@ -948,9 +941,8 @@ void checkSpeedUp(position_t* pos) {
     Print(5, "\n\n");
 }
 
-void benchSplitDepth(position_t* pos) {
+void benchSplitDepth(position_t* pos, char string[]) {
     const int NUMPOS = 4;
-    const int NUMSPLIT = 11;
     char* fenPos[NUMPOS] = {
         "r2qkb1r/pp3p1p/2p2n2/nB1P4/3P1Qb1/2N2p2/PPP3PP/R1B1R1K1 b kq - 2 12",
         "r4b1r/p1kq1p1p/8/np6/3P1R2/5Q2/PPP3PP/R1B3K1 b - - 2 18",
@@ -958,16 +950,20 @@ void benchSplitDepth(position_t* pos) {
         "3q4/p3b2p/1k6/2P1Q3/p2P4/8/1P4PP/6K1 b - - 0 30",
     };
     char command[1024] = {0};
-    uint64 timeSum[NUMSPLIT];
-    uint64 nodesSum[NUMSPLIT];
+    uint64 timeSum[15];
+    uint64 nodesSum[15];
+    int threads = 1, depth = 12;
     for (int i = 1; i <= 14; ++i) {
         timeSum[i] = nodesSum[i] = 0;
     }
 
-    uciSetOption("name Threads value 7");
+    sscanf(string, "%d %d", &threads, &depth);
+
+    sprintf(command, "name Threads value %d", threads);
+    uciSetOption(command);
     for (int posIdx = 0; posIdx < NUMPOS; ++posIdx) {
         Print(5, "\n\nPos#%d: %s\n", posIdx+1, fenPos[posIdx]);
-        for (int i = 1; i < NUMSPLIT; ++i) {
+        for (int i = 1; i <= 14; ++i) {
             sprintf(command, "name Min Split Depth value %d", i);
             uciSetOption(command);
             transClear(0);
@@ -977,20 +973,27 @@ void benchSplitDepth(position_t* pos) {
             }
             uciSetPosition(pos, fenPos[posIdx]);
             int64 startTime = getTime();
-            uciGo(pos, "movedepth 20");
+            sprintf(command, "movedepth %d", depth);
+            uciGo(pos, command);
             int64 spentTime = getTime() - startTime;
             timeSum[i] += spentTime;
             uint64 nodes = 0;
             for (int k = 0; k < Guci_options->threads; ++k) nodes += Threads[k].nodes;
             nodes /= spentTime;
             nodesSum[i] += nodes;
-            Print(5, "Threads: 7: SplitDepth: %d Time: %d Knps: %d\n", i, spentTime, nodes);
+            Print(5, "Threads: %d Depth: %d SplitDepth: %d Time: %d Knps: %d\n", threads, depth, i, spentTime, nodes);
         }
     }
-    Print(5, "\n\nAverage:\n");
-    for (int i = 1; i < NUMSPLIT; ++i) {
+    int bestIdx = 1;
+    uint64 bestTime = timeSum[1]/NUMPOS;
+    Print(5, "\n\nAverage Statistics (Threads: %d Depth: %d)\n\n", threads, depth);
+    for (int i = 1; i <= 14; ++i) {
+        if (timeSum[i]/NUMPOS < bestTime) {
+            bestTime = timeSum[i]/NUMPOS;
+            bestIdx = i;
+        }
         Print(5, "SplitDepth: %d Time: %d Knps: %d\n", i, timeSum[i]/NUMPOS, nodesSum[i]/NUMPOS);
     }
-    Print(5, "\n\n");
+    Print(5, "\n\nThe best SplitDepth for Threads: %d Depth: %d is:\n\nSplitDepth: %d Time: %d Knps: %d\n\n\n", threads, depth, bestIdx, timeSum[bestIdx]/NUMPOS, nodesSum[bestIdx]/NUMPOS);
 }
 

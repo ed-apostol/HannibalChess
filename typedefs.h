@@ -247,7 +247,6 @@ typedef struct _search_info_t{
 
     int64 start_time;
     int64 last_time;
-    int64 rootlasttime;
     int64 alloc_time;
 
     int last_last_value;
