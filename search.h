@@ -813,24 +813,9 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
         if (SearchInfo(thread_id).time_is_limited) {
             time = getTime();
             bool gettingWorse = (SearchInfo(thread_id).best_value + 30) <= SearchInfo(thread_id).last_value;
-			if (depth >= 8) {
-				if (SearchInfo(thread_id).legalmoves == 1 || SearchInfo(thread_id).mate_found >= 3) { 
-					 setAllThreadsToStop(thread_id);
-				}
-				if (!gettingWorse && depth >= 12) { //TODO consider not doing if we just changed move
-					int64 timeExpended = time - SearchInfo(thread_id).start_time;
-					if (timeExpended > (SearchInfo(thread_id).alloc_time * EASY_PLY_TIME1)/100 && SearchInfo(thread_id).best_value > SearchInfo(thread_id).best_value2 + EAST_CUTOFF1) {
-						setAllThreadsToStop(thread_id);
-					}
-					if (timeExpended > (SearchInfo(thread_id).alloc_time * EASY_PLY_TIME2)/100 && SearchInfo(thread_id).best_value > SearchInfo(thread_id).best_value2 + EAST_CUTOFF2) {
-						setAllThreadsToStop(thread_id);
-					}
-					if (timeExpended > (SearchInfo(thread_id).alloc_time * EASY_PLY_TIME3)/100 && SearchInfo(thread_id).best_value > SearchInfo(thread_id).best_value2 + EAST_CUTOFF3) {
-						setAllThreadsToStop(thread_id);
-					}
-				}
+			if (depth >= 8 && (SearchInfo(thread_id).legalmoves == 1 || SearchInfo(thread_id).mate_found >= 3)) { 
+				setAllThreadsToStop(thread_id);
 			}
-
             if (time + (SearchInfo(thread_id).alloc_time * LAST_PLY_TIME)/100 >= SearchInfo(thread_id).time_limit_max) {
                 int64 addTime = 0;
                 if (gettingWorse) {
@@ -841,7 +826,7 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
                     addTime += (SearchInfo(thread_id).alloc_time * CHANGE_TIME_BONUS) / 100;
                 }
                 if (addTime) {
-                    SearchInfo(thread_id).time_limit_max += addTime;
+					SearchInfo(thread_id).time_limit_max += addTime;
                     if (SearchInfo(thread_id).time_limit_max > SearchInfo(thread_id).time_limit_abs) SearchInfo(thread_id).time_limit_max = SearchInfo(thread_id).time_limit_abs;
                     if (time + (SearchInfo(thread_id).alloc_time * LAST_PLY_TIME)/100 >= SearchInfo(thread_id).time_limit_abs) {
                         setAllThreadsToStop(thread_id);
@@ -851,6 +836,23 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
                     setAllThreadsToStop(thread_id);
                 }
             }
+			if (!gettingWorse && depth>= 8) {
+				int64 timeAllocated = SearchInfo(thread_id).time_limit_max - SearchInfo(thread_id).start_time;
+				int64 timeSpent = time - SearchInfo(thread_id).start_time;
+				if (timeSpent  > (timeAllocated* EASY_PLY_TIME4)/100 && SearchInfo(thread_id).best_value > SearchInfo(thread_id).best_value2 + EAST_CUTOFF4) {
+					setAllThreadsToStop(thread_id);
+				}
+				if (timeSpent  > (timeAllocated* EASY_PLY_TIME3)/100 && SearchInfo(thread_id).best_value > SearchInfo(thread_id).best_value2 + EAST_CUTOFF3) {
+					setAllThreadsToStop(thread_id);
+				}
+				if (timeSpent  > (timeAllocated* EASY_PLY_TIME2)/100 && SearchInfo(thread_id).best_value > SearchInfo(thread_id).best_value2 + EAST_CUTOFF2) {
+					setAllThreadsToStop(thread_id);
+				}
+				if (timeSpent  > (timeAllocated* EASY_PLY_TIME1)/100 && SearchInfo(thread_id).best_value > SearchInfo(thread_id).best_value2 + EAST_CUTOFF1) {
+					setAllThreadsToStop(thread_id);
+				}
+			}
+			
         }
     } 
     if (SearchInfo(thread_id).depth_is_limited && depth >= SearchInfo(thread_id).depth_limit) {
