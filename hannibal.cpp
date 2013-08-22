@@ -26,9 +26,9 @@ can knight catch pawns code from LL
 //68 at 3:29
 */
 #define TWEAK_030813 true
-#define VERSION            "m1_SMPFix_SEM"
+#define VERSION            "08_22_13"
 #define NUM_THREADS			    1
-#define MIN_SPLIT_DEPTH			4
+#define MIN_SPLIT_DEPTH			6 //6 tested best on both tests measured by NPS on 12 threads, 5 & 8 tested best once easy measured by time to depth.
 #define TCEC true
 //#define TESTING true
 
@@ -37,17 +37,19 @@ can knight catch pawns code from LL
 #define LAST_PLY_TIME 40 //what percentage of alloc remaining to be worth trying another complete ply
 #define TIME_DIVIDER 30 //how many moves we divide remaining time into 
 
-#define EASY_PLY_TIME1 40
+#define EASY_PLY_TIME1 50
 #define EAST_CUTOFF1 20
 
-#define EASY_PLY_TIME2 30
+#define EASY_PLY_TIME2 40
 #define EAST_CUTOFF2 60
 
-#define EASY_PLY_TIME3 20
+#define EASY_PLY_TIME3 30
 #define EAST_CUTOFF3 150
 
 #define EASY_PLY_TIME4 10
 #define EAST_CUTOFF4 1200 //this is essentially if only one move escapes forced checkmate
+
+
 //#define SPEEDUP
 //#define OPTIMIZE true
 //#define DEBUG

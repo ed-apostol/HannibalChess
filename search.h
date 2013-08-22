@@ -1165,6 +1165,8 @@ void checkSpeedUp(position_t* pos) {
 }
 
 void benchSplitDepth(position_t* pos) {
+	const int startSplit = 1;
+	const int endSplit = 14;
     const int NUMPOS = 4;
     char* fenPos[NUMPOS] = {
         "r2qkb1r/pp3p1p/2p2n2/nB1P4/3P1Qb1/2N2p2/PPP3PP/R1B1R1K1 b kq - 2 12",
@@ -1175,14 +1177,14 @@ void benchSplitDepth(position_t* pos) {
     char command[1024] = {0};
     uint64 timeSum[15];
     uint64 nodesSum[15];
-    for (int i = 1; i <= 14; ++i) {
+    for (int i = startSplit; i <= endSplit; ++i) {
         timeSum[i] = nodesSum[i] = 0;
     }
 
-    uciSetOption("name Threads value 7");
+    uciSetOption("name Threads value 12");
     for (int posIdx = 0; posIdx < NUMPOS; ++posIdx) {
         Print(5, "\n\nPos#%d: %s\n", posIdx+1, fenPos[posIdx]);
-        for (int i = 1; i <= 14; ++i) {
+        for (int i = startSplit; i <= endSplit; ++i) {
             sprintf(command, "name Min Split Depth value %d", i);
             uciSetOption(command);
             transClear(0);
@@ -1192,18 +1194,18 @@ void benchSplitDepth(position_t* pos) {
             }
             uciSetPosition(pos, fenPos[posIdx]);
             int64 startTime = getTime();
-            uciGo(pos, "movedepth 20");
+            uciGo(pos, "movedepth 22");
             int64 spentTime = getTime() - startTime;
             timeSum[i] += spentTime;
             uint64 nodes = 0;
             for (int k = 0; k < Guci_options->threads; ++k) nodes += Threads[k].nodes;
             nodes /= spentTime;
             nodesSum[i] += nodes;
-            Print(5, "Threads: 7: SplitDepth: %d Time: %d Knps: %d\n", i, spentTime, nodes);
+            Print(5, "Threads: 12: SplitDepth: %d Time: %d Knps: %d\n", i, spentTime, nodes);
         }
     }
     Print(5, "\n\nAverage:\n");
-    for (int i = 1; i <= 14; ++i) {
+    for (int i = startSplit; i <= endSplit; ++i) {
         Print(5, "SplitDepth: %d Time: %d Knps: %d\n", i, timeSum[i]/NUMPOS, nodesSum[i]/NUMPOS);
     }
     Print(5, "\n\n");
