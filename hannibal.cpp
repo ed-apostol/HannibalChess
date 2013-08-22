@@ -30,7 +30,7 @@ can knight catch pawns code from LL
 #define NUM_THREADS			    1
 #define MIN_SPLIT_DEPTH			6 //6 tested best on both tests measured by NPS on 12 threads, 5 & 8 tested best once easy measured by time to depth.
 #define TCEC true
-//#define TESTING true
+#define TESTING true
 
 #define WORSE_TIME_BONUS 20 //how many points more than 20 it takes to increase time by alloc to a maximum of 2*alloc
 #define CHANGE_TIME_BONUS 50 //what percentage of alloc to increase if the last move is a change move
