@@ -484,6 +484,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
         if (score > (inSplitPoint ? sp->bestvalue : bestvalue)) {
             bestvalue = inSplitPoint ? sp->bestvalue = score : score;
             if (inRoot) {
+                SearchInfo(thread_id).best_value = bestvalue;
                 extractPvMovesFromHash(pos, &SearchInfo(thread_id).rootPV, move, true);
                 if (SearchInfo(thread_id).iteration > 1 && SearchInfo(thread_id).bestmove != move) SearchInfo(thread_id).change = 1;
                 SearchInfo(thread_id).bestmove = move;
@@ -514,9 +515,8 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
         }
     }
     if (inRoot) {
-        if (SHOW_SEARCH && depth >= 8 && (!Threads[thread_id].stop || bestvalue != -INF))
-            displayPV(pos, &SearchInfo(thread_id).rootPV, depth, oldalpha, beta, bestvalue);
-        if (bestvalue <= oldalpha || bestvalue >= beta) SearchInfo(thread_id).research = 1;
+        if (SHOW_SEARCH && depth >= 8 && (!Threads[thread_id].stop || SearchInfo(thread_id).best_value != -INF))
+            displayPV(pos, &SearchInfo(thread_id).rootPV, depth, oldalpha, beta, SearchInfo(thread_id).best_value);
     }
     if (!inSplitPoint && (!inSingular || bannedMove == EMPTY)) {
         if (played == 0) {
@@ -826,14 +826,18 @@ void getBestMove(position_t *pos, int thread_id) {
         while (true) {
             SearchInfo(thread_id).rbestscore1 = -INF;
             SearchInfo(thread_id).rbestscore2 = -INF;
-            SearchInfo(thread_id).best_value = searchNode<true, false, false>(pos, alpha, beta, id, inCheck, EMPTY, thread_id, PVNode);
+
+            searchNode<true, false, false>(pos, alpha, beta, id, inCheck, EMPTY, thread_id, PVNode);
+
             if (SearchInfo(thread_id).thinking_status == STOPPED) break;
             if(SearchInfo(thread_id).best_value <= alpha) {
                 if (SearchInfo(thread_id).best_value <= alpha) alpha = SearchInfo(thread_id).best_value-(16<<++faillow);
                 if (alpha < -RookValue) alpha = -INF;
+                SearchInfo(thread_id).research = 1;
             } else if(SearchInfo(thread_id).best_value >= beta) {
                 if (SearchInfo(thread_id).best_value >= beta)  beta = SearchInfo(thread_id).best_value+(16<<++failhigh);
                 if (beta > RookValue) beta = INF;
+                SearchInfo(thread_id).research = 1;
             } else break;
         }
         if (SearchInfo(thread_id).thinking_status == STOPPED) break;

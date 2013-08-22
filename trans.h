@@ -81,34 +81,20 @@ void transSetMaxvalue(trans_entry_t * te, int maxvalue) {
 }
 
 trans_entry_t *transProbe(const uint64 hash, const int thread) {
-
     trans_entry_t *entry = TransTable(thread).table + (KEY(hash) & TransTable(thread).mask);
     uint32 locked = LOCK(hash);
 
-    if (entry->hashlock == locked) {
-        transSetDate(entry, TransTable(thread).date);
-        return entry;
+    for (int t = 0; t < 4; t++, entry++) {
+        if (entry->hashlock == locked) {
+            transSetDate(entry, TransTable(thread).date);
+            return entry;
+        }
     }
-    entry++;
-    if (entry->hashlock == locked) {
-        transSetDate(entry,TransTable(thread).date);
-        return entry;
-    }
-    entry++;
-    if (entry->hashlock == locked) {
-        transSetDate(entry, TransTable(thread).date);
-        return entry;
-    }
-    entry++;
-    if (entry->hashlock == locked) {
-        transSetDate(entry, TransTable(thread).date);
-        return entry;
-    }
+
     return NULL;
 }
 
 void transStore(const uint64 hash,uint32 bm, const int d, const int min, const int max, const int thread) {
-
     int worst = -INF, t, score;
     trans_entry_t *replace, *entry;
 
