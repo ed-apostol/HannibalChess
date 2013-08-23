@@ -379,7 +379,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
             if (inCutNode(nt) && depth >= 5 && moveCapture(pos->posStore.lastmove) >= KNIGHT && abs(beta) < MAXEVAL) {
                 int rvalue = beta + (PcValSEE[KNIGHT] / 2);
                 score = searchNode<false, false, false>(pos, rvalue-1, rvalue, depth-3, false, EMPTY, thread_id, nt);
-                if (score > rvalue) return score;
+                if (score >= rvalue) return score;
             }
         }
 
@@ -623,23 +623,22 @@ void timeManagement(int depth, int thread_id) {
                     return;
                 }
             }
-
             if (!gettingWorse && depth >= 8) {
-                static const int EASY_PLY_TIME1 = 20;
-                static const int EASY_CUTOFF1 = 120;
-                static const int EASY_PLY_TIME2 = 30;
-                static const int EASY_CUTOFF2 = 60;
+                const int EasyTime1 = 20;
+                const int EasyCutoff1 = 120;
+                const int EasyTime2 = 30;
+                const int EasyCutoff2 = 60;
 
                 int64 timeLimit = SearchInfo(thread_id).time_limit_max - SearchInfo(thread_id).start_time;
                 int64 timeExpended = time - SearchInfo(thread_id).start_time;
 
-                if (timeExpended > (timeLimit * EASY_PLY_TIME1)/100 && SearchInfo(thread_id).rbestscore1 > SearchInfo(thread_id).rbestscore2 + EASY_CUTOFF1) {
+                if (timeExpended > (timeLimit * EasyTime1)/100 && SearchInfo(thread_id).rbestscore1 > SearchInfo(thread_id).rbestscore2 + EasyCutoff1) {
                     setAllThreadsToStop(thread_id);
                     Print(3, "info string Aborting search: easy move1: score1: %d score2: %d time: %d\n", 
                         SearchInfo(thread_id).rbestscore1, SearchInfo(thread_id).rbestscore2, time - SearchInfo(thread_id).start_time);
                     return;
                 }
-                if (timeExpended > (timeLimit * EASY_PLY_TIME2)/100 && SearchInfo(thread_id).rbestscore1 > SearchInfo(thread_id).rbestscore2 + EASY_CUTOFF2) {
+                if (timeExpended > (timeLimit * EasyTime2)/100 && SearchInfo(thread_id).rbestscore1 > SearchInfo(thread_id).rbestscore2 + EasyCutoff2) {
                     setAllThreadsToStop(thread_id);
                     Print(3, "info string Aborting search: easy move2: score1: %d score2: %d time: %d\n", 
                         SearchInfo(thread_id).rbestscore1, SearchInfo(thread_id).rbestscore2, time - SearchInfo(thread_id).start_time);
