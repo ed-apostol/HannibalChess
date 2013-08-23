@@ -368,7 +368,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                 else score = beta;
                 if (score >= beta) {
                     makeNullMove(pos, &undo);
-                    score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, false, EMPTY, thread_id, invertNode(nt));
+                    score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, false, EMPTY, thread_id, AllNode);
                     if ((entry = transProbe(pos->hash, thread_id)) != NULL && transMove(entry) != EMPTY) {
                         nullThreatMoveToBit = BitMask[moveTo(transMove(entry))];
                     }
@@ -376,7 +376,13 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                     if (score >= beta) return score;
                 }
             }
+            if (inCutNode(nt) && depth >= 5 && moveCapture(pos->posStore.lastmove) >= KNIGHT && abs(beta) < MAXEVAL) {
+                int rvalue = beta + (PcValSEE[KNIGHT] / 2);
+                score = searchNode<false, false, false>(pos, rvalue-1, rvalue, depth-3, false, EMPTY, thread_id, nt);
+                if (score > rvalue) return score;
+            }
         }
+
         if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt)?4:6) && prune) { // IID
             newdepth = depth / 2;
             if (hashMove == EMPTY || hashDepth < newdepth) {
