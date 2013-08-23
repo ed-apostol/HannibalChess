@@ -380,7 +380,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
         if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt)?4:6) && prune) { // IID
             newdepth = depth / 2;
             if (hashMove == EMPTY || hashDepth < newdepth) {
-                score = searchNode<false, false, false>(pos, alpha, beta, newdepth, inCheck, EMPTY, thread_id, nt);
+                score = searchNode<false, false, true>(pos, alpha, beta, newdepth, inCheck, EMPTY, thread_id, nt);
                 if (score > alpha) {
                     if ((entry = transProbe(pos->hash, thread_id)) != NULL) hashMove = transMove(entry);
                     Threads[thread_id].evalvalue[pos->ply] = score;
@@ -487,12 +487,14 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                 SearchInfo(thread_id).best_value = bestvalue;
                 extractPvMovesFromHash(pos, &SearchInfo(thread_id).rootPV, move, true);
                 if (SearchInfo(thread_id).iteration > 1 && SearchInfo(thread_id).bestmove != move) SearchInfo(thread_id).change = 1;
-                SearchInfo(thread_id).bestmove = move;
-                if (SearchInfo(thread_id).rootPV.length > 1) SearchInfo(thread_id).pondermove = SearchInfo(thread_id).rootPV.moves[1];
-                else SearchInfo(thread_id).pondermove = 0;
             }
             if (bestvalue > (inSplitPoint ? sp->alpha : alpha)) {
                 bestmove = inSplitPoint ? sp->bestmove = move : move;
+                if (inRoot) {
+                    SearchInfo(thread_id).bestmove = bestmove;
+                    if (SearchInfo(thread_id).rootPV.length > 1) SearchInfo(thread_id).pondermove = SearchInfo(thread_id).rootPV.moves[1];
+                    else SearchInfo(thread_id).pondermove = 0;
+                }
                 if (inPvNode(nt) && bestvalue < beta) {
                     alpha = inSplitPoint ? sp->alpha = bestvalue : bestvalue;
                 } else {
@@ -508,7 +510,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
             }
         }
         if (inSplitPoint) MutexUnlock(sp->updatelock);
-        if(!inRoot && !inSplitPoint && !inSingular && !Threads[thread_id].stop && !inCheck
+        if (!inRoot && !inSplitPoint && !inSingular && !Threads[thread_id].stop && !inCheck
             && Guci_options->threads > 1 && depth >= Guci_options->min_split_depth && idleThreadExists(thread_id)
             && splitRemainingMoves(pos, mvlist, &bestvalue, &bestmove, &played, alpha, beta, nt, depth, inCheck, inRoot, thread_id)) {
                 break;
