@@ -127,9 +127,9 @@ int main(void) {
             break;
 #ifdef TESTING
         } else if (!memcmp(command, "speedup", 7)) {
-            checkSpeedUp(&pos);
+            checkSpeedUp(&pos, command+8);
         } else if (!memcmp(command, "split", 5)) {
-            benchSplitDepth(&pos, command+5);
+            benchSplitDepth(&pos, command+6);
         
 #endif
 		}
