@@ -116,24 +116,29 @@ int main(void) {
             uciGo(&pos, command + 3);
         } else if (!memcmp(command, "setoption", 9)) {
             uciSetOption(command + 10);
-        } else if (!memcmp(command, "testloop", 8)) {
 #ifdef DEBUG
+		} else if (!memcmp(command, "testloop", 8)) {
+
             nonUCI(&pos);
 #endif
         } else if (!memcmp(command, "stop", 4)) {
             /* no op */
         } else if (!memcmp(command, "quit", 4)) {
             break;
+#ifdef TESTING
         } else if (!memcmp(command, "speedup", 7)) {
-            checkSpeedUp(&pos);
+            checkSpeedUp(&pos, command+8);
         } else if (!memcmp(command, "split", 5)) {
-            benchSplitDepth(&pos);
-        }
+            benchSplitDepth(&pos, command+6);
+        
+#endif
+		}
 #ifdef OPTIMIZE
         else if (!memcmp(command, "optimize1",9)) optimize(&pos, 1);
         else if (!memcmp(command, "optimize2",9)) optimize(&pos, 2);
         else if (!memcmp(command, "optimize4",9)) optimize(&pos, 4);
         else if (!memcmp(command, "optimize8",9)) optimize(&pos, 8);
+		else if (!memcmp(command, "optimizeX",9)) optimize(&pos, 12);
 #endif
 #ifndef TCEC
         else if (!memcmp(command,"ConsumeBook",11)) {

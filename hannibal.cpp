@@ -26,20 +26,32 @@ can knight catch pawns code from LL
 //68 at 3:29
 */
 #define TWEAK_030813 true
-#define OPT_EASY true
-#define VERSION            "m1_SMPFix_EM"
+#define VERSION            "08_22_13"
 #define NUM_THREADS			    1
-#define MIN_SPLIT_DEPTH			4
+#define MIN_SPLIT_DEPTH			6 //6 tested best on both tests measured by NPS on 12 threads, 5 & 8 tested best once easy measured by time to depth.
 #define TCEC true
+//#define TCEC_COMPETE true
+//#define TESTING true
 
 #define WORSE_TIME_BONUS 20 //how many points more than 20 it takes to increase time by alloc to a maximum of 2*alloc
 #define CHANGE_TIME_BONUS 50 //what percentage of alloc to increase if the last move is a change move
 #define LAST_PLY_TIME 40 //what percentage of alloc remaining to be worth trying another complete ply
-#define INCREASE_CHANGE 0 //what percentage of alloc to increase during a change move
 #define TIME_DIVIDER 30 //how many moves we divide remaining time into 
 
+#define EASY_PLY_TIME1 50
+#define EAST_CUTOFF1 20
+
+#define EASY_PLY_TIME2 40
+#define EAST_CUTOFF2 60
+
+#define EASY_PLY_TIME3 30
+#define EAST_CUTOFF3 150
+
+#define EASY_PLY_TIME4 10
+#define EAST_CUTOFF4 1200 //this is essentially if only one move escapes forced checkmate
+
+
 //#define SPEEDUP
-//#define DEBUG_EASY true
 //#define OPTIMIZE true
 //#define DEBUG
 //#define EVAL_DEBUG true
@@ -57,9 +69,15 @@ can knight catch pawns code from LL
 #define MIN_TRANS_SIZE 16
 
 #ifdef TCEC
+#ifdef TCEC_COMPETE
+#define INIT_EVAL 1024
+#define INIT_PAWN 32
+#define INIT_HASH 1024
+#else
 #define INIT_EVAL 64
 #define INIT_PAWN 32
 #define INIT_HASH 64
+#endif
 
 #else
 #define INIT_EVAL 64

@@ -252,6 +252,7 @@ typedef struct _search_info_t{
     int last_last_value;
     int last_value;
     int best_value;
+    int best_value2;
 
     int mate_found;
     int currmovenumber;
@@ -260,8 +261,6 @@ typedef struct _search_info_t{
     int iteration;
 
     bool try_easy;
-    int rbestscore1;
-    int rbestscore2;
 
     int legalmoves;
     basic_move_t bestmove;
@@ -401,6 +400,3 @@ typedef struct player_t { //if you put an array in here you need to change the c
     double rating;
 }player_t;
 #endif
-
-
-
