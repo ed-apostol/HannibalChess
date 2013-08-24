@@ -138,6 +138,7 @@ int main(void) {
         else if (!memcmp(command, "optimize2",9)) optimize(&pos, 2);
         else if (!memcmp(command, "optimize4",9)) optimize(&pos, 4);
         else if (!memcmp(command, "optimize8",9)) optimize(&pos, 8);
+		else if (!memcmp(command, "optimizeX",9)) optimize(&pos, 12);
 #endif
 #ifndef TCEC
         else if (!memcmp(command,"ConsumeBook",11)) {

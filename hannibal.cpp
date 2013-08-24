@@ -30,6 +30,7 @@ can knight catch pawns code from LL
 #define NUM_THREADS			    1
 #define MIN_SPLIT_DEPTH			6 //6 tested best on both tests measured by NPS on 12 threads, 5 & 8 tested best once easy measured by time to depth.
 #define TCEC true
+//#define TCEC_COMPETE true
 //#define TESTING true
 
 #define WORSE_TIME_BONUS 20 //how many points more than 20 it takes to increase time by alloc to a maximum of 2*alloc
@@ -68,9 +69,15 @@ can knight catch pawns code from LL
 #define MIN_TRANS_SIZE 16
 
 #ifdef TCEC
+#ifdef TCEC_COMPETE
+#define INIT_EVAL 1024
+#define INIT_PAWN 32
+#define INIT_HASH 1024
+#else
 #define INIT_EVAL 64
 #define INIT_PAWN 32
 #define INIT_HASH 64
+#endif
 
 #else
 #define INIT_EVAL 64
