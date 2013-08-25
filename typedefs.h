@@ -44,6 +44,8 @@ typedef unsigned int		uint;
 
 enum NodeType { CutNode = -1, PVNode = 0, AllNode };
 enum BookType { POLYGLOT_BOOK, PUCK_BOOK};
+enum HashType { HTLower, HTUpper, HTCutUpper, HTAllLower, HTExact, HTNoMoves };
+enum HashMask { MLower = 1, MUpper = 2, MCutUpper = 4, MAllLower = 8, MNoMoves = 16, MClear = 255 };
 
 typedef uint32 basic_move_t;
 

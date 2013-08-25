@@ -7,23 +7,28 @@
 /*  Description: A chess playing program.         */
 /**************************************************/
 
-uint32 transHashLock(trans_entry_t * te) { return te->hashlock; }
-basic_move_t transMove(trans_entry_t * te) { return te->move; }
-int transAge(trans_entry_t * te) { return te->age; }
-int transMask(trans_entry_t * te) { return te->mask; }
-int transLowerDepth(trans_entry_t * te) { return te->lowerdepth; }
-int transUpperDepth(trans_entry_t * te) { return te->upperdepth; }
-int transLowerValue(trans_entry_t * te) { return te->lowervalue; }
-int transUpperValue(trans_entry_t * te) { return te->uppervalue; }
+inline uint32 transHashLock(trans_entry_t * te) { return te->hashlock; }
+inline basic_move_t transMove(trans_entry_t * te) { return te->move; }
+inline int transAge(trans_entry_t * te) { return te->age; }
+inline int transMask(trans_entry_t * te) { return te->mask; }
+inline int transLowerDepth(trans_entry_t * te) { return te->lowerdepth; }
+inline int transUpperDepth(trans_entry_t * te) { return te->upperdepth; }
+inline int transLowerValue(trans_entry_t * te) { return te->lowervalue; }
+inline int transUpperValue(trans_entry_t * te) { return te->uppervalue; }
 
-void transSetHashlock(trans_entry_t * te, uint32 hashlock) { te->hashlock = hashlock; }
-void transSetMove(trans_entry_t * te, basic_move_t move) { te->move = move; }
-void transSetAge(trans_entry_t * te, uint32 date) { te->age = date; }
-void transSetMask(trans_entry_t * te, uint8 mask) { te->mask = mask; }
-void transSetLowerDepth(trans_entry_t * te, uint8 lowerdepth) { te->lowerdepth = lowerdepth; }
-void transSetUpperDepth(trans_entry_t * te, uint8 upperdepth) { te->upperdepth = upperdepth; }
-void transSetLowerValue(trans_entry_t * te, int16 lowervalue) { te->lowervalue = lowervalue; }
-void transSetUpperValue(trans_entry_t * te, int16 uppervalue) { te->uppervalue = uppervalue; }
+inline void transSetHashlock(trans_entry_t * te, uint32 hashlock) { te->hashlock = hashlock; }
+inline void transSetMove(trans_entry_t * te, basic_move_t move) { te->move = move; }
+inline void transSetAge(trans_entry_t * te, uint8 date) { te->age = date; }
+inline void transSetMask(trans_entry_t * te, uint8 mask) { te->mask |= mask; }
+inline void transSetMaskRem(trans_entry_t * te, uint8 mask) { te->mask &= ~mask; }
+inline void transSetMaskReplace(trans_entry_t * te, uint8 mask) { te->mask = mask; }
+inline void transSetLowerDepth(trans_entry_t * te, uint8 lowerdepth) { te->lowerdepth = lowerdepth; }
+inline void transSetUpperDepth(trans_entry_t * te, uint8 upperdepth) { te->upperdepth = upperdepth; }
+inline void transSetLowerValue(trans_entry_t * te, int16 lowervalue) { te->lowervalue = lowervalue; }
+inline void transSetUpperValue(trans_entry_t * te, int16 uppervalue) { te->uppervalue = uppervalue; }
+
+inline int scoreFromTrans(int score, int ply) { return (score > MAXEVAL) ? (score-ply) : ((score < MAXEVAL) ? (score+ply) : score); }
+inline int scoreToTrans(int score, int ply) { return (score > MAXEVAL) ? (score+ply) : ((score < MAXEVAL) ? (score-ply) : score); }
 
 trans_entry_t *transProbe(const uint64 hash, const int thread) {
     trans_entry_t *entry = TransTable(thread).table + (KEY(hash) & TransTable(thread).mask);
@@ -39,7 +44,8 @@ trans_entry_t *transProbe(const uint64 hash, const int thread) {
     return NULL;
 }
 
-void transStore(const uint64 hash,uint32 bm, const int d, const int min, const int max, const int thread) {
+template<HashType ht>
+void transStore(const uint64 hash, basic_move_t move, const int depth, const int value, const int thread) {
     int worst = -INF, t, score;
     trans_entry_t *replace, *entry;
 
@@ -49,14 +55,44 @@ void transStore(const uint64 hash,uint32 bm, const int d, const int min, const i
         if (transHashLock(entry) == LOCK(hash)) {
             if (transAge(entry) != TransTable(thread).date) TransTable(thread).used++;
             transSetAge(entry, TransTable(thread).date);
-            if (max < INF && d >= transUpperDepth(entry)) {
-                transSetUpperDepth(entry, d);
-                transSetUpperValue(entry, max);
+            if (ht == HTLower && depth >= transLowerDepth(entry)) {
+                transSetMove(entry, move);
+                transSetLowerDepth(entry, depth);
+                transSetLowerValue(entry, value);
+                transSetMask(entry, MLower);
+                transSetMaskRem(entry, MAllLower);
             }
-            if (min > -INF && d >= transLowerDepth(entry)) {
-                transSetMove(entry, bm);
-                transSetLowerDepth(entry, d);
-                transSetLowerValue(entry, min);
+            if (ht == HTAllLower && depth >= transLowerDepth(entry)) {
+                transSetMove(entry, move);
+                transSetLowerDepth(entry, depth);
+                transSetLowerValue(entry, value);
+                transSetMask(entry, MLower|MAllLower);
+            }
+            if (ht == HTUpper && depth >= transUpperDepth(entry)) {
+                transSetUpperDepth(entry, depth);
+                transSetUpperValue(entry, value);
+                transSetMask(entry, MUpper);
+                transSetMaskRem(entry, MCutUpper);
+            }
+            if (ht == HTCutUpper && depth >= transUpperDepth(entry)) {
+                transSetUpperDepth(entry, depth);
+                transSetUpperValue(entry, value);
+                transSetMask(entry, MUpper|MCutUpper);
+            }
+            if (ht == HTExact) {
+                if (depth >= transLowerDepth(entry)) {
+                    transSetMove(entry, move);
+                    transSetLowerDepth(entry, depth);
+                    transSetLowerValue(entry, value);
+                    transSetMask(entry, MLower);
+                    transSetMaskRem(entry, MAllLower);
+                }
+                if (depth >= transUpperDepth(entry)) {
+                    transSetUpperDepth(entry, depth);
+                    transSetUpperValue(entry, value);
+                    transSetMask(entry, MUpper);
+                    transSetMaskRem(entry, MCutUpper);
+                }
             }
             return;
         }
@@ -69,12 +105,47 @@ void transStore(const uint64 hash,uint32 bm, const int d, const int min, const i
 
     if (transAge(replace) != TransTable(thread).date) TransTable(thread).used++;
     transSetHashlock(replace, LOCK(hash));
-    transSetMove(replace, bm);
     transSetAge(replace, TransTable(thread).date);
-    transSetLowerDepth(replace, ((min > -INF) ? d : 0));
-    transSetUpperDepth(replace, ((max < INF) ? d : 0));
-    transSetLowerValue(replace, min);
-    transSetUpperValue(replace, max);
+    if (ht == HTLower) {
+        transSetMove(replace, move);
+        transSetLowerDepth(replace, depth);
+        transSetLowerValue(replace, value);
+        transSetUpperDepth(replace, 0);
+        transSetUpperValue(replace, 0);
+        transSetMaskReplace(replace, MLower);
+    }
+    if (ht == HTAllLower) {
+        transSetMove(replace, move);
+        transSetLowerDepth(replace, depth);
+        transSetLowerValue(replace, value);
+        transSetUpperDepth(replace, 0);
+        transSetUpperValue(replace, 0);
+        transSetMaskReplace(replace, MLower|MAllLower);
+    }
+    if (ht == HTUpper) {
+        transSetMove(replace, EMPTY);
+        transSetLowerDepth(replace, 0);
+        transSetLowerValue(replace, 0);
+        transSetUpperDepth(replace, depth);
+        transSetUpperValue(replace, value);
+        transSetMaskReplace(replace, MUpper);
+    }
+    if (ht == HTCutUpper) {
+        transSetMove(replace, EMPTY);
+        transSetLowerDepth(replace, 0);
+        transSetLowerValue(replace, 0);
+        transSetUpperDepth(replace, depth);
+        transSetUpperValue(replace, value);
+        transSetMaskReplace(replace, MUpper|MCutUpper);
+    }
+    if (ht == HTExact) {
+        transSetMove(replace, move);
+        transSetLowerDepth(replace, depth);
+        transSetLowerValue(replace, value);
+        transSetUpperDepth(replace, depth);
+        transSetUpperValue(replace, value);
+        transSetMaskReplace(replace, MLower|MUpper);
+    }
 }
 
 void transNewDate(int date, int thread) {
@@ -86,15 +157,9 @@ void transNewDate(int date, int thread) {
 }
 
 void transClear(int thread) {
-    trans_entry_t *te;
-
     transNewDate(-1,thread);
     if (TransTable(thread).table != NULL) {
         memset(TransTable(thread).table, 0, (TransTable(thread).size * sizeof(trans_entry_t)));
-        for (te = &TransTable(thread).table[0]; te < &TransTable(thread).table[TransTable(thread).size]; te++) {
-            transSetLowerValue(te, -INF); // not important now, but perhaps if we use in qsearch or something
-            transSetUpperValue(te, INF); // not important now, but perhaps if we use in qsearch or something
-        }
     }
 }
 
