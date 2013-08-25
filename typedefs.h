@@ -140,7 +140,7 @@ typedef struct _transtable_t{
     uint64 size;
     uint64 mask;
     int32 date;
-    uint32 used;
+    uint64 used;
     int32 age[DATESIZE];
 }transtable_t;
 
