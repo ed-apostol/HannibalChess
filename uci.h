@@ -167,7 +167,7 @@ void uciGo(position_t *pos, char *options) {
     char *ponder, *infinite;
     char *c;
     int64 mytime = 0, t_inc = 0;
-    int wtime=0, btime=0, winc=0, binc=0, movestogo=0, maxdepth=0, nodes=0, mate=0, movetime=0;
+    int wtime=0, btime=0, winc=0, binc=0, movestogo=0, upperdepth=0, nodes=0, mate=0, movetime=0;
     movelist_t ml;
 
     ASSERT(pos != NULL);
@@ -214,7 +214,7 @@ void uciGo(position_t *pos, char *options) {
     c = strstr(options, "movestogo");
     if (c != NULL) sscanf(c + 10, "%d", &movestogo);
     c = strstr(options, "depth");
-    if (c != NULL) sscanf(c + 6, "%d", &maxdepth);
+    if (c != NULL) sscanf(c + 6, "%d", &upperdepth);
     c = strstr(options, "nodes");
     if (c != NULL) sscanf(c + 6, "%d", &nodes);
     c = strstr(options, "mate");
@@ -232,9 +232,9 @@ void uciGo(position_t *pos, char *options) {
         SearchInfo(0).depth_limit = MAXPLY;
         Print(2, "info string Infinite\n");
     }
-    if (maxdepth > 0) {
+    if (upperdepth > 0) {
         SearchInfo(0).depth_is_limited = TRUE;
-        SearchInfo(0).depth_limit = maxdepth;
+        SearchInfo(0).depth_limit = upperdepth;
         Print(2, "info string Depth is limited to %d half moves\n", SearchInfo(0).depth_limit);
     }
     if (mate > 0) {

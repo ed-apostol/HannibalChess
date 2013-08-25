@@ -123,13 +123,13 @@ typedef struct evaltable_t{
 /* the trans table entry type */
 typedef struct trans_entry_t{
     uint32 hashlock;
-    uint32 data;
-    int16 maxvalue;
-    int16 minvalue;
-    uint8 depth;
-    uint8 movedepth;
-    uint8 maxdepth;
-    uint8 mindepth;
+    uint32 move;
+    int16 uppervalue;
+    int16 lowervalue;
+    uint8 mask;
+    uint8 age;
+    uint8 upperdepth;
+    uint8 lowerdepth;
 }trans_entry_t;
 
 /* the trans table type */

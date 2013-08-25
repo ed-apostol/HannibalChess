@@ -209,8 +209,8 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, const bool in
     if (entry != NULL) {
         hashMove = transMove(entry);
         if (!inPv) {
-            if (transMinvalue(entry) > alpha && alpha < MAXEVAL) return transMinvalue(entry);
-            if (transMaxvalue(entry) < beta && beta > -MAXEVAL) return transMaxvalue(entry);
+            if (transLowerValue(entry) > alpha && alpha < MAXEVAL) return transLowerValue(entry);
+            if (transUpperValue(entry) < beta && beta > -MAXEVAL) return transUpperValue(entry);
         }
     }
     if (pos->ply >= MAXPLY-1) return eval(pos, thread_id, &opt, &pes);
@@ -322,20 +322,20 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
         if (entry != NULL) {
             hashMove = transMove(entry);
             if (!inPvNode(nt)) {
-                if (depth <= transMindepth(entry) && transMinvalue(entry) > alpha && alpha < MAXEVAL) {
-                    if (transMinvalue(entry) >= beta && hashMove && hashMove != Threads[thread_id].killer1[pos->ply] && !moveIsTactical(hashMove)) {
+                if (depth <= transLowerDepth(entry) && transLowerValue(entry) > alpha && alpha < MAXEVAL) {
+                    if (transLowerValue(entry) >= beta && hashMove && hashMove != Threads[thread_id].killer1[pos->ply] && !moveIsTactical(hashMove)) {
                         Threads[thread_id].killer2[pos->ply] = Threads[thread_id].killer1[pos->ply];
                         Threads[thread_id].killer1[pos->ply] = hashMove;
                     }
-                    return transMinvalue(entry);
+                    return transLowerValue(entry);
                 }
-                if (depth <= transMaxdepth(entry) && transMaxvalue(entry) < beta && beta > -MAXEVAL) {
-                    return transMaxvalue(entry);
+                if (depth <= transUpperDepth(entry) && transUpperValue(entry) < beta && beta > -MAXEVAL) {
+                    return transUpperValue(entry);
                 }
             }
-            hashDepth = transMovedepth(entry);
-            if (transMinvalue(entry) != -INF) Threads[thread_id].evalvalue[pos->ply] = transMinvalue(entry);
-            else if (transMaxvalue(entry) != INF) Threads[thread_id].evalvalue[pos->ply] = transMaxvalue(entry);
+            hashDepth = transLowerDepth(entry);
+            if (transLowerValue(entry) != -INF) Threads[thread_id].evalvalue[pos->ply] = transLowerValue(entry);
+            else if (transUpperValue(entry) != INF) Threads[thread_id].evalvalue[pos->ply] = transUpperValue(entry);
             else {
                 Threads[thread_id].evalvalue[pos->ply] = eval(pos, thread_id, &opt, &pes);
                 hashDepth = 0;

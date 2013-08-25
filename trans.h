@@ -7,78 +7,23 @@
 /*  Description: A chess playing program.         */
 /**************************************************/
 
-basic_move_t transMove(trans_entry_t * te) {
-    return (basic_move_t)(te->data & 0x1ffffff);
-}
-/*
-int transMateThreat(trans_entry_t * te) {
-return (1 & (te->data >> 25));
-}
-*/
-int transDate(trans_entry_t * te) {
-    return (0x3f & (te->data >> 26));
-}
+uint32 transHashLock(trans_entry_t * te) { return te->hashlock; }
+basic_move_t transMove(trans_entry_t * te) { return te->move; }
+int transAge(trans_entry_t * te) { return te->age; }
+int transMask(trans_entry_t * te) { return te->mask; }
+int transLowerDepth(trans_entry_t * te) { return te->lowerdepth; }
+int transUpperDepth(trans_entry_t * te) { return te->upperdepth; }
+int transLowerValue(trans_entry_t * te) { return te->lowervalue; }
+int transUpperValue(trans_entry_t * te) { return te->uppervalue; }
 
-int transDepth(trans_entry_t * te) {
-    return te->depth;
-}
-int transMovedepth(trans_entry_t * te) {
-    return te->movedepth;
-}
-
-int transMindepth(trans_entry_t * te) {
-    return te->mindepth;
-}
-int transMaxdepth(trans_entry_t * te) {
-    return te->maxdepth;
-}
-uint32 transHashlock(trans_entry_t * te) {
-    return te->hashlock;
-}
-int transMinvalue(trans_entry_t * te) {
-    return te->minvalue;
-}
-int transMaxvalue(trans_entry_t * te) {
-    return te->maxvalue;
-}
-
-void transSetMove(trans_entry_t * te, uint32 move) {
-    te->data &= 0xfe000000;
-    te->data |= (move & 0x1ffffff);
-}
-/*
-void transSetMateThreat(trans_entry_t * te, uint32 mthreat) {
-te->data &= 0xfdffffff;
-te->data |= ((mthreat & 1) << 25);
-}
-*/
-void transSetDate(trans_entry_t * te, uint32 date) {
-    te->data &= 0x3ffffff;
-    te->data |= ((date & 0x3f) << 26);
-}
-
-void transSetDepth(trans_entry_t * te, uint32 depth) {
-    te->depth = depth;
-}
-void transSetMovedepth(trans_entry_t * te, uint32 movedepth) {
-    te->movedepth = movedepth;
-}
-
-void transSetMindepth(trans_entry_t * te, uint32 mindepth) {
-    te->mindepth = mindepth;
-}
-void transSetMaxdepth(trans_entry_t * te, uint32 maxdepth) {
-    te->maxdepth = maxdepth;
-}
-void transSetHashlock(trans_entry_t * te, uint32 hashlock) {
-    te->hashlock = hashlock;
-}
-void transSetMinvalue(trans_entry_t * te, int minvalue) {
-    te->minvalue = minvalue;
-}
-void transSetMaxvalue(trans_entry_t * te, int maxvalue) {
-    te->maxvalue = maxvalue;
-}
+void transSetHashlock(trans_entry_t * te, uint32 hashlock) { te->hashlock = hashlock; }
+void transSetMove(trans_entry_t * te, basic_move_t move) { te->move = move; }
+void transSetAge(trans_entry_t * te, uint32 date) { te->age = date; }
+void transSetMask(trans_entry_t * te, uint8 mask) { te->mask = mask; }
+void transSetLowerDepth(trans_entry_t * te, uint8 lowerdepth) { te->lowerdepth = lowerdepth; }
+void transSetUpperDepth(trans_entry_t * te, uint8 upperdepth) { te->upperdepth = upperdepth; }
+void transSetLowerValue(trans_entry_t * te, int16 lowervalue) { te->lowervalue = lowervalue; }
+void transSetUpperValue(trans_entry_t * te, int16 uppervalue) { te->uppervalue = uppervalue; }
 
 trans_entry_t *transProbe(const uint64 hash, const int thread) {
     trans_entry_t *entry = TransTable(thread).table + (KEY(hash) & TransTable(thread).mask);
@@ -86,7 +31,7 @@ trans_entry_t *transProbe(const uint64 hash, const int thread) {
 
     for (int t = 0; t < 4; t++, entry++) {
         if (entry->hashlock == locked) {
-            transSetDate(entry, TransTable(thread).date);
+            transSetAge(entry, TransTable(thread).date);
             return entry;
         }
     }
@@ -101,45 +46,35 @@ void transStore(const uint64 hash,uint32 bm, const int d, const int min, const i
     replace = entry = TransTable(thread).table + (KEY(hash) & TransTable(thread).mask);
 
     for (t = 0; t < 4; t++, entry++) {
-        if (transHashlock(entry) == LOCK(hash)) {
-            if (transDate(entry) != TransTable(thread).date) TransTable(thread).used++;
-            transSetDate(entry, TransTable(thread).date);
-            if (d > transDepth(entry)) transSetDepth(entry, d);
-            if (bm && d > transMovedepth(entry)) {
-                transSetMovedepth(entry, d);
+        if (transHashLock(entry) == LOCK(hash)) {
+            if (transAge(entry) != TransTable(thread).date) TransTable(thread).used++;
+            transSetAge(entry, TransTable(thread).date);
+            if (max < INF && d >= transUpperDepth(entry)) {
+                transSetUpperDepth(entry, d);
+                transSetUpperValue(entry, max);
+            }
+            if (min > -INF && d >= transLowerDepth(entry)) {
                 transSetMove(entry, bm);
-            }
-            if (max < INF && d >= transMaxdepth(entry)) {
-                transSetMaxdepth(entry, d);
-                transSetMaxvalue(entry, max);
-
-            }
-            if (min > -INF && d >= transMindepth(entry)) {
-                transSetMindepth(entry, d);
-                transSetMinvalue(entry, min);
-
+                transSetLowerDepth(entry, d);
+                transSetLowerValue(entry, min);
             }
             return;
         }
-        score = (TransTable(thread).age[transDate(entry)] * 256) - transDepth(entry);
+        score = (TransTable(thread).age[transAge(entry)] * 256) - transMask(entry);
         if (score > worst) {
             worst = score;
             replace = entry;
         }
     }
 
-    if (transDate(replace) != TransTable(thread).date) TransTable(thread).used++;
+    if (transAge(replace) != TransTable(thread).date) TransTable(thread).used++;
     transSetHashlock(replace, LOCK(hash));
     transSetMove(replace, bm);
-    //    transSetMateThreat(replace, mt);
-    transSetDate(replace, TransTable(thread).date);
-    transSetDepth(replace, d);
-    transSetMovedepth(replace, (bm ? d : 0));
-    transSetMindepth(replace, ((min > -INF) ? d : 0));
-    transSetMaxdepth(replace, ((max < INF) ? d : 0));
-    transSetMinvalue(replace, min);
-    transSetMaxvalue(replace, max);
-
+    transSetAge(replace, TransTable(thread).date);
+    transSetLowerDepth(replace, ((min > -INF) ? d : 0));
+    transSetUpperDepth(replace, ((max < INF) ? d : 0));
+    transSetLowerValue(replace, min);
+    transSetUpperValue(replace, max);
 }
 
 void transNewDate(int date, int thread) {
@@ -157,8 +92,8 @@ void transClear(int thread) {
     if (TransTable(thread).table != NULL) {
         memset(TransTable(thread).table, 0, (TransTable(thread).size * sizeof(trans_entry_t)));
         for (te = &TransTable(thread).table[0]; te < &TransTable(thread).table[TransTable(thread).size]; te++) {
-            transSetMinvalue(te, -INF); // not important now, but perhaps if we use in qsearch or something
-            transSetMaxvalue(te, INF); // not important now, but perhaps if we use in qsearch or something
+            transSetLowerValue(te, -INF); // not important now, but perhaps if we use in qsearch or something
+            transSetUpperValue(te, INF); // not important now, but perhaps if we use in qsearch or something
         }
     }
 }
