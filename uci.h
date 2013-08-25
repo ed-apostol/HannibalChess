@@ -195,6 +195,12 @@ void uciGo(position_t *pos, char *options) {
     memset(SearchInfo(0).history, 0, sizeof(SearchInfo(0).history)); //TODO this is bad to share with learning
     memset(SearchInfo(0).evalgains, 0, sizeof(SearchInfo(0).evalgains)); //TODO this is bad to share with learning
 
+    // DEBUG
+    SearchInfo(0).cutnodes = 1;
+    SearchInfo(0).allnodes = 1;
+    SearchInfo(0).cutfail = 1;
+    SearchInfo(0).allfail = 1;
+
     for (int i = 0; i < Guci_options->threads; i++) {
         initSearchThread(i);
     }

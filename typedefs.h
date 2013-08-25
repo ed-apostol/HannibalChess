@@ -275,6 +275,12 @@ typedef struct _search_info_t{
     int research;
     int iteration;
 
+    // DEBUG
+    uint64 cutnodes;
+    uint64 allnodes;
+    uint64 cutfail;
+    uint64 allfail;
+
     bool try_easy;
     int rbestscore1;
     int rbestscore2;
