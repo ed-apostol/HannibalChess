@@ -17,13 +17,15 @@
 
 //#define REDUCE_MIN 1.57
 //#define REDUCE_SCALE 3.87 
-#define REDUCE_MIN 1.5
-#define REDUCE_SCALE 2.5 
+//#define REDUCE_MIN 1.5
+//#define REDUCE_SCALE 2.5 
+#define REDUCE_MIN 0.5
+#define REDUCE_SCALE 2.0
 
 //#define PV_REDUCE_MIN 0.57 
 //#define PV_REDUCE_SCALE 7.58 
-#define PV_REDUCE_MIN 0.5
-#define PV_REDUCE_SCALE 7.5
+#define PV_REDUCE_MIN 0.0
+#define PV_REDUCE_SCALE 3.0
 
 //      double    pvRed = log(double(hd)) * log(double(mc)) / 3.0;
 //      double nonPVRed = 0.33 + log(double(hd)) * log(double(mc)) / 2.25;
@@ -510,10 +512,18 @@ void initArr(void) {
             n = (int) (REDUCE_MIN + log((double)j) * log((double)k) / REDUCE_SCALE);
             ReductionTable[0][j][k] = ((m >= 1) ? m : 0);
             ReductionTable[1][j][k] = ((n >= 1) ? n : 0);
-            // Print(2, "ReductionTable[PV][%d][%d] = %d\n", j, k, ReductionTable[0][j][k]);
-            // Print(2, "ReductionTable[NonPV][%d][%d] = %d\n", j, k, ReductionTable[1][j][k]);
         }
     }
+    //for (j = 0; j < 64; j++) {
+    //    for (k = 0; k < 64; k++) {
+    //        Print(2, "ReductionTable[PV][%d][%d] = %d\n", j, k, ReductionTable[0][j][k]);
+    //    }
+    //}
+    //for (j = 0; j < 64; j++) {
+    //    for (k = 0; k < 64; k++) {
+    //        Print(2, "ReductionTable[NonPV][%d][%d] = %d\n", j, k, ReductionTable[1][j][k]);
+    //    }
+    //}
     /*
     for (j = 0; j < 32; j++)
     {
