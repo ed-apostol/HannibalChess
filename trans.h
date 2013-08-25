@@ -64,7 +64,7 @@ void transStore(const uint64 hash, basic_move_t move, const int depth, const int
                 transRemMask(entry, MAllLower);
                 return;
             }
-            if (ht == HTAllLower && depth >= transLowerDepth(entry)) {// && ((transLowerDepth(entry) == 0) || (transMask(entry) & MAllLower))) {
+            if (ht == HTAllLower && depth >= transLowerDepth(entry) && ((transLowerDepth(entry) == 0) || (transMask(entry) & MAllLower))) {
                 transSetAge(entry, TransTable(thread).date);
                 transSetMove(entry, move);
                 transSetLowerDepth(entry, depth);
@@ -80,7 +80,7 @@ void transStore(const uint64 hash, basic_move_t move, const int depth, const int
                 transRemMask(entry, MCutUpper);
                 return;
             }
-            if (ht == HTCutUpper && depth >= transUpperDepth(entry)) {// && ((transUpperDepth(entry) == 0) || (transMask(entry) & MCutUpper))) {
+            if (ht == HTCutUpper && depth >= transUpperDepth(entry) && ((transUpperDepth(entry) == 0) || (transMask(entry) & MCutUpper))) {
                 transSetAge(entry, TransTable(thread).date);
                 transSetUpperDepth(entry, depth);
                 transSetUpperValue(entry, value);

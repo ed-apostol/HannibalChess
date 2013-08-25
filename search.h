@@ -51,7 +51,7 @@ void check4Input(position_t *pos) {
             quit();
         } else if (!memcmp(input, "stop", 4)) {
             setAllThreadsToStop(0);
-            Print(3, "info string Aborting search: stop\n");
+            Print(2, "info string Aborting search: stop\n");
             return;
         } else if (!memcmp(input, "ponderhit", 9)) {
             ponderHit();
@@ -97,12 +97,12 @@ void initNode(position_t *pos, const int thread_id) {
                         bool wasGettingWorse = SearchInfo(thread_id).best_value == -INF && SearchInfo(thread_id).last_value + WORSE_SCORE_CUTOFF <= SearchInfo(thread_id).last_last_value;
                         if (!gettingWorse && !wasGettingWorse) { 
                             setAllThreadsToStop(thread_id);
-                            Print(3, "info string Aborting search: time limit 2: %d\n", time2 - SearchInfo(thread_id).start_time);
+                            Print(2, "info string Aborting search: time limit 2: %d\n", time2 - SearchInfo(thread_id).start_time);
                         }
                     }
                 } else {
                     setAllThreadsToStop(thread_id);
-                    Print(3, "info string Aborting search: time limit 1: %d\n", time2 - SearchInfo(thread_id).start_time);
+                    Print(2, "info string Aborting search: time limit 1: %d\n", time2 - SearchInfo(thread_id).start_time);
                 }
             }
         }
@@ -630,7 +630,7 @@ void timeManagement(int depth, int thread_id) {
             if (SearchInfo(thread_id).legalmoves == 1 || SearchInfo(thread_id).mate_found >= 3) { 
                 if (depth >= 8) {
                     setAllThreadsToStop(thread_id);
-                    Print(3, "info string Aborting search: legalmove/mate found depth >= 8\n");
+                    Print(2, "info string Aborting search: legalmove/mate found depth >= 8\n");
                     return;
                 }
             } 
@@ -650,7 +650,7 @@ void timeManagement(int depth, int thread_id) {
                         SearchInfo(thread_id).time_limit_max = SearchInfo(thread_id).time_limit_abs;
                 } else { // if we are unlikely to get deeper, save our time
                     setAllThreadsToStop(thread_id);
-                    Print(3, "info string Aborting search: root time limit 1: %d\n", time - SearchInfo(thread_id).start_time);
+                    Print(2, "info string Aborting search: root time limit 1: %d\n", time - SearchInfo(thread_id).start_time);
                     return;
                 }
             }
@@ -665,13 +665,13 @@ void timeManagement(int depth, int thread_id) {
 
                 if (timeExpended > (timeLimit * EasyTime1)/100 && SearchInfo(thread_id).rbestscore1 > SearchInfo(thread_id).rbestscore2 + EasyCutoff1) {
                     setAllThreadsToStop(thread_id);
-                    Print(3, "info string Aborting search: easy move1: score1: %d score2: %d time: %d\n", 
+                    Print(2, "info string Aborting search: easy move1: score1: %d score2: %d time: %d\n", 
                         SearchInfo(thread_id).rbestscore1, SearchInfo(thread_id).rbestscore2, time - SearchInfo(thread_id).start_time);
                     return;
                 }
                 if (timeExpended > (timeLimit * EasyTime2)/100 && SearchInfo(thread_id).rbestscore1 > SearchInfo(thread_id).rbestscore2 + EasyCutoff2) {
                     setAllThreadsToStop(thread_id);
-                    Print(3, "info string Aborting search: easy move2: score1: %d score2: %d time: %d\n", 
+                    Print(2, "info string Aborting search: easy move2: score1: %d score2: %d time: %d\n", 
                         SearchInfo(thread_id).rbestscore1, SearchInfo(thread_id).rbestscore2, time - SearchInfo(thread_id).start_time);
                     return;
                 }
@@ -680,7 +680,7 @@ void timeManagement(int depth, int thread_id) {
     } 
     if (SearchInfo(thread_id).depth_is_limited && depth >= SearchInfo(thread_id).depth_limit) {
         setAllThreadsToStop(thread_id);
-        Print(3, "info string Aborting search: depth limit 1\n");
+        Print(2, "info string Aborting search: depth limit 1\n");
         return;
     }
 }
@@ -889,7 +889,7 @@ void getBestMove(position_t *pos, int thread_id) {
         if ((SearchInfo(thread_id).depth_is_limited || SearchInfo(thread_id).time_is_limited) && SearchInfo(thread_id).thinking_status == THINKING) {
             SearchInfo(thread_id).thinking_status = STOPPED;
             setAllThreadsToStop(thread_id);
-            Print(3, "info string Aborting search: end of getBestMove: id=%d, best_value = %d sp = %d, ply = %d\n", 
+            Print(2, "info string Aborting search: end of getBestMove: id=%d, best_value = %d sp = %d, ply = %d\n", 
                 id, SearchInfo(thread_id).best_value, pos->sp, pos->ply);
         } else {
             Print(3, "info string Waiting for stop, quit, or ponderhit\n");
@@ -897,7 +897,7 @@ void getBestMove(position_t *pos, int thread_id) {
                 check4Input(pos);
             } while (SearchInfo(thread_id).thinking_status != STOPPED);
             setAllThreadsToStop(thread_id);
-            Print(3, "info string Aborting search: end of waiting for stop/quit/ponderhit\n");
+            Print(2, "info string Aborting search: end of waiting for stop/quit/ponderhit\n");
         }
     }
 
