@@ -14,7 +14,6 @@ void quit(void) {
     fclose(dumpfile);
 
     free(TransTable(0).table);
-    free(PVHashTable.table);
     free(SearchInfo(0).pt.table);
     free(SearchInfo(0).et.table);
 #ifndef TCEC
@@ -63,8 +62,6 @@ int main(void) {
 
     TransTable(0).table = NULL;
     initTrans(INIT_HASH,0);
-    PVHashTable.table = NULL;
-    initPVHashTab(&PVHashTable, INIT_PVHASH);
     SearchInfo(0).pt.table = NULL;
     initPawnTab(&SearchInfo(0).pt, INIT_PAWN);
     SearchInfo(0).et.table = NULL;
@@ -143,7 +140,7 @@ int main(void) {
                 HannibalFormat.bookFile = NULL;
                 open_write_book(DEFAULT_HANNIBAL_BOOK,&HannibalFormat,PUCK_BOOK);
                 if (Glearn.learnFile==NULL) initLearn(DEFAULT_HANNIBAL_LEARN,&Glearn);
-                continuation_t moves;
+                pvdisplay_t moves;
                 MutexLock(LearningLock);
                 MutexLock(BookLock);
                 long num = polyglot_to_puck(&GpolyglotBook, &HannibalFormat, &Glearn, &pos, &moves, 0);

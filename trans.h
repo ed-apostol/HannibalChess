@@ -88,7 +88,6 @@ void transStore(const uint64 hash, basic_move_t move, const int depth, const int
                 return;
             }
             if (ht == HTExact && depth >= MAX(transUpperDepth(entry), transLowerDepth(entry))) {
-                pvStore(hash, move, depth, value, thread);
                 transSetMove(entry, move);
                 transSetAge(entry, TransTable(thread).date);
                 transSetUpperDepth(entry, depth);
@@ -149,7 +148,6 @@ void transStore(const uint64 hash, basic_move_t move, const int depth, const int
         transReplaceMask(replace, MUpper|MCutUpper);
     }
     if (ht == HTExact) {
-        pvStore(hash, move, depth, value, thread);
         transSetMove(replace, move);
         transSetUpperDepth(replace, depth);
         transSetUpperValue(replace, value);
@@ -206,68 +204,6 @@ void initTrans(uint64 target, int thread) {
         Print(3, "info string Not enough memory to allocate transposition table.\n");
     }
     transClear(thread);
-}
-
-inline uint32 pvGetHashLock (pvhash_entry_t * pve)      { return pve->hashlock; }
-inline basic_move_t pvGetMove (pvhash_entry_t * pve)    { return pve->move; }
-inline int pvGetAge (pvhash_entry_t * pve)              { return pve->age; }
-inline int pvGetDepth (pvhash_entry_t * pve)            { return pve->depth; }
-inline int pvGetValue (pvhash_entry_t * pve)            { return pve->score; }
-
-inline void pvSetHashLock (pvhash_entry_t * pve, uint32 hashlock)  { pve->hashlock = hashlock; }
-inline void pvSetMove (pvhash_entry_t * pve, basic_move_t move)    { pve->move = move; }
-inline void pvSetAge (pvhash_entry_t * pve, uint8 age)             { pve->age = age; }
-inline void pvSetDepth (pvhash_entry_t * pve, uint8 depth)         { pve->depth = depth; }
-inline void pvSetValue (pvhash_entry_t * pve, int16 value)         { pve->score = value; }
-
-pvhash_entry_t *pvHashProbe(const uint64 hash, const int thread) {
-    pvhash_entry_t *entry = PVHashTable.table + (KEY(hash) & PVHashTable.mask);
-    uint32 locked = LOCK(hash);
-    for (int t = 0; t < 8; t++, entry++) {
-        if (pvGetHashLock(entry) == locked) {
-            pvSetAge(entry, TransTable(thread).date);
-            return entry;
-        }
-    }
-    return NULL;
-}
-
-void pvStore(const uint64 hash, const basic_move_t move, const uint8 depth, const int16 value, const int thread) {
-    int worst = -INF, t, score;
-    pvhash_entry_t *replace, *entry;
-
-    replace = entry = PVHashTable.table + (KEY(hash) & PVHashTable.mask);
-    for (t = 0; t < 8; t++, entry++) {
-        if (pvGetHashLock(entry) == LOCK(hash)) {
-            pvSetAge(entry, TransTable(thread).date);
-            pvSetMove(entry, move);
-            pvSetDepth(entry, depth);
-            pvSetValue(entry, value);
-            return;
-        }
-        score = (TransTable(thread).age[pvGetAge(entry)] * 256) - pvGetDepth(entry);
-        if (score > worst) {
-            worst = score;
-            replace = entry;
-        }
-    }
-    pvSetHashLock(replace, LOCK(hash));
-    pvSetAge(replace, TransTable(thread).date);
-    pvSetMove(replace, move);
-    pvSetDepth(replace, depth);
-    pvSetValue(replace, value);
-}
-
-void pvHashTableClear(pvhashtable_t* pvt) {
-    memset(pvt->table, 0, (pvt->size * sizeof(pvhash_entry_t)));
-}
-
-void initPVHashTab(pvhashtable_t* pvt, uint64 size) {
-    if (pvt->table != NULL) free(pvt->table);
-    pvt->size = size;
-    pvt->mask = pvt->size - 1;
-    pvt->table = (pvhash_entry_t*) malloc(pvt->size * sizeof(pvhash_entry_t));
-    pvHashTableClear(pvt);
 }
 
 void evalTableClear(evaltable_t* et) {

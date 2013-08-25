@@ -53,7 +53,7 @@ typedef struct
 {
     basic_move_t moves[MAXPLY+1];
     int length;
-} continuation_t;
+} pvdisplay_t;
 
 ///* the move structure */
 typedef struct move_t{
@@ -143,20 +143,6 @@ typedef struct _transtable_t{
     uint64 used;
     int32 age[DATESIZE];
 }transtable_t;
-
-struct pvhash_entry_t {
-    uint32 hashlock;
-    basic_move_t move;
-    int16 score;
-    uint8 depth;
-    uint8 age;
-};
-
-struct pvhashtable_t {
-    pvhash_entry_t *table;
-    uint64 size;
-    uint64 mask;
-};
 
 typedef struct _uci_option_t{
     int time_buffer;
@@ -292,7 +278,7 @@ typedef struct _search_info_t{
     basic_move_t moves[MAXMOVES];
     bool mvlist_initialized;
     movelist_t rootmvlist;
-    continuation_t rootPV;
+    pvdisplay_t rootPV;
     int32 evalgains[1024];
     int32 history[1024];
     evaltable_t et;
@@ -310,6 +296,7 @@ typedef struct _split_point_t{
     bool inCheck;
     bool inRoot;
     NodeType nodeType;
+    pvdisplay_t* prePv;
     volatile int alpha;
     volatile int beta;
     volatile int bestvalue;
@@ -322,7 +309,7 @@ typedef struct _split_point_t{
     mutex_t updatelock[1];
 } split_point_t;
 
-typedef struct {
+struct thread_t{
     split_point_t *split_point;
     volatile bool stop;
     volatile bool running;
@@ -349,7 +336,7 @@ typedef struct {
 #ifdef SELF_TUNE2
     bool playingGame;
 #endif
-} thread_t;
+};
 
 
 enum directions {SW,W,NW,N,NE,E,SE,S,NO_DIR };//{-9, -1, 7, 8, 9, 1, -7, -8};

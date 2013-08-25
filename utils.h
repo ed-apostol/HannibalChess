@@ -167,7 +167,7 @@ string moveToStr(basic_move_t m) {
     }
     return toReturn;
 }
-string pv2Str(continuation_t *c) { //TODO promote use of this function throughout the code
+string pv2Str(pvdisplay_t *c) { //TODO promote use of this function throughout the code
     if (c->length ==0) return "no_pv";
     string s="";
     string num;
