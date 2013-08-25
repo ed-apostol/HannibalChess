@@ -129,7 +129,7 @@ extern int historyIndex(uint32 side, uint32 move);
 //int qSearch(position_t *pos, int alpha, int beta, int depth, int inCheck, const int thread_id);
 
 template <bool inRoot, bool inSplitPoint, bool inSingular>
-int searchNode(position_t *pos, int alpha, int beta, const int depth, const bool inCheck, const basic_move_t moveBanned, const int thread_id, pvdisplay_t* prePv, NodeType nt);
+int searchNode(position_t *pos, int alpha, int beta, const int depth, const bool inCheck, const basic_move_t moveBanned, const int thread_id, NodeType nt);
 extern void getBestMove(position_t *pos, int thread_id);
 
 /* debug.c */
@@ -167,13 +167,13 @@ extern void uciSetPosition(position_t *pos, char *str);
 /*book.h*/
 extern int puck_book_score(position_t *p, book_t *book);
 extern basic_move_t getBookMove(position_t *p, book_t *book, movelist_t *ml, bool verbose, int randomness);
-extern void add_to_learn_begin(learn_t *learn, pvdisplay_t *toLearn);
+extern void add_to_learn_begin(learn_t *learn, continuation_t *toLearn);
 extern void initBook(char* book_name, book_t *book, BookType type);
 extern int current_puck_book_score(position_t *p, book_t *book);
-extern bool get_pvdisplay_to_learn(learn_t *learn, pvdisplay_t *toLearn);
+extern bool get_continuation_to_learn(learn_t *learn, continuation_t *toLearn);
 extern void insert_score_to_puck_file(book_t *book, uint64 key, int score);
-extern bool learn_continuation(int thread_id, pvdisplay_t *toLearn);
-extern void generateContinuation(pvdisplay_t *variation);
+extern bool learn_continuation(int thread_id, continuation_t *toLearn);
+extern void generateContinuation(continuation_t *variation);
 /* main.c */
 extern void quit(void);
 extern int main(void);

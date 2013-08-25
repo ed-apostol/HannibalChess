@@ -87,6 +87,8 @@ static int origScore;
 static transtable_t global_trans_table;
 //#define TransTable(thread) (SearchInfo(thread).tt)
 #define TransTable(thread) global_trans_table
+pvhashtable_t PVHashTable;
+
 
 #ifndef TCEC
 static book_t GhannibalBook;
@@ -94,7 +96,7 @@ static book_t GpolyglotBook;
 static learn_t Glearn;
 mutex_t LearningLock[1];
 mutex_t BookLock[1];
-pvdisplay_t movesSoFar;
+continuation_t movesSoFar;
 static search_info_t global_search_info;
 static search_info_t* SearchInfoMap[MaxNumOfThreads];
 #define SearchInfo(thread) (*SearchInfoMap[thread])

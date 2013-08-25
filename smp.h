@@ -23,8 +23,8 @@ void idleLoop(const int thread_id, split_point_t *master_sp) {
         if(Threads[thread_id].exit_flag) break;
 #ifndef TCEC
         if (thread_id >= MaxNumOfThreads - Guci_options->learnThreads) { //lets grab something and learn from it
-            pvdisplay_t toLearn;
-            if (get_pvdisplay_to_learn(&Glearn, &toLearn)) {
+            continuation_t toLearn;
+            if (get_continuation_to_learn(&Glearn, &toLearn)) {
                 if (LOG_LEARNING) Print(2,"learning: got continuation from file\n");
                 if (learn_continuation(thread_id,&toLearn)==false)
                     Sleep(1000);
@@ -50,8 +50,8 @@ void idleLoop(const int thread_id, split_point_t *master_sp) {
             ++Threads[thread_id].started;
             Threads[thread_id].work_assigned = false;
             split_point_t* sp = Threads[thread_id].split_point;
-            if (sp->inRoot) searchNode<true, true, false>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, sp->inCheck, EMPTY, thread_id, sp->prePv, sp->nodeType);
-            else searchNode<false, true, false>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, sp->inCheck, EMPTY, thread_id, sp->prePv, sp->nodeType);
+            if (sp->inRoot) searchNode<true, true, false>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, sp->inCheck, EMPTY, thread_id, sp->nodeType);
+            else searchNode<false, true, false>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, sp->inCheck, EMPTY, thread_id, sp->nodeType);
             MutexLock(SMPLock);
             if (Threads[thread_id].cutoff || (sp->master == thread_id && Threads[thread_id].stop)) {
                 for(int i = 0; i < Guci_options->threads; i++) {
@@ -169,7 +169,7 @@ void setAllThreadsToStop(int thread) {
 #endif
 }
 
-bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, int* bestvalue, basic_move_t* bestmove, int* played, int alpha, int beta, pvdisplay_t* prePv,  NodeType nt, int depth, bool inCheck, bool inRoot, const int master) {
+bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, int* bestvalue, basic_move_t* bestmove, int* played, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, const int master) {
     split_point_t *split_point;
     MutexLock(SMPLock);
     if(!idleThreadExists(master) || Threads[master].num_sp >= MaxNumSplitPointsPerThread) {
@@ -182,7 +182,6 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, int* bestvalue
     split_point->depth = depth;
     split_point->alpha = alpha; 
     split_point->beta = beta;
-    split_point->prePv = prePv;
     split_point->nodeType = nt;
     split_point->bestvalue = *bestvalue;
     split_point->bestmove = *bestmove;
