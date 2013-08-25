@@ -144,6 +144,20 @@ typedef struct _transtable_t{
     int32 age[DATESIZE];
 }transtable_t;
 
+struct pvhash_entry_t {
+    uint32 hashlock;
+    basic_move_t move;
+    int16 score;
+    uint8 depth;
+    uint8 age;
+};
+
+struct pvhashtable_t {
+    pvhash_entry_t *table;
+    uint64 size;
+    uint64 mask;
+};
+
 typedef struct _uci_option_t{
     int time_buffer;
     int contempt;

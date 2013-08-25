@@ -87,7 +87,7 @@ static int origScore;
 static transtable_t global_trans_table;
 //#define TransTable(thread) (SearchInfo(thread).tt)
 #define TransTable(thread) global_trans_table
-
+pvhashtable_t PVHashTable;
 
 
 #ifndef TCEC

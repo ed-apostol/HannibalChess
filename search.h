@@ -583,13 +583,16 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
 }
 
 void extractPvMovesFromHash(position_t *pos, continuation_t* pv, basic_move_t move, bool execMove) {
+    pvhash_entry_t *entry;
     pos_store_t undo[MAXPLY];
     int ply = 0;
     basic_move_t hashMove;
     pv->length = 0;
     pv->moves[pv->length++] = move;
     if (execMove) makeMove(pos, &(undo[ply++]), move);
-    while ((hashMove = transGetHashMove(pos->hash, 0)) != EMPTY) {
+    while ((entry = pvHashProbe(pos->hash, 0)) != NULL) {
+        hashMove = pvGetMove(entry);
+        if (hashMove == EMPTY) break;
         if (!genMoveIfLegal(pos, hashMove, pinnedPieces(pos, pos->side))) break;
         pv->moves[pv->length++] = hashMove;
         if (anyRep(pos)) break; // break on repetition to avoid long pv display
@@ -601,7 +604,7 @@ void extractPvMovesFromHash(position_t *pos, continuation_t* pv, basic_move_t mo
     }
 }
 
-void repopulateHash(position_t *pos,continuation_t *rootPV, int depth, int score) {
+void repopulateHash(position_t *pos, continuation_t *rootPV, int depth, int score) {
     int moveOn;
     int maxMoves = rootPV->length;
     pos_store_t undo[MAXPLY];
@@ -610,7 +613,7 @@ void repopulateHash(position_t *pos,continuation_t *rootPV, int depth, int score
         if (!move) break;
         transStore<HTExact>(pos->hash, move, depth, score, 0);
         makeMove(pos, &(undo[moveOn]), move);
-        if (depth > 0) depth--;
+        if (depth > 1) depth--;
     }
     for (moveOn = moveOn-1; moveOn >= 0; moveOn--) {
         unmakeMove(pos, &(undo[moveOn]));

@@ -55,6 +55,7 @@ can knight catch pawns code from LL
 #define INIT_EVAL 64
 #define INIT_PAWN 32
 #define INIT_HASH 64
+#define INIT_PVHASH (1 << 16)
 
 #else
 #define INIT_EVAL 64

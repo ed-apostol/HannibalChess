@@ -14,6 +14,7 @@ void quit(void) {
     fclose(dumpfile);
 
     free(TransTable(0).table);
+    free(PVHashTable.table);
     free(SearchInfo(0).pt.table);
     free(SearchInfo(0).et.table);
 #ifndef TCEC
@@ -62,6 +63,8 @@ int main(void) {
 
     TransTable(0).table = NULL;
     initTrans(INIT_HASH,0);
+    PVHashTable.table = NULL;
+    initPVHashTab(&PVHashTable, INIT_PVHASH);
     SearchInfo(0).pt.table = NULL;
     initPawnTab(&SearchInfo(0).pt, INIT_PAWN);
     SearchInfo(0).et.table = NULL;
