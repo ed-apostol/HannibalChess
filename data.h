@@ -65,6 +65,7 @@ static const int MoveGenPhase[] = {
 zero otherwise */
 static int DirFromTo[64][64];
 
+static int OutpostValue[2][64];
 /* used for pre-computed piece-square table */
 static int PcSqTb[2048];
 /* used in updating the castle status of the position */
