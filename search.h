@@ -481,7 +481,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                 if (okToPruneOrReduce && depth >= MIN_REDUCTION_DEPTH) newdepthclone -= ReductionTable[(inPvNode(nt)?0:1)][MIN(depth,63)][MIN(played,63)];
                 makeMove(pos, &undo, move);
                 if (inSplitPoint) alpha = sp->alpha;
-                score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepthclone, moveGivesCheck, EMPTY, thread_id, CutNode);
+                score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepthclone, moveGivesCheck, EMPTY, thread_id, /*inCutNode(nt)?AllNode:*/CutNode);
                 if (newdepthclone < newdepth && score > alpha) {
                     score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepth, moveGivesCheck, EMPTY, thread_id, AllNode);
                 }
@@ -889,7 +889,7 @@ void getBestMove(position_t *pos, int thread_id) {
             SearchInfo(thread_id).last_last_value = SearchInfo(thread_id).last_value;
             SearchInfo(thread_id).last_value = SearchInfo(thread_id).best_value;
         }
-        //Print(1, "info string cutfails: %d %% allfails: %d %%\n", (SearchInfo(0).cutfail * 100)/SearchInfo(0).cutnodes, (SearchInfo(0).allfail * 100)/SearchInfo(0).allnodes);
+        Print(1, "info string cutfails: %d %% allfails: %d %%\n", (SearchInfo(0).cutfail * 100)/SearchInfo(0).cutnodes, (SearchInfo(0).allfail * 100)/SearchInfo(0).allnodes);
     }
     if (SearchInfo(thread_id).thinking_status != STOPPED) {
         if ((SearchInfo(thread_id).depth_is_limited || SearchInfo(thread_id).time_is_limited) && SearchInfo(thread_id).thinking_status == THINKING) {
