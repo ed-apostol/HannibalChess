@@ -17,6 +17,7 @@
 #define Q_PVCHECK 2 // implies 2 checks
 #define NO_ASP FALSE
 #define MIN_REDUCTION_DEPTH 4 // default is FALSE
+#define THREAT_SIZE 500 //was 500
 
 void ponderHit() { //no pondering in tuning
     int64 time = getTime() - SearchInfo(0).start_time;
@@ -196,6 +197,7 @@ int qSearch(position_t *pos, int alpha, int beta, int depth, const int inCheck, 
     trans_entry_t * entry = NULL;
     uint32 hashMove = EMPTY;
     int mvlist_phase;
+	bool bigThreat = false;
 
     ASSERT(pos != NULL);
     ASSERT(oldPV != NULL);
@@ -214,6 +216,7 @@ int qSearch(position_t *pos, int alpha, int beta, int depth, const int inCheck, 
             if (transMaxvalue(entry) < beta && beta > -MAXEVAL) return transMaxvalue(entry);
         }
         hashMove = transMove(entry);
+		bigThreat = transBigThreat(entry);
     }
     if (pos->ply >= MAXPLY-1) return eval(pos, thread_id, &opt, &pes);
     if (!inCheck) {
@@ -222,6 +225,7 @@ int qSearch(position_t *pos, int alpha, int beta, int depth, const int inCheck, 
             goto cut;
         }
         Threads[thread_id].evalvalue[pos->ply] = bestvalue = eval(pos, thread_id, &opt, &pes);
+		if (pes >= THREAT_SIZE) bigThreat = true;
         updateEvalgains(pos, pos->posStore.lastmove, Threads[thread_id].evalvalue[pos->ply-1], Threads[thread_id].evalvalue[pos->ply], thread_id);
         if (Threads[thread_id].evalvalue[pos->ply] > alpha) {
             if (Threads[thread_id].evalvalue[pos->ply] >= beta) {
@@ -267,7 +271,7 @@ int qSearch(position_t *pos, int alpha, int beta, int depth, const int inCheck, 
     }
     if (inCheck && bestvalue == -INF) bestvalue = -INF + pos->ply;
 cut:    
-    transStore(pos->hash, bestmove, 0, ((bestvalue > oldalpha) ? bestvalue : -INF), ((bestvalue < beta) ? bestvalue : INF),thread_id);
+    transStore(pos->hash, bestmove, 0, ((bestvalue > oldalpha) ? bestvalue : -INF), ((bestvalue < beta) ? bestvalue : INF),bigThreat,thread_id);
     ASSERT(valueIsOk(bestvalue));
     return bestvalue;
 }
@@ -358,6 +362,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
     uint64 nullThreatMoveToBit = 0;
     basic_move_t hisMoves[64];
     int hisOn;
+	bool bigThreat = false;
 
     ASSERT(pos != NULL);
     ASSERT(oldPV != NULL);
@@ -373,6 +378,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
         entry = transProbe(pos->hash,thread_id);
         if (entry != NULL) {
             hashMove = transMove(entry);
+			bigThreat = transBigThreat(entry);
             if (!inPv) {
                 if (depth <= transMindepth(entry) && transMinvalue(entry) >= beta && beta < MAXEVAL) {
                     if (hashMove && hashMove != Threads[thread_id].killer1[pos->ply] && !moveIsTactical(hashMove)) { //good move, so killer move
@@ -391,13 +397,18 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
             else if (transMaxvalue(entry) != INF) Threads[thread_id].evalvalue[pos->ply] = transMaxvalue(entry);
             else {
                 Threads[thread_id].evalvalue[pos->ply] = eval(pos, thread_id, &opt, &pes);
+				if (pes >= THREAT_SIZE && !bigThreat) {
+					bigThreat = true;
+					transSetBigThreat(entry,true);
+				}
                 hashDepth = 0;
             }
         } else {
             Threads[thread_id].evalvalue[pos->ply] = eval(pos, thread_id, &opt, &pes);
             hashDepth = 0;
             hashMove = EMPTY;
-        }
+			if (pes >= THREAT_SIZE) bigThreat = true;
+		}
         if (pos->ply >= MAXPLY-3) return Threads[thread_id].evalvalue[pos->ply]; // -3 ensures the next 2 lines do not cause problems
         Threads[thread_id].killer1[pos->ply+2] = 0;
         Threads[thread_id].killer2[pos->ply+2] = 0;
@@ -405,8 +416,8 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
 
         if (!inPv && !inCheck && prune) {
             int rvalue;
-            if (cutNode && pos->color[pos->side] & ~(pos->pawns | pos->kings)
-                && beta < (rvalue = Threads[thread_id].evalvalue[pos->ply] - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0] - pes))  {
+			if (cutNode && pos->color[pos->side] & ~(pos->pawns | pos->kings) && !bigThreat
+                && beta < (rvalue = Threads[thread_id].evalvalue[pos->ply] - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0] - MAX(bigThreat*THREAT_SIZE,pes)))  {
                     if (hashMove && hashMove != Threads[thread_id].killer1[pos->ply] && !moveIsTactical(hashMove)) { //good move, so killer move 07/25/13 NEW
                         Threads[thread_id].killer2[pos->ply] = Threads[thread_id].killer1[pos->ply];
                         Threads[thread_id].killer1[pos->ply] = hashMove;
@@ -414,7 +425,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
                     return rvalue;
             }
             if (pos->posStore.lastmove != EMPTY && hashMove == EMPTY
-                && Threads[thread_id].evalvalue[pos->ply] < (rvalue = beta - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0] - opt)) { 
+                && Threads[thread_id].evalvalue[pos->ply] < (rvalue = beta - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0] /*- opt*/)) { 
                     score = qSearch<FALSE>(pos, rvalue-1, rvalue, 0, FALSE, thread_id);
                     if (score < rvalue) return score;
             }
@@ -429,6 +440,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
                     score = -searchNode<false, false>(pos, -beta, -alpha, nullDepth, FALSE, thread_id,false);
                     if ((entry = transProbe(pos->hash,thread_id)) != NULL && transMove(entry) != EMPTY) {
                         nullThreatMoveToBit = BitMask[moveTo(transMove(entry))];
+						if (score < -INF+MAXPLY) bigThreat = true;
                     }
                     unmakeNullMove(pos, &undo);
                     if (score >= beta) {
@@ -499,7 +511,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
             } 
             else {
                 int PruneReductionLevel = (inCheck || newdepth >= depth || moveGivesCheck || MoveGenPhase[mvlist_phase] != PH_QUIET_MOVES ) ? 0 : 
-                    (moveIsPassedPawn(pos, move) ? 1 : 2);
+                    (moveIsPassedPawn(pos, move) ? 1 : 2); 
                 if (PruneReductionLevel && !inPv && pruneable) {
                     if (played > lateMove && !isMoveDefence(pos, move, nullThreatMoveToBit)) continue;
                     int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(played,63)]);
@@ -597,7 +609,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
             }
 
         }
-        transStore(pos->hash, bestmove, depth, ((bestvalue > oldalpha) ? bestvalue : -INF), ((bestvalue < beta) ? bestvalue : INF),thread_id);
+		transStore(pos->hash, bestmove, depth, ((bestvalue > oldalpha) ? bestvalue : -INF), ((bestvalue < beta) ? bestvalue : INF),bigThreat,thread_id);
     }
     ASSERT(valueIsOk(bestvalue));
     return bestvalue;
@@ -625,15 +637,28 @@ void extractPvMovesFromHash(position_t *pos, continuation_t* pv, basic_move_t mo
     }
 }
 
-void repopulateHash(position_t *pos,continuation_t *rootPV,int depth, int score) {
+void repopulateHash(position_t *pos,continuation_t *rootPV,int depth, int score, int thread_id) {
     int moveOn;
     int maxMoves = rootPV->length;
     pos_store_t undo[MAXPLY];
     for (moveOn=0; moveOn+1 <= maxMoves; moveOn++) {
         int move = rootPV->moves[moveOn];
         if (!move) break;
-        transStore(pos->hash, move, depth , -INF, INF,0);
-        makeMove(pos, &(undo[moveOn]), move);
+        trans_entry_t *entry = transProbe(pos->hash,thread_id);
+		 //this is pretty rare but not impossible, because even though we get PV from hash, we do some searching after
+		if (!entry || transMove(entry) != rootPV->moves[moveOn]) {
+			int tDepth = MAX(0,depth-moveOn);
+			int opt, pes;
+			eval(pos,thread_id,&opt,&pes);
+			bool bigThreat = (pes > THREAT_SIZE);
+			//9 & 10 reversed signs on score
+			if (moveOn%2) // if its no our move, their score is max
+				transStore(pos->hash, move, tDepth , -INF, -score,bigThreat,thread_id); //TODO why are we ruining our has knowledge with this?
+			else //if it is our move, our score is min
+				transStore(pos->hash, move, tDepth , score, INF,bigThreat,thread_id); //TODO why are we ruining our has knowledge with this?
+
+		}
+		makeMove(pos, &(undo[moveOn]), move);
         if (depth > 0) depth--;
     }
     for (moveOn = moveOn-1; moveOn >= 0; moveOn--) {
@@ -862,7 +887,7 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
     if (SearchInfo(thread_id).best_value != -INF) {
         SearchInfo(thread_id).last_last_value = SearchInfo(thread_id).last_value;
         SearchInfo(thread_id).last_value = SearchInfo(thread_id).best_value;
-        repopulateHash(pos, &rootPV, depth, SearchInfo(thread_id).best_value);
+        repopulateHash(pos, &rootPV, depth, SearchInfo(thread_id).best_value,thread_id);
     } else if (SearchInfo(thread_id).thinking_status != STOPPED) {
         Print(8, "SearchInfo.thinking_status != STOPPED Failure!\n");
         displayBoard(pos, 8);

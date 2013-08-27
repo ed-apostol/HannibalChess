@@ -110,8 +110,8 @@ typedef struct pawntable_t{
 typedef struct eval_entry_t{
     uint32 hashlock;
     int16 value;
-    int8 optimism;
-    int8 pessimism;
+    uint8 optimism;
+    uint8 pessimism;
 } eval_entry_t;
 
 typedef struct evaltable_t{

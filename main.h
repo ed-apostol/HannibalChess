@@ -42,7 +42,6 @@ int main(void) {
 
     Print(3, "Hannibal %s by Sam Hamilton & Edsel Apostol\n", VERSION);
     Print(3, "Use Universal Chess Interface(UCI) commands\n");
-
     //Print(1, "split_point_t:%.2fkB\n", (float)sizeof(split_point_t)/(float)1024);
     //Print(1, "position_t:%.2fkB\n", (float)sizeof(position_t)/(float)1024);
 #ifndef TCEC
