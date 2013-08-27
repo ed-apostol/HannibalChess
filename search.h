@@ -373,15 +373,15 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
 
         if (!inRoot && !inPvNode(nt) && !inCheck && prune) {
             int rvalue;
-            if (pos->color[pos->side] & ~(pos->pawns | pos->kings) && (rvalue = beta + FutilityMarginTable[MIN(depth, 4)][0]) < Threads[thread_id].evalvalue[pos->ply])  {
-                score = searchNode<false, false, true>(pos, rvalue-1, rvalue, MIN(1, depth-3), false, EMPTY, thread_id, nt);
+            if ((pos->color[pos->side] & ~(pos->pawns | pos->kings)) && (rvalue = beta + FutilityMarginTable[MIN(depth, 4)][0]) < Threads[thread_id].evalvalue[pos->ply])  {
+                score = searchNode<false, false, true>(pos, rvalue-1, rvalue, depth-3, false, EMPTY, thread_id, nt);
                 if (score >= rvalue) return score;
             }
             if (pos->posStore.lastmove != EMPTY && Threads[thread_id].evalvalue[pos->ply] < (rvalue = beta - FutilityMarginTable[MIN(depth,4)][0])) { 
-                score = searchNode<false, false, true>(pos, rvalue-1, rvalue, MIN(1, depth-3), false, EMPTY, thread_id, nt);
+                score = searchNode<false, false, true>(pos, rvalue-1, rvalue, depth-3, false, EMPTY, thread_id, nt);
                 if (score < rvalue) return score;
             }
-            if (depth >= 2 && (MinTwoBits(pos->color[pos->side] & ~(pos->pawns))) && Threads[thread_id].evalvalue[pos->ply] >= beta) {
+            if (depth >= 2 && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) && Threads[thread_id].evalvalue[pos->ply] >= beta) {
                 int nullDepth = depth - (3 + depth/4 + (Threads[thread_id].evalvalue[pos->ply] - beta > PawnValue));
                 if (depth >= 12) score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, false, EMPTY, thread_id, nt);
                 else score = beta;
@@ -396,8 +396,8 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
             }
         }
 
-        if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt)?4:6) && prune) { // IID
-            newdepth = depth / 2;
+        if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt)?6:8) && prune) { // IID
+            newdepth = inPvNode(nt) ? depth - 2 : depth / 2;
             if (hashMove == EMPTY || hashDepth < newdepth) {
                 score = searchNode<false, false, true>(pos, alpha, beta, newdepth, inCheck, EMPTY, thread_id, nt);
                 if (score > alpha) {
@@ -407,7 +407,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                 }
             }
         }
-        if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt)?EXPLORE_DEPTH_PV:EXPLORE_DEPTH_NOPV) && prune) { // singular extension
+        if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt)?6:8) && prune) { // singular extension
             newdepth = depth / 2;
             if (hashMove != EMPTY && hashDepth >= newdepth) { 
                 int targetScore = Threads[thread_id].evalvalue[pos->ply] - EXPLORE_CUTOFF;
