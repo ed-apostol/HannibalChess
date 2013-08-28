@@ -373,12 +373,12 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
 
         if (!inPvNode(nt) && !inCheck && prune) {
             int rvalue;
-            if ((pos->color[pos->side] & ~(pos->pawns | pos->kings)) && (rvalue = beta + FutilityMarginTable[MIN(depth, 4)][0]) < Threads[thread_id].evalvalue[pos->ply])  {
-                score = searchNode<false, false, true>(pos, rvalue-1, rvalue, depth-3, false, EMPTY, thread_id, nt);
+            if ((pos->color[pos->side] & ~(pos->pawns | pos->kings)) && Threads[thread_id].evalvalue[pos->ply] > (rvalue = beta + FutilityMarginTable[MIN(depth, 10)][0]))  {
+                score = searchNode<false, false, false>(pos, rvalue-1, rvalue, depth-3, false, EMPTY, thread_id, nt);
                 if (score >= rvalue) return score;
             }
-            if (pos->posStore.lastmove != EMPTY && Threads[thread_id].evalvalue[pos->ply] < (rvalue = beta - FutilityMarginTable[MIN(depth,4)][0])) { 
-                score = searchNode<false, false, true>(pos, rvalue-1, rvalue, depth-3, false, EMPTY, thread_id, nt);
+            if (pos->posStore.lastmove != EMPTY && Threads[thread_id].evalvalue[pos->ply] < (rvalue = beta - FutilityMarginTable[MIN(depth, 10)][0])) { 
+                score = searchNode<false, false, false>(pos, rvalue-1, rvalue, depth-3, false, EMPTY, thread_id, nt);
                 if (score < rvalue) return score;
             }
             if (depth >= 2 && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) && Threads[thread_id].evalvalue[pos->ply] >= beta) {
@@ -387,7 +387,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                 else score = beta;
                 if (score >= beta) {
                     makeNullMove(pos, &undo);
-                    score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, false, EMPTY, thread_id, AllNode);
+                    score = -searchNode<false, false, true>(pos, -beta, -alpha, nullDepth, false, EMPTY, thread_id, AllNode);
                     basic_move_t threatMove = transGetHashMove(pos->hash, thread_id);
                     if (threatMove != EMPTY) nullThreatMoveToBit = BitMask[moveTo(threatMove)];
                     unmakeNullMove(pos, &undo);

@@ -209,6 +209,9 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, int* bestvalue
         }
         if (split_point->slaves[i]) { // copy search stack from master to slaves
             Threads[i].evalvalue[p->ply] = Threads[master].evalvalue[p->ply];
+            memcpy(&Threads[i].evalvalue[p->ply], &Threads[master].evalvalue[p->ply], depth * sizeof(Threads[i].evalvalue[p->ply])); 
+            memcpy(&Threads[i].killer1[p->ply], &Threads[master].killer1[p->ply], depth * sizeof(Threads[i].killer1[p->ply]));
+            memcpy(&Threads[i].killer2[p->ply], &Threads[master].killer2[p->ply], depth * sizeof(Threads[i].killer2[p->ply]));
         }
     }
     MutexUnlock(SMPLock);
