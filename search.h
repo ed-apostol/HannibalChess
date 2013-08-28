@@ -371,7 +371,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
         if (pos->ply >= MAXPLY-1) return Threads[thread_id].evalvalue[pos->ply];
         updateEvalgains(pos, pos->posStore.lastmove, Threads[thread_id].evalvalue[pos->ply-1], Threads[thread_id].evalvalue[pos->ply], thread_id);
 
-        if (!inRoot && !inPvNode(nt) && !inCheck && prune) {
+        if (!inPvNode(nt) && !inCheck && prune) {
             int rvalue;
             if ((pos->color[pos->side] & ~(pos->pawns | pos->kings)) && (rvalue = beta + FutilityMarginTable[MIN(depth, 4)][0]) < Threads[thread_id].evalvalue[pos->ply])  {
                 score = searchNode<false, false, true>(pos, rvalue-1, rvalue, depth-3, false, EMPTY, thread_id, nt);
@@ -449,7 +449,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
             MutexUnlock(sp->updatelock);
         } else ++played;
         if (inSingular && move == bannedMove) continue;
-        if (hisOn < 64 && !moveIsTactical(move)) {
+        if (!inSplitPoint && hisOn < 64 && !moveIsTactical(move)) {
             hisMoves[hisOn++] = move;
         }
         if (anyRepNoMove(pos, move)) { 
@@ -465,7 +465,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                 int newdepthclone = newdepth;
                 if (!inRoot && !inPvNode(nt) && okToPruneOrReduce) {
                     if (played > lateMove && !isMoveDefence(pos, move, nullThreatMoveToBit)) continue;
-                    int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(played,63)]);
+                    int predictedDepth = MAX(0, newdepth - ReductionTable[1][MIN(depth,63)][MIN(played,63)]);
                     int scoreAprox = Threads[thread_id].evalvalue[pos->ply] 
                     + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(played,63)]
                     + SearchInfo(thread_id).evalgains[historyIndex(pos->side, move)];
@@ -477,7 +477,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                 if (okToPruneOrReduce && depth >= MIN_REDUCTION_DEPTH) newdepthclone -= ReductionTable[(inPvNode(nt)?0:1)][MIN(depth,63)][MIN(played,63)];
                 makeMove(pos, &undo, move);
                 if (inSplitPoint) alpha = sp->alpha;
-                score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepthclone, moveGivesCheck, EMPTY, thread_id, /*inCutNode(nt)?AllNode:*/CutNode);
+                score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepthclone, moveGivesCheck, EMPTY, thread_id, CutNode);
                 if (newdepthclone < newdepth && score > alpha) {
                     score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepth, moveGivesCheck, EMPTY, thread_id, AllNode);
                 }
@@ -551,7 +551,8 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
             int index = historyIndex(pos->side, bestmove);
             int hisDepth = MIN(depth,MAX_HDEPTH);
             SearchInfo(thread_id).history[index] += hisDepth * hisDepth;
-            for (int i=0; i < hisOn-1; ++i) { // don't include the last index, it's the bestmove
+            for (int i=0; i < hisOn; ++i) {
+                if (hisMoves[i] == bestmove) continue;
                 index = historyIndex(pos->side, hisMoves[i]);
                 SearchInfo(thread_id).history[index] -= SearchInfo(thread_id).history[index]/(NEW_HISTORY-hisDepth);
             }
@@ -607,10 +608,9 @@ void extractPvMovesFromHash(position_t *pos, continuation_t* pv, basic_move_t mo
 
 void repopulateHash(position_t *pos, continuation_t *rootPV, int depth, int score) {
     int moveOn;
-    int maxMoves = rootPV->length;
     pos_store_t undo[MAXPLY];
-    for (moveOn=0; moveOn+1 <= maxMoves; moveOn++) {
-        int move = rootPV->moves[moveOn];
+    for (moveOn=0; moveOn+1 <= rootPV->length; moveOn++) {
+        basic_move_t move = rootPV->moves[moveOn];
         if (!move) break;
         transStore<HTExact>(pos->hash, move, depth, score, 0);
         makeMove(pos, &(undo[moveOn]), move);
