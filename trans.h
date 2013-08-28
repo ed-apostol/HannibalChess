@@ -7,25 +7,25 @@
 /*  Description: A chess playing program.         */
 /**************************************************/
 
-inline uint32 transHashLock(trans_entry_t * te) { return te->hashlock; }
-inline basic_move_t transMove(trans_entry_t * te) { return te->move; }
-inline int transAge(trans_entry_t * te) { return te->age; }
-inline int transMask(trans_entry_t * te) { return te->mask; }
-inline int transLowerDepth(trans_entry_t * te) { return te->lowerdepth; }
-inline int transUpperDepth(trans_entry_t * te) { return te->upperdepth; }
-inline int transLowerValue(trans_entry_t * te) { return te->lowervalue; }
-inline int transUpperValue(trans_entry_t * te) { return te->uppervalue; }
+inline const uint32 transHashLock(trans_entry_t * te) { return te->hashlock; }
+inline const basic_move_t transMove(trans_entry_t * te) { return te->move; }
+inline const int transAge(trans_entry_t * te) { return te->age; }
+inline const int transMask(trans_entry_t * te) { return te->mask; }
+inline const int transLowerDepth(trans_entry_t * te) { return te->lowerdepth; }
+inline const int transUpperDepth(trans_entry_t * te) { return te->upperdepth; }
+inline const int transLowerValue(trans_entry_t * te) { return te->lowervalue; }
+inline const int transUpperValue(trans_entry_t * te) { return te->uppervalue; }
 
-inline void transSetHashLock(trans_entry_t * te, uint32 hashlock) { te->hashlock = hashlock; }
-inline void transSetMove(trans_entry_t * te, basic_move_t move) { te->move = move; }
-inline void transSetAge(trans_entry_t * te, uint8 date) { te->age = date; }
-inline void transSetMask(trans_entry_t * te, uint8 mask) { te->mask |= mask; }
-inline void transRemMask(trans_entry_t * te, uint8 mask) { te->mask &= ~mask; }
-inline void transReplaceMask(trans_entry_t * te, uint8 mask) { te->mask = mask; }
-inline void transSetLowerDepth(trans_entry_t * te, uint8 lowerdepth) { te->lowerdepth = lowerdepth; }
-inline void transSetUpperDepth(trans_entry_t * te, uint8 upperdepth) { te->upperdepth = upperdepth; }
-inline void transSetLowerValue(trans_entry_t * te, int16 lowervalue) { te->lowervalue = lowervalue; }
-inline void transSetUpperValue(trans_entry_t * te, int16 uppervalue) { te->uppervalue = uppervalue; }
+inline void transSetHashLock(trans_entry_t * te, const uint32 hashlock) { te->hashlock = hashlock; }
+inline void transSetMove(trans_entry_t * te, const basic_move_t move) { te->move = move; }
+inline void transSetAge(trans_entry_t * te, const uint8 date) { te->age = date; }
+inline void transSetMask(trans_entry_t * te, const uint8 mask) { te->mask |= mask; }
+inline void transRemMask(trans_entry_t * te, const uint8 mask) { te->mask &= ~mask; }
+inline void transReplaceMask(trans_entry_t * te, const uint8 mask) { te->mask = mask; }
+inline void transSetLowerDepth(trans_entry_t * te, const uint8 lowerdepth) { te->lowerdepth = lowerdepth; }
+inline void transSetUpperDepth(trans_entry_t * te, const uint8 upperdepth) { te->upperdepth = upperdepth; }
+inline void transSetLowerValue(trans_entry_t * te, const int16 lowervalue) { te->lowervalue = lowervalue; }
+inline void transSetUpperValue(trans_entry_t * te, const int16 uppervalue) { te->uppervalue = uppervalue; }
 
 inline int scoreFromTrans(int score, int ply) { return (score > MAXEVAL) ? (score-ply) : ((score < MAXEVAL) ? (score+ply) : score); }
 inline int scoreToTrans(int score, int ply) { return (score > MAXEVAL) ? (score+ply) : ((score < MAXEVAL) ? (score-ply) : score); }
@@ -50,7 +50,9 @@ template<HashType ht>
 void transStore(const uint64 hash, basic_move_t move, const int depth, const int value, const int thread) {
     int worst = -INF, t, score;
     trans_entry_t *replace, *entry;
-
+    
+    ASSERT(valueIsOk(value));
+    
     replace = entry = TransTable(thread).table + (KEY(hash) & TransTable(thread).mask);
 
     for (t = 0; t < 4; t++, entry++) {
@@ -163,7 +165,7 @@ void transStore(const uint64 hash, basic_move_t move, const int depth, const int
         transSetUpperValue(replace, value);
         transSetLowerDepth(replace, depth);
         transSetLowerValue(replace, value);
-        transReplaceMask(replace, MNoMoves);
+        transReplaceMask(replace, MExact|MNoMoves);
     }
 }
 

@@ -197,11 +197,9 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, const bool in
     int mvlist_phase;
 
     ASSERT(pos != NULL);
-    ASSERT(oldPV != NULL);
     ASSERT(valueIsOk(alpha));
     ASSERT(valueIsOk(beta));
     ASSERT(alpha < beta);
-    ASSERT(!kingIsInCheck(pos));
 
     initNode(pos, thread_id);
     if (Threads[thread_id].stop) return 0;
@@ -211,7 +209,7 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, const bool in
         if (transHashLock(entry) == LOCK(pos->hash)) {
             transSetAge(entry, TransTable(thread).date);
             if (!inPv) { // TODO: re-use values from here to evalvalue?
-                if (transLowerDepth(entry) > 0) {
+                if (transMove(entry) != EMPTY && transLowerDepth(entry) > 0) {
                     score = scoreFromTrans(transLowerValue(entry), pos->ply);
                     if (score > alpha) return score;
                 }
@@ -220,7 +218,7 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, const bool in
                     if (score < beta) return score;
                 }
             }
-            if (transLowerDepth(entry) > hashDepth ) {
+            if (transMove(entry) != EMPTY && transLowerDepth(entry) > hashDepth ) {
                 hashDepth = transLowerDepth(entry);
                 hashMove = transMove(entry);
             }
@@ -232,12 +230,13 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, const bool in
             return DrawValue[pos->side];
         }
         Threads[thread_id].evalvalue[pos->ply] = bestvalue = eval(pos, thread_id, &opt, &pes);
-        updateEvalgains(pos, pos->posStore.lastmove, Threads[thread_id].evalvalue[pos->ply-1], Threads[thread_id].evalvalue[pos->ply], thread_id);
-        if (Threads[thread_id].evalvalue[pos->ply] > alpha) {
-            if (Threads[thread_id].evalvalue[pos->ply] >= beta) {
-                return Threads[thread_id].evalvalue[pos->ply];
+        if (pos->posStore.lastmove != EMPTY) updateEvalgains(pos, pos->posStore.lastmove, Threads[thread_id].evalvalue[pos->ply-1], Threads[thread_id].evalvalue[pos->ply], thread_id);
+        if (bestvalue > alpha) {
+            if (bestvalue >= beta) {
+                ASSERT(valueIsOk(bestvalue));
+                return bestvalue;
             }
-            alpha = Threads[thread_id].evalvalue[pos->ply];
+            alpha = bestvalue;
         }
     }
     pinned = pinnedPieces(pos, pos->side);
@@ -269,32 +268,42 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, const bool in
                 bestmove = move;
                 if (score >= beta) {
                     transStore<HTLower>(pos->hash, bestmove, 1, scoreToTrans(bestvalue, pos->ply), thread_id);
+                    ASSERT(valueIsOk(bestvalue));
                     return bestvalue;
                 }
                 alpha = score;
             }
         }
     }
-    if (inCheck && bestvalue == -INF) return (-INF + pos->ply); 
-    if (bestmove != EMPTY) transStore<HTExact>(pos->hash, bestmove, 1, scoreToTrans(bestvalue, pos->ply), thread_id);
-    else transStore<HTUpper>(pos->hash, EMPTY, 1, scoreToTrans(bestvalue, pos->ply), thread_id);
-    ASSERT(valueIsOk(bestvalue));
-    return bestvalue;
-}
-
-template <bool inRoot, bool inSplitPoint, bool inSingular>
-int searchNode(position_t *pos, int alpha, int beta, const int depth, const bool inCheck, const basic_move_t moveBanned, const int thread_id, NodeType nt) {
-    if (depth <= 0) return qSearch(pos, alpha, beta, 0, inCheck, thread_id, ((nt==PVNode)?true:false));
-    else {
-        if (inCheck) return searchGeneric<inRoot, inSplitPoint, true, inSingular>(pos, alpha, beta, depth, moveBanned, thread_id, nt);
-        else return searchGeneric<inRoot, inSplitPoint, false, inSingular>(pos, alpha, beta, depth, moveBanned, thread_id, nt);
+    if (inCheck && bestvalue == -INF) {
+        bestvalue = (-INF + pos->ply); 
+        transStore<HTNoMoves>(pos->hash, EMPTY, 1, scoreToTrans(bestvalue, pos->ply), thread_id);
+        return bestvalue;
     }
+
+    ASSERT(bestvalue != -INF);
+
+    if (inPv && bestmove != EMPTY) transStore<HTExact>(pos->hash, bestmove, 1, scoreToTrans(bestvalue, pos->ply), thread_id);
+    else transStore<HTUpper>(pos->hash, EMPTY, 1, scoreToTrans(bestvalue, pos->ply), thread_id);
+
+    ASSERT(valueIsOk(bestvalue));
+
+    return bestvalue;
 }
 
 inline bool inPvNode(NodeType nt) { return (nt==PVNode);}
 inline bool inCutNode(NodeType nt) { return (nt==CutNode);}
 inline bool inAllNode(NodeType nt) { return (nt==AllNode);}
 inline NodeType invertNode(NodeType nt) { return ((nt==PVNode) ? PVNode : ((nt==CutNode) ? AllNode : CutNode));}
+
+template <bool inRoot, bool inSplitPoint, bool inSingular>
+int searchNode(position_t *pos, int alpha, int beta, const int depth, const bool inCheck, const basic_move_t moveBanned, const int thread_id, NodeType nt) {
+    if (depth <= 0) return qSearch(pos, alpha, beta, 0, inCheck, thread_id, inPvNode(nt));
+    else {
+        if (inCheck) return searchGeneric<inRoot, inSplitPoint, true, inSingular>(pos, alpha, beta, depth, moveBanned, thread_id, nt);
+        else return searchGeneric<inRoot, inSplitPoint, false, inSingular>(pos, alpha, beta, depth, moveBanned, thread_id, nt);
+    }
+}
 
 template<bool inRoot, bool inSplitPoint, bool inCheck, bool inSingular>
 int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const basic_move_t bannedMove, const int thread_id, NodeType nt) {
@@ -322,9 +331,8 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
     basic_move_t hisMoves[64] = {0};
 
     ASSERT(pos != NULL);
-    ASSERT(oldPV != NULL);
-    ASSERT(valueIsOk(alpha));
-    ASSERT(valueIsOk(beta));
+    ASSERT(valueIsOk(alpha)); 
+    ASSERT(valueIsOk(beta)); 
     ASSERT(alpha < beta);
     ASSERT(depth >= 1);
 
@@ -334,6 +342,14 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
     if (!inRoot && !inSingular && !inSplitPoint) {
         int t = 0;
         int evalDepth = 0;
+
+        //////if (alpha > INF-pos->ply) return alpha;
+        //////bestvalue = -INF+pos->ply;
+        //////if (alpha < bestvalue) {
+        //////    if (beta <= bestvalue) return beta;
+        //////    else alpha = bestvalue;
+        //////}
+
         Threads[thread_id].evalvalue[pos->ply] = -INF;
         for (trans_entry_t * entry = TransTable(thread).table + (KEY(pos->hash) & TransTable(thread).mask); t < 4; t++, entry++) {
             if (transHashLock(entry) == LOCK(pos->hash)) {
@@ -343,12 +359,14 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                     else return DrawValue[pos->side];
                 }
                 if (!inPvNode(nt)) {
-                    if ((!inCutNode(nt) || !(transMask(entry) & MAllLower)) && transLowerDepth(entry) >= depth) {
+                    if ((!inCutNode(nt) || !(transMask(entry) & MAllLower)) && transLowerDepth(entry) >= depth && (transMove(entry) != EMPTY || pos->posStore.lastmove == EMPTY)) {
                         score = scoreFromTrans(transLowerValue(entry), pos->ply);
+                        ASSERT(valueIsOk(score));
                         if (score > alpha) return score;
                     }
                     if ((!inAllNode(nt) || !(transMask(entry) & MCutUpper)) && transUpperDepth(entry) >= depth) {
                         score = scoreFromTrans(transUpperValue(entry), pos->ply);
+                        ASSERT(valueIsOk(score));
                         if (score < beta) return score;
                     }
                 }
@@ -369,29 +387,33 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
         if (Threads[thread_id].evalvalue[pos->ply] == -INF) Threads[thread_id].evalvalue[pos->ply] = eval(pos, thread_id, &opt, &pes);
 
         if (pos->ply >= MAXPLY-1) return Threads[thread_id].evalvalue[pos->ply];
-        updateEvalgains(pos, pos->posStore.lastmove, Threads[thread_id].evalvalue[pos->ply-1], Threads[thread_id].evalvalue[pos->ply], thread_id);
+        if (pos->posStore.lastmove != EMPTY) updateEvalgains(pos, pos->posStore.lastmove, Threads[thread_id].evalvalue[pos->ply-1], Threads[thread_id].evalvalue[pos->ply], thread_id);
 
         if (!inPvNode(nt) && !inCheck && prune) {
             int rvalue;
             if ((pos->color[pos->side] & ~(pos->pawns | pos->kings)) && Threads[thread_id].evalvalue[pos->ply] > (rvalue = beta + FutilityMarginTable[MIN(depth, 10)][0]))  {
-                score = searchNode<false, false, false>(pos, rvalue-1, rvalue, depth-3, false, EMPTY, thread_id, nt);
-                if (score >= rvalue) return score;
+                return rvalue;
             }
             if (pos->posStore.lastmove != EMPTY && Threads[thread_id].evalvalue[pos->ply] < (rvalue = beta - FutilityMarginTable[MIN(depth, 10)][0])) { 
                 score = searchNode<false, false, false>(pos, rvalue-1, rvalue, depth-3, false, EMPTY, thread_id, nt);
-                if (score < rvalue) return score;
+                if (score < rvalue) return score; 
             }
             if (depth >= 2 && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) && Threads[thread_id].evalvalue[pos->ply] >= beta) {
                 int nullDepth = depth - (3 + depth/4 + (Threads[thread_id].evalvalue[pos->ply] - beta > PawnValue));
-                if (depth >= 12) score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, false, EMPTY, thread_id, nt);
+                if (depth >= 12) score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, false, EMPTY, thread_id, nt); // TODO: set to false and DEBUG
                 else score = beta;
                 if (score >= beta) {
                     makeNullMove(pos, &undo);
-                    score = -searchNode<false, false, true>(pos, -beta, -alpha, nullDepth, false, EMPTY, thread_id, AllNode);
+                    score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, false, EMPTY, thread_id, AllNode);
                     basic_move_t threatMove = transGetHashMove(pos->hash, thread_id);
                     if (threatMove != EMPTY) nullThreatMoveToBit = BitMask[moveTo(threatMove)];
                     unmakeNullMove(pos, &undo);
-                    if (score >= beta) return score;
+                    if (score >= beta) {
+                        ASSERT(valueIsOk(score));
+                        if (inCutNode(nt)) transStore<HTLower>(pos->hash, EMPTY, depth, score, thread_id);
+                        else transStore<HTAllLower>(pos->hash, EMPTY, depth, score, thread_id);
+                        return score;
+                    }
                 }
             }
         }
@@ -399,7 +421,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
         if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt)?6:8) && prune) { // IID
             newdepth = inPvNode(nt) ? depth - 2 : depth / 2;
             if (hashMove == EMPTY || hashDepth < newdepth) {
-                score = searchNode<false, false, true>(pos, alpha, beta, newdepth, inCheck, EMPTY, thread_id, nt);
+                score = searchNode<false, false, false>(pos, alpha, beta, newdepth, inCheck, EMPTY, thread_id, nt);
                 if (score > alpha) {
                     hashMove = transGetHashMove(pos->hash, thread_id);
                     Threads[thread_id].evalvalue[pos->ply] = score;
@@ -539,11 +561,11 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
         if (SHOW_SEARCH && depth >= 8 && (!Threads[thread_id].stop || SearchInfo(thread_id).best_value != -INF))
             displayPV(pos, &SearchInfo(thread_id).rootPV, depth, oldalpha, beta, SearchInfo(thread_id).best_value);
     }
-    if (!inSplitPoint && (!inSingular || bannedMove == EMPTY)) {
+    if (!inSplitPoint && !inSingular) {
         if (played == 0) {
             if (inCheck) bestvalue = -INF + pos->ply;
             else bestvalue = DrawValue[pos->side];
-            transStore<HTNoMoves>(pos->hash, EMPTY, depth, bestvalue, thread_id);
+            transStore<HTNoMoves>(pos->hash, EMPTY, depth, scoreToTrans(bestvalue, pos->ply), thread_id);
             return bestvalue;
         }
         if (Threads[thread_id].stop) return 0;
@@ -572,10 +594,12 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
         }
 
         if (bestvalue >= beta) {
+            ASSERT(valueIsOk(bestvalue));
             if (inCutNode(nt)) transStore<HTLower>(pos->hash, bestmove, depth, scoreToTrans(bestvalue, pos->ply), thread_id);
             else transStore<HTAllLower>(pos->hash, bestmove, depth, scoreToTrans(bestvalue, pos->ply), thread_id);
         } else {
-            if (bestmove != EMPTY) transStore<HTExact>(pos->hash, bestmove, depth, scoreToTrans(bestvalue, pos->ply), thread_id);
+            ASSERT(valueIsOk(bestvalue));
+            if (inPvNode(nt) && bestmove != EMPTY) transStore<HTExact>(pos->hash, bestmove, depth, scoreToTrans(bestvalue, pos->ply), thread_id);
             else if (inCutNode(nt)) transStore<HTCutUpper>(pos->hash, EMPTY, depth, scoreToTrans(bestvalue, pos->ply), thread_id);
             else transStore<HTUpper>(pos->hash, EMPTY, depth, scoreToTrans(bestvalue, pos->ply), thread_id);
         }
