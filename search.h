@@ -390,16 +390,17 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
         if (pos->posStore.lastmove != EMPTY) updateEvalgains(pos, pos->posStore.lastmove, Threads[thread_id].evalvalue[pos->ply-1], Threads[thread_id].evalvalue[pos->ply], thread_id);
 
         if (!inPvNode(nt) && !inCheck && prune) {
+            const int MaxRazorDepth = 10;
             int rvalue;
-            if ((pos->color[pos->side] & ~(pos->pawns | pos->kings)) && Threads[thread_id].evalvalue[pos->ply] > (rvalue = beta + FutilityMarginTable[MIN(depth, 10)][0]))  {
+            if (depth <= MaxRazorDepth && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) && Threads[thread_id].evalvalue[pos->ply] > (rvalue = beta + FutilityMarginTable[MIN(depth, MaxRazorDepth)][0]))  {
                 return rvalue;
             }
-            if (pos->posStore.lastmove != EMPTY && Threads[thread_id].evalvalue[pos->ply] < (rvalue = beta - FutilityMarginTable[MIN(depth, 10)][0])) { 
-                score = searchNode<false, false, false>(pos, rvalue-1, rvalue, depth-3, false, EMPTY, thread_id, nt);
+            if (depth <= MaxRazorDepth && pos->posStore.lastmove != EMPTY && Threads[thread_id].evalvalue[pos->ply] < (rvalue = beta - FutilityMarginTable[MIN(depth, MaxRazorDepth)][0])) { 
+                score = searchNode<false, false, false>(pos, rvalue-1, rvalue, depth-4, false, EMPTY, thread_id, nt);
                 if (score < rvalue) return score; 
             }
             if (depth >= 2 && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) && Threads[thread_id].evalvalue[pos->ply] >= beta) {
-                int nullDepth = depth - (3 + depth/4 + (Threads[thread_id].evalvalue[pos->ply] - beta > PawnValue));
+                int nullDepth = depth - (4 + depth/5 + (Threads[thread_id].evalvalue[pos->ply] - beta > PawnValue));
                 if (depth >= 12) score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, false, EMPTY, thread_id, nt); // TODO: set to false and DEBUG
                 else score = beta;
                 if (score >= beta) {
