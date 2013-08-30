@@ -109,7 +109,7 @@ void transStore(const uint64 hash, basic_move_t move, const int depth, const int
             }
             TransTable(thread).used++;
         }
-        score = (TransTable(thread).age[transAge(entry)] * 256) - transMask(entry);
+        score = (TransTable(thread).age[transAge(entry)] * 256) - MAX(transUpperDepth(entry), transLowerDepth(entry));
         if (score > worst) {
             worst = score;
             replace = entry;
@@ -222,12 +222,22 @@ inline void pvSetAge (pvhash_entry_t * pve, uint8 age)             { pve->age = 
 inline void pvSetDepth (pvhash_entry_t * pve, uint8 depth)         { pve->depth = depth; }
 inline void pvSetValue (pvhash_entry_t * pve, int16 value)         { pve->score = value; }
 
-pvhash_entry_t *pvHashProbe(const uint64 hash, const int thread) {
+pvhash_entry_t *pvHashProbe(const uint64 hash) {
     pvhash_entry_t *entry = PVHashTable.table + (KEY(hash) & PVHashTable.mask);
     uint32 locked = LOCK(hash);
     for (int t = 0; t < 8; t++, entry++) {
         if (pvGetHashLock(entry) == locked) {
-            pvSetAge(entry, TransTable(thread).date);
+            return entry;
+        }
+    }
+    return NULL;
+}
+
+pvhash_entry_t *getPvEntryFromMove(const uint64 hash, basic_move_t move) {
+    pvhash_entry_t *entry = PVHashTable.table + (KEY(hash) & PVHashTable.mask);
+    uint32 locked = LOCK(hash);
+    for (int t = 0; t < 8; t++, entry++) {
+        if (pvGetHashLock(entry) == locked && pvGetMove(entry) == move) {
             return entry;
         }
     }

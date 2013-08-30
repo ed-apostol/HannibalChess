@@ -614,7 +614,7 @@ void extractPvMovesFromHash(position_t *pos, continuation_t* pv, basic_move_t mo
     pv->length = 0;
     pv->moves[pv->length++] = move;
     if (execMove) makeMove(pos, &(undo[ply++]), move);
-    while ((entry = pvHashProbe(pos->hash, 0)) != NULL) {
+    while ((entry = pvHashProbe(pos->hash)) != NULL) {
         hashMove = pvGetMove(entry);
         if (hashMove == EMPTY) break;
         if (!genMoveIfLegal(pos, hashMove, pinnedPieces(pos, pos->side))) break;
@@ -628,15 +628,16 @@ void extractPvMovesFromHash(position_t *pos, continuation_t* pv, basic_move_t mo
     }
 }
 
-void repopulateHash(position_t *pos, continuation_t *rootPV, int depth, int score) {
+void repopulateHash(position_t *pos, continuation_t *rootPV) {
     int moveOn;
     pos_store_t undo[MAXPLY];
     for (moveOn=0; moveOn+1 <= rootPV->length; moveOn++) {
         basic_move_t move = rootPV->moves[moveOn];
         if (!move) break;
-        transStore<HTExact>(pos->hash, move, depth, score, 0);
+        pvhash_entry_t* entry = getPvEntryFromMove(pos->hash, move);
+        if (NULL == entry) break;
+        transStore<HTExact>(pos->hash, pvGetMove(entry), pvGetDepth(entry), pvGetValue(entry), 0);
         makeMove(pos, &(undo[moveOn]), move);
-        if (depth > 1) depth--;
     }
     for (moveOn = moveOn-1; moveOn >= 0; moveOn--) {
         unmakeMove(pos, &(undo[moveOn]));
@@ -900,7 +901,8 @@ void getBestMove(position_t *pos, int thread_id) {
             } else break;
         }
         if (SearchInfo(thread_id).thinking_status == STOPPED) break;
-        repopulateHash(pos, &SearchInfo(thread_id).rootPV, id, SearchInfo(thread_id).best_value);
+        //repopulateHash(pos, &SearchInfo(thread_id).rootPV, id, SearchInfo(thread_id).best_value);
+        repopulateHash(pos, &SearchInfo(thread_id).rootPV);
         timeManagement(id, thread_id);
         if (SearchInfo(thread_id).thinking_status == STOPPED) break;
         if (SearchInfo(thread_id).best_value != -INF) {
