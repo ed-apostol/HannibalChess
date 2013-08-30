@@ -230,7 +230,7 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, const bool in
             return DrawValue[pos->side];
         }
         Threads[thread_id].evalvalue[pos->ply] = bestvalue = eval(pos, thread_id, &opt, &pes);
-        if (pos->posStore.lastmove != EMPTY) updateEvalgains(pos, pos->posStore.lastmove, Threads[thread_id].evalvalue[pos->ply-1], Threads[thread_id].evalvalue[pos->ply], thread_id);
+        updateEvalgains(pos, pos->posStore.lastmove, Threads[thread_id].evalvalue[pos->ply-1], Threads[thread_id].evalvalue[pos->ply], thread_id);
         if (bestvalue > alpha) {
             if (bestvalue >= beta) {
                 ASSERT(valueIsOk(bestvalue));
@@ -343,12 +343,9 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
         int t = 0;
         int evalDepth = 0;
 
-        //////if (alpha > INF-pos->ply) return alpha;
-        //////bestvalue = -INF+pos->ply;
-        //////if (alpha < bestvalue) {
-        //////    if (beta <= bestvalue) return beta;
-        //////    else alpha = bestvalue;
-        //////}
+        alpha = MAX(-INF + pos->ply, alpha);
+        beta = MIN(INF - pos->ply - 1, beta);
+        if (alpha >= beta) return alpha;
 
         Threads[thread_id].evalvalue[pos->ply] = -INF;
         for (trans_entry_t * entry = TransTable(thread).table + (KEY(pos->hash) & TransTable(thread).mask); t < 4; t++, entry++) {
@@ -387,7 +384,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
         if (Threads[thread_id].evalvalue[pos->ply] == -INF) Threads[thread_id].evalvalue[pos->ply] = eval(pos, thread_id, &opt, &pes);
 
         if (pos->ply >= MAXPLY-1) return Threads[thread_id].evalvalue[pos->ply];
-        if (pos->posStore.lastmove != EMPTY) updateEvalgains(pos, pos->posStore.lastmove, Threads[thread_id].evalvalue[pos->ply-1], Threads[thread_id].evalvalue[pos->ply], thread_id);
+        updateEvalgains(pos, pos->posStore.lastmove, Threads[thread_id].evalvalue[pos->ply-1], Threads[thread_id].evalvalue[pos->ply], thread_id);
 
         if (!inPvNode(nt) && !inCheck && prune) {
             const int MaxRazorDepth = 10;
@@ -910,7 +907,7 @@ void getBestMove(position_t *pos, int thread_id) {
             SearchInfo(thread_id).last_last_value = SearchInfo(thread_id).last_value;
             SearchInfo(thread_id).last_value = SearchInfo(thread_id).best_value;
         }
-        Print(1, "info string cutfails: %d %% allfails: %d %%\n", (SearchInfo(0).cutfail * 100)/SearchInfo(0).cutnodes, (SearchInfo(0).allfail * 100)/SearchInfo(0).allnodes);
+        //////Print(1, "info string cutfails: %d %% allfails: %d %%\n", (SearchInfo(0).cutfail * 100)/SearchInfo(0).cutnodes, (SearchInfo(0).allfail * 100)/SearchInfo(0).allnodes);
     }
     if (SearchInfo(thread_id).thinking_status != STOPPED) {
         if ((SearchInfo(thread_id).depth_is_limited || SearchInfo(thread_id).time_is_limited) && SearchInfo(thread_id).thinking_status == THINKING) {
