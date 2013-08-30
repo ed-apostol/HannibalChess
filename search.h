@@ -869,6 +869,7 @@ void getBestMove(position_t *pos, int thread_id) {
 
     SearchInfo(thread_id).try_easy = true;
     for (id = 1; id < MAXPLY; id++) {
+        const int AspirationWindow = 24;
         int faillow = 0, failhigh = 0;
         SearchInfo(thread_id).iteration = id;
         SearchInfo(thread_id).best_value = -INF;
@@ -878,8 +879,8 @@ void getBestMove(position_t *pos, int thread_id) {
             alpha = -INF;
             beta = INF;
         } else {
-            alpha = SearchInfo(thread_id).last_value-16;
-            beta = SearchInfo(thread_id).last_value+16;
+            alpha = SearchInfo(thread_id).last_value-AspirationWindow;
+            beta = SearchInfo(thread_id).last_value+AspirationWindow;
             if (alpha < -RookValue) alpha = -INF;
             if (beta > RookValue) beta = INF;
         }
@@ -891,11 +892,11 @@ void getBestMove(position_t *pos, int thread_id) {
 
             if (SearchInfo(thread_id).thinking_status == STOPPED) break;
             if(SearchInfo(thread_id).best_value <= alpha) {
-                if (SearchInfo(thread_id).best_value <= alpha) alpha = SearchInfo(thread_id).best_value-(16<<++faillow);
+                if (SearchInfo(thread_id).best_value <= alpha) alpha = SearchInfo(thread_id).best_value-(AspirationWindow<<++faillow);
                 if (alpha < -RookValue) alpha = -INF;
                 SearchInfo(thread_id).research = 1;
             } else if(SearchInfo(thread_id).best_value >= beta) {
-                if (SearchInfo(thread_id).best_value >= beta)  beta = SearchInfo(thread_id).best_value+(16<<++failhigh);
+                if (SearchInfo(thread_id).best_value >= beta)  beta = SearchInfo(thread_id).best_value+(AspirationWindow<<++failhigh);
                 if (beta > RookValue) beta = INF;
                 SearchInfo(thread_id).research = 1;
             } else break;
