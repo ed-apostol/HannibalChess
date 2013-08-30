@@ -398,20 +398,15 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
             }
             if (depth >= 2 && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) && Threads[thread_id].evalvalue[pos->ply] >= beta) {
                 int nullDepth = depth - (4 + depth/5 + (Threads[thread_id].evalvalue[pos->ply] - beta > PawnValue));
-                if (depth >= 12) score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, false, EMPTY, thread_id, nt); // TODO: set to false and DEBUG
-                else score = beta;
+                makeNullMove(pos, &undo);
+                score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, false, EMPTY, thread_id, AllNode);
+                basic_move_t threatMove = transGetHashMove(pos->hash, thread_id);
+                if (threatMove != EMPTY) nullThreatMoveToBit = BitMask[moveTo(threatMove)];
+                unmakeNullMove(pos, &undo);
                 if (score >= beta) {
-                    makeNullMove(pos, &undo);
-                    score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, false, EMPTY, thread_id, AllNode);
-                    basic_move_t threatMove = transGetHashMove(pos->hash, thread_id);
-                    if (threatMove != EMPTY) nullThreatMoveToBit = BitMask[moveTo(threatMove)];
-                    unmakeNullMove(pos, &undo);
-                    if (score >= beta) {
-                        ASSERT(valueIsOk(score));
-                        if (inCutNode(nt)) transStore<HTLower>(pos->hash, EMPTY, depth, score, thread_id);
-                        else transStore<HTAllLower>(pos->hash, EMPTY, depth, score, thread_id);
-                        return score;
-                    }
+                    if (depth < 12) return score;
+                    score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, false, EMPTY, thread_id, nt);
+                    if (score >= beta) return score;
                 }
             }
         }
