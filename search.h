@@ -386,8 +386,8 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
         if (pos->ply >= MAXPLY-1) return Threads[thread_id].evalvalue[pos->ply];
         updateEvalgains(pos, pos->posStore.lastmove, Threads[thread_id].evalvalue[pos->ply-1], Threads[thread_id].evalvalue[pos->ply], thread_id);
 
-        if (!inPvNode(nt) && !inCheck && prune) {
-            const int MaxRazorDepth = 10;
+        if (!inPvNode(nt) && !inCheck) {
+            const int MaxRazorDepth = 4;
             int rvalue;
             if (depth <= MaxRazorDepth && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) && Threads[thread_id].evalvalue[pos->ply] > (rvalue = beta + FutilityMarginTable[MIN(depth, MaxRazorDepth)][0]))  {
                 return rvalue;
