@@ -67,6 +67,7 @@ typedef struct _sort_t{
     basic_move_t transmove;
     basic_move_t killer1;
     basic_move_t killer2;
+    int32 evalvalue;
     int32 scout;
     int32 ply;
     int32 depth;
@@ -300,12 +301,62 @@ typedef struct _search_info_t{
     transtable_t tt;
 }search_info_t;
 
+
+struct ThreadStack {
+    void Init () { 
+        killer1 = EMPTY;
+        killer2 = EMPTY;
+    }
+    basic_move_t killer1;
+    basic_move_t killer2;
+};
+
+struct SearchStack {
+    SearchStack () :
+        firstExtend(false),
+        reducedMove(false),
+        moveGivesCheck(false),
+        playedMoves(0),
+        hisCnt(0),
+        evalvalue(-INF),
+        bestvalue(-INF),
+        bestmove(EMPTY),
+        dcc(0),
+        nullThreatMoveToBit(0),
+        bannedMove(EMPTY),
+        hashMove(EMPTY),
+        hashDepth(0),
+        mvlist(&movelist),
+        mvlist_phase(0)
+    { }
+    int playedMoves;
+    int hisCnt;
+    basic_move_t hisMoves[64];
+    int bestvalue;
+    basic_move_t bestmove;
+
+    bool firstExtend;
+    bool reducedMove;
+    bool moveGivesCheck;
+    int evalvalue;
+    uint64 dcc;
+    uint64 nullThreatMoveToBit;
+    basic_move_t bannedMove;
+    basic_move_t hashMove;
+    int hashDepth;
+
+    movelist_t movelist;
+    movelist_t* mvlist;
+    int mvlist_phase;
+};
+
 typedef CRITICAL_SECTION mutex_t;
 
-typedef struct _split_point_t{
+struct SplitPoint {
     position_t pos[MaxNumOfThreads];
-    _split_point_t* parent;
     movelist_t *parent_movestack;
+    SplitPoint* parent;
+    SearchStack* ssprev;
     int depth;
     bool inCheck;
     bool inRoot;
@@ -320,10 +371,10 @@ typedef struct _split_point_t{
     volatile int cpus;
     mutex_t movelistlock[1];
     mutex_t updatelock[1];
-} split_point_t;
+};
 
-typedef struct {
-    split_point_t *split_point;
+struct thread_t {
+    SplitPoint *split_point;
     volatile bool stop;
     volatile bool running;
     volatile bool idle;
@@ -337,19 +388,13 @@ typedef struct {
     uint64 started; // DEBUG
     uint64 ended; // DEBUG
     int64 numsplits; // DEBUG
-    //    evaltable_t et;
-    //    pawntable_t pt;
     int num_sp;
-    int evalvalue[MAXPLY];
-    basic_move_t killer1[MAXPLY]; //consider moving
-    basic_move_t killer2[MAXPLY]; //consider moving 
-    //    int32 evalgains[1024];
-    //    int32 history[1024];
-    split_point_t sptable[MaxNumSplitPointsPerThread];
+    ThreadStack ts[MAXPLY];
+    SplitPoint sptable[MaxNumSplitPointsPerThread];
 #ifdef SELF_TUNE2
     bool playingGame;
 #endif
-} thread_t;
+};
 
 
 enum directions {SW,W,NW,N,NE,E,SE,S,NO_DIR };//{-9, -1, 7, 8, 9, 1, -7, -8};

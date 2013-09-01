@@ -8,10 +8,11 @@
 /**************************************************/
 
 
-void sortInit(const position_t *pos, movelist_t *mvlist, uint64 pinned, uint32 hashmove, int scout, int depth, int type, int thread_id) {
+void sortInit(const position_t *pos, movelist_t *mvlist, uint64 pinned, uint32 hashmove, int scout, int eval, int depth, int type, int thread_id) {
     mvlist->transmove =  hashmove;
-    mvlist->killer1 = Threads[thread_id].killer1[pos->ply];
-    mvlist->killer2 = Threads[thread_id].killer2[pos->ply];
+    mvlist->killer1 = Threads[thread_id].ts[pos->ply].killer1;
+    mvlist->killer2 = Threads[thread_id].ts[pos->ply].killer2;
+    mvlist->evalvalue = eval;
     mvlist->pos = 0;
     mvlist->size = 0;
     mvlist->pinned = pinned;
@@ -145,10 +146,10 @@ void scoreRoot(movelist_t *mvlist) {
     }
 }
 
-basic_move_t sortNext(split_point_t* sp, position_t *pos, movelist_t *mvlist, int *phase, int thread_id) {
+basic_move_t sortNext(SplitPoint* sp, position_t *pos, movelist_t *mvlist, int& phase, int thread_id) {
     basic_move_t move;
     if (sp != NULL) MutexLock(sp->movelistlock);
-    *phase = mvlist->phase;
+    phase = mvlist->phase;
     if (MoveGenPhase[mvlist->phase] == PH_END) {  // SMP hack
         if (sp != NULL) MutexUnlock(sp->movelistlock);
         return EMPTY;
@@ -229,7 +230,7 @@ basic_move_t sortNext(split_point_t* sp, position_t *pos, movelist_t *mvlist, in
         }
 
         mvlist->phase++;
-        *phase = mvlist->phase;
+        phase = mvlist->phase;
 
         switch (MoveGenPhase[mvlist->phase]) {
         case PH_ROOT:
@@ -295,8 +296,8 @@ basic_move_t sortNext(split_point_t* sp, position_t *pos, movelist_t *mvlist, in
             scoreNonCaptures(pos, mvlist, thread_id);
             break;
         case PH_GAINING:
-            if (mvlist->scout - Threads[thread_id].evalvalue[pos->ply] > 150) continue; // TODO: test other values
-            genGainingMoves(pos, mvlist, mvlist->scout - Threads[thread_id].evalvalue[pos->ply], thread_id);
+            if (mvlist->scout - mvlist->evalvalue > 150) continue; // TODO: test other values
+            genGainingMoves(pos, mvlist, mvlist->scout - mvlist->evalvalue, thread_id);
             // Print(3, "delta = %d, mvlist->size = %d\n", mvlist->scout - SearchInfo.evalvalue[pos->ply], mvlist->size);
             scoreNonCaptures(pos, mvlist, thread_id);
             break;

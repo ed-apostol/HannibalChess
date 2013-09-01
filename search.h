@@ -178,28 +178,17 @@ void updateEvalgains(const position_t *pos, uint32 move, int before, int after, 
 
 const int MaxPieceValue[] = {0, PawnValueEnd, KnightValueEnd, BishopValueEnd, RookValueEnd, QueenValueEnd, 10000};
 
-int qSearch(position_t *pos, int alpha, int beta, const int depth, const bool inCheck, const int thread_id, int inPv) {
-    int bestvalue = -INF;
-    int oldalpha = alpha;
-    int score;
-    int newdepth;
+template<bool inPv>
+int qSearch(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, const int thread_id) {
     int pes = 0, opt = 0;
-    bool moveGivesCheck;
-    uint32 bestmove = EMPTY;
     uint64 pinned;
-    uint64 dcc;
-    basic_move_t move;
-    movelist_t mvlist;
-    pos_store_t undo;
-    trans_entry_t * entry = NULL;
-    uint32 hashMove = EMPTY;
-    int hashDepth = 0;
-    int mvlist_phase;
+    SearchStack ss;
 
     ASSERT(pos != NULL);
     ASSERT(valueIsOk(alpha));
     ASSERT(valueIsOk(beta));
     ASSERT(alpha < beta);
+    ASSERT(pos->ply > 0); // for ssprev above
 
     initNode(pos, thread_id);
     if (Threads[thread_id].stop) return 0;
@@ -210,85 +199,88 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, const bool in
             transSetAge(entry, TransTable(thread).date);
             if (!inPv) { // TODO: re-use values from here to evalvalue?
                 if (transMove(entry) != EMPTY && transLowerDepth(entry) > 0) {
-                    score = scoreFromTrans(transLowerValue(entry), pos->ply);
+                    int score = scoreFromTrans(transLowerValue(entry), pos->ply);
                     if (score > alpha) return score;
                 }
                 if (transUpperDepth(entry) > 0) {
-                    score = scoreFromTrans(transUpperValue(entry), pos->ply);
+                    int score = scoreFromTrans(transUpperValue(entry), pos->ply);
                     if (score < beta) return score;
                 }
             }
-            if (transMove(entry) != EMPTY && transLowerDepth(entry) > hashDepth ) {
-                hashDepth = transLowerDepth(entry);
-                hashMove = transMove(entry);
+            if (transMove(entry) != EMPTY && transLowerDepth(entry) > ss.hashDepth ) {
+                ss.hashDepth = transLowerDepth(entry);
+                ss.hashMove = transMove(entry);
             }
         }
     }
     if (pos->ply >= MAXPLY-1) return eval(pos, thread_id, &opt, &pes);
-    if (!inCheck) {
+    if (!ssprev.moveGivesCheck) {
         if (simpleStalemate(pos)) {
             return DrawValue[pos->side];
         }
-        Threads[thread_id].evalvalue[pos->ply] = bestvalue = eval(pos, thread_id, &opt, &pes);
-        updateEvalgains(pos, pos->posStore.lastmove, Threads[thread_id].evalvalue[pos->ply-1], Threads[thread_id].evalvalue[pos->ply], thread_id);
-        if (bestvalue > alpha) {
-            if (bestvalue >= beta) {
-                ASSERT(valueIsOk(bestvalue));
-                return bestvalue;
+        ss.evalvalue = ss.bestvalue = eval(pos, thread_id, &opt, &pes);
+        updateEvalgains(pos, pos->posStore.lastmove, ssprev.evalvalue, ss.evalvalue, thread_id);
+        if (ss.bestvalue > alpha) {
+            if (ss.bestvalue >= beta) {
+                ASSERT(valueIsOk(ss.bestvalue));
+                return ss.bestvalue;
             }
-            alpha = bestvalue;
+            alpha = ss.bestvalue;
         }
     }
     pinned = pinnedPieces(pos, pos->side);
-    dcc = discoveredCheckCandidates(pos, pos->side);
-    if (inCheck) {
-        sortInit(pos, &mvlist, pinned, hashMove, alpha, depth, MoveGenPhaseEvasion, thread_id);
+    ss.dcc = discoveredCheckCandidates(pos, pos->side);
+    if (ssprev.moveGivesCheck) {
+        sortInit(pos, ss.mvlist, pinned, ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseEvasion, thread_id);
     } else {
-        if (inPv) sortInit(pos, &mvlist, pinned, hashMove, alpha, depth, (depth > -Q_PVCHECK) ? MoveGenPhaseQuiescenceAndChecksPV : MoveGenPhaseQuiescencePV, thread_id);
-        else sortInit(pos, &mvlist, pinned, hashMove, alpha, depth, (depth > -Q_CHECK) ? MoveGenPhaseQuiescenceAndChecks : MoveGenPhaseQuiescence, thread_id);
+        if (inPv) sortInit(pos, ss.mvlist, pinned, ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_PVCHECK) ? MoveGenPhaseQuiescenceAndChecksPV : MoveGenPhaseQuiescencePV, thread_id);
+        else sortInit(pos, ss.mvlist, pinned, ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_CHECK) ? MoveGenPhaseQuiescenceAndChecks : MoveGenPhaseQuiescence, thread_id);
     }
-    bool prunable = !inCheck && !inPv && MinTwoBits(pos->color[pos->side^1] & pos->pawns) && MinTwoBits(pos->color[pos->side^1] & ~(pos->pawns | pos->kings));
-    while ((move = sortNext(NULL, pos, &mvlist, &mvlist_phase, thread_id)) != EMPTY) {
+    bool prunable = !ssprev.moveGivesCheck && !inPv && MinTwoBits(pos->color[pos->side^1] & pos->pawns) && MinTwoBits(pos->color[pos->side^1] & ~(pos->pawns | pos->kings));
+    basic_move_t move;
+    while ((move = sortNext(NULL, pos, ss.mvlist, ss.mvlist_phase, thread_id)) != EMPTY) {
+        int score;
         if (anyRepNoMove(pos,move)) { 
             score = DrawValue[pos->side];
         } else {
-            moveGivesCheck = moveIsCheck(pos, move, dcc);
-            if (prunable && move!=hashMove && !moveGivesCheck && !moveIsPassedPawn(pos, move)) {
-                int scoreAprox = Threads[thread_id].evalvalue[pos->ply] + PawnValueEnd + MaxPieceValue[moveCapture(move)]; 
+            pos_store_t undo;
+            ss.moveGivesCheck = moveIsCheck(pos, move, ss.dcc);
+            if (prunable && move != ss.hashMove && !ss.moveGivesCheck && !moveIsPassedPawn(pos, move)) {
+                int scoreAprox = ss.evalvalue + PawnValueEnd + MaxPieceValue[moveCapture(move)]; 
                 if (scoreAprox < beta) continue;
             }
-            newdepth = depth - !moveGivesCheck;
+            int newdepth = depth - !ss.moveGivesCheck;
             makeMove(pos, &undo, move);
-            score = -qSearch(pos, -beta, -alpha, newdepth, moveGivesCheck, thread_id, inPv);
+            score = -qSearch<inPv>(pos, -beta, -alpha, newdepth, ss, thread_id);
             unmakeMove(pos, &undo);
         }
-        if (score > bestvalue) {
-            bestvalue = score;
+        if (score > ss.bestvalue) {
+            ss.bestvalue = score;
             if (score > alpha) {
-                bestmove = move;
+                ss.bestmove = move;
                 if (score >= beta) {
-                    transStore<HTLower>(pos->hash, bestmove, 1, scoreToTrans(bestvalue, pos->ply), thread_id);
-                    ASSERT(valueIsOk(bestvalue));
-                    return bestvalue;
+                    transStore<HTLower>(pos->hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
+                    ASSERT(valueIsOk(ss.bestvalue));
+                    return ss.bestvalue;
                 }
                 alpha = score;
             }
         }
     }
-    if (inCheck && bestvalue == -INF) {
-        bestvalue = (-INF + pos->ply); 
-        transStore<HTNoMoves>(pos->hash, EMPTY, 1, scoreToTrans(bestvalue, pos->ply), thread_id);
-        return bestvalue;
+    if (ssprev.moveGivesCheck && ss.bestvalue == -INF) {
+        ss.bestvalue = (-INF + pos->ply); 
+        transStore<HTNoMoves>(pos->hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
+        return ss.bestvalue;
     }
 
     ASSERT(bestvalue != -INF);
 
-    if (inPv && bestmove != EMPTY) transStore<HTExact>(pos->hash, bestmove, 1, scoreToTrans(bestvalue, pos->ply), thread_id);
-    else transStore<HTUpper>(pos->hash, EMPTY, 1, scoreToTrans(bestvalue, pos->ply), thread_id);
+    if (inPv && ss.bestmove != EMPTY) transStore<HTExact>(pos->hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
+    else transStore<HTUpper>(pos->hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
 
-    ASSERT(valueIsOk(bestvalue));
+    ASSERT(valueIsOk(ss.bestvalue));
 
-    return bestvalue;
+    return ss.bestvalue;
 }
 
 inline bool inPvNode(NodeType nt) { return (nt==PVNode);}
@@ -297,39 +289,23 @@ inline bool inAllNode(NodeType nt) { return (nt==AllNode);}
 inline NodeType invertNode(NodeType nt) { return ((nt==PVNode) ? PVNode : ((nt==CutNode) ? AllNode : CutNode));}
 
 template <bool inRoot, bool inSplitPoint, bool inSingular>
-int searchNode(position_t *pos, int alpha, int beta, const int depth, const bool inCheck, const basic_move_t moveBanned, const int thread_id, NodeType nt) {
-    if (depth <= 0) return qSearch(pos, alpha, beta, 0, inCheck, thread_id, inPvNode(nt));
-    else {
-        if (inCheck) return searchGeneric<inRoot, inSplitPoint, true, inSingular>(pos, alpha, beta, depth, moveBanned, thread_id, nt);
-        else return searchGeneric<inRoot, inSplitPoint, false, inSingular>(pos, alpha, beta, depth, moveBanned, thread_id, nt);
+int searchNode(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, const int thread_id, NodeType nt) {
+    if (depth <= 0) {
+        if (inPvNode(nt)) return qSearch<true>(pos, alpha, beta, 0, ssprev, thread_id);
+        else return qSearch<false>(pos, alpha, beta, 0, ssprev, thread_id);
+    } else {
+        if (ssprev.moveGivesCheck) return searchGeneric<inRoot, inSplitPoint, true, inSingular>(pos, alpha, beta, depth, ssprev, thread_id, nt);
+        else return searchGeneric<inRoot, inSplitPoint, false, inSingular>(pos, alpha, beta, depth, ssprev, thread_id, nt);
     }
 }
 
 template<bool inRoot, bool inSplitPoint, bool inCheck, bool inSingular>
-int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const basic_move_t bannedMove, const int thread_id, NodeType nt) {
-    int bestvalue = -INF;
+int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, const int thread_id, NodeType nt) {
     int oldalpha = alpha;
-    int score;
-    int newdepth;
-    bool moveGivesCheck;
-    int played = 0;
     int pes = 0, opt = 0;
-    uint32 bestmove = EMPTY;
-    uint64 dcc;
-    basic_move_t move;
-    movelist_t movelist;
-    movelist_t* mvlist = &movelist;
-    pos_store_t undo;
-    trans_entry_t * entry = NULL;
-    int firstExtend = FALSE;
-    int hashDepth = 0;
-    basic_move_t hashMove = EMPTY;
-    int prune = (abs(alpha) < MAXEVAL);
-    int mvlist_phase;
-    split_point_t* sp = NULL;
-    uint64 nullThreatMoveToBit = 0;
-    basic_move_t hisMoves[64] = {0};
-
+    SplitPoint* sp = NULL;
+    SearchStack ss;
+    
     ASSERT(pos != NULL);
     ASSERT(valueIsOk(alpha)); 
     ASSERT(valueIsOk(beta)); 
@@ -347,7 +323,6 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
         beta = MIN(INF - pos->ply - 1, beta);
         if (alpha >= beta) return alpha;
 
-        Threads[thread_id].evalvalue[pos->ply] = -INF;
         for (trans_entry_t * entry = TransTable(thread).table + (KEY(pos->hash) & TransTable(thread).mask); t < 4; t++, entry++) {
             if (transHashLock(entry) == LOCK(pos->hash)) {
                 transSetAge(entry, TransTable(thread).date);
@@ -357,156 +332,165 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
                 }
                 if (!inPvNode(nt)) {
                     if ((!inCutNode(nt) || !(transMask(entry) & MAllLower)) && transLowerDepth(entry) >= depth && (transMove(entry) != EMPTY || pos->posStore.lastmove == EMPTY)) {
-                        score = scoreFromTrans(transLowerValue(entry), pos->ply);
+                        int score = scoreFromTrans(transLowerValue(entry), pos->ply);
                         ASSERT(valueIsOk(score));
                         if (score > alpha) return score;
                     }
                     if ((!inAllNode(nt) || !(transMask(entry) & MCutUpper)) && transUpperDepth(entry) >= depth) {
-                        score = scoreFromTrans(transUpperValue(entry), pos->ply);
+                        int score = scoreFromTrans(transUpperValue(entry), pos->ply);
                         ASSERT(valueIsOk(score));
                         if (score < beta) return score;
                     }
                 }
-                if (transMove(entry) != EMPTY && transLowerDepth(entry) > hashDepth) {
-                    hashMove = transMove(entry);
-                    hashDepth = transLowerDepth(entry);
+                if (transMove(entry) != EMPTY && transLowerDepth(entry) > ss.hashDepth) {
+                    ss.hashMove = transMove(entry);
+                    ss.hashDepth = transLowerDepth(entry);
                 }
                 if (transLowerDepth(entry) > evalDepth) {
                     evalDepth = transLowerDepth(entry);
-                    Threads[thread_id].evalvalue[pos->ply] = scoreFromTrans(transLowerValue(entry), pos->ply);
+                    ss.evalvalue = scoreFromTrans(transLowerValue(entry), pos->ply);
                 }
                 if (transUpperDepth(entry) > evalDepth) {
                     evalDepth = transUpperDepth(entry);
-                    Threads[thread_id].evalvalue[pos->ply] = scoreFromTrans(transUpperValue(entry), pos->ply);
+                    ss.evalvalue = scoreFromTrans(transUpperValue(entry), pos->ply);
                 }
             }
         }
-        if (Threads[thread_id].evalvalue[pos->ply] == -INF) Threads[thread_id].evalvalue[pos->ply] = eval(pos, thread_id, &opt, &pes);
+        if (ss.evalvalue == -INF) ss.evalvalue = eval(pos, thread_id, &opt, &pes);
 
-        if (pos->ply >= MAXPLY-1) return Threads[thread_id].evalvalue[pos->ply];
-        updateEvalgains(pos, pos->posStore.lastmove, Threads[thread_id].evalvalue[pos->ply-1], Threads[thread_id].evalvalue[pos->ply], thread_id);
+        if (pos->ply >= MAXPLY-1) return ss.evalvalue;
+        updateEvalgains(pos, pos->posStore.lastmove, ssprev.evalvalue, ss.evalvalue, thread_id);
 
         if (!inPvNode(nt) && !inCheck) {
             const int MaxRazorDepth = 4;
             int rvalue;
-            if (depth <= MaxRazorDepth && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) && Threads[thread_id].evalvalue[pos->ply] > (rvalue = beta + FutilityMarginTable[MIN(depth, MaxRazorDepth)][0]))  {
+            if (depth <= MaxRazorDepth && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) && ss.evalvalue > (rvalue = beta + FutilityMarginTable[MIN(depth, MaxRazorDepth)][0]))  {
                 return rvalue;
             }
-            if (depth <= MaxRazorDepth && pos->posStore.lastmove != EMPTY && Threads[thread_id].evalvalue[pos->ply] < (rvalue = beta - FutilityMarginTable[MIN(depth, MaxRazorDepth)][0])) { 
-                score = searchNode<false, false, false>(pos, rvalue-1, rvalue, depth-4, false, EMPTY, thread_id, nt);
+            if (depth <= MaxRazorDepth && pos->posStore.lastmove != EMPTY && ss.evalvalue < (rvalue = beta - FutilityMarginTable[MIN(depth, MaxRazorDepth)][0])) { 
+                int score = searchNode<false, false, false>(pos, rvalue-1, rvalue, depth-4, ssprev, thread_id, nt);
                 if (score < rvalue) return score; 
             }
-            if (depth >= 2 && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) && Threads[thread_id].evalvalue[pos->ply] >= beta) {
-                int nullDepth = depth - (4 + depth/5 + (Threads[thread_id].evalvalue[pos->ply] - beta > PawnValue));
+            if (depth >= 2 && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) && ss.evalvalue >= beta) {
+                pos_store_t undo;
+                int nullDepth = depth - (4 + depth/5 + (ss.evalvalue - beta > PawnValue));
                 makeNullMove(pos, &undo);
-                score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, false, EMPTY, thread_id, AllNode);
+                int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, thread_id, AllNode);
                 basic_move_t threatMove = transGetHashMove(pos->hash, thread_id);
-                if (threatMove != EMPTY) nullThreatMoveToBit = BitMask[moveTo(threatMove)];
+                if (threatMove != EMPTY) ss.nullThreatMoveToBit = BitMask[moveTo(threatMove)];
                 unmakeNullMove(pos, &undo);
                 if (score >= beta) {
-                    if (depth < 12) return score;
-                    score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, false, EMPTY, thread_id, nt);
-                    if (score >= beta) return score;
+                    if (depth >= 12) score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, ssprev, thread_id, nt);
+                    if (score >= beta) {
+                        if (inCutNode(nt)) transStore<HTLower>(pos->hash, EMPTY, depth, scoreToTrans(score, pos->ply), thread_id);
+                        else transStore<HTAllLower>(pos->hash, EMPTY, depth, scoreToTrans(score, pos->ply), thread_id);
+                        return score;
+                    }
                 }
             }
         }
 
-        if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt)?6:8) && prune) { // IID
-            newdepth = inPvNode(nt) ? depth - 2 : depth / 2;
-            if (hashMove == EMPTY || hashDepth < newdepth) {
-                score = searchNode<false, false, false>(pos, alpha, beta, newdepth, inCheck, EMPTY, thread_id, nt);
+        if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt)?6:8)) { // IID
+            int newdepth = inPvNode(nt) ? depth - 2 : depth / 2;
+            if (ss.hashMove == EMPTY || ss.hashDepth < newdepth) {
+                int score = searchNode<false, false, false>(pos, alpha, beta, newdepth, ssprev, thread_id, nt);
                 if (score > alpha) {
-                    hashMove = transGetHashMove(pos->hash, thread_id);
-                    Threads[thread_id].evalvalue[pos->ply] = score;
-                    hashDepth = newdepth;
+                    ss.hashMove = transGetHashMove(pos->hash, thread_id);
+                    ss.evalvalue = score;
+                    ss.hashDepth = newdepth;
                 }
             }
         }
-        if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt)?6:8) && prune) { // singular extension
-            newdepth = depth / 2;
-            if (hashMove != EMPTY && hashDepth >= newdepth) { 
-                int targetScore = Threads[thread_id].evalvalue[pos->ply] - EXPLORE_CUTOFF;
-                score = searchNode<false, false, true>(pos, targetScore, targetScore+1, newdepth, inCheck, hashMove, thread_id, nt);
-                if (score <= targetScore) firstExtend = TRUE;
+        if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt)?6:8)) { // singular extension
+            int newdepth = depth / 2;
+            if (ss.hashMove != EMPTY && ss.hashDepth >= newdepth) { 
+                int targetScore = ss.evalvalue - EXPLORE_CUTOFF;
+                ssprev.bannedMove = ss.hashMove;
+                int score = searchNode<false, false, true>(pos, targetScore, targetScore+1, newdepth, ssprev, thread_id, nt);
+                ssprev.bannedMove = EMPTY;
+                if (score <= targetScore) ss.firstExtend = true;
             }
         }
     }
-
-    dcc = discoveredCheckCandidates(pos, pos->side);
 
     if (inSplitPoint) {
         sp = Threads[thread_id].split_point;
-        bestvalue = sp->bestvalue;
-        bestmove = sp->bestmove;
-        mvlist = sp->parent_movestack;
-        played = sp->played;
+        ss.bestvalue = sp->bestvalue;
+        ss.bestmove = sp->bestmove;
+        ss.mvlist = sp->parent_movestack;
+        ss.playedMoves = sp->played;
     } else {
         if (inRoot) {
-            mvlist = &SearchInfo(thread_id).rootmvlist;
+            ss.mvlist = &SearchInfo(thread_id).rootmvlist;
             if (!SearchInfo(thread_id).mvlist_initialized) {
-                hashMove = transGetHashMove(pos->hash, thread_id);
-                sortInit(pos, mvlist, pinnedPieces(pos, pos->side), hashMove, alpha, depth, MoveGenPhaseRoot, thread_id);
+                ss.hashMove = transGetHashMove(pos->hash, thread_id);
+                sortInit(pos, ss.mvlist, pinnedPieces(pos, pos->side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseRoot, thread_id);
             } else {
-                mvlist->pos = 0;
-                mvlist->phase = MoveGenPhaseRoot + 1;
+                ss.mvlist->pos = 0;
+                ss.mvlist->phase = MoveGenPhaseRoot + 1;
             }
         } else {
-            sortInit(pos, mvlist, pinnedPieces(pos, pos->side), hashMove, alpha, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), thread_id);
-            firstExtend |= (inCheck && mvlist->size==1);
+            sortInit(pos, ss.mvlist, pinnedPieces(pos, pos->side), ss.hashMove, alpha, ss.evalvalue, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), thread_id);
+            ss.firstExtend = ss.firstExtend || (inCheck && ss.mvlist->size==1);
         }
     }
+
+    ss.dcc = discoveredCheckCandidates(pos, pos->side); // always assign even in splitpoint, data not copied over from master
+
     int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 3) : (depth * depth));
-    int hisOn = 0;
-    while ((move = sortNext(sp, pos, mvlist, &mvlist_phase, thread_id)) != EMPTY) {
+    basic_move_t move;
+    while ((move = sortNext(sp, pos, ss.mvlist, ss.mvlist_phase, thread_id)) != EMPTY) {
+        int score = -INF;
         if (inSplitPoint) {
             MutexLock(sp->updatelock);
-            played = ++sp->played;
+            ss.playedMoves = ++sp->played;
             MutexUnlock(sp->updatelock);
-        } else ++played;
-        if (inSingular && move == bannedMove) continue;
-        if (!inSplitPoint && hisOn < 64 && !moveIsTactical(move)) {
-            hisMoves[hisOn++] = move;
+        } else ++ss.playedMoves;
+        if (inSingular && move == ssprev.bannedMove) continue;
+        if (!inSplitPoint && ss.hisCnt < 64 && !moveIsTactical(move)) {
+            ss.hisMoves[ss.hisCnt++] = move;
         }
         if (anyRepNoMove(pos, move)) { 
             score = DrawValue[pos->side];
         } else {
-            moveGivesCheck = moveIsCheck(pos, move, dcc);
-            newdepth = depth - !(firstExtend && played==1);
-            if (bestvalue == -INF) {
+            pos_store_t undo;
+            ss.moveGivesCheck = moveIsCheck(pos, move, ss.dcc);
+            int newdepth = depth - !(ss.firstExtend && ss.playedMoves==1);
+            if (ss.bestvalue == -INF) {
                 makeMove(pos, &undo, move);
-                score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, EMPTY, thread_id, invertNode(nt));
+                score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, thread_id, invertNode(nt));
             } else {
-                int okToPruneOrReduce = (newdepth >= depth || inCheck || moveGivesCheck || MoveGenPhase[mvlist_phase] != PH_QUIET_MOVES) ? 0 : 1;
+                int okToPruneOrReduce = (newdepth >= depth || inCheck || ss.moveGivesCheck || MoveGenPhase[ss.mvlist_phase] != PH_QUIET_MOVES) ? 0 : 1;
                 int newdepthclone = newdepth;
                 if (!inRoot && !inPvNode(nt) && okToPruneOrReduce) {
-                    if (played > lateMove && !isMoveDefence(pos, move, nullThreatMoveToBit)) continue;
-                    int predictedDepth = MAX(0, newdepth - ReductionTable[1][MIN(depth,63)][MIN(played,63)]);
-                    int scoreAprox = Threads[thread_id].evalvalue[pos->ply] 
-                    + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(played,63)]
+                    if (ss.playedMoves > lateMove && !isMoveDefence(pos, move, ss.nullThreatMoveToBit)) continue;
+                    int predictedDepth = MAX(0, newdepth - ReductionTable[1][MIN(depth,63)][MIN(ss.playedMoves,63)]);
+                    int scoreAprox = ss.evalvalue
+                        + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(ss.playedMoves,63)]
                     + SearchInfo(thread_id).evalgains[historyIndex(pos->side, move)];
                     if (scoreAprox < beta) {
                         if (!moveIsPassedPawn(pos, move)) continue;
                         --newdepthclone;
                     }
                 }
-                if (okToPruneOrReduce && depth >= MIN_REDUCTION_DEPTH) newdepthclone -= ReductionTable[(inPvNode(nt)?0:1)][MIN(depth,63)][MIN(played,63)];
+                if (okToPruneOrReduce && depth >= MIN_REDUCTION_DEPTH) newdepthclone -= ReductionTable[(inPvNode(nt)?0:1)][MIN(depth,63)][MIN(ss.playedMoves,63)];
                 makeMove(pos, &undo, move);
                 if (inSplitPoint) alpha = sp->alpha;
-                score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepthclone, moveGivesCheck, EMPTY, thread_id, CutNode);
+                score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepthclone, ss, thread_id, CutNode);
                 if (newdepthclone < newdepth && score > alpha) {
-                    score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepth, moveGivesCheck, EMPTY, thread_id, AllNode);
+                    score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepth, ss, thread_id, AllNode);
                 }
                 if (inPvNode(nt) && score > alpha) {
                     if (inRoot) SearchInfo(thread_id).research = 1;
-                    score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, EMPTY, thread_id, PVNode);
+                    score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, thread_id, PVNode);
                     if (inRoot) SearchInfo(thread_id).research = 0;
                 }
             }
             unmakeMove(pos, &undo);
         }
-        if (Threads[thread_id].stop) return bestvalue;
+        if (Threads[thread_id].stop) return ss.bestvalue;
         if (inRoot) {
-            mvlist->list[mvlist->pos-1].s = score;
+            ss.mvlist->list[ss.mvlist->pos-1].s = score;
             if (score > SearchInfo(thread_id).rbestscore1) {
                 SearchInfo(thread_id).rbestscore2 = SearchInfo(thread_id).rbestscore1;
                 SearchInfo(thread_id).rbestscore1 = score;
@@ -515,25 +499,25 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
             }
         }
         if (inSplitPoint) MutexLock(sp->updatelock);
-        if (score > (inSplitPoint ? sp->bestvalue : bestvalue)) {
-            bestvalue = inSplitPoint ? sp->bestvalue = score : score;
+        if (score > (inSplitPoint ? sp->bestvalue : ss.bestvalue)) {
+            ss.bestvalue = inSplitPoint ? sp->bestvalue = score : score;
             if (inRoot) {
-                SearchInfo(thread_id).best_value = bestvalue;
+                SearchInfo(thread_id).best_value = ss.bestvalue;
                 extractPvMovesFromHash(pos, &SearchInfo(thread_id).rootPV, move, true);
                 if (SearchInfo(thread_id).iteration > 1 && SearchInfo(thread_id).bestmove != move) SearchInfo(thread_id).change = 1;
             }
-            if (bestvalue > (inSplitPoint ? sp->alpha : alpha)) {
-                bestmove = inSplitPoint ? sp->bestmove = move : move;
+            if (ss.bestvalue > (inSplitPoint ? sp->alpha : alpha)) {
+                ss.bestmove = inSplitPoint ? sp->bestmove = move : move;
                 if (inRoot) {
-                    SearchInfo(thread_id).bestmove = bestmove;
+                    SearchInfo(thread_id).bestmove = ss.bestmove;
                     if (SearchInfo(thread_id).rootPV.length > 1) SearchInfo(thread_id).pondermove = SearchInfo(thread_id).rootPV.moves[1];
                     else SearchInfo(thread_id).pondermove = 0;
                 }
-                if (inPvNode(nt) && bestvalue < beta) {
-                    alpha = inSplitPoint ? sp->alpha = bestvalue : bestvalue;
+                if (inPvNode(nt) && ss.bestvalue < beta) {
+                    alpha = inSplitPoint ? sp->alpha = ss.bestvalue : ss.bestvalue;
                 } else {
                     if (inRoot) {
-                        for (int i = mvlist->pos; i < mvlist->size; ++i) mvlist->list[i].s = -INF;
+                        for (int i = ss.mvlist->pos; i < ss.mvlist->size; ++i) ss.mvlist->list[i].s = -INF;
                     }
                     if (inSplitPoint) {
                         Threads[thread_id].cutoff = true;
@@ -546,7 +530,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
         if (inSplitPoint) MutexUnlock(sp->updatelock);
         if (!inRoot && !inSplitPoint && !inSingular && !Threads[thread_id].stop && !inCheck
             && Guci_options->threads > 1 && depth >= Guci_options->min_split_depth && idleThreadExists(thread_id)
-            && splitRemainingMoves(pos, mvlist, &bestvalue, &bestmove, &played, alpha, beta, nt, depth, inCheck, inRoot, thread_id)) {
+            && splitRemainingMoves(pos, ss.mvlist, ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, thread_id)) {
                 break;
         }
     }
@@ -555,50 +539,50 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, const b
             displayPV(pos, &SearchInfo(thread_id).rootPV, depth, oldalpha, beta, SearchInfo(thread_id).best_value);
     }
     if (!inSplitPoint && !inSingular) {
-        if (played == 0) {
-            if (inCheck) bestvalue = -INF + pos->ply;
-            else bestvalue = DrawValue[pos->side];
-            transStore<HTNoMoves>(pos->hash, EMPTY, depth, scoreToTrans(bestvalue, pos->ply), thread_id);
-            return bestvalue;
+        if (ss.playedMoves == 0) {
+            if (inCheck) ss.bestvalue = -INF + pos->ply;
+            else ss.bestvalue = DrawValue[pos->side];
+            transStore<HTNoMoves>(pos->hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
+            return ss.bestvalue;
         }
         if (Threads[thread_id].stop) return 0;
-        if (!inRoot && bestmove != EMPTY && !moveIsTactical(bestmove) && bestvalue >= beta) { //> alpha account for pv better maybe? Sam
-            int index = historyIndex(pos->side, bestmove);
+        if (!inRoot && ss.bestmove != EMPTY && !moveIsTactical(ss.bestmove) && ss.bestvalue >= beta) { //> alpha account for pv better maybe? Sam
+            int index = historyIndex(pos->side, ss.bestmove);
             int hisDepth = MIN(depth,MAX_HDEPTH);
             SearchInfo(thread_id).history[index] += hisDepth * hisDepth;
-            for (int i=0; i < hisOn; ++i) {
-                if (hisMoves[i] == bestmove) continue;
-                index = historyIndex(pos->side, hisMoves[i]);
+            for (int i=0; i < ss.hisCnt; ++i) {
+                if (ss.hisMoves[i] == ss.bestmove) continue;
+                index = historyIndex(pos->side, ss.hisMoves[i]);
                 SearchInfo(thread_id).history[index] -= SearchInfo(thread_id).history[index]/(NEW_HISTORY-hisDepth);
             }
-            if (Threads[thread_id].killer1[pos->ply] != bestmove) {
-                Threads[thread_id].killer2[pos->ply] = Threads[thread_id].killer1[pos->ply];
-                Threads[thread_id].killer1[pos->ply] = bestmove;
+            if (Threads[thread_id].ts[pos->ply].killer1 != ss.bestmove) {
+                Threads[thread_id].ts[pos->ply].killer2 = Threads[thread_id].ts[pos->ply].killer1;
+                Threads[thread_id].ts[pos->ply].killer1 = ss.bestmove;
             }
         }
         // DEBUG
         if (inCutNode(nt)) {
             SearchInfo(thread_id).cutnodes++;
-            if (bestvalue < beta) SearchInfo(thread_id).cutfail++;
+            if (ss.bestvalue < beta) SearchInfo(thread_id).cutfail++;
         }
         if (inAllNode(nt)) {
             SearchInfo(thread_id).allnodes++;
-            if (bestvalue >= beta) SearchInfo(thread_id).allfail++;
+            if (ss.bestvalue >= beta) SearchInfo(thread_id).allfail++;
         }
 
-        if (bestvalue >= beta) {
-            ASSERT(valueIsOk(bestvalue));
-            if (inCutNode(nt)) transStore<HTLower>(pos->hash, bestmove, depth, scoreToTrans(bestvalue, pos->ply), thread_id);
-            else transStore<HTAllLower>(pos->hash, bestmove, depth, scoreToTrans(bestvalue, pos->ply), thread_id);
+        if (ss.bestvalue >= beta) {
+            ASSERT(valueIsOk(ss.bestvalue));
+            if (inCutNode(nt)) transStore<HTLower>(pos->hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
+            else transStore<HTAllLower>(pos->hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
         } else {
             ASSERT(valueIsOk(bestvalue));
-            if (inPvNode(nt) && bestmove != EMPTY) transStore<HTExact>(pos->hash, bestmove, depth, scoreToTrans(bestvalue, pos->ply), thread_id);
-            else if (inCutNode(nt)) transStore<HTCutUpper>(pos->hash, EMPTY, depth, scoreToTrans(bestvalue, pos->ply), thread_id);
-            else transStore<HTUpper>(pos->hash, EMPTY, depth, scoreToTrans(bestvalue, pos->ply), thread_id);
+            if (inPvNode(nt) && ss.bestmove != EMPTY) transStore<HTExact>(pos->hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
+            else if (inCutNode(nt)) transStore<HTCutUpper>(pos->hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
+            else transStore<HTUpper>(pos->hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
         }
     }
-    ASSERT(valueIsOk(bestvalue));
-    return bestvalue;
+    ASSERT(valueIsOk(ss.bestvalue));
+    return ss.bestvalue;
 }
 
 void extractPvMovesFromHash(position_t *pos, continuation_t* pv, basic_move_t move, bool execMove) {
@@ -829,7 +813,9 @@ void getBestMove(position_t *pos, int thread_id) {
     uci_option_t *opt = Guci_options;
     basic_move_t hashMove;
     int alpha, beta;
-    bool inCheck = kingIsInCheck(pos);
+    SearchStack ss;
+    ss.moveGivesCheck = kingIsInCheck(pos);
+
     ASSERT(pos != NULL);
 
     hashMove = EMPTY;
@@ -883,7 +869,7 @@ void getBestMove(position_t *pos, int thread_id) {
             SearchInfo(thread_id).rbestscore1 = -INF;
             SearchInfo(thread_id).rbestscore2 = -INF;
 
-            searchNode<true, false, false>(pos, alpha, beta, id, inCheck, EMPTY, thread_id, PVNode);
+            searchNode<true, false, false>(pos, alpha, beta, id, ss, thread_id, PVNode);
 
             if (SearchInfo(thread_id).thinking_status == STOPPED) break;
             if(SearchInfo(thread_id).best_value <= alpha) {
@@ -940,8 +926,8 @@ void checkSpeedUp(position_t* pos, char string[]) {
         "4qRr1/p3b2p/1kn5/1p2B3/3P4P2Q2/PP4PP/4R1K1 b - - 0 24",
         "3q4/p3b2p/1k6P1Q3/p2P4/8/1P4PP/6K1 b - - 0 30",
     };
-    float timeSpeedupSum[MAXTHREADS];
-    float nodesSpeedupSum[MAXTHREADS];
+    double timeSpeedupSum[MAXTHREADS];
+    double nodesSpeedupSum[MAXTHREADS];
     char tempStr[256] = {0};
     int depth = 12;
     int threads = 1;
@@ -967,9 +953,9 @@ void checkSpeedUp(position_t* pos, char string[]) {
         uciGo(pos, command);
         int64 spentTime1 = getTime() - startTime;
         uint64 nodes1 = Threads[0].nodes / spentTime1;
-        float timeSpeedUp = (float)spentTime1/1000.0;
+        double timeSpeedUp = (double)spentTime1/1000.0;
         timeSpeedupSum[0] += timeSpeedUp;
-        float nodesSpeedup = (float)nodes1;
+        double nodesSpeedup = (double)nodes1;
         nodesSpeedupSum[0] += nodesSpeedup;
         Print(5, "Base: %0.2fs %dknps\n", timeSpeedUp, nodes1);
 
@@ -988,9 +974,9 @@ void checkSpeedUp(position_t* pos, char string[]) {
             uint64 nodes = 0;
             for (int i = 0; i < Guci_options->threads; ++i) nodes += Threads[i].nodes;
             nodes /= spentTime;
-            timeSpeedUp = (float)spentTime1 / (float)spentTime;
+            timeSpeedUp = (double)spentTime1 / (double)spentTime;
             timeSpeedupSum[j] += timeSpeedUp;
-            nodesSpeedup = (float)nodes / (float)nodes1;
+            nodesSpeedup = (double)nodes / (double)nodes1;
             nodesSpeedupSum[j] += nodesSpeedup;
             Print(5, "Thread: %d SpeedUp: %0.2f %0.2f\n", j, timeSpeedUp, nodesSpeedup);
         }

@@ -106,9 +106,9 @@ extern void initTrans(uint64 target, int thread);
 extern void transClear(int thread);
 
 /* movepicker.c */
-extern void sortInit(const position_t *pos, movelist_t *mvlist, uint64 pinned, uint32 hashmove, int scout, int depth, int type, int thread_id);
+extern void sortInit(const position_t *pos, movelist_t *mvlist, uint64 pinned, uint32 hashmove, int scout, int eval, int depth, int type, int thread_id);
 extern basic_move_t getMove(movelist_t *mvlist);
-extern basic_move_t sortNext(split_point_t* sp, position_t *pos, movelist_t *mvlist, int *phase, int thread_id);
+extern basic_move_t sortNext(SplitPoint* sp, position_t *pos, movelist_t *mvlist, int *phase, int thread_id);
 extern uint32 captureIsGood(const position_t *pos, uint32 m);
 extern void scoreCaptures(movelist_t *mvlist);
 extern void scoreCapturesPure(movelist_t *mvlist);
@@ -124,12 +124,9 @@ extern void initNode(position_t *pos, int thread_id);
 extern int moveIsTactical(uint32 m);
 extern int simpleStalemate(const position_t *pos);
 extern int historyIndex(uint32 side, uint32 move);
-//extern int qSearch(position_t *pos, int alpha, int beta, int depth, const int pv, const int inCheck, int thread_id);
-//template <bool inPv>
-//int qSearch(position_t *pos, int alpha, int beta, int depth, int inCheck, const int thread_id);
 
 template <bool inRoot, bool inSplitPoint, bool inSingular>
-int searchNode(position_t *pos, int alpha, int beta, const int depth, const bool inCheck, const basic_move_t moveBanned, const int thread_id, NodeType nt);
+int searchNode(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, const int thread_id, NodeType nt);
 extern void getBestMove(position_t *pos, int thread_id);
 
 /* debug.c */
