@@ -164,6 +164,20 @@ inline int historyIndex(uint32 side, uint32 move) {
     return ((((side) << 9) + ((movePiece(move)) << 6) + (moveTo(move))) & 0x3ff);
 }
 
+bool prevMoveAllowsThreat(const position_t* pos, basic_move_t first, basic_move_t second) {
+    int m1from = moveFrom(first);
+    int m2from = moveFrom(second);
+    int m1to = moveTo(first);
+    int m2to = moveTo(second);
+
+    if (m1to == m2from || m2to == m1from) return true;
+    if (InBetween[m2from][m2to] & BitMask[m1from]) return true;
+    uint64 m1att = pieceAttacksFromBB(pos, getPiece(pos, m1to), m1to, pos->occupied ^ BitMask[m2from]);
+    if (pieceAttacksFromBB(pos, getPiece(pos, m1to), m1to, pos->occupied ^ BitMask[m2from]) & BitMask[m2to]) return true;
+    if (m1att & BitMask[pos->kpos[pos->side]]) return true;
+    return false;
+}
+
 void updateEvalgains(const position_t *pos, uint32 move, int before, int after, const int thread_id) {
     if (move != EMPTY
         && before != -INF
@@ -181,7 +195,6 @@ const int MaxPieceValue[] = {0, PawnValueEnd, KnightValueEnd, BishopValueEnd, Ro
 template<bool inPv>
 int qSearch(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, const int thread_id) {
     int pes = 0, opt = 0;
-    uint64 pinned;
     SearchStack ss;
 
     ASSERT(pos != NULL);
@@ -194,7 +207,7 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, SearchStack& 
     if (Threads[thread_id].stop) return 0;
 
     int t = 0;
-    for (trans_entry_t* entry = TransTable(thread).table + (KEY(pos->hash) & TransTable(thread).mask); t < 4; t++, entry++) {
+    for (trans_entry_t* entry = TransTable(thread_id).table + (KEY(pos->hash) & TransTable(thread_id).mask); t < 4; t++, entry++) {
         if (transHashLock(entry) == LOCK(pos->hash)) {
             transSetAge(entry, TransTable(thread).date);
             if (!inPv) { // TODO: re-use values from here to evalvalue?
@@ -228,13 +241,13 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, SearchStack& 
             alpha = ss.bestvalue;
         }
     }
-    pinned = pinnedPieces(pos, pos->side);
+
     ss.dcc = discoveredCheckCandidates(pos, pos->side);
     if (ssprev.moveGivesCheck) {
-        sortInit(pos, ss.mvlist, pinned, ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseEvasion, thread_id);
+        sortInit(pos, ss.mvlist, pinnedPieces(pos, pos->side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseEvasion, thread_id);
     } else {
-        if (inPv) sortInit(pos, ss.mvlist, pinned, ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_PVCHECK) ? MoveGenPhaseQuiescenceAndChecksPV : MoveGenPhaseQuiescencePV, thread_id);
-        else sortInit(pos, ss.mvlist, pinned, ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_CHECK) ? MoveGenPhaseQuiescenceAndChecks : MoveGenPhaseQuiescence, thread_id);
+        if (inPv) sortInit(pos, ss.mvlist, pinnedPieces(pos, pos->side), ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_PVCHECK) ? MoveGenPhaseQuiescenceAndChecksPV : MoveGenPhaseQuiescencePV, thread_id);
+        else sortInit(pos, ss.mvlist, pinnedPieces(pos, pos->side), ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_CHECK) ? MoveGenPhaseQuiescenceAndChecks : MoveGenPhaseQuiescence, thread_id);
     }
     bool prunable = !ssprev.moveGivesCheck && !inPv && MinTwoBits(pos->color[pos->side^1] & pos->pawns) && MinTwoBits(pos->color[pos->side^1] & ~(pos->pawns | pos->kings));
     basic_move_t move;
@@ -305,7 +318,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
     int pes = 0, opt = 0;
     SplitPoint* sp = NULL;
     SearchStack ss;
-    
+
     ASSERT(pos != NULL);
     ASSERT(valueIsOk(alpha)); 
     ASSERT(valueIsOk(beta)); 
@@ -323,7 +336,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
         beta = MIN(INF - pos->ply - 1, beta);
         if (alpha >= beta) return alpha;
 
-        for (trans_entry_t * entry = TransTable(thread).table + (KEY(pos->hash) & TransTable(thread).mask); t < 4; t++, entry++) {
+        for (trans_entry_t * entry = TransTable(thread_id).table + (KEY(pos->hash) & TransTable(thread_id).mask); t < 4; t++, entry++) {
             if (transHashLock(entry) == LOCK(pos->hash)) {
                 transSetAge(entry, TransTable(thread).date);
                 if (transMask(entry) & MNoMoves) {
@@ -376,7 +389,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 int nullDepth = depth - (4 + depth/5 + (ss.evalvalue - beta > PawnValue));
                 makeNullMove(pos, &undo);
                 int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, thread_id, AllNode);
-                basic_move_t threatMove = transGetHashMove(pos->hash, thread_id);
+                basic_move_t threatMove = transGetHashMove(pos->hash, thread_id); // need to really get the proper threatmove
                 if (threatMove != EMPTY) ss.nullThreatMoveToBit = BitMask[moveTo(threatMove)];
                 unmakeNullMove(pos, &undo);
                 if (score >= beta) {
@@ -386,6 +399,11 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                         else transStore<HTAllLower>(pos->hash, EMPTY, depth, scoreToTrans(score, pos->ply), thread_id);
                         return score;
                     }
+                } 
+                //else if (depth < 5 && ssprev.reducedMove && threatMove != EMPTY && prevMoveAllowsThreat(pos, pos->posStore.lastmove, threatMove)) {
+                else if (depth < 5 && ssprev.reducedMove && ((score < beta - PawnValue/2) || score < -MAXEVAL)) {
+                    //Print(1, "Gone here\n");
+                    return alpha;
                 }
             }
         }
@@ -476,8 +494,10 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 if (okToPruneOrReduce && depth >= MIN_REDUCTION_DEPTH) newdepthclone -= ReductionTable[(inPvNode(nt)?0:1)][MIN(depth,63)][MIN(ss.playedMoves,63)];
                 makeMove(pos, &undo, move);
                 if (inSplitPoint) alpha = sp->alpha;
+                ss.reducedMove = (newdepthclone < newdepth);
                 score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepthclone, ss, thread_id, CutNode);
-                if (newdepthclone < newdepth && score > alpha) {
+                if (ss.reducedMove && score > alpha) {
+                    ss.reducedMove = false;
                     score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepth, ss, thread_id, AllNode);
                 }
                 if (inPvNode(nt) && score > alpha) {

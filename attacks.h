@@ -72,6 +72,19 @@ uint32 isSqAtt(const position_t *pos, uint64 occ, int sq,int color) {
     ) & pos->color[color])!=0;
     */
 }
+
+uint64 pieceAttacksFromBB(const position_t* pos, const int pc, const int sq, uint64 occ) {
+    switch (pc) {
+    case PAWN: return PawnCaps[sq][pos->side];
+    case KNIGHT: return KnightMoves[sq];
+    case BISHOP: return bishopAttacksBB(sq, occ);
+    case ROOK: return rookAttacksBB(sq, occ);
+    case QUEEN: return queenAttacksBB(sq, occ);
+    case KING: return KingMoves[sq];
+    }
+    return 0;
+}
+
 /* this determines if the side to move is in check */
 uint32 kingIsInCheck(const position_t *pos) {
     return isSqAtt(pos,pos->occupied,pos->kpos[pos->side],pos->side^1);
