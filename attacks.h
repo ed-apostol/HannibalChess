@@ -73,7 +73,7 @@ uint32 isSqAtt(const position_t *pos, uint64 occ, int sq,int color) {
     */
 }
 
-uint64 pieceAttacksFromBB(const position_t* pos, const int pc, const int sq, uint64 occ) {
+uint64 pieceAttacksFromBB(const position_t* pos, const int pc, const int sq, const uint64 occ) {
     switch (pc) {
     case PAWN: return PawnCaps[sq][pos->side];
     case KNIGHT: return KnightMoves[sq];

@@ -322,7 +322,7 @@ struct SearchStack {
         bestvalue(-INF),
         bestmove(EMPTY),
         dcc(0),
-        nullThreatMoveToBit(0),
+        threatMove(EMPTY),
         bannedMove(EMPTY),
         hashMove(EMPTY),
         hashDepth(0),
@@ -340,7 +340,7 @@ struct SearchStack {
     bool moveGivesCheck;
     int evalvalue;
     uint64 dcc;
-    uint64 nullThreatMoveToBit;
+    basic_move_t threatMove;
     basic_move_t bannedMove;
     basic_move_t hashMove;
     int hashDepth;

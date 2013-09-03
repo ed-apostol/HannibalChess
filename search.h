@@ -172,9 +172,25 @@ bool prevMoveAllowsThreat(const position_t* pos, basic_move_t first, basic_move_
 
     if (m1to == m2from || m2to == m1from) return true;
     if (InBetween[m2from][m2to] & BitMask[m1from]) return true;
-    uint64 m1att = pieceAttacksFromBB(pos, getPiece(pos, m1to), m1to, pos->occupied ^ BitMask[m2from]);
-    if (pieceAttacksFromBB(pos, getPiece(pos, m1to), m1to, pos->occupied ^ BitMask[m2from]) & BitMask[m2to]) return true;
+    uint64 m1att = pieceAttacksFromBB(pos, movePiece(first), m1to, pos->occupied ^ BitMask[m2from]);
+    if (m1att & BitMask[m2to]) return true;
     if (m1att & BitMask[pos->kpos[pos->side]]) return true;
+    return false;
+}
+
+bool moveRefutesThreat(const position_t* pos, basic_move_t first, basic_move_t second) {
+    int m1from = moveFrom(first);
+    int m2from = moveFrom(second);
+    int m1to = moveTo(first);
+    int m2to = moveTo(second);
+
+    if (m1from == m2to) return true;
+    uint64 occ = pos->occupied ^ BitMask[m1from] ^ BitMask[m1to] ^ BitMask[m2from];
+    if (pieceAttacksFromBB(pos, movePiece(first), m1to, occ) & BitMask[m2to]) return true;
+    uint64 xray = rookAttacksBBX(m2to, occ) & (pos->queens | pos->rooks) & pos->color[pos->side];
+    xray |= bishopAttacksBBX(m2to, occ) & (pos->queens | pos->bishops) & pos->color[pos->side];
+    if (xray && (xray & ~queenAttacksBB(m2to, pos->occupied))) return true;
+    if (InBetween[m2from][m2to] & BitMask[m1to] && swap(pos, first) >= 0) return true;
     return false;
 }
 
@@ -389,8 +405,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 int nullDepth = depth - (4 + depth/5 + (ss.evalvalue - beta > PawnValue));
                 makeNullMove(pos, &undo);
                 int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, thread_id, AllNode);
-                basic_move_t threatMove = transGetHashMove(pos->hash, thread_id); // need to really get the proper threatmove
-                if (threatMove != EMPTY) ss.nullThreatMoveToBit = BitMask[moveTo(threatMove)];
+                ss.threatMove = transGetHashMove(pos->hash, thread_id);
                 unmakeNullMove(pos, &undo);
                 if (score >= beta) {
                     if (depth >= 12) score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, ssprev, thread_id, nt);
@@ -400,9 +415,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                         return score;
                     }
                 } 
-                //else if (depth < 5 && ssprev.reducedMove && threatMove != EMPTY && prevMoveAllowsThreat(pos, pos->posStore.lastmove, threatMove)) {
-                else if (depth < 5 && ssprev.reducedMove && ((score < beta - PawnValue/2) || score < -MAXEVAL)) {
-                    //Print(1, "Gone here\n");
+                else if (depth < 5 && ssprev.reducedMove && ss.threatMove != EMPTY && prevMoveAllowsThreat(pos, pos->posStore.lastmove, ss.threatMove)) {
                     return alpha;
                 }
             }
@@ -481,7 +494,8 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 int okToPruneOrReduce = (newdepth >= depth || inCheck || ss.moveGivesCheck || MoveGenPhase[ss.mvlist_phase] != PH_QUIET_MOVES) ? 0 : 1;
                 int newdepthclone = newdepth;
                 if (!inRoot && !inPvNode(nt) && okToPruneOrReduce) {
-                    if (ss.playedMoves > lateMove && !isMoveDefence(pos, move, ss.nullThreatMoveToBit)) continue;
+                    //if (ss.playedMoves > lateMove && (ss.threatMove == EMPTY || !moveRefutesThreat(pos, move, ss.threatMove))) continue;
+                    if (ss.playedMoves > lateMove) continue;
                     int predictedDepth = MAX(0, newdepth - ReductionTable[1][MIN(depth,63)][MIN(ss.playedMoves,63)]);
                     int scoreAprox = ss.evalvalue
                         + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(ss.playedMoves,63)]
@@ -834,7 +848,7 @@ void getBestMove(position_t *pos, int thread_id) {
     basic_move_t hashMove;
     int alpha, beta;
     SearchStack ss;
-    ss.moveGivesCheck = kingIsInCheck(pos);
+    ss.moveGivesCheck = (bool)kingIsInCheck(pos);
 
     ASSERT(pos != NULL);
 
