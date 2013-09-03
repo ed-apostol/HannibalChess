@@ -94,8 +94,7 @@ void initNode(position_t *pos, const int thread_id) {
                 if (time2 < SearchInfo(thread_id).time_limit_abs) {
                     if (!SearchInfo(thread_id).research && !SearchInfo(thread_id).change) {
                         bool gettingWorse = SearchInfo(thread_id).best_value != -INF && SearchInfo(thread_id).best_value + WORSE_SCORE_CUTOFF <= SearchInfo(thread_id).last_value;
-                        bool wasGettingWorse = SearchInfo(thread_id).best_value == -INF && SearchInfo(thread_id).last_value + WORSE_SCORE_CUTOFF <= SearchInfo(thread_id).last_last_value;
-                        if (!gettingWorse && !wasGettingWorse) { 
+                        if (!gettingWorse) { 
                             setAllThreadsToStop(thread_id);
                             Print(2, "info string Aborting search: time limit 2: %d\n", time2 - SearchInfo(thread_id).start_time);
                         }
