@@ -185,11 +185,13 @@ bool moveRefutesThreat(const position_t* pos, basic_move_t first, basic_move_t s
     int m2to = moveTo(second);
 
     if (m1from == m2to) return true;
-    uint64 occ = pos->occupied ^ BitMask[m1from] ^ BitMask[m1to] ^ BitMask[m2from];
-    if (pieceAttacksFromBB(pos, movePiece(first), m1to, occ) & BitMask[m2to]) return true;
-    uint64 xray = rookAttacksBBX(m2to, occ) & (pos->queens | pos->rooks) & pos->color[pos->side];
-    xray |= bishopAttacksBBX(m2to, occ) & (pos->queens | pos->bishops) & pos->color[pos->side];
-    if (xray && (xray & ~queenAttacksBB(m2to, pos->occupied))) return true;
+    if (moveCapture(second) && (PcValSEE[movePiece(second)] >= PcValSEE[moveCapture(second)] || movePiece(second) == KING)) {
+        uint64 occ = pos->occupied ^ BitMask[m1from] ^ BitMask[m1to] ^ BitMask[m2from];
+        if (pieceAttacksFromBB(pos, movePiece(first), m1to, occ) & BitMask[m2to]) return true;
+        uint64 xray = rookAttacksBBX(m2to, occ) & (pos->queens | pos->rooks) & pos->color[pos->side];
+        xray |= bishopAttacksBBX(m2to, occ) & (pos->queens | pos->bishops) & pos->color[pos->side];
+        if (xray && (xray & ~queenAttacksBB(m2to, pos->occupied))) return true;
+    }
     if (InBetween[m2from][m2to] & BitMask[m1to] && swap(pos, first) >= 0) return true;
     return false;
 }
@@ -229,7 +231,10 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, SearchStack& 
             if (!inPv) { // TODO: re-use values from here to evalvalue?
                 if (transMove(entry) != EMPTY && transLowerDepth(entry) > 0) {
                     int score = scoreFromTrans(transLowerValue(entry), pos->ply);
-                    if (score > alpha) return score;
+                    if (score > alpha) {
+                        ssprev.counterMove= transMove(entry);
+                        return score;
+                    }
                 }
                 if (transUpperDepth(entry) > 0) {
                     int score = scoreFromTrans(transUpperValue(entry), pos->ply);
@@ -290,6 +295,7 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, SearchStack& 
                 if (score >= beta) {
                     transStore<HTLower>(pos->hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
                     ASSERT(valueIsOk(ss.bestvalue));
+                    ssprev.counterMove = ss.bestmove;
                     return ss.bestvalue;
                 }
                 alpha = score;
@@ -304,8 +310,10 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, SearchStack& 
 
     ASSERT(bestvalue != -INF);
 
-    if (inPv && ss.bestmove != EMPTY) transStore<HTExact>(pos->hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
-    else transStore<HTUpper>(pos->hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
+    if (inPv && ss.bestmove != EMPTY) {
+        ssprev.counterMove = ss.bestmove;
+        transStore<HTExact>(pos->hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
+    } else transStore<HTUpper>(pos->hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
 
     ASSERT(valueIsOk(ss.bestvalue));
 
@@ -363,7 +371,10 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                     if ((!inCutNode(nt) || !(transMask(entry) & MAllLower)) && transLowerDepth(entry) >= depth && (transMove(entry) != EMPTY || pos->posStore.lastmove == EMPTY)) {
                         int score = scoreFromTrans(transLowerValue(entry), pos->ply);
                         ASSERT(valueIsOk(score));
-                        if (score > alpha) return score;
+                        if (score > alpha) {
+                            ssprev.counterMove = transMove(entry);
+                            return score;
+                        }
                     }
                     if ((!inAllNode(nt) || !(transMask(entry) & MCutUpper)) && transUpperDepth(entry) >= depth) {
                         int score = scoreFromTrans(transUpperValue(entry), pos->ply);
@@ -405,7 +416,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 int nullDepth = depth - (4 + depth/5 + (ss.evalvalue - beta > PawnValue));
                 makeNullMove(pos, &undo);
                 int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, thread_id, AllNode);
-                ss.threatMove = transGetHashMove(pos->hash, thread_id);
+                ss.threatMove = ss.counterMove;
                 unmakeNullMove(pos, &undo);
                 if (score >= beta) {
                     if (depth >= 12) score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, ssprev, thread_id, nt);
@@ -426,7 +437,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
             if (ss.hashMove == EMPTY || ss.hashDepth < newdepth) {
                 int score = searchNode<false, false, false>(pos, alpha, beta, newdepth, ssprev, thread_id, nt);
                 if (score > alpha) {
-                    ss.hashMove = transGetHashMove(pos->hash, thread_id);
+                    ss.hashMove = ssprev.counterMove;
                     ss.evalvalue = score;
                     ss.hashDepth = newdepth;
                 }
@@ -494,11 +505,9 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 int okToPruneOrReduce = (newdepth >= depth || inCheck || ss.moveGivesCheck || MoveGenPhase[ss.mvlist_phase] != PH_QUIET_MOVES) ? 0 : 1;
                 int newdepthclone = newdepth;
                 if (!inRoot && !inPvNode(nt) && okToPruneOrReduce) {
-                    //if (ss.playedMoves > lateMove && (ss.threatMove == EMPTY || !moveRefutesThreat(pos, move, ss.threatMove))) continue;
-                    if (ss.playedMoves > lateMove) continue;
+                    if (ss.playedMoves > lateMove && (!ss.threatMove || !moveRefutesThreat(pos, move, ss.threatMove))) continue;
                     int predictedDepth = MAX(0, newdepth - ReductionTable[1][MIN(depth,63)][MIN(ss.playedMoves,63)]);
-                    int scoreAprox = ss.evalvalue
-                        + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(ss.playedMoves,63)]
+                    int scoreAprox = ss.evalvalue + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(ss.playedMoves,63)]
                     + SearchInfo(thread_id).evalgains[historyIndex(pos->side, move)];
                     if (scoreAprox < beta) {
                         if (!moveIsPassedPawn(pos, move)) continue;
@@ -606,11 +615,15 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
 
         if (ss.bestvalue >= beta) {
             ASSERT(valueIsOk(ss.bestvalue));
+            ssprev.counterMove = ss.bestmove;
             if (inCutNode(nt)) transStore<HTLower>(pos->hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
             else transStore<HTAllLower>(pos->hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
         } else {
             ASSERT(valueIsOk(bestvalue));
-            if (inPvNode(nt) && ss.bestmove != EMPTY) transStore<HTExact>(pos->hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
+            if (inPvNode(nt) && ss.bestmove != EMPTY) {
+                ssprev.counterMove = ss.bestmove;
+                transStore<HTExact>(pos->hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
+            }
             else if (inCutNode(nt)) transStore<HTCutUpper>(pos->hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
             else transStore<HTUpper>(pos->hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
         }
