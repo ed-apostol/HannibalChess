@@ -356,8 +356,8 @@ typedef CRITICAL_SECTION mutex_t;
 
 struct SplitPoint {
     position_t pos[MaxNumOfThreads];
-    movelist_t *parent_movestack;
     SplitPoint* parent;
+    SearchStack* sscurr;
     SearchStack* ssprev;
     int depth;
     bool inCheck;

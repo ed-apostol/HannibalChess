@@ -424,8 +424,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                         else transStore<HTAllLower>(pos->hash, EMPTY, depth, scoreToTrans(score, pos->ply), thread_id);
                         return score;
                     }
-                } 
-                else if (depth < 5 && ssprev.reducedMove && ss.threatMove != EMPTY && prevMoveAllowsThreat(pos, pos->posStore.lastmove, ss.threatMove)) {
+                } else if (depth < 5 && ssprev.reducedMove && ss.threatMove != EMPTY && prevMoveAllowsThreat(pos, pos->posStore.lastmove, ss.threatMove)) {
                     return alpha;
                 }
             }
@@ -456,10 +455,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
 
     if (inSplitPoint) {
         sp = Threads[thread_id].split_point;
-        ss.bestvalue = sp->bestvalue;
-        ss.bestmove = sp->bestmove;
-        ss.mvlist = sp->parent_movestack;
-        ss.playedMoves = sp->played;
+        ss = *sp->sscurr;
     } else {
         if (inRoot) {
             ss.mvlist = &SearchInfo(thread_id).rootmvlist;
@@ -530,7 +526,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
             }
             unmakeMove(pos, &undo);
         }
-        if (Threads[thread_id].stop) return ss.bestvalue;
+        if (Threads[thread_id].stop) break;
         if (inRoot) {
             ss.mvlist->list[ss.mvlist->pos-1].s = score;
             if (score > SearchInfo(thread_id).rbestscore1) {
@@ -572,7 +568,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
         if (inSplitPoint) MutexUnlock(sp->updatelock);
         if (!inRoot && !inSplitPoint && !inSingular && !Threads[thread_id].stop && !inCheck
             && Guci_options->threads > 1 && depth >= Guci_options->min_split_depth && idleThreadExists(thread_id)
-            && splitRemainingMoves(pos, ss.mvlist, ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, thread_id)) {
+            && splitRemainingMoves(pos, ss.mvlist, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, thread_id)) {
                 break;
         }
     }
@@ -580,7 +576,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
         if (SHOW_SEARCH && depth >= 8 && (!Threads[thread_id].stop || SearchInfo(thread_id).best_value != -INF))
             displayPV(pos, &SearchInfo(thread_id).rootPV, depth, oldalpha, beta, SearchInfo(thread_id).best_value);
     }
-    if (!inSplitPoint && !inSingular) {
+    if (!inSplitPoint && !inSingular && !Threads[thread_id].stop) {
         if (ss.playedMoves == 0) {
             if (inCheck) ss.bestvalue = -INF + pos->ply;
             else ss.bestvalue = DrawValue[pos->side];

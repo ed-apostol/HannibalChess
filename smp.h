@@ -169,7 +169,7 @@ void setAllThreadsToStop(int thread) {
 #endif
 }
 
-bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack& ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, const int master) {
+bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, const int master) {
     SplitPoint *split_point;
     MutexLock(SMPLock);
     if(!idleThreadExists(master) || Threads[master].num_sp >= MaxNumSplitPointsPerThread) {
@@ -183,15 +183,15 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack& s
     split_point->alpha = alpha; 
     split_point->beta = beta;
     split_point->nodeType = nt;
-    split_point->bestvalue = ss.bestvalue;
-    split_point->bestmove = ss.bestmove;
-    split_point->played = ss.playedMoves;
+    split_point->bestvalue = ss->bestvalue;
+    split_point->bestmove = ss->bestmove;
+    split_point->played = ss->playedMoves;
     split_point->master = master;
     split_point->inCheck = inCheck;
     split_point->inRoot = inRoot;
     split_point->cpus = 0;
+    split_point->sscurr = ss;
     split_point->ssprev = ssprev;
-    split_point->parent_movestack = mvlist;
     for(int i = 0; i < Guci_options->threads; i++) {
         split_point->slaves[i] = 0;
         if(threadIsAvailable(i, master) || i == master) {
@@ -208,9 +208,6 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack& s
             Threads[i].cutoff = false;
             Threads[i].work_assigned = true;
         }
-        if (split_point->slaves[i]) { // copy search stack from master to slaves
-            memcpy(&Threads[i].ts[p->ply], &Threads[master].ts[p->ply], depth * sizeof(ThreadStack));
-        }
     }
     MutexUnlock(SMPLock);
 
@@ -222,9 +219,9 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack& s
     idleLoop(master, split_point);
 
     MutexLock(SMPLock);
-    ss.bestvalue = split_point->bestvalue;
-    ss.bestmove = split_point->bestmove;
-    ss.playedMoves = split_point->played;
+    ss->bestvalue = split_point->bestvalue;
+    ss->bestmove = split_point->bestmove;
+    ss->playedMoves = split_point->played;
     if (SearchInfo(0).thinking_status != STOPPED) {
         Threads[master].stop = false; 
         Threads[master].idle = false;
