@@ -27,7 +27,7 @@ can knight catch pawns code from LL
 */
 #define TWEAK_030813 true
 #define OPT_EASY true
-#define VERSION            "20130901_nr"
+#define VERSION            "20130904_nr"
 #define NUM_THREADS			    4
 #define MIN_SPLIT_DEPTH			6
 #define TCEC true
@@ -139,11 +139,12 @@ can knight catch pawns code from LL
 #include "attacks.h"
 #include "movegen.h"
 #include "position.h"
-#include "endgame.h"
+//#include "endgame.h"
 #include "eval.h"
 #include "trans.h"
 #include "smp.h"
 #include "movepicker.h"
+#include "learn.h"
 #include "search.h"
 #if defined SELF_TUNE2 || defined OPTIMIZE
 #include "tune.h"
