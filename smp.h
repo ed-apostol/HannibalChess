@@ -51,8 +51,8 @@ void idleLoop(const int thread_id, split_point_t *master_sp) {
                     ++Threads[thread_id].started;
                     Threads[thread_id].work_assigned = false;
                     split_point_t* sp = Threads[thread_id].split_point;
-                    if (sp->inPv) searchNode<true, true>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, sp->inCheck, thread_id, false);
-                    else searchNode<false, true>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, sp->inCheck, thread_id, false);
+                    if (sp->inPv) searchNode<true, true>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, sp->inCheck, thread_id, false,false, false);
+                    else searchNode<false, true>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, sp->inCheck, thread_id, false,false, false);
                     MutexLock(SMPLock);
                     if (Threads[thread_id].cutoff || (sp->master == thread_id && Threads[thread_id].stop)) {
                         for(int i = 0; i < Guci_options->threads; i++) {

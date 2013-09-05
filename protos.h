@@ -98,8 +98,7 @@ extern char *positionToFEN(const position_t *pos);
 /* eval.c */
 extern int kingPasser(const position_t *pos, int square, int color);
 extern int unstoppablePasser(const position_t *pos, int square, int color);
-//extern int eval(const position_t *pos, int thread_id);
-extern int eval(const position_t *pos, int thread_id, int *optimism, int *pessimism);
+extern int eval(const position_t *pos, int thread_id, uint8 *doneSearching, int *pessimism);
 
 /* trans.c */
 extern void initTrans(uint64 target, int thread);
@@ -124,12 +123,8 @@ extern void initNode(position_t *pos, int thread_id);
 extern int moveIsTactical(uint32 m);
 extern int simpleStalemate(const position_t *pos);
 extern int historyIndex(uint32 side, uint32 move);
-//extern int qSearch(position_t *pos, int alpha, int beta, int depth, const int pv, const int inCheck, int thread_id);
-//template <bool inPv>
-//int qSearch(position_t *pos, int alpha, int beta, int depth, int inCheck, const int thread_id);
-
 template<bool inPv, bool inSplitPoint>
-int searchNode(position_t *pos, int alpha, int beta, int depth, int inCheck, int thread_id, const bool cutNode);
+extern int searchNode(position_t *pos, int alpha, int beta, int depth, int inCheck, const int thread_id, const bool cutNode, const bool extended, const bool bigThreat);
 extern void getBestMove(position_t *pos, int thread_id);
 
 /* debug.c */

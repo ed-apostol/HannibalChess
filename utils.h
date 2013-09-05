@@ -186,7 +186,8 @@ string pv2Str(continuation_t *c) { //TODO promote use of this function throughou
 void displayBoard(const position_t *pos, int x) {
     static char pcstr[] = ".PNBRQK.pnbrqk";
     int i, j, c, p;
-    int opt, pes;
+//	int pessmism;
+//	uint8 doneSearching;
     for (i = 56; i >= 0; i -= 8) {
         Print(x, "\n%d  ",(i / 8) + 1);
         for (j = 0; j < 8; j++) {
@@ -205,8 +206,10 @@ void displayBoard(const position_t *pos, int x) {
     Print(x, "Castle = %d, ", pos->posStore.castle);
     Print(x, "Ep = %d, ", pos->posStore.epsq);
     Print(x, "Fifty = %d, ", pos->posStore.fifty);
-    Print(x, "Ev = %d, ", eval(pos, 0,&opt, &pes));
-    Print(x, "Ch = %s,\n",
+//    Print(x, "Ev = %d,", eval(pos, 0,&doneSearching, &pessmism));
+//	Print(x, "Dn = %d,", doneSearching);
+//	Print(x, "Pes = %d,", pessmism);
+	Print(x, "Ch = %s,\n",
         isAtt(pos, pos->side^1, pos->kings&pos->color[pos->side])
         ? "T" : "F");
     Print(x, "H = %s, ", bit2Str(pos->hash));

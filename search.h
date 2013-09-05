@@ -17,7 +17,6 @@
 #define Q_PVCHECK 2 // implies 2 checks
 #define NO_ASP FALSE
 #define MIN_REDUCTION_DEPTH 4 // default is FALSE
-#define THREAT_SIZE 500 //was 500
 
 void ponderHit() { //no pondering in tuning
     int64 time = getTime() - SearchInfo(0).start_time;
@@ -105,7 +104,7 @@ void initNode(position_t *pos, const int thread_id) {
             }
         }
 }
-
+/*
 int simpleStalemate(const position_t *pos) {
     uint32 kpos, to;
     uint64 mv_bits;
@@ -119,6 +118,7 @@ int simpleStalemate(const position_t *pos) {
     }
     return TRUE;
 }
+*/
 
 void copyPV(continuation_t *pv, continuation_t *newpv) {
     if (newpv->length)
@@ -187,7 +187,7 @@ int qSearch(position_t *pos, int alpha, int beta, int depth, const int inCheck, 
     int score;
     int newdepth;
     int moveGivesCheck;
-    int opt, pes;
+	uint8 doneSearching;
     uint32 bestmove = EMPTY;
     uint64 pinned;
     uint64 dcc;
@@ -198,6 +198,7 @@ int qSearch(position_t *pos, int alpha, int beta, int depth, const int inCheck, 
     uint32 hashMove = EMPTY;
     int mvlist_phase;
 	bool bigThreat = false;
+	int pessimism;
 
     ASSERT(pos != NULL);
     ASSERT(oldPV != NULL);
@@ -218,14 +219,17 @@ int qSearch(position_t *pos, int alpha, int beta, int depth, const int inCheck, 
         hashMove = transMove(entry);
 		bigThreat = transBigThreat(entry);
     }
-    if (pos->ply >= MAXPLY-1) return eval(pos, thread_id, &opt, &pes);
+    if (pos->ply >= MAXPLY-1) return eval(pos, thread_id, &doneSearching, &pessimism);
     if (!inCheck) {
-        if (simpleStalemate(pos)) {
+//		 detecting simple stalemates in eval now
+/*        if (simpleStalemate(pos)) {
             bestvalue = DrawValue[pos->side];
             goto cut;
         }
-        Threads[thread_id].evalvalue[pos->ply] = bestvalue = eval(pos, thread_id, &opt, &pes);
-		if (pes >= THREAT_SIZE) bigThreat = true;
+		*/
+        Threads[thread_id].evalvalue[pos->ply] = bestvalue = eval(pos, thread_id, &doneSearching, &pessimism);
+		if (doneSearching) goto cut;
+		if (pessimism >= THREAT_SIZE) bigThreat = true;
         updateEvalgains(pos, pos->posStore.lastmove, Threads[thread_id].evalvalue[pos->ply-1], Threads[thread_id].evalvalue[pos->ply], thread_id);
         if (Threads[thread_id].evalvalue[pos->ply] > alpha) {
             if (Threads[thread_id].evalvalue[pos->ply] >= beta) {
@@ -277,9 +281,12 @@ cut:
 }
 
 template <bool inPv, bool inSplitPoint>
-inline int searchNode(position_t *pos, int alpha, int beta, int depth, int inCheck, const int thread_id, const bool cutNode) {
-    if (depth <= 0) return qSearch<inPv>(pos, alpha, beta, 0, inCheck, thread_id);
-    else return searchGeneric<inPv, inSplitPoint>(pos, alpha, beta, depth, inCheck, thread_id, cutNode);
+inline int searchNode(position_t *pos, int alpha, int beta, int depth, int inCheck, const int thread_id, const bool cutNode, const bool extended, const bool bigThreat) {
+    if (depth <= 0) {
+		if (!extended && bigThreat) return searchGeneric<inPv, inSplitPoint>(pos, alpha, beta, 1, inCheck, thread_id, cutNode, true);
+		return qSearch<inPv>(pos, alpha, beta, 0, inCheck, thread_id);
+	}
+    return searchGeneric<inPv, inSplitPoint>(pos, alpha, beta, depth, inCheck, thread_id, cutNode, extended);
 }
 
 template<bool firstBanned>
@@ -322,9 +329,9 @@ int searchSelective(position_t *pos, int beta, int depth, int inCheck, uint32 *f
             makeMove(pos, &undo, move);
             newdepthclone = newdepth;
             if (okToPruneOrReduce) newdepthclone = newdepth - ReductionTable[1][MIN(depth,63)][MIN(played,63)];
-            score = -searchNode<false, false>(pos, -beta, 1-beta, newdepthclone, moveGivesCheck, thread_id,true); //TODO consider not doing pruning on played1
+            score = -searchNode<false, false>(pos, -beta, 1-beta, newdepthclone, moveGivesCheck, thread_id,true,false,false); //TODO consider not doing pruning on played1
             if (newdepthclone < newdepth && score >= beta) {
-                score = -searchNode<false, false>(pos, -beta, 1-beta, newdepth, moveGivesCheck, thread_id,true);
+                score = -searchNode<false, false>(pos, -beta, 1-beta, newdepth, moveGivesCheck, thread_id,true,false,false);
             }
             unmakeMove(pos, &undo);
         }
@@ -337,14 +344,14 @@ int searchSelective(position_t *pos, int beta, int depth, int inCheck, uint32 *f
 }
 
 template<bool inPv, bool inSplitPoint>
-int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, const int thread_id, const bool cutNode) {
+int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, const int thread_id, const bool cutNode, const bool extended) {
     int bestvalue = -INF;
     int oldalpha = alpha;
     int score;
     int newdepth;
     int moveGivesCheck;
     int played = 0;
-    int opt=0, pes = 0;
+	uint8 doneSearching;
     uint32 bestmove = EMPTY;
     uint64 pinned;
     uint64 dcc;
@@ -363,6 +370,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
     basic_move_t hisMoves[64];
     int hisOn;
 	bool bigThreat = false;
+	int pessimism = 0;
 
     ASSERT(pos != NULL);
     ASSERT(oldPV != NULL);
@@ -391,23 +399,33 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
                     return transMaxvalue(entry);
                 }
             }
-
+			//doneSearching only quits search if eval is called.  Would be nice if this was hashed
             hashDepth = transMovedepth(entry);
             if (transMinvalue(entry) != -INF) Threads[thread_id].evalvalue[pos->ply] = transMinvalue(entry);
             else if (transMaxvalue(entry) != INF) Threads[thread_id].evalvalue[pos->ply] = transMaxvalue(entry);
             else {
-                Threads[thread_id].evalvalue[pos->ply] = eval(pos, thread_id, &opt, &pes);
-				if (pes >= THREAT_SIZE && !bigThreat) {
-					bigThreat = true;
+                Threads[thread_id].evalvalue[pos->ply] = eval(pos, thread_id, &doneSearching, &pessimism);
+				if (doneSearching /*&& depth < 4*/) { //position can be non drawn, like R versus R (with hanging rook) so some search is needed
+//			       updateEvalgains(pos, pos->posStore.lastmove, Threads[thread_id].evalvalue[pos->ply-1], Threads[thread_id].evalvalue[pos->ply], thread_id);
+					transStore(pos->hash, 0, depth+2, Threads[thread_id].evalvalue[pos->ply], Threads[thread_id].evalvalue[pos->ply],true,thread_id);
+					return Threads[thread_id].evalvalue[pos->ply];
+				}
+				if (pessimism >= THREAT_SIZE) bigThreat = true;
+				if (bigThreat) {
 					transSetBigThreat(entry,true);
 				}
                 hashDepth = 0;
             }
         } else {
-            Threads[thread_id].evalvalue[pos->ply] = eval(pos, thread_id, &opt, &pes);
-            hashDepth = 0;
+            Threads[thread_id].evalvalue[pos->ply] = eval(pos, thread_id, &doneSearching, &pessimism);
+			if (doneSearching /*&& depth < 4*/) { //position can be non drawn, like R versus R (with hanging rook) so some search is needed
+//		       updateEvalgains(pos, pos->posStore.lastmove, Threads[thread_id].evalvalue[pos->ply-1], Threads[thread_id].evalvalue[pos->ply], thread_id);
+				transStore(pos->hash, 0, depth+2, Threads[thread_id].evalvalue[pos->ply], Threads[thread_id].evalvalue[pos->ply],true,thread_id);
+				return Threads[thread_id].evalvalue[pos->ply];
+			}		
+			if (pessimism >= THREAT_SIZE) bigThreat = true;
+			hashDepth = 0;
             hashMove = EMPTY;
-			if (pes >= THREAT_SIZE) bigThreat = true;
 		}
         if (pos->ply >= MAXPLY-3) return Threads[thread_id].evalvalue[pos->ply]; // -3 ensures the next 2 lines do not cause problems
         Threads[thread_id].killer1[pos->ply+2] = 0;
@@ -417,15 +435,15 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
         if (!inPv && !inCheck && prune) {
             int rvalue;
 			if (cutNode && pos->color[pos->side] & ~(pos->pawns | pos->kings) && !bigThreat
-                && beta < (rvalue = Threads[thread_id].evalvalue[pos->ply] - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0] - MAX(bigThreat*THREAT_SIZE,pes)))  {
-                    if (hashMove && hashMove != Threads[thread_id].killer1[pos->ply] && !moveIsTactical(hashMove)) { //good move, so killer move 07/25/13 NEW
+                && beta < (rvalue = Threads[thread_id].evalvalue[pos->ply] - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0] - MAX(pessimism,bigThreat*THREAT_SIZE)))  {
+                    if (hashMove && hashMove != Threads[thread_id].killer1[pos->ply] && !moveIsTactical(hashMove)) { 
                         Threads[thread_id].killer2[pos->ply] = Threads[thread_id].killer1[pos->ply];
                         Threads[thread_id].killer1[pos->ply] = hashMove;
                     }
                     return rvalue;
             }
             if (pos->posStore.lastmove != EMPTY && hashMove == EMPTY
-                && Threads[thread_id].evalvalue[pos->ply] < (rvalue = beta - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0] /*- opt*/)) { 
+                && Threads[thread_id].evalvalue[pos->ply] < (rvalue = beta - FutilityMarginTable[MIN(depth,MAX_FUT_MARGIN)][0])) { 
                     score = qSearch<FALSE>(pos, rvalue-1, rvalue, 0, FALSE, thread_id);
                     if (score < rvalue) return score;
             }
@@ -437,7 +455,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
                     int R = 4 + depth/5  + (Threads[thread_id].evalvalue[pos->ply] - beta > PawnValue);
                     int nullDepth = depth - R;
                     makeNullMove(pos, &undo);
-                    score = -searchNode<false, false>(pos, -beta, -alpha, nullDepth, FALSE, thread_id,false);
+                    score = -searchNode<false, false>(pos, -beta, -alpha, nullDepth, FALSE, thread_id,false,extended,bigThreat);
                     if ((entry = transProbe(pos->hash,thread_id)) != NULL && transMove(entry) != EMPTY) {
                         nullThreatMoveToBit = BitMask[moveTo(transMove(entry))];
 						if (score < -INF+MAXPLY) bigThreat = true;
@@ -447,7 +465,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
                         if (depth <= 6 || MinTwoBits(pos->color[pos->side] & ~(pos->pawns | pos->kings))) {
                             return score;
                         }
-                        score = searchNode<false, false>(pos, alpha, beta, depth-6, FALSE, thread_id,false);
+                        score = searchNode<false, false>(pos, alpha, beta, depth-6, FALSE, thread_id,false,extended,bigThreat);
                         if (score >= beta) 
                             return score;
                     }
@@ -507,10 +525,10 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
             //maybe should check legality here, since its an expensive check and might have been pruned earlier?
             if (bestvalue == -INF) { //TODO remove this from loop and do it first
                 makeMove(pos, &undo, move);
-                score = -searchNode<inPv, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, thread_id,(!inPv && !cutNode));
+                score = -searchNode<inPv, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, thread_id,(!inPv && !cutNode),extended,bigThreat);
             } 
             else {
-                int PruneReductionLevel = (inCheck || newdepth >= depth || moveGivesCheck || MoveGenPhase[mvlist_phase] != PH_QUIET_MOVES ) ? 0 : 
+                int PruneReductionLevel = (inCheck || moveGivesCheck || MoveGenPhase[mvlist_phase] != PH_QUIET_MOVES ) ? 0 : 
                     (moveIsPassedPawn(pos, move) ? 1 : 2); 
                 if (PruneReductionLevel && !inPv && pruneable) {
                     if (played > lateMove && !isMoveDefence(pos, move, nullThreatMoveToBit)) continue;
@@ -528,23 +546,23 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
                     }
                 }
                 int newdepthclone = newdepth;
-                if (depth >= MIN_REDUCTION_DEPTH || !MIN_REDUCTION_DEPTH) { 
+                if (depth >= MIN_REDUCTION_DEPTH) { 
                     if (PruneReductionLevel==1) {
                         newdepthclone -= ((ReductionTable[1][MIN(depth,63)][MIN(played,63)] >= 3) ? (ReductionTable[1][MIN(depth,63)][MIN(played,63)] - 2) : 0);
                     }
                     else if (PruneReductionLevel==2) {
                         newdepthclone -= ReductionTable[(inPv?0:1)][MIN(depth,63)][MIN(played,63)];
                     }
-                    else if (MoveGenPhase[mvlist_phase] == PH_BAD_CAPTURES) newdepthclone--;
+					else if (MoveGenPhase[mvlist_phase] == PH_BAD_CAPTURES) newdepthclone--;
                 }
 
                 makeMove(pos, &undo, move);
-                score = -searchNode<false, false>(pos, -alpha-1, -alpha, newdepthclone, moveGivesCheck, thread_id, true);
+                score = -searchNode<false, false>(pos, -alpha-1, -alpha, newdepthclone, moveGivesCheck, thread_id, true,extended,bigThreat);
                 if (newdepthclone < newdepth && score > alpha) {
-                    score = -searchNode<false, false>(pos, -alpha-1, -alpha, newdepth, moveGivesCheck, thread_id, false);
+                    score = -searchNode<false, false>(pos, -alpha-1, -alpha, newdepth, moveGivesCheck, thread_id, false,extended,bigThreat);
                 }
                 if (inPv && score > alpha) {
-                    score = -searchNode<true, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, thread_id, false);
+                    score = -searchNode<true, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, thread_id, false,extended,bigThreat);
                 }
             }
             unmakeMove(pos, &undo);
@@ -648,9 +666,11 @@ void repopulateHash(position_t *pos,continuation_t *rootPV,int depth, int score,
 		 //this is pretty rare but not impossible, because even though we get PV from hash, we do some searching after
 		if (!entry || transMove(entry) != rootPV->moves[moveOn]) {
 			int tDepth = MAX(0,depth-moveOn);
-			int opt, pes;
-			eval(pos,thread_id,&opt,&pes);
-			bool bigThreat = (pes > THREAT_SIZE);
+			bool bigThreat;
+			uint8 doneSearching;
+			int pessimism;
+			eval(pos,thread_id,&doneSearching,&pessimism);
+			bigThreat = (pessimism >= THREAT_SIZE); 
 			//9 & 10 reversed signs on score
 			if (moveOn%2) // if its no our move, their score is max
 				transStore(pos->hash, move, tDepth , -INF, -score,bigThreat,thread_id); //TODO why are we ruining our has knowledge with this?
@@ -750,20 +770,20 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
 #endif
                 makeMove(pos, &undo, move);
                 if (SearchInfo(thread_id).best_value == -INF || score > alpha) {
-                    score = -searchNode<true, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, thread_id,false);
+                    score = -searchNode<true, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, thread_id,false,false,false);
                 } else {
                     int newdepthclone = newdepth;
                     if (okToPruneOrReduce) {
                         newdepthclone -= ReductionTable[0][MIN(depth,63)][MIN(played,63)];
                     }
-                    score = -searchNode<false, false>(pos, -alpha-1, -alpha, newdepthclone, moveGivesCheck, thread_id,true);
+                    score = -searchNode<false, false>(pos, -alpha-1, -alpha, newdepthclone, moveGivesCheck, thread_id,true,false,false);
                     if (SearchInfo(thread_id).thinking_status != STOPPED && newdepthclone < newdepth && score > alpha) {
-                        score = -searchNode<false, false>(pos, -alpha-1, -alpha, newdepth, moveGivesCheck, thread_id,false);
+                        score = -searchNode<false, false>(pos, -alpha-1, -alpha, newdepth, moveGivesCheck, thread_id,false,false,false);
                     }
                     if (SearchInfo(thread_id).thinking_status != STOPPED && score > alpha) {
                         SearchInfo(thread_id).research = 1;
                         if (SHOW_SEARCH && getTime() - SearchInfo(thread_id).start_time > 10000) Print(1, "info currmove %s currmovenumber %d\n", move2Str(move), mvlist->pos);
-                        score = -searchNode<true, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, thread_id, false);
+                        score = -searchNode<true, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, thread_id, false,false, false);
                         SearchInfo(thread_id).research = 0;
                     }
                 }
@@ -778,10 +798,10 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
                         SearchInfo(thread_id).bestmove = move;
                         fail_high++;
                         beta = goodBeta(beta+24*(1<<fail_high));
-                        score = -searchNode<true, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, thread_id, false);
+                        score = -searchNode<true, false>(pos, -beta, -alpha, newdepth, moveGivesCheck, thread_id, false, false, false);
                     } while (score >= beta && SearchInfo(thread_id).thinking_status != STOPPED);
                     if (!NO_ASP && SearchInfo(thread_id).thinking_status != STOPPED && score <= alpha) {
-                        score = -searchNode<true, false>(pos, -INF, INF, newdepth, moveGivesCheck, thread_id, false);//this ensures our best estimate of the score
+                        score = -searchNode<true, false>(pos, -INF, INF, newdepth, moveGivesCheck, thread_id, false,false,false);//this ensures our best estimate of the score
                         if (SearchInfo(thread_id).thinking_status != STOPPED && score <= SearchInfo(thread_id).best_value) { // perhaps we should not have switched moves?
                             SearchInfo(thread_id).bestmove = oldMove;
                             SearchInfo(thread_id).pondermove = oldPonder;
@@ -1029,9 +1049,10 @@ void getBestMove(position_t *pos, int thread_id) {
 #ifdef EVAL_DEBUG
     showEval = true;
     {
-        int opt, pes;
-        Print(3,"info string eval %d",eval(pos,0, &opt, &pes));
-        Print(3,"opt %d pes %d\n",opt,pes);
+		bool doneSearching;
+		int pessimism;
+        Print(3,"info string eval %d",eval(pos,0, &doneSearching, &pessimism));
+        Print(3,"doneSearching %d bigThreat %d\n",doneSearching,pessimism);
     }
     showEval = false;
 #endif

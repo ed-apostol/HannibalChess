@@ -50,6 +50,8 @@ can knight catch pawns code from LL
 #define EASY_PLY_TIME4 10
 #define EAST_CUTOFF4 1200 //this is essentially if only one move escapes forced checkmate
 
+#define THREAT_SIZE 500 //was 500
+
 
 //#define SPEEDUP
 //#define OPTIMIZE true
