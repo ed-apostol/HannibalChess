@@ -97,8 +97,10 @@ typedef struct pawn_entry_t{
     uint64 passedbits;
     int16 opn;
     int16 end;
-    int8 shield[2][3];
-    int8 storm[2][3];
+    int8 shelter[2];
+    int8 kshelter[2];
+    int8 qshelter[2];
+    //	int8 halfPassed[2]; //currently unused
 }pawn_entry_t;
 
 /* the pawn hash table type */
@@ -237,9 +239,11 @@ typedef struct _position_t{
 typedef uint8 mflag_t;
 
 /* the material info structure */
-typedef struct material_info_t{
+typedef struct _material_info_t{
     int16 value;
-    uint16 flags;
+    uint8 phase;
+    uint8 draw[2];
+    mflag_t flags[2];
 }material_info_t;
 
 /* the search data structure */

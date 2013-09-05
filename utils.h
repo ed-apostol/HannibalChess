@@ -205,7 +205,7 @@ void displayBoard(const position_t *pos, int x) {
     Print(x, "Castle = %d, ", pos->posStore.castle);
     Print(x, "Ep = %d, ", pos->posStore.epsq);
     Print(x, "Fifty = %d, ", pos->posStore.fifty);
-    Print(x, "Ev = %d, ", eval(pos));
+    Print(x, "Ev = %d, ", eval(pos, 0,&opt, &pes));
     Print(x, "Ch = %s,\n",
         isAtt(pos, pos->side^1, pos->kings&pos->color[pos->side])
         ? "T" : "F");

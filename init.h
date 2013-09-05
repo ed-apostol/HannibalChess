@@ -8,14 +8,29 @@
 /**************************************************/
 #define FUTILITY_MOVE 64
 
+//BEST 1160 0.516
+//#define REDUCE_MIN 1.5
+//#define REDUCE_SCALE 2.5 
+//#define PV_REDUCE_MIN 0.50
+//#define PV_REDUCE_SCALE 7.50
+
+
+//#define REDUCE_MIN 1.57
+//#define REDUCE_SCALE 3.87 
 #define REDUCE_MIN 1.5
 #define REDUCE_SCALE 2.5 
 
+//#define PV_REDUCE_MIN 0.57 
+//#define PV_REDUCE_SCALE 7.58 
 #define PV_REDUCE_MIN 0.5
 #define PV_REDUCE_SCALE 7.5
 
-#define LATE_PRUNE_MIN 3
+//      double    pvRed = log(double(hd)) * log(double(mc)) / 3.0;
+//      double nonPVRed = 0.33 + log(double(hd)) * log(double(mc)) / 2.25;
+
+#define LATE_PRUNE_MIN 3 //3 range from 0 to 10
 #define FUTILITY_SCALE 18
+//#define FUTILITY_SCALE 18 //072613opt1 (15, originaly 20)
 
 
 int mpawn(int sq) {
@@ -90,6 +105,8 @@ int equeen(int sq) {
     return (central[abs(f-r)] + central[abs(f+r-7)] + file[f] + rank[r]);
 }
 
+
+
 #define MKF1 04 //5
 #define MKF2 30 //30
 #define MKF3 20 //20
@@ -155,7 +172,18 @@ void initPST(uci_option_t *opt) {
 
     for (i = 0; i < 8; i++) {
         for (j = 0; j < 64; j++) {
-            k = ((7 - SQRANK(j)) * 8) + SQFILE(j);
+            k = ((7 - SQRANK(j)) * 8) + SQFILE(j);/*
+                                                  if (i==KING) {
+                                                  PST(WHITE,i,j,MIDGAME) = (PST(WHITE,i,j,MIDGAME)*opt->king_pos_open_mult)/20;
+                                                  PST(WHITE,i,j,ENDGAME) = (PST(WHITE,i,j,ENDGAME)*opt->king_pos_end_mult)/20;
+                                                  }
+                                                  else {
+                                                  if (i!=KNIGHT || (j!= a8 && j!= h8)) {
+                                                  PST(WHITE,i,j,MIDGAME) = (PST(WHITE,i,j,MIDGAME)*opt->active_piece_open_mult)/20;
+                                                  PST(WHITE,i,j,ENDGAME) = (PST(WHITE,i,j,ENDGAME)*opt->active_piece_end_mult)/20;
+                                                  }
+                                                  }
+                                                  */
             PST(BLACK,i,k,MIDGAME) = PST(WHITE,i,j,MIDGAME);
             PST(BLACK,i,k,ENDGAME) = PST(WHITE,i,j,ENDGAME);
         }
@@ -164,6 +192,114 @@ void initPST(uci_option_t *opt) {
         k = ((7 - SQRANK(j)) * 8) + SQFILE(j);
         KingPosPenalty[WHITE][j] = (4 - KingFileMul[SQFILE(j)]) + (1 - KingRankMul[SQRANK(j)]);
         KingPosPenalty[BLACK][k] = KingPosPenalty[WHITE][j];
+    }
+}
+
+void InitTrapped() {
+    int i;
+    bewareTrapped[WHITE] = bewareTrapped[BLACK] = escapeTrapped[WHITE] = escapeTrapped[BLACK] = 0;
+
+    for (i=0;i<64;i++) {
+        if (SQRANK(i) >= Rank4 && (SQFILE(i) >= FileG || SQFILE(i) <= FileB)) {
+            bewareTrapped[WHITE] |= BitMask[i];
+        }
+        if (SQRANK(i) >= Rank5) {
+            bewareTrapped[WHITE] |= BitMask[i];
+            escapeTrapped[BLACK] |= BitMask[i];
+        }
+        if (SQRANK(i) <= Rank5 && (SQFILE(i) >= FileG || SQFILE(i) <= FileB)) {
+            bewareTrapped[BLACK] |= BitMask[i];
+        }
+        if (SQRANK(i) <= Rank4) {
+            bewareTrapped[BLACK] |= BitMask[i];
+            escapeTrapped[WHITE] |= BitMask[i];
+        }
+    }
+}
+
+void InitKingShelter()
+{
+    // lets do king shelter and indirect shelter
+    int i,j;
+    int ri,fi,rj,fj;
+    for (i = 0; i < 64; i++)
+    {
+        kingShelter[WHITE][i] = 0;
+        kingIndirectShelter[WHITE][i] = 0;
+        kingShelter[BLACK][i] = 0;
+        kingIndirectShelter[BLACK][i] = 0;
+        ri = i/8;
+        fi = i%8;
+        for (j = 0; j < 64; j++)
+        {
+            rj = j/8;
+            fj = j%8;
+            // WHITE
+            if (ri <= rj)
+            {
+                //                if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1)
+                if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1 && rj == Rank2) //only great protection on 2nd rate...example pawn on g2 protects Kg2/Kg1 equally
+                {
+                    kingShelter[WHITE][i] |= BitMask[j];
+                }
+                //               if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1)
+                if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1 && (rj <= Rank3 || abs(ri-rj) <=1) )
+                {
+                    kingIndirectShelter[WHITE][i] |= BitMask[j];
+                }
+            }
+            // BLACK
+            if (ri >= rj)
+            {
+                //                if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1)
+                if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1 && rj == Rank7)
+                {
+                    kingShelter[BLACK][i] |= BitMask[j];
+                }
+                //                if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1)
+                if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1 && (rj >= Rank6 || abs(ri-rj) <= 1))
+                {
+                    kingIndirectShelter[BLACK][i] |= BitMask[j];
+                }
+            }
+        }
+    }
+
+    // deal with exceptions for white
+    for (i = 0; i < 7; i++)
+    {
+        // king on A file protected by pawn on C file
+        kingIndirectShelter[WHITE][i*8+a1] |= BitMask[i*8+8+c1-a1];
+        kingIndirectShelter[WHITE][i*8+a1] |= BitMask[i*8+c1-a1];
+        // king on H file protected by pawn on F file
+        kingIndirectShelter[WHITE][i*8+h1] |= BitMask[i*8+8+h1-f1];
+        kingIndirectShelter[WHITE][i*8+h1] |= BitMask[i*8+h1-f1];
+        // the E and D files do not protect as well
+        kingShelter[WHITE][i*8+c1] &= ~BitMask[i*8+8+d1];
+        kingShelter[WHITE][i*8+d1] &= ~BitMask[i*8+8+d1];
+        kingShelter[WHITE][i*8+e1] &= ~BitMask[i*8+8+d1];
+        kingShelter[WHITE][i*8+d1] &= ~BitMask[i*8+8+e1];
+        kingShelter[WHITE][i*8+e1] &= ~BitMask[i*8+8+e1];
+        kingShelter[WHITE][i*8+f1] &= ~BitMask[i*8+8+e1];
+        // don't need to add back in indirect since its already there
+    }
+
+    // deal with exceptions for black
+    for (i = 1; i < 8; i++)
+    {
+        // king on A file protected by pawn on C file
+        kingIndirectShelter[BLACK][i*8+a1] |= BitMask[i*8-8+c1-a1];
+        kingIndirectShelter[BLACK][i*8+a1] |= BitMask[i*8+c1-a1];
+        // king on H file protected by pawn on F file
+        kingIndirectShelter[BLACK][i*8+h1] |= BitMask[i*8-8+f1-h1];
+        kingIndirectShelter[BLACK][i*8+h1] |= BitMask[i*8+f1-h1];
+        // the E and D files do not protect as well
+        kingShelter[BLACK][i*8+c1] &= ~BitMask[i*8-8+d1];
+        kingShelter[BLACK][i*8+d1] &= ~BitMask[i*8-8+d1];
+        kingShelter[BLACK][i*8+e1] &= ~BitMask[i*8-8+d1];
+        kingShelter[BLACK][i*8+d1] &= ~BitMask[i*8-8+e1];
+        kingShelter[BLACK][i*8+e1] &= ~BitMask[i*8-8+e1];
+        kingShelter[BLACK][i*8+f1] &= ~BitMask[i*8-8+e1];
     }
 }
 
@@ -242,6 +378,8 @@ void initArr(void) {
     const int bpawn2mov[] = {-16};
 
     int bit_list[16];
+    //memset(BMagicMask, 0, sizeof(BMagicMask));
+    //memset(RMagicMask, 0, sizeof(RMagicMask));
     memset(MagicAttacks, 0, sizeof(MagicAttacks));
     memset(bit_list, 0, sizeof(bit_list));
 
@@ -254,6 +392,8 @@ void initArr(void) {
     memset(FileMask, 0, sizeof(FileMask));
     memset(InBetween, 0, sizeof(InBetween));
     memset(PassedMask, 0, sizeof(PassedMask));
+    //    memset(FutilityMarginTable, 0, sizeof(FutilityMarginTable));
+    //    memset(ReductionTable, 0, sizeof(ReductionTable));
 
     for (i = 0; i < 0x40; i++) CastleMask[i] = 0xF;
 
@@ -339,6 +479,7 @@ void initArr(void) {
             }
         }
     }
+    InitKingShelter();
     for (i = 8; i < 56; i++) {
         uint64 b = (uint64)1 << (i + 8);
         if (SQFILE(i) > FileA) b |= (uint64)1 << (i + 7);
@@ -373,6 +514,13 @@ void initArr(void) {
             // Print(2, "ReductionTable[NonPV][%d][%d] = %d\n", j, k, ReductionTable[1][j][k]);
         }
     }
+    /*
+    for (j = 0; j < 32; j++)
+    {
+    LateMovePruningTable[j] = LATE_PRUNE_MIN + ((j * j) / LATE_PRUNE_SCALE);
+    // Print(2, "LateMovePruningTable[%d] = %d\n", j, LateMovePruningTable[j]);
+    }
+    */
     for (i = 0; i < 64; i++)
     {
         int bits = 64 - BShift[i];
@@ -398,37 +546,5 @@ void initArr(void) {
             }
             MagicAttacks[ROffset[i] + ((RMagic[i] * u) >> RShift[i])] = RMagicHash(i,u);
         }
-    }
-    for (i = 0; i < 3; i++) {
-        int wksq[3] = {b1, e1, g1};
-        int bksq[3] = {b8, e8, g8};
-        uint64 b1, b2, b3;
-        b1 = b2 = b3 = 0;
-        b1 |= BitMask[wksq[i] + 7];
-        b1 |= BitMask[wksq[i] + 8];
-        b1 |= BitMask[wksq[i] + 9];
-        b2 |= BitMask[wksq[i] + 15];
-        b2 |= BitMask[wksq[i] + 16];
-        b2 |= BitMask[wksq[i] + 17];
-        b3 |= BitMask[wksq[i] + 23];
-        b3 |= BitMask[wksq[i] + 24];
-        b3 |= BitMask[wksq[i] + 25];
-        PawnShelterMask1[WHITE][i] = b1;
-        PawnShelterMask2[WHITE][i] = b2;
-        PawnShelterMask3[WHITE][i] = b3;
-
-        b1 = b2 = b3 = 0;
-        b1 |= BitMask[bksq[i] - 9];
-        b1 |= BitMask[bksq[i] - 8];
-        b1 |= BitMask[bksq[i] - 7];
-        b2 |= BitMask[bksq[i] - 17];
-        b2 |= BitMask[bksq[i] - 16];
-        b2 |= BitMask[bksq[i] - 15];
-        b3 |= BitMask[bksq[i] - 25];
-        b3 |= BitMask[bksq[i] - 24];
-        b3 |= BitMask[bksq[i] - 23];
-        PawnShelterMask1[BLACK][i] = b1;
-        PawnShelterMask2[BLACK][i] = b2;
-        PawnShelterMask3[BLACK][i] = b3;
     }
 }

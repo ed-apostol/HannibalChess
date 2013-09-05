@@ -73,13 +73,13 @@ int main(void) {
     initOption(&uci_option); // this should be initialized first
     initArr();
     initPST(Guci_options);
-    //InitTrapped();
+    InitTrapped();
 
     initSmpVars();
     initThreads();
 
     initMaterial();
-    //InitMateBoost();
+    InitMateBoost();
 
     setPosition(&pos,STARTPOS);
     needReplyReady = FALSE;

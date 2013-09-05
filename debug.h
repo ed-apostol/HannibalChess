@@ -228,8 +228,8 @@ int evalSymmetryIsOk(const position_t *pos) {
     int opt, pes;
 
     flipPosition(pos, &clone);
-    score1 = eval(pos);
-    score2 = eval(&clone);
+    score1 = eval(pos, 0, &opt, &pes);
+    score2 = eval(&clone, 0, &opt, &pes);
     if (score1 != score2) {
         Print(8, "\n==============================================\n");
         Print(8, "score1 = %d, score2 = %d\n", score1, score2);
