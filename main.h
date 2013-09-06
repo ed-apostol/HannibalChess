@@ -96,6 +96,7 @@ int main(void) {
 
         if (!memcmp(command, "ucinewgame", 10)) {
             origScore = 0;
+            SearchInfo(0).lastDepthSearched = MAXPLY;
             transClear(0);
 #ifndef TCEC
             SearchInfo(0).outOfBook = 0;

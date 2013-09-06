@@ -254,6 +254,8 @@ typedef struct _search_info_t{
     int best_value;
     int best_value2;
 
+    int lastDepthSearched;
+
     int mate_found;
     int currmovenumber;
     int change;
