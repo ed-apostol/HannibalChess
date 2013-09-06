@@ -217,92 +217,6 @@ void InitTrapped() {
     }
 }
 
-void InitKingShelter()
-{
-    // lets do king shelter and indirect shelter
-    int i,j;
-    int ri,fi,rj,fj;
-    for (i = 0; i < 64; i++)
-    {
-        kingShelter[WHITE][i] = 0;
-        kingIndirectShelter[WHITE][i] = 0;
-        kingShelter[BLACK][i] = 0;
-        kingIndirectShelter[BLACK][i] = 0;
-        ri = i/8;
-        fi = i%8;
-        for (j = 0; j < 64; j++)
-        {
-            rj = j/8;
-            fj = j%8;
-            // WHITE
-            if (ri <= rj)
-            {
-                //                if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1)
-                if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1 && rj == Rank2) //only great protection on 2nd rate...example pawn on g2 protects Kg2/Kg1 equally
-                {
-                    kingShelter[WHITE][i] |= BitMask[j];
-                }
-                //               if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1)
-                if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1 && (rj <= Rank3 || abs(ri-rj) <=1) )
-                {
-                    kingIndirectShelter[WHITE][i] |= BitMask[j];
-                }
-            }
-            // BLACK
-            if (ri >= rj)
-            {
-                //                if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1)
-                if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1 && rj == Rank7)
-                {
-                    kingShelter[BLACK][i] |= BitMask[j];
-                }
-                //                if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1)
-                if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1 && (rj >= Rank6 || abs(ri-rj) <= 1))
-                {
-                    kingIndirectShelter[BLACK][i] |= BitMask[j];
-                }
-            }
-        }
-    }
-
-    // deal with exceptions for white
-    for (i = 0; i < 7; i++)
-    {
-        // king on A file protected by pawn on C file
-        kingIndirectShelter[WHITE][i*8+a1] |= BitMask[i*8+8+c1-a1];
-        kingIndirectShelter[WHITE][i*8+a1] |= BitMask[i*8+c1-a1];
-        // king on H file protected by pawn on F file
-        kingIndirectShelter[WHITE][i*8+h1] |= BitMask[i*8+8+h1-f1];
-        kingIndirectShelter[WHITE][i*8+h1] |= BitMask[i*8+h1-f1];
-        // the E and D files do not protect as well
-        kingShelter[WHITE][i*8+c1] &= ~BitMask[i*8+8+d1];
-        kingShelter[WHITE][i*8+d1] &= ~BitMask[i*8+8+d1];
-        kingShelter[WHITE][i*8+e1] &= ~BitMask[i*8+8+d1];
-        kingShelter[WHITE][i*8+d1] &= ~BitMask[i*8+8+e1];
-        kingShelter[WHITE][i*8+e1] &= ~BitMask[i*8+8+e1];
-        kingShelter[WHITE][i*8+f1] &= ~BitMask[i*8+8+e1];
-        // don't need to add back in indirect since its already there
-    }
-
-    // deal with exceptions for black
-    for (i = 1; i < 8; i++)
-    {
-        // king on A file protected by pawn on C file
-        kingIndirectShelter[BLACK][i*8+a1] |= BitMask[i*8-8+c1-a1];
-        kingIndirectShelter[BLACK][i*8+a1] |= BitMask[i*8+c1-a1];
-        // king on H file protected by pawn on F file
-        kingIndirectShelter[BLACK][i*8+h1] |= BitMask[i*8-8+f1-h1];
-        kingIndirectShelter[BLACK][i*8+h1] |= BitMask[i*8+f1-h1];
-        // the E and D files do not protect as well
-        kingShelter[BLACK][i*8+c1] &= ~BitMask[i*8-8+d1];
-        kingShelter[BLACK][i*8+d1] &= ~BitMask[i*8-8+d1];
-        kingShelter[BLACK][i*8+e1] &= ~BitMask[i*8-8+d1];
-        kingShelter[BLACK][i*8+d1] &= ~BitMask[i*8-8+e1];
-        kingShelter[BLACK][i*8+e1] &= ~BitMask[i*8-8+e1];
-        kingShelter[BLACK][i*8+f1] &= ~BitMask[i*8-8+e1];
-    }
-}
-
 uint64 BMagicHash(int i, uint64 occ)
 {
     uint64 free = 0;
@@ -392,8 +306,9 @@ void initArr(void) {
     memset(FileMask, 0, sizeof(FileMask));
     memset(InBetween, 0, sizeof(InBetween));
     memset(PassedMask, 0, sizeof(PassedMask));
-    //    memset(FutilityMarginTable, 0, sizeof(FutilityMarginTable));
-    //    memset(ReductionTable, 0, sizeof(ReductionTable));
+    memset(PawnShelterMask1, 0, sizeof(PawnShelterMask1));
+    memset(PawnShelterMask2, 0, sizeof(PawnShelterMask2));
+    memset(PawnShelterMask3, 0, sizeof(PawnShelterMask3));
 
     for (i = 0; i < 0x40; i++) CastleMask[i] = 0xF;
 
@@ -479,7 +394,6 @@ void initArr(void) {
             }
         }
     }
-    InitKingShelter();
     for (i = 8; i < 56; i++) {
         uint64 b = (uint64)1 << (i + 8);
         if (SQFILE(i) > FileA) b |= (uint64)1 << (i + 7);
@@ -546,5 +460,37 @@ void initArr(void) {
             }
             MagicAttacks[ROffset[i] + ((RMagic[i] * u) >> RShift[i])] = RMagicHash(i,u);
         }
+    }
+    for (i = 0; i < 3; i++) {
+        int wksq[3] = {b1, e1, g1};
+        int bksq[3] = {b8, e8, g8};
+        uint64 b1, b2, b3;
+        b1 = b2 = b3 = 0;
+        b1 |= BitMask[wksq[i] + 7];
+        b1 |= BitMask[wksq[i] + 8];
+        b1 |= BitMask[wksq[i] + 9];
+        b2 |= BitMask[wksq[i] + 15];
+        b2 |= BitMask[wksq[i] + 16];
+        b2 |= BitMask[wksq[i] + 17];
+        b3 |= BitMask[wksq[i] + 23];
+        b3 |= BitMask[wksq[i] + 24];
+        b3 |= BitMask[wksq[i] + 25];
+        PawnShelterMask1[WHITE][i] = b1;
+        PawnShelterMask2[WHITE][i] = b2;
+        PawnShelterMask3[WHITE][i] = b3;
+
+        b1 = b2 = b3 = 0;
+        b1 |= BitMask[bksq[i] - 9];
+        b1 |= BitMask[bksq[i] - 8];
+        b1 |= BitMask[bksq[i] - 7];
+        b2 |= BitMask[bksq[i] - 17];
+        b2 |= BitMask[bksq[i] - 16];
+        b2 |= BitMask[bksq[i] - 15];
+        b3 |= BitMask[bksq[i] - 25];
+        b3 |= BitMask[bksq[i] - 24];
+        b3 |= BitMask[bksq[i] - 23];
+        PawnShelterMask1[BLACK][i] = b1;
+        PawnShelterMask2[BLACK][i] = b2;
+        PawnShelterMask3[BLACK][i] = b3;
     }
 }

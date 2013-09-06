@@ -337,8 +337,8 @@ void makeMove(position_t *pos, pos_store_t *undo, basic_move_t m) {
         pos->hash ^= ZobPiece[side][KING][to];
         pos->hash ^= ZobPiece[side][ROOK][rook_from];
         pos->hash ^= ZobPiece[side][ROOK][rook_to];
-        pos->posStore.phash ^= ZobPiece[side][KING][from];
-        pos->posStore.phash ^= ZobPiece[side][KING][to];
+        //////pos->posStore.phash ^= ZobPiece[side][KING][from];
+        //////pos->posStore.phash ^= ZobPiece[side][KING][to];
         pos->posStore.open[side] += PST(side, KING, to, MIDGAME) -  PST(side, KING, from, MIDGAME);
         pos->posStore.end[side] += PST(side, KING, to, ENDGAME) -  PST(side, KING, from, ENDGAME);
         pos->posStore.open[side] += PST(side, ROOK, rook_to, MIDGAME) -  PST(side, ROOK, rook_from, MIDGAME);

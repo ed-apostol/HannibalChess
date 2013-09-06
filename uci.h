@@ -134,6 +134,34 @@ void uciSetOption(char string[]) {
     } else if (!memcmp(name,"Min Split Depth",15)) {
         Guci_options->min_split_depth = atoi(value);
     }
+
+     else if (!memcmp(name,"QueenAttackValue",strlen("QueenAttackValue"))) {
+        QueenAttackValue = atoi(value);
+    } else if (!memcmp(name,"RookAttackValue",strlen("RookAttackValue"))) {
+        RookAttackValue = atoi(value);
+    } else if (!memcmp(name,"BishopAttackValue",strlen("BishopAttackValue"))) {
+        BishopAttackValue = atoi(value);
+    } else if (!memcmp(name,"KnightAttackValue",strlen("KnightAttackValue"))) {
+        KnightAttackValue = atoi(value);
+    } else if (!memcmp(name,"QueenSafeContactCheckValue",strlen("QueenSafeContactCheckValue"))) {
+        QueenSafeContactCheckValue = atoi(value);
+    } else if (!memcmp(name,"QueenSafeCheckValue",strlen("QueenSafeCheckValue"))) {
+        QueenSafeCheckValue = atoi(value);
+    } else if (!memcmp(name,"RookSafeCheckValue",strlen("RookSafeCheckValue"))) {
+        RookSafeCheckValue = atoi(value);
+    } else if (!memcmp(name,"BishopSafeCheckValue",strlen("BishopSafeCheckValue"))) {
+        BishopSafeCheckValue = atoi(value);
+    } else if (!memcmp(name,"KnightSafeCheckValue",strlen("KnightSafeCheckValue"))) {
+        KnightSafeCheckValue = atoi(value);
+    } else if (!memcmp(name,"DiscoveredCheckValue",strlen("DiscoveredCheckValue"))) {
+        DiscoveredCheckValue = atoi(value);
+    } else if (!memcmp(name,"PawnShelterMultiplier",strlen("PawnShelterMultiplier"))) {
+        PawnShelterMultiplier = atoi(value);
+    } else if (!memcmp(name,"KingLocationPenalty",strlen("KingLocationPenalty"))) {
+        KingLocationPenalty = atoi(value);
+    } else if (!memcmp(name,"UndefendedKingAttacks",strlen("UndefendedKingAttacks"))) {
+        UndefendedKingAttacks = atoi(value);
+    }
 }
 
 void uciParseSearchmoves(movelist_t *ml, char *str, uint32 moves[]) {

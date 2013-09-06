@@ -88,6 +88,19 @@ const int MatSummValue[8] = {0,1,9,27,81,243,0,0};
 #define MLR MatSummValue[ROOK]
 #define MLQ MatSummValue[QUEEN]
 
+// used in pawn shelter and storm eval
+static const int FileWing[64] = {
+    0,0,0,1,1,2,2,2,
+    0,0,0,1,1,2,2,2,
+    0,0,0,1,1,2,2,2,
+    0,0,0,1,1,2,2,2,
+    0,0,0,1,1,2,2,2,
+    0,0,0,1,1,2,2,2,
+    0,0,0,1,1,2,2,2,
+    0,0,0,1,1,2,2,2
+};
+
+
 // used in setting up the position and eval symmetry
 const char *FenString[] = {
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
