@@ -75,9 +75,8 @@ static int KingPosPenalty[2][64];
 static int DrawValue[2];
 /* this is used for pawn shelter and pawn storm */
 static uint64 PassedMask[2][64];
-static uint64 PawnShelterMask1[2][3];
-static uint64 PawnShelterMask2[2][3];
-static uint64 PawnShelterMask3[2][3];
+static uint64 kingShelter[2][64]; // provides good shelter for king SAM1 added static
+static uint64 kingIndirectShelter[2][64]; // provides ok shelter for king SAM1 added static
 /* used in debugging, etc.. */
 FILE *logfile;
 FILE *errfile;

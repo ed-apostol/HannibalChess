@@ -44,7 +44,379 @@ static const int QScastleTo[2] = {c1,c8} ;
 #define TRAPPED3 25 //25
 #define TRAPPED4 4 //4
 
-#ifndef SELF_TUNE2
+#ifdef SELF_TUNE2
+#define MIN_SIM 0.9
+#define SIM_WEIGHT 0.2 
+#define TUNE_NODES 50000
+#define MAX_PERSONALITIES 10000
+#define MAX_SHOW 20
+#define DEFAULT_RATING 2000
+#define SUFFICIENT_DIVERSITY 50 //should be at > twice the number of active games
+#define MIN_GAMES 100
+int Random (int min, int max) {
+    if (min >=max) return min;
+    return rand()%(max-min+1)+min;
+}
+typedef struct {
+    int low;
+    int high;
+} range_t;
+class Personality {
+private:
+    double similarityWeight[NUM_GENOMES];
+    double ratingWeight[NUM_GENOMES];
+public:
+    int numToMutate; //TODO make numToMatate and the ranges static
+    int stuck_end; range_t stuck_end_range;
+    int stuck_bishop; range_t stuck_bishop_range;
+    int stuck_rook; range_t stuck_rook_range;
+    int stuck_queen; range_t stuck_queen_range;
+    int tempo_open; range_t tempo_open_range;
+    int tempo_end; range_t tempo_end_range;
+    int TrappedMoves[7*4+1]; range_t trapped1_range; range_t trapped2_range; range_t trapped3_range; range_t trapped4_range;
+
+
+    int games, points;
+    double rating;
+
+    bool toMutate[NUM_GENOMES];
+
+    int GetTrapped1() { return TrappedMoves[0]-TrappedMoves[1];}
+    int GetTrapped2() { return TrappedMoves[1]-TrappedMoves[2];}
+    int GetTrapped3() { return TrappedMoves[2]-TrappedMoves[3];}
+    int GetTrapped4() { return TrappedMoves[3];}
+    void SetDefaultRating() {
+        games = 0;
+        points = 0;
+        rating = DEFAULT_RATING;
+        for (int i = 0; i < NUM_GENOMES; i++) {
+            similarityWeight[i] = 0;
+            ratingWeight[i] = 0;
+        }
+    }
+    void SetDefaults() {
+        SetDefaultRating();
+        numToMutate = NUM_GENOMES; //stuck, trapped
+
+        stuck_end = STUCK_END; stuck_end_range.low = 0; stuck_end_range.high = 10;
+        stuck_bishop = STUCK_BISHOP; stuck_bishop_range.low = 0; stuck_bishop_range.high = 50;
+        stuck_rook = STUCK_ROOK; stuck_rook_range.low = 0; stuck_rook_range.high = 50;
+        stuck_queen = STUCK_QUEEN; stuck_queen_range.low = 0; stuck_queen_range.high = 50;
+
+        tempo_open = TEMPO_OPEN; tempo_open_range.low = 0; tempo_open_range.high = 40;
+        tempo_end = TEMPO_END; tempo_end_range.low = 0; tempo_end_range.high = 40;
+
+        SetTrapped(TRAPPED1,TRAPPED2,TRAPPED3,TRAPPED4);
+        trapped1_range.low = 0; trapped1_range.high = 200;
+        trapped2_range.low = 0; trapped2_range.high = 200;
+        trapped3_range.low = 0; trapped3_range.high = 50;
+        trapped4_range.low = 0; trapped4_range.high = 20;
+
+        SetMutate(true,true,true); //mutate stuck but not trapped
+    }
+    double GetSimilarityRating(int i) {
+        double sr = 0;
+        if (toMutate[i]) sr += (similarityWeight[i] == 0) ? 0 : (ratingWeight[i] / similarityWeight[i]);
+
+        if (sr==0) return 0;
+        return sr;
+    }
+    double GetSimilarityRating() {
+        double sr = 0;
+        int numCount = 0;
+        for (int i = 0; i < NUM_GENOMES; i++) {
+            if (toMutate[i])
+            {
+                if (similarityWeight[i] > 0) {
+                    sr += (ratingWeight[i] / similarityWeight[i]);
+                    numCount++;
+                }
+            }
+        }
+        if (numCount==0) return 0;
+        return (sr / (float) numCount);
+    }
+
+    char* PrettyString() {
+        static char s[255], s1[255]="", s2[255]="", s3[255]="";
+        if (tempo_open_range.low != tempo_open_range.high) {
+            double sr = GetSimilarityRating(0);
+            sprintf(s1,"%d %d [%.2f]",tempo_open,tempo_end,sr);
+        }
+        if (stuck_end_range.low != stuck_end_range.high) {
+            double sr = GetSimilarityRating(1);
+            sprintf(s2,"%d %d %d %d [%.2f]",stuck_end,stuck_bishop,stuck_rook,stuck_queen,sr);
+        }
+        if (trapped1_range.low != trapped1_range.high) {
+            double sr = GetSimilarityRating(2);
+            sprintf(s3,"%d %d %d %d [%.2f]",GetTrapped1(),  GetTrapped2(),  GetTrapped3(),  GetTrapped4(),sr);
+        }
+        sprintf(s,"%s%s%s",s1,s2,s3);
+
+        return s;
+    }
+    void updateRatingWeight(double sim, Personality p,int k, bool increment) {
+        double games = (double)p.games/(double)MIN_GAMES;
+        double weight = sim * games;
+        if (increment) {
+            similarityWeight[k] += weight;
+            ratingWeight[k] += weight * p.rating;
+        }
+        else {
+            similarityWeight[k] -= weight;
+            ratingWeight[k] -=  weight * p.rating;
+        }
+    }
+    int rangeDif(range_t r) { return (r.high - r.low);}
+    double gameWeight() {
+        if (games < MIN_GAMES) return 0;
+        else if  (games < MIN_GAMES*2) return 1;
+        else if  (games < MIN_GAMES*4) return 2;
+        else if  (games < MIN_GAMES*8) return 3;
+        else if  (games < MIN_GAMES*16) return 4;
+        else if  (games < MIN_GAMES*32) return 5;
+        else if  (games < MIN_GAMES*64) return 6;
+        return 7;
+    }
+    double similarity(Personality p, int k) {
+        if (Equal(p)) return (1.0); //if you have no games, you don't count as similar to yourself :)
+        double dif = 0;
+        double s;
+        if (k==0) { //tempo
+            float range = (float) rangeDif(tempo_open_range);
+            if (range==0) return 0;
+            dif += fabs((float)tempo_open - (float)p.tempo_open) / range;
+            range = (float) rangeDif(tempo_end_range);
+            dif += fabs((float)tempo_end - (float)p.tempo_end) / range;
+            s = 1.0 - (dif / 2.0);			
+        }
+        else if (k==1) { //stuck
+            float range = (float) rangeDif(stuck_end_range);
+            if (range==0) return 0;
+            dif += fabs((float)stuck_end - (float)p.stuck_end) / range;
+            range = (float) rangeDif(stuck_bishop_range);
+            dif += fabs((float)stuck_bishop - (float)p.stuck_bishop) / range;
+            range = (float) rangeDif(stuck_rook_range);
+            dif += fabs((float)stuck_rook - (float)p.stuck_rook) / range;
+            range = (float) rangeDif(stuck_queen_range);
+            dif += fabs((float)stuck_queen - (float)p.stuck_queen) / range;
+            s = 1.0 - (dif / 4.0);			
+        }
+        else if (k==2) { //trapped
+            float range = (float) rangeDif(trapped1_range);
+            if (range==0) return 0;
+            dif += abs(GetTrapped1() - p.GetTrapped1()) / range;
+            range = (float) rangeDif(trapped2_range);
+            dif += fabs((float)GetTrapped2() - (float)p.GetTrapped2()) / range;
+            range = (float) rangeDif(trapped3_range);
+            dif += fabs((float)GetTrapped3() - (float)p.GetTrapped3()) / range;
+            range = (float) rangeDif(trapped4_range);
+            dif += fabs((float)GetTrapped4() - (float)p.GetTrapped4()) / range;
+            s = 1.0 - (dif / 4.0);			
+        }
+        if (s < MIN_SIM) return 0;
+        else return (s * SIM_WEIGHT);
+    }
+
+    /*
+    char* FileString() {
+    static char s[255];
+    sprintf(s,"%.2f %d %d %d %d %d %d %d %d %d %d",rating, points, games, stuck_end,stuck_bishop,stuck_rook,stuck_queen, GetTrapped1(),  GetTrapped2(),  GetTrapped3(),  GetTrapped4());
+    return s;
+    }*/
+    bool Equal(Personality p) {
+        return (stuck_end == p.stuck_end && stuck_bishop == p.stuck_bishop && stuck_rook == p.stuck_rook &&
+            stuck_queen == p.stuck_queen && GetTrapped1() == p.GetTrapped1() && GetTrapped2() == p.GetTrapped2() &&
+            GetTrapped3() == p.GetTrapped3() && GetTrapped4() == p.GetTrapped4() &&
+            tempo_open == p.tempo_open && tempo_end == p.tempo_end);
+    }
+    void SetTrapped(int trapped1, int trapped2, int trapped3, int trapped4) {
+        TrappedMoves[0] = trapped4+trapped3+trapped2+trapped1;
+        TrappedMoves[1] = trapped4+trapped3+trapped2;
+        TrappedMoves[2] = trapped4+trapped3;
+        TrappedMoves[3] = trapped4;
+        for (int i = 4; i < 7*4+1;i++) TrappedMoves[i] = 0;
+    }
+    void SetMutate(bool tempoMutate, bool stuckMutate, bool trappedMutate) {
+        numToMutate = 0;
+        toMutate[0] = tempoMutate;
+        toMutate[1] = stuckMutate;
+        toMutate[2] = trappedMutate;
+        if (stuckMutate == false) {
+            stuck_end_range.low = stuck_end_range.high = stuck_end;
+            stuck_bishop_range.low = stuck_bishop_range.high = stuck_bishop;
+            stuck_rook_range.low = stuck_rook_range.high = stuck_rook; 
+            stuck_queen_range.low = stuck_queen_range.high = stuck_queen;
+        }
+        else numToMutate++;
+        if (trappedMutate == false) {
+            trapped1_range.low = trapped1_range.high = GetTrapped1();
+            trapped2_range.low = trapped2_range.high = GetTrapped2();
+            trapped3_range.low = trapped3_range.high = GetTrapped3();
+            trapped4_range.low = trapped4_range.high = GetTrapped4();
+        }
+        else numToMutate++;
+        if (tempoMutate == false) {
+            tempo_open_range.low = tempo_open_range.high = tempo_open;
+            tempo_end_range.low = tempo_end_range.high = tempo_end;
+        }
+        else numToMutate++;
+    }
+    void Randomize() {
+        SetDefaultRating();
+        stuck_end = Random(stuck_end_range.low,stuck_end_range.high);
+        stuck_bishop = Random(stuck_bishop_range.low,stuck_bishop_range.high);
+        stuck_rook = Random(stuck_rook_range.low,stuck_rook_range.high);
+        stuck_queen = Random(stuck_queen_range.low,stuck_queen_range.high);
+        int trapped1 = Random(trapped1_range.low,trapped1_range.high);
+        int trapped2 = Random(trapped2_range.low,trapped2_range.high);
+        int trapped3 = Random(trapped3_range.low,trapped3_range.high);
+        int trapped4 = Random(trapped4_range.low,trapped4_range.high);
+        SetTrapped(trapped1, trapped2, trapped3, trapped4);
+
+        tempo_open = Random(tempo_open_range.low, tempo_open_range.high);
+        tempo_end = Random(tempo_end_range.low, tempo_end_range.high);
+    }
+    int change(int dif) {
+        if (dif==0) return 0;
+        else return 1 + Random(0,(dif-1)/8);
+    }
+    bool MutateVariable(int *v, range_t r) { //returns whether succesfully mutated
+        int startValue = *v;
+        if (*v < r.low || *v > r.high || r.low == r.high) return false;
+        if (Random(0,1) == 0 && *v > r.low) {// make the variable lower
+            int dif = *v - r.low;
+            *v -= change(dif);
+        }
+        else { // make the variable higher
+            int dif = r.high - *v;
+            *v += change(dif);
+        }
+        return (*v != startValue);
+    }
+    bool CanMutate(range_t r) {
+        return (r.low < r.high);
+    }
+    void Mutate() {
+        if (numToMutate < 1) return;
+        bool changed = false;
+        do {
+            int mutate = Random(1,numToMutate);
+            int option = Random(0,10000);
+            if (CanMutate(tempo_open_range)) {
+                mutate--;
+                if (mutate==0) {
+                    if (option%2==0) changed = MutateVariable(&tempo_open,tempo_open_range);
+                    else changed = MutateVariable(&tempo_end,tempo_end_range);
+                }
+            }
+            if (CanMutate(stuck_end_range)) {
+                mutate--;
+                if (mutate==0) {
+                    if (option%4==0) changed = MutateVariable(&stuck_end,stuck_end_range);
+                    else if (option%4==1) changed = MutateVariable(&stuck_bishop,stuck_bishop_range);
+                    else if (option%4==2) changed = MutateVariable(&stuck_rook,stuck_rook_range);
+                    else changed = MutateVariable(&stuck_queen,stuck_queen_range);
+                }
+            }
+            if (CanMutate(trapped1_range)) {
+                mutate--;
+                if (mutate==0) {
+                    int trapped1 = GetTrapped1();
+                    int trapped2 = GetTrapped2();
+                    int trapped3 = GetTrapped3();
+                    int trapped4 = GetTrapped4();
+
+                    if (option%4==0) changed = MutateVariable(&trapped1,trapped1_range);
+                    else if (option%4==1) changed = MutateVariable(&trapped2,trapped2_range);
+                    else if (option%4==2) changed = MutateVariable(&trapped3,trapped3_range);
+                    else changed = MutateVariable(&trapped4,trapped4_range);
+                    if (changed) SetTrapped(trapped1, trapped2, trapped3, trapped4);
+                }
+            }
+        } while (!changed);
+        games = 0; points = 0;
+        SetDefaultRating();
+    }
+
+    void Combine(Personality p) {
+        tempo_open =(tempo_open + p.tempo_open + rand()%2)/2;
+        tempo_end =(tempo_end + p.tempo_end + rand()%2)/2;
+
+        stuck_end = (stuck_end + p.stuck_end + rand()%2)/2;
+        stuck_bishop = (stuck_bishop + p.stuck_bishop + rand()%2)/2;
+        stuck_rook = (stuck_rook + p.stuck_rook + rand()%2)/2;
+        stuck_queen = (stuck_queen + p.stuck_queen + rand()%2)/2;
+
+        TrappedMoves[0] = (TrappedMoves[0] + p.TrappedMoves[0] + rand()%2)/2;
+        TrappedMoves[1] = (TrappedMoves[1] + p.TrappedMoves[1] + rand()%2)/2;
+        TrappedMoves[2] = (TrappedMoves[2] + p.TrappedMoves[2] + rand()%2)/2;
+        TrappedMoves[3] = (TrappedMoves[3] + p.TrappedMoves[3] + rand()%2)/2;
+        SetDefaultRating();
+    }
+
+    void CopyTempo(Personality p) {
+        tempo_open = p.tempo_open;
+        tempo_end = p.tempo_end;
+    }
+    void CopyStuck(Personality p) {
+        stuck_end = p.stuck_end;
+        stuck_bishop = p.stuck_bishop;
+        stuck_rook = p.stuck_rook;
+        stuck_queen = p.stuck_queen;
+    }
+    void CopyTrapped(Personality p) {
+        TrappedMoves[0] = p.TrappedMoves[0];
+        TrappedMoves[1] = p.TrappedMoves[1];
+        TrappedMoves[2] = p.TrappedMoves[2];
+        TrappedMoves[3] = p.TrappedMoves[3];
+    }
+    void CopyGenome(Personality p,int g) {
+        if (g==0) CopyTempo(p);
+        else if (g==1) CopyStuck(p);
+        else if (g==2) CopyTrapped(p);
+    }
+    void Copy(Personality p) {
+
+        games = p.games;
+        rating = p.rating;
+        for (int i = 0; i < NUM_GENOMES; i++) {
+            CopyGenome(p,i);
+            similarityWeight[i] = p.similarityWeight[i];
+            ratingWeight[i] = p.ratingWeight[i];
+        }
+        points = p.points;
+    }
+
+    void Swap(Personality *p) {
+        Personality temp;
+        temp.Copy(*p);
+        p->Copy(*this);
+        Copy(temp);
+    }
+    /*
+    Personality(char *str) {
+    int trapped1,trapped2,trapped3,trapped4;
+    SetDefaults();
+    sscanf(str,"%d %d %d %d %d %d %d %d %d %d %d",&games, &rating, &points, &stuck_end,&stuck_bishop,&stuck_rook,&stuck_queen,&trapped1,&trapped2,&trapped3,&trapped4);
+    }
+
+    Personality(int stuckEnd, int stuckBishop, int stuckRook, int stuckQueen, int trapped1, int trapped2, int trapped3, int trapped4) {
+    SetDefaults();
+    stuck_end = stuckEnd;
+    stuck_bishop = stuckBishop;
+    stuck_rook = stuckRook;
+    stuck_queen = stuckQueen;
+    SetTrapped(trapped1, trapped2, trapped3, trapped4);
+    }*/
+    Personality() { 
+        SetDefaults();
+    }
+};
+
+static Personality personality[MaxNumOfThreads];
+#define personality(thread) personality[thread]
+#else
 #define TM1 64 
 #define TM2 54 
 #define TM3 25 
@@ -67,6 +439,8 @@ static const Personality personality;
 //king safety stuff
 #define PARTIAL_ATTACK 0 //0 means don't count, otherwise multiplies attack by 5
 #define MATE_CODE 10 // mate threat
+#define KING_ATT_W 4
+#define K_SHELT_W 17
 #define LOW_SHELTER 5
 #define EXP_PENALTY 1
 
@@ -169,19 +543,16 @@ static const int PassedPawnAttackerDistance = 20;
 static const int PassedPawnDefenderDistance = 40;
 
 // king safety
-int QueenAttackValue = 12;
-int RookAttackValue = 22;
-int BishopAttackValue = 15;
-int KnightAttackValue = 31;
-int QueenSafeContactCheckValue = 67;
-int QueenSafeCheckValue = 60;
-int RookSafeCheckValue = 42;
-int BishopSafeCheckValue = 60;
-int KnightSafeCheckValue = 55;
-int DiscoveredCheckValue = 54;
-int PawnShelterMultiplier = 15;
-int KingLocationPenalty = 5;
-int UndefendedKingAttacks = 23;
+static const int QueenAttackValue = 5;
+static const int RookAttackValue = 3;
+static const int BishopAttackValue = 2;
+static const int KnightAttackValue = 2;
+static const int QueenSafeContactCheckValue = 3;
+static const int QueenSafeCheckValue = 2;
+static const int RookSafeCheckValue = 1;
+static const int BishopSafeCheckValue = 1;
+static const int KnightSafeCheckValue = 1;
+static const int DiscoveredCheckValue = 3;
 
 // piece attacks
 static const int QueenAttacked = 4; //4
@@ -203,6 +574,101 @@ static const int PieceAttackMulEnd = 3; //3
 
 static const int sbonus[8] = {0, 0, 0, 13, 34, 77, 128, 0};
 #define scale(smax,sr) ((((smax))*sbonus[sr]) / sbonus[6])
+
+
+void judgeTrapped(const position_t *pos, eval_info_t *ei,const int color, const int thread/*, int *upside, int *downside*/) {
+
+    uint64 targets,safeMoves;
+    int targetSq;
+    int penalty;
+    const int enemy = color^1;
+    uint64 safe = ~(ei->atkpawns[enemy] | pos->color[enemy]); // occupied assumes we can capture our way out of trouble in search
+    uint64 beware = pos->color[color] & bewareTrapped[color] & ~(pos->pawns | pos->kings); // added if not guarded 1a21
+    uint64 safer = (Rank4BB | Rank5BB | ei->atkall[color]);
+
+    if (!beware) return;
+    targets = pos->knights & beware;
+    while (targets)
+    {
+        targetSq = popFirstBit(&targets);
+        safeMoves = (KnightMoves[targetSq]) &
+
+            (safe & (~ei->atkall[enemy] | ei->atkpawns[color] | ei->atkbishops[color] | ei->atkrooks[color] | ei->atkqueens[color] | ei->atkkings[color]));
+        if (showEval) Print(3," judging knight %d ",targetSq);
+
+        if (!(escapeTrapped[color] & safeMoves)) {
+            penalty = (BitMask[targetSq] & safer)!=0 ? personality(thread).TrappedMoves[bitCnt(safeMoves)]/2 : personality(thread).TrappedMoves[bitCnt(safeMoves)];
+            ei->mid_score[color] -= penalty;
+            //			*upside += penalty/2;
+            //			*downside += penalty/2;
+            if (showEval) {
+                Print(3," trapped knight %d",bitCnt(safeMoves));
+            }
+        }
+    }
+    targets = pos->bishops & beware;
+    while (targets)
+    {
+        targetSq = popFirstBit(&targets);
+        safeMoves = (bishopAttacksBB(targetSq, pos->occupied)) &
+            (safe & (~ei->atkall[enemy] | ei->atkpawns[color] | ei->atkknights[color] | ei->atkrooks[color] | ei->atkqueens[color] | ei->atkkings[color]));
+        if (showEval) Print(3," judging bishop %d ",targetSq);
+
+        if (!(escapeTrapped[color] & safeMoves)) {
+            penalty = (BitMask[targetSq] & safer)!=0 ? personality(thread).TrappedMoves[bitCnt(safeMoves)]/2 : personality(thread).TrappedMoves[bitCnt(safeMoves)];
+            ei->mid_score[color] -= penalty;
+            //			*upside += penalty/2;
+            //			*downside += penalty/2;
+            if (showEval) {
+                Print(3," trapped bishop %d",bitCnt(safeMoves));
+            }
+        }
+    }
+    safe &= ~(ei->atkknights[enemy] | ei->atkbishops[enemy]);
+    targets = pos->rooks & beware;
+    while (targets)
+    {
+        targetSq = popFirstBit(&targets);
+        safeMoves = (rookAttacksBB(targetSq, pos->occupied)) &
+
+            (safe & (~ei->atkall[enemy] | ei->atkpawns[color] | ei->atkbishops[color] | ei->atkknights[color] | ei->atkqueens[color] | ei->atkkings[color]));
+        if (showEval) Print(3," judging rook %d ",targetSq);
+
+        if (!(escapeTrapped[color] & safeMoves)) {
+            penalty =  personality(thread).TrappedMoves[bitCnt(safeMoves)]/2; //trapped rooks often get the exchange anyway
+            ei->mid_score[color] -= penalty;
+            //			*upside += penalty/2;
+            //			*downside += penalty/2;
+            if (showEval) {
+                Print(3," trapped rook %d",bitCnt(safeMoves));
+            }
+        }
+    }
+
+    safe &= ~(ei->atkrooks[enemy]);
+    targets = pos->queens & beware;
+    while (targets)
+    {
+        targetSq = popFirstBit(&targets);
+        if (DISTANCE(targetSq,pos->kpos[enemy]) > 2) {
+
+            safeMoves = (queenAttacksBB(targetSq, pos->occupied)) &
+
+                (safe & (~ei->atkall[enemy] | ei->atkpawns[color] | ei->atkbishops[color] | ei->atkrooks[color] | ei->atkknights[color] | ei->atkkings[color]));
+            if (showEval) Print(3," judging queen %d ",targetSq);
+
+            if (!(escapeTrapped[color] & safeMoves)) {
+                penalty = personality(thread).TrappedMoves[bitCnt(safeMoves)]/2; //trapped queens are still dangerous
+                ei->mid_score[color] -= penalty;
+                //				*upside += penalty/2;
+                //				*downside += penalty/2;
+                if (showEval) {
+                    Print(3," trapped queen %d",bitCnt(safeMoves));
+                }
+            }
+        }
+    }
+}
 
 // this is only called when there are more than 1 queen for a side
 int computeMaterial(const position_t *pos, eval_info_t *ei) {
@@ -261,6 +727,48 @@ void initPawnEvalByColor(const position_t *pos, eval_info_t *ei, const int color
     ei->atkpawns[color] = temp64;
     ei->atkcntpcs[color^1] += bitCnt(temp64 & ei->kingadj[color^1]);
     ei->potentialPawnAttack[color] = (*FillPtr2[color])(temp64);
+    /*	if (showEval) {
+    uint64 pAtt = temp64;
+    while (pAtt)
+    {
+    int sq = popFirstBit(&pAtt);
+    Print(3,"a %c%i ",sq%8+'a',sq/8+1);
+    }
+    }
+    */
+}
+
+void evalShelter(const int color, eval_info_t *ei, const position_t *pos) {
+    uint64 shelter,indirectShelter,doubledShelter;
+    uint64 pawns = ei->pawns[color];
+
+    // king shelter in your current position
+    shelter = kingShelter[color][pos->kpos[color]] & pawns;
+    indirectShelter = kingIndirectShelter[color][pos->kpos[color]] & pawns;
+    // doubled pawns are a bit redundant as shelter
+    doubledShelter = indirectShelter & (*FillPtr[color])(indirectShelter);
+    indirectShelter ^= doubledShelter;
+    // remember, shelter is also indirect shelter so it is counted twice
+    ei->pawn_entry->shelter[color]  = bitCnt(shelter)+bitCnt(indirectShelter);
+    // now take into account possible castling, and the associated safety SAM122109
+    if (pos->posStore.castle & KS(color)) {
+        shelter = kingShelter[color][KScastleTo[color]] & pawns;
+        indirectShelter = kingIndirectShelter[color][KScastleTo[color]] & pawns;
+        // doubled pawns are a bit redundant as shelter
+        doubledShelter = indirectShelter & (*FillPtr[color])(indirectShelter);
+        indirectShelter ^= doubledShelter;
+        // remember, shelter is also indirect shelter so it is counted twice
+        ei->pawn_entry->kshelter[color] = bitCnt(shelter)+bitCnt(indirectShelter);
+    } else ei->pawn_entry->kshelter[color] = 0;
+    if (pos->posStore.castle&QS(color)) {
+        shelter = kingShelter[color][QScastleTo[color]] & pawns;
+        indirectShelter = kingIndirectShelter[color][QScastleTo[color]] & pawns;
+        // doubled pawns are a bit redundant as shelter
+        doubledShelter = indirectShelter & (*FillPtr[color])(indirectShelter);
+        indirectShelter ^= doubledShelter;
+        // remember, shelter is also indirect shelter so it is counted twice
+        ei->pawn_entry->qshelter[color] = bitCnt(shelter)+bitCnt(indirectShelter);
+    } else ei->pawn_entry->qshelter[color] = 0;
 }
 
 void evalPawnsByColor(const position_t *pos, eval_info_t *ei, int mid_score[], int end_score[], const int color) {
@@ -378,21 +886,16 @@ void evalPawnsByColor(const position_t *pos, eval_info_t *ei, int mid_score[], i
             if (openPawn) {
                 mid_score[color] -= sqPenalty;
             }
+            /*
+            if (fixedPawn) { //if we cannot move it
+            if (showEval) Print(3,"f %s ",sq2Str(sq));
+            mid_score[color] -= WEAK_FIXED_O;
+            end_score[color] -= WEAK_FIXED_E;
+            }*/
         }
     }
+    evalShelter(color,ei,pos);
 
-    ei->pawn_entry->shield[color][0] = bitCnt(PawnShelterMask1[color][0] & ei->pawns[color]) * 2;
-    ei->pawn_entry->shield[color][0] += bitCnt(PawnShelterMask2[color][0] & ei->pawns[color]);
-    ei->pawn_entry->shield[color][1] = bitCnt(PawnShelterMask1[color][1] & ei->pawns[color]) * 2;
-    ei->pawn_entry->shield[color][1] += bitCnt(PawnShelterMask2[color][1] & ei->pawns[color]);
-    ei->pawn_entry->shield[color][2] = bitCnt(PawnShelterMask1[color][2] & ei->pawns[color]) * 2;
-    ei->pawn_entry->shield[color][2] += bitCnt(PawnShelterMask2[color][2] & ei->pawns[color]);
-    ei->pawn_entry->storm[color][0] = bitCnt(PawnShelterMask2[color][0] & ei->pawns[enemy]) * 2;
-    ei->pawn_entry->storm[color][0] += bitCnt(PawnShelterMask3[color][0] & ei->pawns[enemy]);
-    ei->pawn_entry->storm[color][1] = bitCnt(PawnShelterMask2[color][1] & ei->pawns[enemy]) * 2;
-    ei->pawn_entry->storm[color][1] += bitCnt(PawnShelterMask3[color][1] & ei->pawns[enemy]);
-    ei->pawn_entry->storm[color][2] = bitCnt(PawnShelterMask2[color][2] & ei->pawns[enemy]) * 2;
-    ei->pawn_entry->storm[color][2] += bitCnt(PawnShelterMask3[color][2] & ei->pawns[enemy]);
 
     ei->pawn_entry->passedbits |= passedBitMap;
 
@@ -645,57 +1148,126 @@ void evalThreats(const position_t *pos, eval_info_t *ei, const int color, int *u
     }
 }
 
-void evalKingAttacks(const position_t *pos, eval_info_t *ei, const int color) {
-    static const int KingSideCastleMask[2] = {WCKS, BCKS};
-    static const int QueenSideCastleMask[2] = {WCQS, BCQS};
-    uint64 pc_atkrs_mask, pc_atkhelpersmask, king_atkmask, pc_defenders_mask;
-    int penalty, best_shieldval, curr_shieldval, tot_atkrs, pc_weights, kzone_atkcnt, enemy = color^1;
+void KingShelter(const int color, eval_info_t *ei, const position_t *pos,int danger) {
+    int currentKing = ei->pawn_entry->shelter[color];
 
+    int kingSide = ((pos->posStore.castle & KSC[color])==0 || (ei->atkall[color^1] & KCSQ[color])) ?  0 : ei->pawn_entry->kshelter[color];
+    int queenSide =  ((pos->posStore.castle & QSC[color])==0 || (ei->atkall[color^1] & QCSQ[color])) ? 0 : ei->pawn_entry->qshelter[color];
+
+
+    kingSide = (kingSide > queenSide) ? kingSide : queenSide;
+    currentKing = (currentKing >= kingSide) ? currentKing : (currentKing/2 + kingSide/2);
+
+    danger += K_SHELT_W;
+    currentKing *= danger;
+    if (currentKing > (LOW_SHELTER*danger)) currentKing -= (currentKing-(LOW_SHELTER*danger))/2;
+    currentKing = (currentKing-(9*danger))/2;
+
+    if (showEval) {
+        if (color==WHITE) Print(3," ws %d ",currentKing);
+        else Print(3," bs %d ",currentKing);
+    }
+    ei->mid_score[color] += currentKing;
+}
+
+void evalKingAttacks(const position_t *pos, eval_info_t *ei, const int color, int *upside) {
+
+    int danger;
+    uint64 pc_atkrs_mask, pc_atkhelpersmask, king_atkmask, pc_defenders_mask;
+    int penalty, tot_atkrs, pc_weights, kzone_atkcnt;
     ASSERT(pos != NULL);
     ASSERT(ei != NULL);
     ASSERT(colorIsOk(color));
 
-    if ((pos->queens & pos->color[enemy]) && ((pos->rooks|pos->bishops|pos->knights) & pos->color[enemy])) {
-        best_shieldval = curr_shieldval = ei->pawn_entry->shield[color][FileWing[pos->kpos[color]]]
-            - ei->pawn_entry->storm[color][FileWing[pos->kpos[color]]];
-        if (pos->posStore.castle & QueenSideCastleMask[color])
-            best_shieldval = MAX((ei->pawn_entry->shield[color][0] - ei->pawn_entry->storm[color][0]), best_shieldval);
-        if (pos->posStore.castle & KingSideCastleMask[color])
-            best_shieldval = MAX((ei->pawn_entry->shield[color][2] - ei->pawn_entry->storm[color][2]), best_shieldval);
+    tot_atkrs = ei->atkcntpcs[color] >> 20;
+    kzone_atkcnt = ei->atkcntpcs[color] & ((1 << 10) - 1);
 
-        tot_atkrs = ei->atkcntpcs[color] >> 20;
-        kzone_atkcnt = ei->atkcntpcs[color] & ((1 << 10) - 1);
+    danger = (tot_atkrs>=2 && kzone_atkcnt>=1);
+    KingShelter(color, ei, pos,kzone_atkcnt+tot_atkrs);
+    if (danger) {
+
+        king_atkmask = KingMoves[pos->kpos[color]];
         pc_weights = (ei->atkcntpcs[color] & ((1 << 20) - 1)) >> 10;
-        penalty = pc_weights;
+        penalty = KingPosPenalty[color][pos->kpos[color]] + ((pc_weights * tot_atkrs) / 2)
+            + kzone_atkcnt;
+        pc_defenders_mask = ei->atkqueens[color] | ei->atkrooks[color] | ei->atkbishops[color] | ei->atkknights[color] | ei->atkpawns[color];
+        penalty += bitCnt(king_atkmask & ei->atkall[color^1] & ~pc_defenders_mask);
+        pc_atkrs_mask = king_atkmask & ei->atkqueens[color^1] & (~pos->color[color^1]);
+        if (pc_atkrs_mask) {
+            uint64 queenContact;
+            pc_atkhelpersmask = (ei->atkkings[color^1] | ei->kingatkrooks[color^1] | ei->kingatkbishops[color^1] | ei->atkknights[color^1] | ei->atkpawns[color^1]);
+            pc_atkrs_mask &= pc_atkhelpersmask;
+            queenContact = pc_atkrs_mask & ~pc_defenders_mask;
 
-        best_shieldval = (best_shieldval + curr_shieldval) / 2;
-        ei->mid_score[color] += best_shieldval * PawnShelterMultiplier;
+            if (queenContact) {
+                int bonus = ((pos->side == (color^1)) ? 2 : 1) * QueenSafeContactCheckValue;
+                uint64 kingEscape = king_atkmask & ~(pc_atkhelpersmask | pos->color[color]);
+                do {
+                    int sq = popFirstBit(&queenContact);
+                    uint64 queenCovers = queenAttacksBB(sq, pos->occupied);
+                    /*
+                    if (showEval) {
+                    Print(3," qcontact %s \n",sq2Str(sq));
+                    showBitboard(queenCovers,3);
 
-        if (tot_atkrs >= 2 && kzone_atkcnt >= 1) {
-            king_atkmask = KingMoves[pos->kpos[color]];
-            penalty += KingPosPenalty[color][pos->kpos[color]] * KingLocationPenalty;
-            pc_defenders_mask = ei->atkqueens[color] | ei->atkrooks[color] | ei->atkbishops[color] | ei->atkknights[color] | ei->atkpawns[color];
-            penalty += bitCnt(king_atkmask & ei->atkall[enemy] & ~pc_defenders_mask) * UndefendedKingAttacks;
-            pc_atkrs_mask = king_atkmask & ei->atkqueens[enemy];
-            if (pc_atkrs_mask) {
-                pc_atkhelpersmask = ei->atkkings[enemy] | ei->atkrooks[enemy] | ei->atkbishops[enemy] | ei->atkknights[enemy] | ei->atkpawns[enemy];
-                pc_atkrs_mask &= pc_atkhelpersmask;
-                if (pc_atkrs_mask) {
-                    penalty += bitCnt(pc_atkrs_mask & ~pc_defenders_mask) * ((pos->side == (enemy)) ? 2 : 1) * QueenSafeContactCheckValue;
-                }
+                    Print(3,"\n");
+                    showBitboard(kingEscape,3);
+                    }*/
+                    penalty += bonus;
+                    if (0==(kingEscape & ~queenCovers)) { //checkmate
+                        //MAKE SURE IT IS REALLY MATE
+                        // first sliders
+                        uint64 tempOcc = pos->occupied & ~(pos->queens & pos->color[color^1]); // a little conservative when there are two queens but that is OK
+
+                        if (bishopAttacksBB(sq, tempOcc) & (pos->bishops|pos->queens) & pos->color[color]) continue;
+                        if (rookAttacksBB(sq, tempOcc) & (pos->rooks|pos->queens) & pos->color[color]) continue;
+                        //FOR NOW IGNORE QUEEN IS PINNED ISSUES
+                        if (pos->side == (color^1)) {
+                            ei->mid_score[color] -= 10000;
+                            ei->end_score[color] -= 10000; //CHECKMATE
+                            if (showEval) Print(3," checkmate %s ",sq2Str(sq));
+                        }
+                        else {
+                            penalty += MATE_CODE;
+                            *upside += 10000; // maybe checkmate!!
+                            if (showEval) Print(3, " MateThreat %s ",sq2Str(sq));
+                        }
+                    }
+                    /*
+                    else if (showEval) {
+                    Print(3,"\n");
+                    showBitboard((kingEscape & ~queenCovers),3);
+                    }*/
+
+                } while (queenContact);
             }
-            pc_atkrs_mask = rookAttacksBB(pos->kpos[color], pos->occupied) & ~ei->atkall[color] & ~pos->color[enemy];
-            if (pc_atkrs_mask & ei->atkqueens[enemy]) penalty += bitCnt(pc_atkrs_mask & ei->atkqueens[enemy]) * QueenSafeCheckValue;
-            if (pc_atkrs_mask & ei->atkrooks[enemy]) penalty += bitCnt(pc_atkrs_mask & ei->atkrooks[enemy]) * RookSafeCheckValue;
-            pc_atkrs_mask = bishopAttacksBB(pos->kpos[color], pos->occupied) & ~ei->atkall[color] & ~pos->color[enemy];
-            if (pc_atkrs_mask & ei->atkqueens[enemy]) penalty += bitCnt(pc_atkrs_mask & ei->atkqueens[enemy]) * QueenSafeCheckValue;
-            if (pc_atkrs_mask & ei->atkbishops[enemy]) penalty += bitCnt(pc_atkrs_mask & ei->atkbishops[enemy]) * BishopSafeCheckValue;
-            pc_atkrs_mask = KnightMoves[pos->kpos[color]] & ~ei->atkall[color] & ~pos->color[enemy];
-            if (pc_atkrs_mask & ei->atkknights[enemy]) penalty += bitCnt(pc_atkrs_mask & ei->atkknights[enemy]) * KnightSafeCheckValue;
-            pc_atkrs_mask = discoveredCheckCandidates(pos, enemy) & ~pos->pawns;
-            if (pc_atkrs_mask) penalty += bitCnt(pc_atkrs_mask) * DiscoveredCheckValue;
-            ei->mid_score[color] -= penalty;
         }
+
+        pc_atkrs_mask = rookAttacksBB(pos->kpos[color], pos->occupied) & ~ei->atkall[color] & ~pos->color[color^1];
+        if (pc_atkrs_mask & ei->atkqueens[color^1]) {
+            int numQueenChecks = bitCnt(pc_atkrs_mask & ei->atkqueens[color^1]);
+            penalty += numQueenChecks * QueenSafeCheckValue;
+        }
+        if (pc_atkrs_mask & ei->kingatkrooks[color^1]) penalty += bitCnt(pc_atkrs_mask & ei->kingatkrooks[color^1]) * RookSafeCheckValue;
+        pc_atkrs_mask = bishopAttacksBB(pos->kpos[color], pos->occupied) & ~ei->atkall[color] & ~pos->color[color^1];
+        if (pc_atkrs_mask & ei->atkqueens[color^1]) penalty += bitCnt(pc_atkrs_mask & ei->atkqueens[color^1]) * QueenSafeCheckValue;
+        if (pc_atkrs_mask & ei->kingatkbishops[color^1]) penalty += bitCnt(pc_atkrs_mask & ei->kingatkbishops[color^1]) * BishopSafeCheckValue;
+        pc_atkrs_mask = KnightMoves[pos->kpos[color]] & ~ei->atkall[color] & ~pos->color[color^1];
+        if (pc_atkrs_mask & ei->atkknights[color^1]) penalty += bitCnt(pc_atkrs_mask & ei->atkknights[color^1]) * KnightSafeCheckValue;
+        pc_atkrs_mask = discoveredCheckCandidates(pos, color^1) & ~pos->pawns;
+        if (pc_atkrs_mask) penalty += bitCnt(pc_atkrs_mask) * DiscoveredCheckValue;
+        ei->mid_score[color] -= (penalty * (penalty-EXP_PENALTY) * KING_ATT_W) / 20; 
+        *upside += (penalty * penalty*KING_ATT_W)/20; //072513 NEW consider reducing king attack strength to compensate
+        //		*upside += (penalty * penalty)/2; //072513 NEW consider reducing king attack strength to compensate /5
+
+        if (showEval) {
+            if (color==WHITE) Print(3, " wa %d",penalty * (penalty-EXP_PENALTY)); 
+            else Print(3, " ba %d",penalty * (penalty-EXP_PENALTY) * KING_ATT_W/ 20);
+        }
+    }
+    else if (PARTIAL_ATTACK) { //if there is a maximum of 1 active attacker
+        if (showEval) Print(3, " pa %d", kzone_atkcnt*PARTIAL_ATTACK);
+        ei->mid_score[color] -= kzone_atkcnt*PARTIAL_ATTACK;
     }
 }
 
@@ -973,8 +1545,9 @@ int eval(const position_t *pos, int thread_id, int *optimism, int *pessimism) {
         evalThreats(pos, &ei, WHITE, &upside[WHITE]);
         // attacking the black king
         if (ei.flags & ATTACK_KING[BLACK]) {
-            evalKingAttacks(pos, &ei, BLACK);
+            evalKingAttacks(pos, &ei, BLACK,&upside[WHITE]);
         }
+        judgeTrapped(pos,&ei,WHITE,thread_id/*,&upside[WHITE],&upside[BLACK]*/);
     }
     else {
         if (blackPassed) evalPassedvsKing(pos,&ei,BLACK,blackPassed);
@@ -984,8 +1557,9 @@ int eval(const position_t *pos, int thread_id, int *optimism, int *pessimism) {
         if (whitePassed) evalPassed(pos,&ei,WHITE,whitePassed);
         evalThreats(pos, &ei, BLACK, &upside[BLACK]);
         if (ei.flags & ATTACK_KING[WHITE]) { // attacking the white king
-            evalKingAttacks(pos, &ei, WHITE);
+            evalKingAttacks(pos, &ei, WHITE,&upside[BLACK]);
         }
+        judgeTrapped(pos,&ei,BLACK,thread_id/*,&upside[WHITE],&upside[BLACK]*/);
     }
     else {
         if (whitePassed) evalPassedvsKing(pos,&ei,WHITE,whitePassed);

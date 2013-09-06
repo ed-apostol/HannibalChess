@@ -97,8 +97,10 @@ typedef struct pawn_entry_t{
     uint64 passedbits;
     int16 opn;
     int16 end;
-    int8 shield[2][3];
-    int8 storm[2][3];
+    int8 shelter[2];
+    int8 kshelter[2];
+    int8 qshelter[2];
+    //	int8 halfPassed[2]; //currently unused
 }pawn_entry_t;
 
 /* the pawn hash table type */
