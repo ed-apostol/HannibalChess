@@ -154,6 +154,8 @@ struct pvhash_entry_t {
 };
 
 struct pvhashtable_t {
+    pvhashtable_t() : table(NULL) {}
+    ~pvhashtable_t() { if (table) free(table); }
     pvhash_entry_t *table;
     uint64 size;
     uint64 mask;
@@ -285,6 +287,8 @@ typedef struct _search_info_t{
     bool try_easy;
     int rbestscore1;
     int rbestscore2;
+
+    int lastDepthSearched;
 
     int legalmoves;
     basic_move_t bestmove;

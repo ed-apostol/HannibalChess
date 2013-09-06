@@ -862,7 +862,24 @@ void getBestMove(position_t *pos, int thread_id) {
 
     hashMove = EMPTY;
     transNewDate(TransTable(thread_id).date, thread_id);
-    hashMove = transGetHashMove(pos->hash, thread_id);
+
+    do {
+        pvhash_entry_t *entry = pvHashProbe(pos->hash);
+        if (NULL == entry) break;
+        if (entry->depth >= SearchInfo(thread_id).lastDepthSearched - 2 && (moveCapture(pos->posStore.lastmove) && moveTo(pos->posStore.lastmove) == moveTo(entry->move))) {
+            SearchInfo(thread_id).bestmove =  entry->move;
+            SearchInfo(thread_id).best_value = entry->score;
+            extractPvMovesFromHash(pos, &SearchInfo(thread_id).rootPV, entry->move, true);
+            if (SearchInfo(thread_id).rootPV.length > 1) SearchInfo(thread_id).pondermove = SearchInfo(thread_id).rootPV.moves[1];
+            else SearchInfo(thread_id).pondermove = 0;
+            displayPV(pos, &SearchInfo(thread_id).rootPV, entry->depth, -INF, INF, SearchInfo(thread_id).best_value);
+            SearchInfo(thread_id).thinking_status = STOPPED;
+            setAllThreadsToStop(thread_id);
+            return;
+        }
+        hashMove = entry->move;
+    } while (false);
+
     // extend time when there is no hashmove from hashtable, this is useful when just out of the book
     if (hashMove == EMPTY) { 
         SearchInfo(thread_id).time_limit_max += SearchInfo(thread_id).alloc_time / 2;
@@ -898,6 +915,7 @@ void getBestMove(position_t *pos, int thread_id) {
         SearchInfo(thread_id).best_value = -INF;
         SearchInfo(thread_id).change = 0;
         SearchInfo(thread_id).research = 0;
+        SearchInfo(thread_id).lastDepthSearched = id;
         if (id < 6) {
             alpha = -INF;
             beta = INF;

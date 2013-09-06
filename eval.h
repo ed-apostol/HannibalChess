@@ -548,6 +548,7 @@ static const int RookAttackValue = 3;
 static const int BishopAttackValue = 2;
 static const int KnightAttackValue = 2;
 static const int QueenSafeContactCheckValue = 3;
+static const int UndefendedAttacks = 1;
 static const int QueenSafeCheckValue = 2;
 static const int RookSafeCheckValue = 1;
 static const int BishopSafeCheckValue = 1;
@@ -1191,7 +1192,7 @@ void evalKingAttacks(const position_t *pos, eval_info_t *ei, const int color, in
         penalty = KingPosPenalty[color][pos->kpos[color]] + ((pc_weights * tot_atkrs) / 2)
             + kzone_atkcnt;
         pc_defenders_mask = ei->atkqueens[color] | ei->atkrooks[color] | ei->atkbishops[color] | ei->atkknights[color] | ei->atkpawns[color];
-        penalty += bitCnt(king_atkmask & ei->atkall[color^1] & ~pc_defenders_mask);
+        penalty += bitCnt(king_atkmask & ei->atkall[color^1] & ~pc_defenders_mask) * UndefendedAttacks;
         pc_atkrs_mask = king_atkmask & ei->atkqueens[color^1] & (~pos->color[color^1]);
         if (pc_atkrs_mask) {
             uint64 queenContact;

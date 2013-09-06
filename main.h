@@ -13,10 +13,9 @@ void quit(void) {
     fclose(errfile);
     fclose(dumpfile);
 
-    free(TransTable(0).table);
-    free(PVHashTable.table);
-    free(SearchInfo(0).pt.table);
-    free(SearchInfo(0).et.table);
+    if (TransTable(0).table != NULL) free(TransTable(0).table);
+    if (SearchInfo(0).pt.table != NULL) free(SearchInfo(0).pt.table);
+    if (SearchInfo(0).et.table != NULL) free(SearchInfo(0).et.table);
 #ifndef TCEC
     closeBook(&GpolyglotBook);
     closeLearn(&Glearn);
@@ -63,7 +62,6 @@ int main(void) {
 
     TransTable(0).table = NULL;
     initTrans(INIT_HASH,0);
-    PVHashTable.table = NULL;
     initPVHashTab(&PVHashTable, INIT_PVHASH);
     SearchInfo(0).pt.table = NULL;
     initPawnTab(&SearchInfo(0).pt, INIT_PAWN);
@@ -105,6 +103,7 @@ int main(void) {
 #endif
             pawnTableClear(&SearchInfo(0).pt);
             evalTableClear(&SearchInfo(0).et);
+            SearchInfo(0).lastDepthSearched = MAXPLY;
         } else if (!memcmp(command, "uci", 3)) {
             uciStart();
         } else if (!memcmp(command, "debug", 5)) {
