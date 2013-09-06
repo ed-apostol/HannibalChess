@@ -470,8 +470,10 @@ static const int EndgameQueenMob = 2;
 static const int EndgameXrayQueenMob = 2; 
 
 // rook specific evaluation
-static const int MidgameRook7th = 20;
-static const int EndgameRook7th = 40;
+static const int MidgameRookPawnPressure = 4; 
+static const int EndgameRookPawnPressure = 8; 
+static const int MidgameRook7th = 20 - MidgameRookPawnPressure*2; 
+static const int EndgameRook7th = 40 - EndgameRookPawnPressure*2; 
 
 // queen specific evaluation
 static const int MidgameQueen7th = 10;
@@ -1017,12 +1019,23 @@ void evalPieces(const position_t *pos, eval_info_t *ei, const int color, const i
         ei->mid_score[color] += temp1 * MidgameXrayRookMob;
         ei->end_score[color] += temp1 * EndgameXrayRookMob;
 
-        if (BitMask[from] & Rank7ByColorBB[color]) {
+		//its good to be lined up with a lot of enemy pawns (7th rank most common example)
+		uint64 pressured = rookAttacksBB(from, ((pos->pawns | pos->kings) & pos->color[color]));
+		uint64 pawnsPressured = pressured & ei->pawns[enemy] & ~ei->atkpawns[enemy]; 
+		if (pawnsPressured) {
+			int numPawnsPressured = bitCnt(pawnsPressured);
+			if (showEval) Print(3,"pp %d ",numPawnsPressured);
+			ei->mid_score[color] += MidgameRookPawnPressure * numPawnsPressured;
+			ei->mid_score[color] += EndgameRookPawnPressure * numPawnsPressured;
+		}
+
+        if (BitMask[from] & Rank7ByColorBB[color]) { //7th rank is also good for other reasons
             if ((pos->pawns & pos->color[enemy] & Rank7ByColorBB[color]) || (BitMask[pos->kpos[enemy]] & Rank8ByColorBB[color])) {
                 ei->mid_score[color] += MidgameRook7th;
                 ei->end_score[color] += EndgameRook7th;
             }
         }
+		
     }
     pc_bits = pos->queens & pos->color[color];
     while (pc_bits) {
@@ -1134,6 +1147,10 @@ void evalThreats(const position_t *pos, eval_info_t *ei, const int color, int *u
 
         if (threatB) {
             int numThreats = bitCnt(threatB);
+			if (showEval) {
+				if (color==WHITE) Print(3,"WTHR %d ",numThreats);
+				else Print(3,"BTHR %d ",numThreats);
+			}
             if (pos->side != color) *upside += ThreatBonus[numThreats]; 
             //only really takes double threats for the opponent seriously, since its not handled well by qsearch and such
             numThreats += (pos->side==color);
@@ -1446,14 +1463,16 @@ int eval(const position_t *pos, int thread_id, int *optimism, int *pessimism) {
     int winning;
     eval_entry_t *entry;
     uint64 whitePassed, blackPassed;
-    int upside[2] = {0,0};
+    int upside[2] = {0,0}; //this should never be negative
 
     entry = SearchInfo(thread_id).et.table + (KEY(pos->hash) & SearchInfo(thread_id).et.mask);
     if (entry->hashlock == LOCK(pos->hash)) {
         //optimism and pessimism is hashed in 0.1 pawns
-        *optimism = entry->optimism; //this was meant to be * 10
-        *pessimism = entry->pessimism; //this was meant to be * 10
-        return entry->value;
+        *optimism = entry->optimism << 3; //this was meant to be * 10
+        *pessimism = entry->pessimism << 3; //this was meant to be * 10
+		if (showEval) Print(3," from hash ");
+		return entry->value;
+
     }
 
     ASSERT(pos != NULL);
@@ -1577,17 +1596,16 @@ int eval(const position_t *pos, int thread_id, int *optimism, int *pessimism) {
         score = ((score * (MAX_DRAW-draw)) + (DrawValue[WHITE] * draw))/MAX_DRAW; 
     }
     score = score*sign[pos->side];
-    *optimism = upside[pos->side];
-    *pessimism = upside[pos->side^1];
+    *optimism = MIN((255 << 3),upside[pos->side]); //make sure this can fit in 8 bits 
+    *pessimism = MIN((255 << 3),upside[pos->side^1]); //make sure this can fit in 8 bits 
 
     if (score < -MAXEVAL) score = -MAXEVAL;
     else if (score > MAXEVAL) score = MAXEVAL;
 
     entry->hashlock = LOCK(pos->hash);
-    entry->optimism = *optimism / 10;
-    entry->pessimism = *pessimism / 10;
+	entry->optimism = (uint8) (*optimism >> 3);
+	entry->pessimism = (uint8) (*pessimism >> 3);
     entry->value = score;
-
     return score;
 }
 
