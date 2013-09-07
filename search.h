@@ -135,7 +135,6 @@ void displayPV(const position_t *pos, continuation_t *pv, int depth, int alpha, 
 
     Print(1, "info depth %d ", depth);
     if (abs(score) < (INF - MAXPLY)) {
-
         if (score < beta) {
             if (score <= alpha) Print(1, "score cp %d upperbound ", score);
             else Print(1, "score cp %d ", score);
@@ -337,7 +336,6 @@ int searchNode(position_t *pos, int alpha, int beta, const int depth, SearchStac
 
 template<bool inRoot, bool inSplitPoint, bool inCheck, bool inSingular>
 int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, const int thread_id, NodeType nt) {
-    int oldalpha = alpha;
     int pes = 0, opt = 0;
     SplitPoint* sp = NULL;
     SearchStack ss;
@@ -455,24 +453,22 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
 
     if (inSplitPoint) {
         sp = Threads[thread_id].split_point;
-        ss = *sp->sscurr;
+        ss = *sp->sscurr; // ss.mvlist points to master ss.mvlist, copied the entire searchstack also
     } else {
         if (inRoot) {
-            ss.mvlist = &SearchInfo(thread_id).rootmvlist;
+            ss = ssprev; // this is correct, ss.mvlist points to the ssprev.mvlist, at the same time, ssprev resets other member vars
             if (!SearchInfo(thread_id).mvlist_initialized) {
-                ss.hashMove = transGetHashMove(pos->hash, thread_id);
                 sortInit(pos, ss.mvlist, pinnedPieces(pos, pos->side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseRoot, thread_id);
             } else {
                 ss.mvlist->pos = 0;
                 ss.mvlist->phase = MoveGenPhaseRoot + 1;
             }
         } else {
+            ss.dcc = discoveredCheckCandidates(pos, pos->side);
             sortInit(pos, ss.mvlist, pinnedPieces(pos, pos->side), ss.hashMove, alpha, ss.evalvalue, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), thread_id);
             ss.firstExtend = ss.firstExtend || (inCheck && ss.mvlist->size==1);
         }
     }
-
-    ss.dcc = discoveredCheckCandidates(pos, pos->side); // always assign even in splitpoint, data not copied over from master
 
     int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 3) : (depth * depth));
     basic_move_t move;
@@ -572,19 +568,18 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 break;
         }
     }
-    if (inRoot) {
-        if (SHOW_SEARCH && depth >= 8 && (!Threads[thread_id].stop || SearchInfo(thread_id).best_value != -INF))
-            displayPV(pos, &SearchInfo(thread_id).rootPV, depth, oldalpha, beta, SearchInfo(thread_id).best_value);
+    if (inRoot && ss.playedMoves == 0) {
+        if (inCheck) return -INF;
+        else return DrawValue[pos->side];
     }
-    if (!inSplitPoint && !inSingular && !Threads[thread_id].stop) {
+    if (!inRoot && !inSplitPoint && !inSingular && !Threads[thread_id].stop) {
         if (ss.playedMoves == 0) {
             if (inCheck) ss.bestvalue = -INF + pos->ply;
             else ss.bestvalue = DrawValue[pos->side];
             transStore<HTNoMoves>(pos->hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
             return ss.bestvalue;
         }
-        if (Threads[thread_id].stop) return 0;
-        if (!inRoot && ss.bestmove != EMPTY && !moveIsTactical(ss.bestmove) && ss.bestvalue >= beta) { //> alpha account for pv better maybe? Sam
+        if (ss.bestmove != EMPTY && !moveIsTactical(ss.bestmove) && ss.bestvalue >= beta) { //> alpha account for pv better maybe? Sam
             int index = historyIndex(pos->side, ss.bestmove);
             int hisDepth = MIN(depth,MAX_HDEPTH);
             SearchInfo(thread_id).history[index] += hisDepth * hisDepth;
@@ -853,14 +848,13 @@ bool learn_position(position_t *pos,int thread_id, continuation_t *variation) {
 void getBestMove(position_t *pos, int thread_id) {
     int id;
     uci_option_t *opt = Guci_options;
-    basic_move_t hashMove;
     int alpha, beta;
     SearchStack ss;
     ss.moveGivesCheck = (bool)kingIsInCheck(pos);
+    ss.dcc = discoveredCheckCandidates(pos, pos->side);
 
     ASSERT(pos != NULL);
 
-    hashMove = EMPTY;
     transNewDate(TransTable(thread_id).date, thread_id);
 
     do {
@@ -877,11 +871,11 @@ void getBestMove(position_t *pos, int thread_id) {
             setAllThreadsToStop(thread_id);
             return;
         }
-        hashMove = entry->move;
+        ss.hashMove = entry->move;
     } while (false);
 
     // extend time when there is no hashmove from hashtable, this is useful when just out of the book
-    if (hashMove == EMPTY) { 
+    if (ss.hashMove == EMPTY) { 
         SearchInfo(thread_id).time_limit_max += SearchInfo(thread_id).alloc_time / 2;
         if (SearchInfo(thread_id).time_limit_max > SearchInfo(thread_id).time_limit_abs)
             SearchInfo(thread_id).time_limit_max = SearchInfo(thread_id).time_limit_abs;
@@ -931,6 +925,12 @@ void getBestMove(position_t *pos, int thread_id) {
 
             searchNode<true, false, false>(pos, alpha, beta, id, ss, thread_id, PVNode);
 
+            if (!Threads[thread_id].stop || SearchInfo(thread_id).best_value != -INF) {
+                if (SHOW_SEARCH && id >= 8)
+                    displayPV(pos, &SearchInfo(thread_id).rootPV, id, alpha, beta, SearchInfo(thread_id).best_value);
+                if (SearchInfo(thread_id).best_value > alpha && SearchInfo(thread_id).best_value < beta)
+                    repopulateHash(pos, &SearchInfo(thread_id).rootPV);
+            }
             if (SearchInfo(thread_id).thinking_status == STOPPED) break;
             if(SearchInfo(thread_id).best_value <= alpha) {
                 if (SearchInfo(thread_id).best_value <= alpha) alpha = SearchInfo(thread_id).best_value-(AspirationWindow<<++faillow);
@@ -943,8 +943,6 @@ void getBestMove(position_t *pos, int thread_id) {
             } else break;
         }
         if (SearchInfo(thread_id).thinking_status == STOPPED) break;
-        //repopulateHash(pos, &SearchInfo(thread_id).rootPV, id, SearchInfo(thread_id).best_value);
-        repopulateHash(pos, &SearchInfo(thread_id).rootPV);
         timeManagement(id, thread_id);
         if (SearchInfo(thread_id).thinking_status == STOPPED) break;
         if (SearchInfo(thread_id).best_value != -INF) {

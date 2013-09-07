@@ -49,20 +49,20 @@ enum HashMask { MLower = 1, MUpper = 2, MCutUpper = 4, MAllLower = 8, MExact = 1
 
 typedef uint32 basic_move_t;
 
-typedef struct
+struct continuation_t
 {
     basic_move_t moves[MAXPLY+1];
     int length;
-} continuation_t;
+};
 
 ///* the move structure */
-typedef struct move_t{
+struct move_t {
     basic_move_t m;
     int32 s;
-}move_t;
+};
 
 /* the structure used in generating moves */
-typedef struct _sort_t{
+struct movelist_t {
     volatile uint32 phase;
     basic_move_t transmove;
     basic_move_t killer1;
@@ -77,22 +77,26 @@ typedef struct _sort_t{
     volatile int32 startBad;
     uint64 pinned;
     move_t list[MAXMOVES];
-}movelist_t;
+};
 
 struct learn_t {
-    FILE *learnFile;// = NULL; //TODO make sure this is initialized correctly 
+    learn_t() : learnFile(NULL) {}
+    ~learn_t() { if (learnFile) free(learnFile); }
+    FILE *learnFile;
     string name;
-    //    char name[MAX_FILENAME_LENGTH];
 };
+
 struct book_t {
     BookType type;
-    FILE *bookFile;// = NULL; TODO make sure this is initialized correctly 
+    book_t() : bookFile(NULL) {}
+    ~book_t() { if (bookFile) free(bookFile); }
+    FILE *bookFile; 
     int64 size;
     string name;
-    //    char name[MAX_FILENAME_LENGTH];
 };
+
 /* the pawn hash table entry type */
-typedef struct pawn_entry_t{
+struct pawn_entry_t{
     uint32 hashlock;
     uint64 passedbits;
     int16 opn;
@@ -101,30 +105,34 @@ typedef struct pawn_entry_t{
     int8 kshelter[2];
     int8 qshelter[2];
     //	int8 halfPassed[2]; //currently unused
-}pawn_entry_t;
+};
 
 /* the pawn hash table type */
-typedef struct pawntable_t{
+struct pawntable_t{
+    pawntable_t() : table(NULL) {}
+    ~pawntable_t() { if (table) free(table); }
     pawn_entry_t *table;
     uint64 size;
     uint64 mask;
-}pawntable_t;
+};
 
-typedef struct eval_entry_t{
+struct eval_entry_t{
     uint32 hashlock;
     int16 value;
     int8 optimism;
     int8 pessimism;
-} eval_entry_t;
+};
 
-typedef struct evaltable_t{
+struct evaltable_t{
+    evaltable_t() : table(NULL) {}
+    ~evaltable_t() { if (table) free(table); }
     eval_entry_t *table;
     uint64 size;
     uint64 mask;
-} evaltable_t;
+};
 
 /* the trans table entry type */
-typedef struct trans_entry_t{
+struct trans_entry_t{
     uint32 hashlock;
     uint32 move;
     int16 uppervalue;
@@ -133,17 +141,19 @@ typedef struct trans_entry_t{
     uint8 age;
     uint8 upperdepth;
     uint8 lowerdepth;
-}trans_entry_t;
+};
 
 /* the trans table type */
-typedef struct _transtable_t{
+struct transtable_t{
+    transtable_t() : table(NULL) {}
+    ~transtable_t() { if (table) free(table); }
     trans_entry_t *table;
     uint64 size;
     uint64 mask;
     int32 date;
     uint64 used;
     int32 age[DATESIZE];
-}transtable_t;
+};
 
 struct pvhash_entry_t {
     uint32 hashlock;
@@ -161,7 +171,7 @@ struct pvhashtable_t {
     uint64 mask;
 };
 
-typedef struct _uci_option_t{
+struct uci_option_t{
     int time_buffer;
     int contempt;
     int threads;
@@ -176,10 +186,10 @@ typedef struct _uci_option_t{
     int min_split_depth;
     int evalcachesize;
     int pawnhashsize;
-}uci_option_t;
+};
 
 /* the eval info structure */
-typedef struct _eval_info_t{
+struct eval_info_t{
     uint64 atkall[2];
     uint64 atkpawns[2];
     uint64 atkknights[2];
@@ -203,10 +213,10 @@ typedef struct _eval_info_t{
     int queening;
     uint8 endFlags[2];
     pawn_entry_t *pawn_entry;
-}eval_info_t;
+};
 
 /* the undo structure */
-typedef struct _pos_store_t{
+struct pos_store_t{
     uint32 lastmove;
     int castle;
     int fifty;
@@ -215,10 +225,10 @@ typedef struct _pos_store_t{
     int end[2];
     int mat_summ[2];
     uint64 phash;
-}pos_store_t;
+};
 
 /* the position structure */
-typedef struct _position_t{
+struct position_t{
     uint64 pawns;
     uint64 knights;
     uint64 bishops;
@@ -236,20 +246,20 @@ typedef struct _position_t{
     int sp;
     uint64 hash;
     uint64 stack[MAX_HASH_STORE];
-}position_t;
+};
 
 typedef uint8 mflag_t;
 
 /* the material info structure */
-typedef struct _material_info_t{
+struct material_info_t{
     int16 value;
     uint8 phase;
     uint8 draw[2];
     mflag_t flags[2];
-}material_info_t;
+};
 
 /* the search data structure */
-typedef struct _search_info_t{
+struct search_info_t{
     int thinking_status;
 #ifndef TCEC
     int outOfBook;
@@ -296,14 +306,13 @@ typedef struct _search_info_t{
 
     basic_move_t moves[MAXMOVES];
     bool mvlist_initialized;
-    movelist_t rootmvlist;
     continuation_t rootPV;
     int32 evalgains[1024];
     int32 history[1024];
     evaltable_t et;
     pawntable_t pt;
     transtable_t tt;
-}search_info_t;
+};
 
 
 struct ThreadStack {
@@ -438,7 +447,7 @@ enum movegen_phases {
 };
 
 #ifdef SELF_TUNE
-typedef struct player_t { //if you put an array in here you need to change the copy and compare functions
+struct player_t { //if you put an array in here you need to change the copy and compare functions
 
     /* MATERIAL
     int p1, p2, p3, p4;
@@ -473,7 +482,7 @@ typedef struct player_t { //if you put an array in here you need to change the c
     int games;
     int points; // win is 2, draw is 1.
     double rating;
-}player_t;
+};
 #endif
 
 

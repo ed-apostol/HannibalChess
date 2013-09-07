@@ -13,9 +13,6 @@ void quit(void) {
     fclose(errfile);
     fclose(dumpfile);
 
-    if (TransTable(0).table != NULL) free(TransTable(0).table);
-    if (SearchInfo(0).pt.table != NULL) free(SearchInfo(0).pt.table);
-    if (SearchInfo(0).et.table != NULL) free(SearchInfo(0).et.table);
 #ifndef TCEC
     closeBook(&GpolyglotBook);
     closeLearn(&Glearn);
@@ -60,12 +57,9 @@ int main(void) {
 
     Guci_options = &uci_option;
 
-    TransTable(0).table = NULL;
     initTrans(INIT_HASH,0);
     initPVHashTab(&PVHashTable, INIT_PVHASH);
-    SearchInfo(0).pt.table = NULL;
     initPawnTab(&SearchInfo(0).pt, INIT_PAWN);
-    SearchInfo(0).et.table = NULL;
     initEvalTab(&SearchInfo(0).et, INIT_EVAL);
 
     initOption(&uci_option); // this should be initialized first
