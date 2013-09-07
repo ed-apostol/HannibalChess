@@ -174,7 +174,7 @@ void setAllThreadsToStop(int thread) {
     MutexUnlock(SMPLock);
 }
 
-bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, int* bestvalue, basic_move_t* bestmove, int* played, int alpha, int beta, bool pvnode, int depth, int inCheck, const int master) {
+bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, int* bestvalue, basic_move_t* bestmove, int* played, int alpha, int beta, bool pvnode, int depth, int inCheck, uint64 ntBit, const int master) {
     split_point_t *split_point;
     MutexLock(SMPLock);
     if(!idleThreadExists(master) || Threads[master].num_sp >= MaxNumSplitPointsPerThread) {
@@ -185,6 +185,7 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, int* bestvalue
     Threads[master].num_sp++;
     split_point->parent = Threads[master].split_point;
     split_point->depth = depth;
+    split_point->nullThreatBit = ntBit;
     split_point->alpha = alpha; 
     split_point->beta = beta;
     split_point->inPv = pvnode;

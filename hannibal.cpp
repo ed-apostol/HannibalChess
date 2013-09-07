@@ -26,8 +26,8 @@ can knight catch pawns code from LL
 //68 at 3:29
 */
 #define TWEAK_030813 true
-#define VERSION            "08_27_13"
-#define NUM_THREADS			    1
+#define VERSION            "09_07_13"
+#define NUM_THREADS			    6
 #define MIN_SPLIT_DEPTH			6 //6 tested best on both tests measured by NPS on 12 threads, 5 & 8 tested best once easy measured by time to depth.
 #define TCEC true
 //#define TCEC_COMPETE true

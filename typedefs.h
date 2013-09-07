@@ -288,6 +288,7 @@ typedef struct _split_point_t{
     int depth;
     int inCheck;
     bool inPv;
+    uint64 nullThreatBit;
     volatile int alpha;
     volatile int beta;
     volatile int bestvalue;

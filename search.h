@@ -485,6 +485,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
         bestmove = sp->bestmove;
         mvlist = sp->parent_movestack;
         played = sp->played;
+        nullThreatMoveToBit = sp->nullThreatBit;
     } else {
         pinned = pinnedPieces(pos, pos->side);
         sortInit(pos, mvlist, pinned, hashMove, alpha, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), thread_id);
@@ -583,7 +584,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, int depth, int inCheck, 
             && thread_id < Guci_options->threads //SAM only necessary for learning threads, which are start at maxthreads and count down
 #endif
             && Guci_options->threads > 1 && depth >= Guci_options->min_split_depth && idleThreadExists(thread_id)
-            && splitRemainingMoves(pos, mvlist, &bestvalue, &bestmove, &played, alpha, beta, inPv, depth, inCheck, thread_id)) {
+            && splitRemainingMoves(pos, mvlist, &bestvalue, &bestmove, &played, alpha, beta, inPv, depth, inCheck, nullThreatMoveToBit, thread_id)) {
                 break;
         }
     }
