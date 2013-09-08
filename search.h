@@ -860,16 +860,21 @@ void getBestMove(position_t *pos, int thread_id) {
     do {
         pvhash_entry_t *entry = pvHashProbe(pos->hash);
         if (NULL == entry) break;
-        if (entry->depth >= SearchInfo(thread_id).lastDepthSearched - 2 && (moveCapture(pos->posStore.lastmove) && moveTo(pos->posStore.lastmove) == moveTo(entry->move))) {
-            SearchInfo(thread_id).bestmove =  entry->move;
-            SearchInfo(thread_id).best_value = entry->score;
-            extractPvMovesFromHash(pos, &SearchInfo(thread_id).rootPV, entry->move, true);
-            if (SearchInfo(thread_id).rootPV.length > 1) SearchInfo(thread_id).pondermove = SearchInfo(thread_id).rootPV.moves[1];
-            else SearchInfo(thread_id).pondermove = 0;
-            displayPV(pos, &SearchInfo(thread_id).rootPV, entry->depth, -INF, INF, SearchInfo(thread_id).best_value);
-            SearchInfo(thread_id).thinking_status = STOPPED;
-            setAllThreadsToStop(thread_id);
-            return;
+        if (SearchInfo(thread_id).thinking_status == THINKING
+            && entry->depth >= SearchInfo(thread_id).lastDepthSearched - 2 
+            && SearchInfo(thread_id).rootPV.moves[1] == pos->posStore.lastmove
+            && SearchInfo(thread_id).rootPV.moves[2] == entry->move
+            && ((moveCapture(pos->posStore.lastmove) && (moveTo(pos->posStore.lastmove) == moveTo(entry->move))) 
+            || (moveCapture(entry->move) > movePiece(entry->move)))) {
+                SearchInfo(thread_id).bestmove =  entry->move;
+                SearchInfo(thread_id).best_value = entry->score;
+                extractPvMovesFromHash(pos, &SearchInfo(thread_id).rootPV, entry->move, true);
+                if (SearchInfo(thread_id).rootPV.length > 1) SearchInfo(thread_id).pondermove = SearchInfo(thread_id).rootPV.moves[1];
+                else SearchInfo(thread_id).pondermove = 0;
+                displayPV(pos, &SearchInfo(thread_id).rootPV, entry->depth, -INF, INF, SearchInfo(thread_id).best_value);
+                SearchInfo(thread_id).thinking_status = STOPPED;
+                setAllThreadsToStop(thread_id);
+                return;
         }
         ss.hashMove = entry->move;
     } while (false);
@@ -909,7 +914,6 @@ void getBestMove(position_t *pos, int thread_id) {
         SearchInfo(thread_id).best_value = -INF;
         SearchInfo(thread_id).change = 0;
         SearchInfo(thread_id).research = 0;
-        SearchInfo(thread_id).lastDepthSearched = id;
         if (id < 6) {
             alpha = -INF;
             beta = INF;
@@ -951,6 +955,7 @@ void getBestMove(position_t *pos, int thread_id) {
         }
         //////Print(1, "info string cutfails: %d %% allfails: %d %%\n", (SearchInfo(0).cutfail * 100)/SearchInfo(0).cutnodes, (SearchInfo(0).allfail * 100)/SearchInfo(0).allnodes);
     }
+    SearchInfo(thread_id).lastDepthSearched = id;
     if (SearchInfo(thread_id).thinking_status != STOPPED) {
         if ((SearchInfo(thread_id).depth_is_limited || SearchInfo(thread_id).time_is_limited) && SearchInfo(thread_id).thinking_status == THINKING) {
             SearchInfo(thread_id).thinking_status = STOPPED;
