@@ -683,7 +683,6 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
     basic_move_t move;
     pos_store_t undo;
     continuation_t newPV;
-    continuation_t rootPV;
     int64 lastnodes;
     int64 sum_nodes;
     int64 maxnodes;
@@ -698,7 +697,7 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
     int played = 0;
     time = getTime();
     pos->ply = 0;
-    rootPV.length = 0;
+    SearchInfo(thread_id).rootPV.length = 0;
     newPV.length = 0;
     Threads[thread_id].evalvalue[pos->ply] = -INF;
     SearchInfo(thread_id).iteration = depth;
@@ -804,9 +803,9 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
                 bestmoveindex = mvlist->pos-1;
                 SearchInfo(thread_id).best_value2 = SearchInfo(thread_id).best_value;
                 SearchInfo(thread_id).best_value = score;
-                extractPvMovesFromHash(pos, &rootPV, move);
+                extractPvMovesFromHash(pos, &SearchInfo(thread_id).rootPV, move);
                 SearchInfo(thread_id).bestmove = move;
-                if (rootPV.length > 1) SearchInfo(thread_id).pondermove = rootPV.moves[1];
+                if (SearchInfo(thread_id).rootPV.length > 1) SearchInfo(thread_id).pondermove = SearchInfo(thread_id).rootPV.moves[1];
                 else SearchInfo(thread_id).pondermove = 0;
                 if (mvlist->pos > 1) {
                     SearchInfo(thread_id).change = 1;
@@ -826,7 +825,7 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
                 return;
             }
             SearchInfo(thread_id).change = 1;
-            if (SHOW_SEARCH  && thread_id < Guci_options->threads && depth >= 8) displayPV(pos, &rootPV, depth, old_alpha, beta, SearchInfo(thread_id).best_value);
+            if (SHOW_SEARCH  && thread_id < Guci_options->threads && depth >= 8) displayPV(pos, &SearchInfo(thread_id).rootPV, depth, old_alpha, beta, SearchInfo(thread_id).best_value);
             fail_low++;
             old_alpha = alpha = goodAlpha(alpha-(24*(1<<(fail_low))));
 
@@ -888,14 +887,14 @@ void searchRoot(position_t *pos, movelist_t *mvlist, int alpha, int beta, int de
     if (SearchInfo(thread_id).best_value != -INF) {
         SearchInfo(thread_id).last_last_value = SearchInfo(thread_id).last_value;
         SearchInfo(thread_id).last_value = SearchInfo(thread_id).best_value;
-        repopulateHash(pos, &rootPV, depth, SearchInfo(thread_id).best_value,thread_id);
+        repopulateHash(pos, &SearchInfo(thread_id).rootPV, depth, SearchInfo(thread_id).best_value,thread_id);
     } else if (SearchInfo(thread_id).thinking_status != STOPPED) {
         Print(8, "SearchInfo.thinking_status != STOPPED Failure!\n");
         displayBoard(pos, 8);
     }
 
     if (SHOW_SEARCH  && thread_id < Guci_options->threads && SearchInfo(thread_id).best_value != -INF && (depth >= 8 || SearchInfo(thread_id).thinking_status == STOPPED))
-        displayPV(pos, &rootPV, depth, old_alpha, beta, SearchInfo(thread_id).best_value);
+        displayPV(pos, &SearchInfo(thread_id).rootPV, depth, old_alpha, beta, SearchInfo(thread_id).best_value);
 }
 
 #ifndef TCEC
@@ -1044,16 +1043,20 @@ void getBestMove(position_t *pos, int thread_id) {
     do {
         entry = transProbe(pos->hash,thread_id);
         if (NULL == entry) break;
-        if (entry->depth >= SearchInfo(thread_id).lastDepthSearched - 2 && (moveCapture(pos->posStore.lastmove) && moveTo(pos->posStore.lastmove) == moveTo(transMove(entry)))) {
-            SearchInfo(thread_id).bestmove = transMove(entry);
-            SearchInfo(thread_id).best_value = transMaxvalue(entry);
-            extractPvMovesFromHash(pos, &SearchInfo(thread_id).rootPV, transMove(entry));
-            if (SearchInfo(thread_id).rootPV.length > 1) SearchInfo(thread_id).pondermove = SearchInfo(thread_id).rootPV.moves[1];
-            else SearchInfo(thread_id).pondermove = 0;
-            displayPV(pos, &SearchInfo(thread_id).rootPV, entry->depth, -INF, INF, SearchInfo(thread_id).best_value);
-            SearchInfo(thread_id).thinking_status = STOPPED;
-            setAllThreadsToStop(thread_id);
-            return;
+        if (SearchInfo(thread_id).thinking_status == THINKING 
+            && SearchInfo(thread_id).rootPV.moves[1] == pos->posStore.lastmove
+            && SearchInfo(thread_id).rootPV.moves[2] == transMove(entry)
+            && entry->depth >= SearchInfo(thread_id).lastDepthSearched - 2 
+            && (moveCapture(pos->posStore.lastmove) && moveTo(pos->posStore.lastmove) == moveTo(transMove(entry)))) {
+                SearchInfo(thread_id).bestmove = transMove(entry);
+                SearchInfo(thread_id).best_value = transMaxvalue(entry);
+                extractPvMovesFromHash(pos, &SearchInfo(thread_id).rootPV, transMove(entry));
+                if (SearchInfo(thread_id).rootPV.length > 1) SearchInfo(thread_id).pondermove = SearchInfo(thread_id).rootPV.moves[1];
+                else SearchInfo(thread_id).pondermove = 0;
+                displayPV(pos, &SearchInfo(thread_id).rootPV, entry->depth, -INF, INF, SearchInfo(thread_id).best_value);
+                SearchInfo(thread_id).thinking_status = STOPPED;
+                setAllThreadsToStop(thread_id);
+                return;
         }
         hashMove = transMove(entry);
     } while (false);
@@ -1104,7 +1107,6 @@ void getBestMove(position_t *pos, int thread_id) {
     SearchInfo(thread_id).try_easy = true;
     Threads[thread_id].split_point = &Threads[thread_id].sptable[thread_id];
     for (id = 1; id < MAXPLY; id++) {
-        SearchInfo(0).lastDepthSearched = id;
         if (id >= 6) { // TODO: to be tuned
             alpha = goodAlpha(SearchInfo(thread_id).best_value-16);
             beta = goodBeta(SearchInfo(thread_id).best_value+16);
@@ -1116,6 +1118,7 @@ void getBestMove(position_t *pos, int thread_id) {
 
         if (SearchInfo(thread_id).thinking_status == STOPPED) break;
     }
+    SearchInfo(0).lastDepthSearched = id;
     if (SearchInfo(thread_id).thinking_status != STOPPED) {
         if ((SearchInfo(thread_id).node_is_limited || SearchInfo(thread_id).depth_is_limited || SearchInfo(thread_id).time_is_limited) && SearchInfo(thread_id).thinking_status == THINKING) {
             Print(3,"info string max depth, but can stop\n");
