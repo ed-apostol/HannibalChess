@@ -399,7 +399,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
         updateEvalgains(pos, pos->posStore.lastmove, ssprev.evalvalue, ss.evalvalue, thread_id);
 
         if (!inPvNode(nt) && !inCheck) {
-            const int MaxRazorDepth = 5;
+            const int MaxRazorDepth = 10;
             int rvalue;
             if (depth < MaxRazorDepth && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) 
                 && ss.evalvalue > (rvalue = beta + FutilityMarginTable[MIN(depth, MaxRazorDepth)][MIN(ssprev.playedMoves,63)])) {
@@ -420,8 +420,10 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 if (score >= beta) {
                     if (depth >= 12) score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, ssprev, thread_id, nt);
                     if (score >= beta) {
-                        if (inCutNode(nt)) transStore<HTLower>(pos->hash, EMPTY, depth, scoreToTrans(score, pos->ply), thread_id);
-                        else transStore<HTAllLower>(pos->hash, EMPTY, depth, scoreToTrans(score, pos->ply), thread_id);
+                        if (ss.hashMove == EMPTY) {
+                            if (inCutNode(nt)) transStore<HTLower>(pos->hash, EMPTY, depth, scoreToTrans(score, pos->ply), thread_id);
+                            else transStore<HTAllLower>(pos->hash, EMPTY, depth, scoreToTrans(score, pos->ply), thread_id);
+                        }
                         return score;
                     }
                 } else if (depth < 5 && ssprev.reducedMove && ss.threatMove != EMPTY && prevMoveAllowsThreat(pos, pos->posStore.lastmove, ss.threatMove)) {
@@ -472,7 +474,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
         }
     }
 
-    int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 3) : (depth * depth));
+    int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 4) : (depth * depth));
     basic_move_t move;
     while ((move = sortNext(sp, pos, ss.mvlist, ss.mvlist_phase, thread_id)) != EMPTY) {
         int score = -INF;
@@ -511,10 +513,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                         --newdepthclone;
                     }
                 }
-                if (depth >= MIN_REDUCTION_DEPTH) {
-                    if (okToPruneOrReduce) newdepthclone -= ReductionTable[(inPvNode(nt)?0:1)][MIN(depth,63)][MIN(ss.playedMoves,63)];
-                    //else if (!inRoot && !inPvNode(nt) && MoveGenPhase[ss.mvlist_phase] == PH_BAD_CAPTURES) --newdepthclone;
-                }
+                if (okToPruneOrReduce && depth >= MIN_REDUCTION_DEPTH) newdepthclone -= ReductionTable[(inPvNode(nt)?0:1)][MIN(depth,63)][MIN(ss.playedMoves,63)];
                 makeMove(pos, &undo, move);
                 if (inSplitPoint) alpha = sp->alpha;
                 ss.reducedMove = (newdepthclone < newdepth);
