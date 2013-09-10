@@ -18,9 +18,9 @@ void initSearchThread(int i) {
 
 void idleLoop(const int thread_id, SplitPoint *master_sp) {
     ASSERT(thread_id < Guci_options->threads || master_sp == NULL);
+    //Print(3, "%s: thread_id:%d\n", __FUNCTION__, thread_id);
     Threads[thread_id].running = true;
-    while(1) {
-        if(Threads[thread_id].exit_flag) break;
+    while(!Threads[thread_id].exit_flag) {
 #ifndef TCEC
         if (thread_id >= MaxNumOfThreads - Guci_options->learnThreads) { //lets grab something and learn from it
             continuation_t toLearn;
@@ -38,7 +38,7 @@ void idleLoop(const int thread_id, SplitPoint *master_sp) {
         }
         else 
 #endif
-            while(thread_id != 0 && master_sp == NULL && 
+            while(master_sp == NULL && 
                 (SearchInfo(thread_id).thinking_status == STOPPED
 #ifndef TCEC
                 && (thread_id >= Guci_options->threads && thread_id < MaxNumOfThreads - Guci_options->learnThreads)
@@ -46,29 +46,32 @@ void idleLoop(const int thread_id, SplitPoint *master_sp) {
                 )) {
                     WaitForSingleObject(Threads[thread_id].idle_event, INFINITE);
             }
-        if(Threads[thread_id].work_assigned) {
-            ++Threads[thread_id].started;
-            Threads[thread_id].work_assigned = false;
-            SplitPoint* sp = Threads[thread_id].split_point;
-            if (sp->inRoot) searchNode<true, true, false>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, *sp->ssprev, thread_id, sp->nodeType);
-            else searchNode<false, true, false>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, *sp->ssprev, thread_id, sp->nodeType);
-            MutexLock(SMPLock);
-            if (Threads[thread_id].cutoff || (sp->master == thread_id && Threads[thread_id].stop)) {
-                for(int i = 0; i < Guci_options->threads; i++) {
-                    if(i == sp->master || sp->slaves[i])
-                        Threads[i].stop = true;
-                }
+            if(Threads[thread_id].searching) {
+                ++Threads[thread_id].started;
+                SplitPoint* sp = Threads[thread_id].split_point;
+                if (sp->inRoot) searchNode<true, true, false>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, *sp->ssprev, thread_id, sp->nodeType);
+                else searchNode<false, true, false>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, *sp->ssprev, thread_id, sp->nodeType);
+                MutexLock(sp->updatelock);
+                sp->cpus--;
+                sp->slaves[thread_id] = 0;
+                Threads[thread_id].searching = false;
+                MutexUnlock(sp->updatelock);
+                ++Threads[thread_id].ended;
             }
-            sp->cpus--;
-            sp->slaves[thread_id] = 0;
-            Threads[thread_id].idle = true;
-            Threads[thread_id].cutoff = false;
-            MutexUnlock(SMPLock);
-            ++Threads[thread_id].ended;
-        }
-        if(master_sp != NULL && master_sp->cpus == 0) return;
+            if(master_sp != NULL && master_sp->cpus == 0) {
+                Threads[thread_id].stop = false; 
+                Threads[thread_id].searching = true;
+                return;
+            }
     }
     Threads[thread_id].running = false;
+}
+
+bool smpCutoffOccurred(SplitPoint *splitpoint) {
+    for (SplitPoint* sp = splitpoint; sp; sp = sp->parent) {
+        if (sp->cutoff) return true;
+    }
+    return false;
 }
 
 void initSmpVars() {
@@ -76,10 +79,8 @@ void initSmpVars() {
 #ifdef SELF_TUNE2
         Threads[i].playingGame = false;
 #endif
-        Threads[i].work_assigned = false;
-        Threads[i].idle = true;
+        Threads[i].searching = false;
         Threads[i].stop = false;
-        Threads[i].cutoff = false;
         Threads[i].started = 0;
         Threads[i].ended = 0;
         Threads[i].numsplits = 0;
@@ -95,7 +96,7 @@ void initSmpVars() {
 }
 
 bool threadIsAvailable(int slave, int master) { // TODO: study this for improvement
-    if(!Threads[slave].idle) return false;
+    if(Threads[slave].searching) return false;
     if(Threads[slave].num_sp == 0) 
         return true;
     if(Threads[slave].sptable[Threads[slave].num_sp-1].slaves[master])
@@ -118,11 +119,12 @@ DWORD WINAPI winInitThread(LPVOID n) {
 }
 
 void initThreads(void) {
-    volatile int i;
+    int i;
     DWORD iID[MaxNumOfThreads];
     for (i = 0; i < MaxNumOfThreads; ++i) {
         Threads[i].num_sp = 0;
         Threads[i].exit_flag = false;
+        Threads[i].running = false;
         Threads[i].idle_event = CreateEvent(0, FALSE, FALSE, 0);
         for (int j = 0; j < MaxNumSplitPointsPerThread; ++j) {
             MutexInit(Threads[i].sptable[j].movelistlock, NULL);
@@ -146,7 +148,7 @@ void stopThreads(void) {
     for(int i = 0; i < MaxNumOfThreads; i++) {
         Threads[i].stop = true;
         Threads[i].exit_flag = true;
-        Threads[i].work_assigned = false;
+        Threads[i].searching = false;
         SetEvent(Threads[i].idle_event);
         for (int j = 0; j < MaxNumSplitPointsPerThread; ++j) {
             MutexDestroy(Threads[i].sptable[j].movelistlock);
@@ -164,6 +166,7 @@ void setAllThreadsToStop(int thread) {
     MutexLock(SMPLock);
     for (int i = 0; i < Guci_options->threads; i++) {
         Threads[i].stop = true;
+        Threads[i].searching = false;
     }
     MutexUnlock(SMPLock);
 #endif
@@ -190,11 +193,12 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* s
     split_point->inCheck = inCheck;
     split_point->inRoot = inRoot;
     split_point->cpus = 0;
+    split_point->cutoff = false;
     split_point->sscurr = ss;
     split_point->ssprev = ssprev;
     for(int i = 0; i < Guci_options->threads; i++) {
         split_point->slaves[i] = 0;
-        if(threadIsAvailable(i, master) || i == master) {
+        if(master == i || threadIsAvailable(i, master)) {
             split_point->pos[i] = *p;
             Threads[i].split_point = split_point;
             if(i != master) split_point->slaves[i] = 1;
@@ -203,10 +207,8 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* s
     }
     for(int i = 0; i < Guci_options->threads; i++) {
         if(i == master || split_point->slaves[i]) {
-            Threads[i].idle = false;
+            Threads[i].searching = true;
             Threads[i].stop = false;
-            Threads[i].cutoff = false;
-            Threads[i].work_assigned = true;
         }
     }
     MutexUnlock(SMPLock);
@@ -222,10 +224,6 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* s
     ss->bestvalue = split_point->bestvalue;
     ss->bestmove = split_point->bestmove;
     ss->playedMoves = split_point->played;
-    if (SearchInfo(0).thinking_status != STOPPED) {
-        Threads[master].stop = false; 
-        Threads[master].idle = false;
-    }
     Threads[master].split_point = split_point->parent;
     Threads[master].num_sp--;
     Threads[master].numsplits++;

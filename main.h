@@ -33,7 +33,7 @@ int main(void) {
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stdin, NULL, _IONBF, 0);
 
-    logfile = fopen("logfile.txt", "w");
+    logfile = fopen("logfile.txt", "a+");
     errfile = fopen(ERROR_FILE, "a+");
     dumpfile = fopen("dumpfile.txt", "a+");
 

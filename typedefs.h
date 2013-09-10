@@ -384,6 +384,7 @@ struct SplitPoint {
     volatile int master;
     volatile int slaves[MaxNumOfThreads];
     volatile int cpus;
+    volatile bool cutoff;
     mutex_t movelistlock[1];
     mutex_t updatelock[1];
 };
@@ -392,9 +393,7 @@ struct thread_t {
     SplitPoint *split_point;
     volatile bool stop;
     volatile bool running;
-    volatile bool idle;
-    volatile bool work_assigned;
-    volatile bool cutoff;
+    volatile bool searching;
     volatile bool exit_flag;
     HANDLE idle_event;
     uint64 nodes;

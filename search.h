@@ -220,6 +220,7 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, SearchStack& 
     ASSERT(pos->ply > 0); // for ssprev above
 
     initNode(pos, thread_id);
+    if (smpCutoffOccurred(Threads[thread_id].split_point)) Threads[thread_id].stop = true;
     if (Threads[thread_id].stop) return 0;
 
     int t = 0;
@@ -286,6 +287,7 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, SearchStack& 
             score = -qSearch<inPv>(pos, -beta, -alpha, newdepth, ss, thread_id);
             unmakeMove(pos, &undo);
         }
+        if (Threads[thread_id].stop) return ss.bestvalue;
         if (score > ss.bestvalue) {
             ss.bestvalue = score;
             if (score > alpha) {
@@ -347,6 +349,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
     ASSERT(depth >= 1);
 
     initNode(pos, thread_id);
+    if (inSplitPoint && smpCutoffOccurred(Threads[thread_id].split_point)) Threads[thread_id].stop = true;
     if (Threads[thread_id].stop) return 0;
 
     if (!inRoot && !inSingular && !inSplitPoint) {
@@ -530,7 +533,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
             }
             unmakeMove(pos, &undo);
         }
-        if (Threads[thread_id].stop) break;
+        if (Threads[thread_id].stop) return ss.bestvalue;
         if (inRoot) {
             ss.mvlist->list[ss.mvlist->pos-1].s = score;
             if (score > SearchInfo(thread_id).rbestscore1) {
@@ -562,7 +565,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                         for (int i = ss.mvlist->pos; i < ss.mvlist->size; ++i) ss.mvlist->list[i].s = -INF;
                     }
                     if (inSplitPoint) {
-                        Threads[thread_id].cutoff = true;
+                        sp->cutoff = true;
                         MutexUnlock(sp->updatelock);
                     }
                     break;
@@ -580,7 +583,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
         if (inCheck) return -INF;
         else return DrawValue[pos->side];
     }
-    if (!inRoot && !inSplitPoint && !inSingular && !Threads[thread_id].stop) {
+    if (!inRoot && !inSplitPoint && !inSingular) {
         if (ss.playedMoves == 0) {
             if (inCheck) ss.bestvalue = -INF + pos->ply;
             else ss.bestvalue = DrawValue[pos->side];
@@ -911,7 +914,7 @@ void getBestMove(position_t *pos, int thread_id) {
     // SMP 
     initSmpVars();
     for (int i = 1; i < Guci_options->threads; ++i) SetEvent(Threads[i].idle_event);
-    Threads[thread_id].split_point = &Threads[thread_id].sptable[0];
+    Threads[thread_id].split_point = NULL; //////&Threads[thread_id].sptable[0];
     SearchInfo(thread_id).mvlist_initialized = false;
 
     SearchInfo(thread_id).try_easy = true;
@@ -980,12 +983,12 @@ void getBestMove(position_t *pos, int thread_id) {
         }
     }
 
-    //////Print(8, "================================================================\n");
-    //////for (int i = 0; i < Guci_options->threads; ++i) {
-    //////    Print(8, "%s: thread_id:%d, num_sp:%d work:%d idle:%d stop:%d started:%d ended:%d nodes:%d numsplits:%d\n", __FUNCTION__, i, 
-    //////    Threads[i].num_sp, Threads[i].work_assigned, Threads[i].idle, Threads[i].stop, 
-    //////    Threads[i].started, Threads[i].ended, Threads[i].nodes, Threads[i].numsplits);
-    //////}
+    Print(2, "================================================================\n");
+    for (int i = 0; i < Guci_options->threads; ++i) {
+        Print(2, "%s: thread_id:%d, num_sp:%d searching:%d stop:%d started:%d ended:%d nodes:%d numsplits:%d\n", __FUNCTION__, i, 
+            Threads[i].num_sp, Threads[i].searching, Threads[i].stop, 
+            Threads[i].started, Threads[i].ended, Threads[i].nodes, Threads[i].numsplits);
+    }
 }
 
 void checkSpeedUp(position_t* pos, char string[]) {
