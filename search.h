@@ -349,7 +349,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
     ASSERT(depth >= 1);
 
     initNode(pos, thread_id);
-    if (inSplitPoint && smpCutoffOccurred(Threads[thread_id].split_point)) Threads[thread_id].stop = true;
+    if (smpCutoffOccurred(Threads[thread_id].split_point)) Threads[thread_id].stop = true;
     if (Threads[thread_id].stop) return 0;
 
     if (!inRoot && !inSingular && !inSplitPoint) {
@@ -420,8 +420,12 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, thread_id, AllNode);
                 ss.threatMove = ss.counterMove;
                 unmakeNullMove(pos, &undo);
+                if (Threads[thread_id].stop) return 0;
                 if (score >= beta) {
-                    if (depth >= 12) score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, ssprev, thread_id, nt);
+                    if (depth >= 12) {
+                        score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, ssprev, thread_id, nt);
+                        if (Threads[thread_id].stop) return 0;
+                    }
                     if (score >= beta) {
                         if (ss.hashMove == EMPTY) {
                             if (inCutNode(nt)) transStore<HTLower>(pos->hash, EMPTY, depth, scoreToTrans(score, pos->ply), thread_id);
@@ -439,6 +443,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
             int newdepth = inPvNode(nt) ? depth - 2 : depth / 2;
             if (ss.hashMove == EMPTY || ss.hashDepth < newdepth) {
                 int score = searchNode<false, false, false>(pos, alpha, beta, newdepth, ssprev, thread_id, nt);
+                if (Threads[thread_id].stop) return 0;
                 if (score > alpha) {
                     ss.hashMove = ssprev.counterMove;
                     ss.evalvalue = score;
@@ -452,6 +457,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 int targetScore = ss.evalvalue - EXPLORE_CUTOFF;
                 ssprev.bannedMove = ss.hashMove;
                 int score = searchNode<false, false, true>(pos, targetScore, targetScore+1, newdepth, ssprev, thread_id, nt);
+                if (Threads[thread_id].stop) return 0;
                 ssprev.bannedMove = EMPTY;
                 if (score <= targetScore) ss.firstExtend = true;
             }
