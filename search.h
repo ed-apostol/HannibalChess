@@ -444,6 +444,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
             if (ss.hashMove == EMPTY || ss.hashDepth < newdepth) {
                 int score = searchNode<false, false, false>(pos, alpha, beta, newdepth, ssprev, thread_id, nt);
                 if (Threads[thread_id].stop) return 0;
+                ss.evalvalue = score;
                 if (score > alpha) {
                     ss.hashMove = ssprev.counterMove;
                     ss.evalvalue = score;
@@ -1082,7 +1083,7 @@ void benchSplitDepth(position_t* pos, char string[]) {
     uint64 timeSum[MAXSPLIT];
     uint64 nodesSum[MAXSPLIT];
     int threads = 1, depth = 12;
-    for (int i = 1; i <= 14; ++i) {
+    for (int i = 1; i < MAXSPLIT; ++i) {
         timeSum[i] = nodesSum[i] = 0;
     }
 

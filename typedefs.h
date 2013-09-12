@@ -382,8 +382,7 @@ struct SplitPoint {
     volatile int played;
     volatile basic_move_t bestmove;
     volatile int master;
-    volatile int slaves[MaxNumOfThreads];
-    volatile int cpus;
+    volatile uint64 workersBitMask;
     volatile bool cutoff;
     mutex_t movelistlock[1];
     mutex_t updatelock[1];

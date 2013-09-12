@@ -51,8 +51,7 @@ void idleLoop(const int thread_id, SplitPoint *master_sp) {
         }
         else 
 #endif
-            while(master_sp == NULL && 
-                (SearchInfo(thread_id).thinking_status == STOPPED
+            while(master_sp == NULL && (SearchInfo(thread_id).thinking_status == STOPPED
 #ifndef TCEC
                 && (thread_id >= Guci_options->threads && thread_id < MaxNumOfThreads - Guci_options->learnThreads)
 #endif
@@ -66,27 +65,20 @@ void idleLoop(const int thread_id, SplitPoint *master_sp) {
                 if (sp->inRoot) searchNode<true, true, false>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, *sp->ssprev, thread_id, sp->nodeType);
                 else searchNode<false, true, false>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, *sp->ssprev, thread_id, sp->nodeType);
                 MutexLock(sp->updatelock);
-                //if (sp->cutoff || (thread_id == sp->master && Threads[thread_id].stop)) {
-                //    for(int i = 0; i < Guci_options->threads; i++) {
-                //        if(i == sp->master || sp->slaves[i])
-                //            Threads[i].stop = true;
-                //    }
-                //}
-                sp->cpus--;
-                sp->slaves[thread_id] = 0;
+                sp->workersBitMask &= ~(1 << thread_id);
                 Threads[thread_id].searching = false;
                 MutexUnlock(sp->updatelock);
                 ++Threads[thread_id].ended;
             }
-            if(master_sp != NULL && master_sp->cpus == 0) {
+            if(master_sp != NULL && !master_sp->workersBitMask) {
                 if (SearchInfo(thread_id).thinking_status != STOPPED) {
                     Threads[thread_id].stop = false; 
                     Threads[thread_id].searching = true;
                 }
                 return;
             }
-            if (master_sp != NULL && master_sp->cpus != 0 && SearchInfo(thread_id).thinking_status == STOPPED) {
-                Print(2, "Master Thread waiting: %d cpus: %d\n", thread_id, master_sp->cpus);
+            if (master_sp != NULL && master_sp->workersBitMask && SearchInfo(thread_id).thinking_status == STOPPED) {
+                Print(2, "Master Thread waiting: %d workersBitMask: %x\n", thread_id, master_sp->workersBitMask);
                 //// HACK: no need to wait for other threads, let's kill them all, and quit the search ASAP
                 setAllThreadsToStop(thread_id);
                 return;
@@ -95,9 +87,12 @@ void idleLoop(const int thread_id, SplitPoint *master_sp) {
     Threads[thread_id].running = false;
 }
 
-bool smpCutoffOccurred(SplitPoint *splitpoint) {
-    for (SplitPoint* sp = splitpoint; sp; sp = sp->parent) {
-        if (sp->cutoff) return true;
+bool smpCutoffOccurred(SplitPoint *sp) {
+    if (NULL == sp) return false;
+    if (sp->cutoff) return true;
+    if (smpCutoffOccurred(sp->parent)) {
+        sp->cutoff = true;
+        return true;
     }
     return false;
 }
@@ -115,9 +110,8 @@ void initSmpVars() {
         Threads[i].num_sp = 0;
         for (int j = 0; j < MaxNumSplitPointsPerThread; ++j) {
             Threads[i].sptable[j].master = 0;
-            Threads[i].sptable[j].cpus = 0;
             for (int k = 0; k < MaxNumOfThreads; ++k) {
-                Threads[i].sptable[j].slaves[k] = 0;
+                Threads[i].sptable[j].workersBitMask = 0;
             }
         }
     }
@@ -129,7 +123,7 @@ bool threadIsAvailable(int thread_id, int master) {
     // the "thread_id" has this "master" as a slave in a higher split point
     // since "thread_id" is not searching and probably waiting for this "master" thread to finish,
     // it's better to help it finish the search (helpful master concept)
-    if(Threads[thread_id].sptable[Threads[thread_id].num_sp-1].slaves[master]) return true;
+    if(Threads[thread_id].sptable[Threads[thread_id].num_sp-1].workersBitMask & (1<<master)) return true;
     return false;
 }
 
@@ -207,21 +201,19 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* s
     split_point->master = master;
     split_point->inCheck = inCheck;
     split_point->inRoot = inRoot;
-    split_point->cpus = 0;
+    split_point->workersBitMask = 0;
     split_point->cutoff = false;
     split_point->sscurr = ss;
     split_point->ssprev = ssprev;
     for(int i = 0; i < Guci_options->threads; i++) {
-        split_point->slaves[i] = 0;
         if(master == i || threadIsAvailable(i, master)) {
             split_point->pos[i] = *p;
             Threads[i].split_point = split_point;
-            if(i != master) split_point->slaves[i] = 1;
-            split_point->cpus++;
+            split_point->workersBitMask |= (1<<i);
         }
     }
     for(int i = 0; i < Guci_options->threads; i++) {
-        if(i == master || split_point->slaves[i]) {
+        if(split_point->workersBitMask & (1<<i)) {
             Threads[i].searching = true;
             Threads[i].stop = false;
         }
