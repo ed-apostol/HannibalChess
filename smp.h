@@ -103,7 +103,6 @@ void initSmpVars() {
         Threads[i].numsplits = 0;
         Threads[i].num_sp = 0;
         for (int j = 0; j < MaxNumSplitPointsPerThread; ++j) {
-            Threads[i].sptable[j].master = 0;
             for (int k = 0; k < MaxNumOfThreads; ++k) {
                 Threads[i].sptable[j].workersBitMask = 0;
             }
@@ -193,15 +192,19 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* s
     split_point->bestvalue = ss->bestvalue;
     split_point->bestmove = ss->bestmove;
     split_point->played = ss->playedMoves;
-    split_point->master = master;
     split_point->inCheck = inCheck;
     split_point->inRoot = inRoot;
-    split_point->workersBitMask = 0;
     split_point->cutoff = false;
     split_point->sscurr = ss;
     split_point->ssprev = ssprev;
+    split_point->pos[master] = *p;
+    split_point->workersBitMask = ((uint64)1<<master);
+    Threads[master].split_point = split_point;
+
+    int threadCnt = 1;
     for(int i = 0; i < Guci_options->threads; i++) {
-        if(master == i || threadIsAvailable(i, master)) {
+        if(threadCnt < Guci_options->max_split_threads && threadIsAvailable(i, master)) {
+            threadCnt++;
             split_point->pos[i] = *p;
             Threads[i].split_point = split_point;
             split_point->workersBitMask |= ((uint64)1<<i);

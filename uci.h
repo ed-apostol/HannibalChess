@@ -14,6 +14,7 @@ void initOption(uci_option_t* opt) {
     opt->time_buffer = 1000;
     opt->threads = NUM_THREADS;
     opt->min_split_depth = MIN_SPLIT_DEPTH;
+    opt->max_split_threads = MAX_SPLIT_THREADS;
     opt->evalcachesize = INIT_EVAL;
     opt->pawnhashsize = INIT_PAWN;
 #ifndef TCEC
@@ -49,6 +50,7 @@ void uciStart(void) {
     Print(3, "option name LearnThreads type spin min 0 max %d default %d\n", MaxNumOfThreads, DEFAULT_LEARN_THREADS);
 #endif
     Print(3, "option name Min Split Depth type spin min 1 max 16 default %d\n", MIN_SPLIT_DEPTH);
+    Print(3, "option name Max Split Threads type spin min 2 max 8 default %d\n", MAX_SPLIT_THREADS);
     Print(3, "option name Contempt type spin min -100 max 100 default 0\n");
     Print(3, "uciok\n"); //this makes sure there are no issues I hope?
 }
@@ -133,6 +135,8 @@ void uciSetOption(char string[]) {
         Guci_options->threads = newValue;
     } else if (!memcmp(name,"Min Split Depth",15)) {
         Guci_options->min_split_depth = atoi(value);
+    } else if (!memcmp(name,"Max Split Threads",17)) {
+        Guci_options->max_split_threads = atoi(value);
     }
 }
 

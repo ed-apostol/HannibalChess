@@ -184,6 +184,7 @@ struct uci_option_t{
     int bookExplore;
 #endif
     int min_split_depth;
+    int max_split_threads;
     int evalcachesize;
     int pawnhashsize;
 };
@@ -381,7 +382,6 @@ struct SplitPoint {
     volatile int bestvalue;
     volatile int played;
     volatile basic_move_t bestmove;
-    volatile int master;
     volatile uint64 workersBitMask;
     volatile bool cutoff;
     mutex_t movelistlock[1];
