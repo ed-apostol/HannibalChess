@@ -61,21 +61,10 @@ uint32 isSqAtt(const position_t *pos, uint64 occ, int sq,int color) {
         (KingMoves[sq] & pos->kings & pos->color[color]) ||
         (bishopAttacksBB(sq, occ) & ((pos->bishops | pos->queens) & pos->color[color])) ||
         (rookAttacksBB(sq, occ) & ((pos->rooks | pos->queens) & pos->color[color]));
-
-    /*
-    return ((
-    (rookAttacksBB(sq, occ) & (pos->rooks | pos->queens)) |
-    (bishopAttacksBB(sq, occ) & (pos->bishops | pos->queens)) |
-    (KnightMoves[sq] & pos->knights) |
-    (KingMoves[sq] & pos->kings) |
-    (PawnCaps[sq][color^1] & pos->pawns)
-    ) & pos->color[color])!=0;
-    */
 }
 /* this determines if the side to move is in check */
 uint32 kingIsInCheck(const position_t *pos) {
     return isSqAtt(pos,pos->occupied,pos->kpos[pos->side],pos->side^1);
-    //    return isAtt(pos, pos->side^1, pos->kings & pos->color[pos->side]);
 }
 /* checks if the move attacks the target */
 uint32 isMoveDefence(const position_t *pos, uint32 move, uint64 target) {
@@ -95,40 +84,13 @@ uint32 isMoveDefence(const position_t *pos, uint32 move, uint64 target) {
         if (KnightMoves[to] & target) return 1;
         break;
     case BISHOP:
-        //        if (MinTwoBits(target))
-        //        {
         if (bishopAttacksBB(to, pos->occupied&~BitMask[from]) & target) return 1;
-        /*        }
-        else
-        {
-        sq = popFirstBit(&target);
-        dir = DirFromTo[to][sq];
-        if ((dir == 7 || dir == 9) && !(InBetween[to][sq]&pos->occupied&~BitMask[from])) return 1;
-        }*/
         break;
     case ROOK:
-        //      if (MinTwoBits(target))
-        //      {
         if (rookAttacksBB(to, pos->occupied&~BitMask[from]) & target) return 1;
-        /*        }
-        else
-        {
-        sq = popFirstBit(&target);
-        dir = abs(Direction[to][sq]);
-        if ((dir == 1 || dir == 8) && !(InBetween[to][sq]&pos->occupied&~BitMask[from])) return 1;
-        }*/
         break;
     case QUEEN:
-        //       if (MinTwoBits(target))
-        //        {
         if (queenAttacksBB(to, pos->occupied&~BitMask[from]) & target) return 1;
-        /* }
-
-        else
-        {
-        sq = popFirstBit(&target);
-        if (Direction[to][sq] && !(InBetween[to][sq]&pos->occupied&~BitMask[from])) return 1;
-        }*/
         break;
     }
     return 0;

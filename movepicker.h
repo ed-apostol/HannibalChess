@@ -41,7 +41,10 @@ basic_move_t getMove(movelist_t *mvlist) {
     *best = *temp;
     return start->m;
 }
-
+inline int scoreNonTactical(uint32 side, uint32 move) {
+	int score = SearchInfo(0).history[historyIndex(side,move)] /* + SearchInfo(0).evalgains[historyIndex(side, move)]*/;
+	return score;
+}
 BOOL moveIsPassedPawn(const position_t * pos, uint32 move) {
     if (movePiece(move) == PAWN && !((*FillPtr[pos->side])(BitMask[moveTo(move)]) & pos->pawns)) {
         if (!(pos->pawns & pos->color[pos->side^1] & PassedMask[pos->side][moveTo(move)])) return TRUE;
@@ -97,8 +100,8 @@ void scoreNonCaptures(const position_t *pos, movelist_t *mvlist, int thread_id) 
     ASSERT(mvlist != NULL);
 
     for (m = &mvlist->list[mvlist->pos]; m < &mvlist->list[mvlist->size]; m++) {
-        m->s = SearchInfo(0).history[historyIndex(mvlist->side, m->m)]; // TODO: change history with evalgains
-    }
+        m->s = scoreNonTactical(mvlist->side, m->m);
+	}
 }
 
 void scoreAll(const position_t *pos, movelist_t *mvlist, int thread_id) {
@@ -117,7 +120,7 @@ void scoreAll(const position_t *pos, movelist_t *mvlist, int thread_id) {
         else if (m->m == mvlist->killer1) m->s = MAXHIST + 4;
         else if (m->m == mvlist->killer2) m->s = MAXHIST + 2;
         else {
-            m->s = SearchInfo(0).history[historyIndex(mvlist->side, m->m)]; // TODO: change history with evalgains
+            m->s = scoreNonTactical(mvlist->side, m->m); // TODO: change history with evalgains
         }
     }
 }
@@ -129,7 +132,7 @@ void scoreAllQ(movelist_t *mvlist, int thread_id) {
 
     for (m = &mvlist->list[mvlist->pos]; m < &mvlist->list[mvlist->size]; m++) {
         if (moveIsTactical(m->m))  m->s = MAXHIST + (moveCapture(m->m) * 6) + movePromote(m->m) - movePiece(m->m);
-        else m->s = SearchInfo(0).history[historyIndex(mvlist->side, m->m)]; // TODO: change history with evalgains
+        else m->s = scoreNonTactical(mvlist->side, m->m); // TODO: change history with evalgains
     }
 }
 

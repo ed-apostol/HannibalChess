@@ -182,9 +182,6 @@ void initPST(uci_option_t *opt) {
 		int oScore = outpost(i);
 		OutpostValue[WHITE][i] = oScore;
 		OutpostValue[BLACK][((7 - SQRANK(i)) * 8) + SQFILE(i)] = oScore;
-//		Print(3,"%d",oScore);
-//		if (i%8==7) Print(3,"\n");
-//		else Print(3,"\t");
     }
 
     for (i = 0; i < 8; i++) {

@@ -445,6 +445,9 @@ static const Personality personality;
 #define EXP_PENALTY 1
 
 // side to move bonus
+//static const int MidgameTempo = 20;
+//static const int EndgameTempo = 10;
+
 static const int MidgameKnightMob = 6; 
 static const int EndgameKnightMob = 8; 
 
@@ -1184,7 +1187,6 @@ void evalKingAttacks(const position_t *pos, eval_info_t *ei, const int color, in
     int danger;
     uint64 pc_atkrs_mask, pc_atkhelpersmask, king_atkmask, pc_defenders_mask;
     int penalty, tot_atkrs, pc_weights, kzone_atkcnt;
-//	bool noEscape = (KingMoves[pos->kpos[color]] & ~(ei->atkall[color^1] | pos->color[color])) == 0;
     ASSERT(pos != NULL);
     ASSERT(ei != NULL);
     ASSERT(colorIsOk(color));
@@ -1192,14 +1194,14 @@ void evalKingAttacks(const position_t *pos, eval_info_t *ei, const int color, in
     tot_atkrs = ei->atkcntpcs[color] >> 20;
     kzone_atkcnt = ei->atkcntpcs[color] & ((1 << 10) - 1);
 
-	//TODO consider detecting stalemate, or suicide for stalemate situations
     danger = (tot_atkrs>=2 && kzone_atkcnt>=1);
     KingShelter(color, ei, pos,kzone_atkcnt+tot_atkrs);
-	if (danger /*|| (tot_atkrs && noEscape)*/) {
-//		if (showEval && noEscape) Print(3,"no escape");
+    if (danger) {
+
         king_atkmask = KingMoves[pos->kpos[color]];
         pc_weights = (ei->atkcntpcs[color] & ((1 << 20) - 1)) >> 10;
-        penalty = KingPosPenalty[color][pos->kpos[color]] + ((pc_weights * tot_atkrs) / 2);
+        penalty = KingPosPenalty[color][pos->kpos[color]] + ((pc_weights * tot_atkrs) / 2)
+            + kzone_atkcnt;
         pc_defenders_mask = ei->atkqueens[color] | ei->atkrooks[color] | ei->atkbishops[color] | ei->atkknights[color] | ei->atkpawns[color];
         penalty += bitCnt(king_atkmask & ei->atkall[color^1] & ~pc_defenders_mask);
         pc_atkrs_mask = king_atkmask & ei->atkqueens[color^1] & (~pos->color[color^1]);
@@ -1263,8 +1265,7 @@ void evalKingAttacks(const position_t *pos, eval_info_t *ei, const int color, in
         if (pc_atkrs_mask & ei->atkqueens[color^1]) penalty += bitCnt(pc_atkrs_mask & ei->atkqueens[color^1]) * QueenSafeCheckValue;
         if (pc_atkrs_mask & ei->kingatkbishops[color^1]) penalty += bitCnt(pc_atkrs_mask & ei->kingatkbishops[color^1]) * BishopSafeCheckValue;
         pc_atkrs_mask = KnightMoves[pos->kpos[color]] & ~ei->atkall[color] & ~pos->color[color^1];
-		if (pc_atkrs_mask & ei->atkknights[color^1]) penalty += bitCnt(pc_atkrs_mask & ei->atkknights[color^1]) * KnightSafeCheckValue;
-
+        if (pc_atkrs_mask & ei->atkknights[color^1]) penalty += bitCnt(pc_atkrs_mask & ei->atkknights[color^1]) * KnightSafeCheckValue;
         pc_atkrs_mask = discoveredCheckCandidates(pos, color^1) & ~pos->pawns;
         if (pc_atkrs_mask) penalty += bitCnt(pc_atkrs_mask) * DiscoveredCheckValue;
         ei->mid_score[color] -= (penalty * (penalty-EXP_PENALTY) * KING_ATT_W) / 20; 
@@ -1427,48 +1428,6 @@ void evalPassed(const position_t *pos, eval_info_t *ei, const int allied,uint64 
     } while (passedpawn_mask);
 }
 
-//this is only called if color has no pieces
-//TODO make fancier by dealing with pins and such
-//TODO measure speed if this is templated by color
-/*
-inline bool simpleStalemate(const position_t *pos, eval_info_t *ei, const int color) {
-	if (pos->side!=color) return false;
-	//if we have a king move not stalemate
-	if (KingMoves[pos->kpos[color]] & ~ei->atkall[color^1]) {
-		if (showEval) Print(3," KM%d ",color);
-		return false;
-	}
-	//if we are in check it is not stalemate
-	if (ei->atkall[color^1] & BitMask[pos->kpos[color]]) {
-		if (showEval) Print(3," CH%d ",color);
-		return false;
-	}
-	// if we have a pawn move not stalemate
-	uint64 pawnMoves = (color==WHITE) ? ei->pawns[color] << 8 : ei->pawns[color] >> 8;
-	if (pawnMoves & ~pos->color[color^1]) {
-		if (showEval) Print(3," PM%d ",color);
-		return false;
-	}
-	//if we have a pawn capture not stalemate
-	if (ei->atkpawns[color] & (pos->color[color^1] | BitMask[pos->posStore.epsq])) {
-		if (showEval) Print(3," PC%d ",color);
-		return false;
-	}
-	//well, I guess it is stalemate
-	return true;
-}*/
-template <int color>
-inline bool simpleStalemate(const position_t *pos, eval_info_t *ei) {
-	return ((pos->side==color) &&
-	//if we have a king move not stalemate
-		(KingMoves[pos->kpos[color]] & ~ei->atkall[color^1])==0 &&
-	//if we are in check it is not stalemate
-		(ei->atkall[color^1] & BitMask[pos->kpos[color]])==0 &&
-	// if we have a pawn move not stalemate
-		(((color==WHITE) ? ei->pawns[color] << 8 : ei->pawns[color] >> 8) & ~pos->color[color^1])==0 &&
-	//if we have a pawn capture not stalemate
-		(ei->atkpawns[color] & (pos->color[color^1] | BitMask[pos->posStore.epsq]))==0);
-}
 void evalPawns(const position_t *pos, eval_info_t *ei, int thread_id) {
 
     ASSERT(pos != NULL);
@@ -1497,7 +1456,7 @@ void evalPawns(const position_t *pos, eval_info_t *ei, int thread_id) {
 }
 
 
-int eval(const position_t *pos, int thread_id, uint8 *doneSearching, int *pessimism) {
+int eval(const position_t *pos, int thread_id, int *pessimism) {
     eval_info_t ei;
     material_info_t *mat;
     int open, end, score;
@@ -1508,12 +1467,12 @@ int eval(const position_t *pos, int thread_id, uint8 *doneSearching, int *pessim
 
     entry = SearchInfo(thread_id).et.table + (KEY(pos->hash) & SearchInfo(thread_id).et.mask);
     if (entry->hashlock == LOCK(pos->hash)) {
-        *doneSearching = entry->doneSearching; 
-        *pessimism = entry->pessimism << 3; 
-		if (showEval) Print(3," from hash\n");
+        *pessimism = entry->pessimism; //this was meant to be * 10
+		if (showEval) Print(3," from hash ");
 		return entry->value;
+
     }
-	*doneSearching = false;
+
     ASSERT(pos != NULL);
     ei.MLindex[WHITE] = pos->posStore.mat_summ[WHITE];
     ei.MLindex[BLACK] = pos->posStore.mat_summ[BLACK];
@@ -1533,7 +1492,7 @@ int eval(const position_t *pos, int thread_id, uint8 *doneSearching, int *pessim
         score = computeMaterial(pos, &ei);
     }
     if (showEval) {
-        Print(3,"info string mat %d (%d,%d)",score,ei.draw[WHITE],ei.draw[BLACK]);
+        Print(3,"info string mat %d ",score);
     }
 
     ei.mid_score[WHITE] = pos->posStore.open[WHITE];
@@ -1601,16 +1560,11 @@ int eval(const position_t *pos, int thread_id, uint8 *doneSearching, int *pessim
         judgeTrapped(pos,&ei,WHITE,thread_id/*,&upside[WHITE],&upside[BLACK]*/);
     }
     else {
-		if (simpleStalemate<WHITE>(pos,&ei)) {
-			*doneSearching = true;
-			score = DrawValue[WHITE];
-			goto done_eval;
-		}
-		if (blackPassed) evalPassedvsKing(pos,&ei,BLACK,blackPassed);
+        if (blackPassed) evalPassedvsKing(pos,&ei,BLACK,blackPassed);
     }
     whitePassed = ei.pawn_entry->passedbits & pos->color[WHITE];
     if (pos->color[BLACK] & ~pos->pawns & ~pos->kings) { //if black has a piece
-		if (whitePassed) evalPassed(pos,&ei,WHITE,whitePassed);
+        if (whitePassed) evalPassed(pos,&ei,WHITE,whitePassed);
         evalThreats(pos, &ei, BLACK, &upside[BLACK]);
         if (ei.flags & ATTACK_KING[WHITE]) { // attacking the white king
             evalKingAttacks(pos, &ei, WHITE,&upside[BLACK]);
@@ -1618,12 +1572,7 @@ int eval(const position_t *pos, int thread_id, uint8 *doneSearching, int *pessim
         judgeTrapped(pos,&ei,BLACK,thread_id/*,&upside[WHITE],&upside[BLACK]*/);
     }
     else {
-		if (simpleStalemate<BLACK>(pos,&ei)) {
-			*doneSearching = true;
-			score = DrawValue[WHITE];
-			goto done_eval;
-		}
-		if (whitePassed) evalPassedvsKing(pos,&ei,WHITE,whitePassed);
+        if (whitePassed) evalPassedvsKing(pos,&ei,WHITE,whitePassed);
     }
 
     open = ei.mid_score[WHITE] - ei.mid_score[BLACK];
@@ -1636,31 +1585,23 @@ int eval(const position_t *pos, int thread_id, uint8 *doneSearching, int *pessim
 
     // if there is an unstoppable pawn on the board, we cannot trust any of our draw estimates or endgame rules of thumb
     if (!ei.queening) {
-        bool edge = score < DrawValue[WHITE];
+        int edge = score < DrawValue[WHITE];
         int draw = ei.draw[edge]; //this is who is trying to draw 
         if (showEval) Print(3," preenddraw %d ",draw );
         evalEndgame(edge, pos, &ei, &score, &draw, pos->side);
         draw = MIN(MAX_DRAW,draw); // max of 200 draw
-        if (showEval) Print(3," draw %d(%d) ",draw,ei.draw[edge^1] );
+        if (showEval) Print(3," draw %d ",draw );
         score = ((score * (MAX_DRAW-draw)) + (DrawValue[WHITE] * draw))/MAX_DRAW; 
-//		if (draw >= MAX_DRAW && ei.draw[edge^1] >= MAX_DRAW) *doneSearching = true; //currently evaluates some things like R v R draws even if there is a capture
     }
-done_eval:
-//	if (*doneSearching) {
-//		Print(8,"\nDONE SEARCHING\n");
-//		displayBoard(pos,8);
-//	}
     score = score*sign[pos->side];
-	*pessimism = (uint8) MIN((255 << 3),upside[pos->side^1]);
- 
+    *pessimism = upside[pos->side^1]; //make sure this can fit in 8 bits 
+
     if (score < -MAXEVAL) score = -MAXEVAL;
     else if (score > MAXEVAL) score = MAXEVAL;
 
     entry->hashlock = LOCK(pos->hash);
-	entry->pessimism = (uint8) (*pessimism >> 3);
-	entry->doneSearching = (uint8) *doneSearching;
+	entry->pessimism = *pessimism;
     entry->value = score;
-	if (showEval) Print(3,"\n");
     return score;
 }
 

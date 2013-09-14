@@ -110,8 +110,7 @@ typedef struct pawntable_t{
 typedef struct eval_entry_t{
     uint32 hashlock;
     int16 value;
-    uint8 doneSearching;
-    uint8 pessimism;
+    int16 pessimism;
 } eval_entry_t;
 
 typedef struct evaltable_t{
@@ -254,6 +253,8 @@ typedef struct _search_info_t{
     int best_value;
     int best_value2;
 
+//    int lastDepthSearched;
+
     int mate_found;
     int currmovenumber;
     int change;
@@ -286,6 +287,7 @@ typedef struct _split_point_t{
     int depth;
     int inCheck;
     bool inPv;
+    uint64 nullThreatBit;
     volatile int alpha;
     volatile int beta;
     volatile int bestvalue;

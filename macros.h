@@ -21,6 +21,7 @@
 #endif
 
 #define BOOL                unsigned int
+//#define BOOL                bool
 #define TRUE                1
 #define FALSE               0
 
