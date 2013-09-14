@@ -107,8 +107,8 @@ extern void transClear(int thread);
 
 /* movepicker.c */
 extern void sortInit(const position_t *pos, movelist_t *mvlist, uint64 pinned, uint32 hashmove, int scout, int eval, int depth, int type, int thread_id);
-extern basic_move_t getMove(movelist_t *mvlist);
-extern basic_move_t sortNext(SplitPoint* sp, position_t *pos, movelist_t *mvlist, int *phase, int thread_id);
+extern move_t* getMove(movelist_t *mvlist);
+extern move_t* sortNext(SplitPoint* sp, position_t *pos, movelist_t *mvlist, int *phase, int thread_id);
 extern uint32 captureIsGood(const position_t *pos, uint32 m);
 extern void scoreCaptures(movelist_t *mvlist);
 extern void scoreCapturesPure(movelist_t *mvlist);

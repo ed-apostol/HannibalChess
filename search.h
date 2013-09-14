@@ -64,6 +64,11 @@ void check4Input(position_t *pos) {
 void initNode(position_t *pos, const int thread_id) {
     int64 time2;
 
+    if (smpCutoffOccurred(Threads[thread_id].split_point)) {
+        Threads[thread_id].stop = true;
+        return;
+    }
+
     Threads[thread_id].nodes++;
 #ifdef SELF_TUNE2
     if (Threads[thread_id].nodes >= SearchInfo(thread_id).node_limit && SearchInfo(thread_id).node_is_limited) {
@@ -220,7 +225,6 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, SearchStack& 
     ASSERT(pos->ply > 0); // for ssprev above
 
     initNode(pos, thread_id);
-    if (smpCutoffOccurred(Threads[thread_id].split_point)) Threads[thread_id].stop = true;
     if (Threads[thread_id].stop) return 0;
 
     int t = 0;
@@ -270,20 +274,20 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, SearchStack& 
         else sortInit(pos, ss.mvlist, pinnedPieces(pos, pos->side), ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_CHECK) ? MoveGenPhaseQuiescenceAndChecks : MoveGenPhaseQuiescence, thread_id);
     }
     bool prunable = !ssprev.moveGivesCheck && !inPv && MinTwoBits(pos->color[pos->side^1] & pos->pawns) && MinTwoBits(pos->color[pos->side^1] & ~(pos->pawns | pos->kings));
-    basic_move_t move;
-    while ((move = sortNext(NULL, pos, ss.mvlist, ss.mvlist_phase, thread_id)) != EMPTY) {
+    move_t* move;
+    while ((move = sortNext(NULL, pos, ss.mvlist, ss.mvlist_phase, thread_id)) != NULL) {
         int score;
-        if (anyRepNoMove(pos,move)) { 
+        if (anyRepNoMove(pos, move->m)) { 
             score = DrawValue[pos->side];
         } else {
             pos_store_t undo;
-            ss.moveGivesCheck = moveIsCheck(pos, move, ss.dcc);
-            if (prunable && move != ss.hashMove && !ss.moveGivesCheck && !moveIsPassedPawn(pos, move)) {
-                int scoreAprox = ss.evalvalue + PawnValueEnd + MaxPieceValue[moveCapture(move)]; 
+            ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
+            if (prunable && move->m != ss.hashMove && !ss.moveGivesCheck && !moveIsPassedPawn(pos, move->m)) {
+                int scoreAprox = ss.evalvalue + PawnValueEnd + MaxPieceValue[moveCapture(move->m)]; 
                 if (scoreAprox < beta) continue;
             }
             int newdepth = depth - !ss.moveGivesCheck;
-            makeMove(pos, &undo, move);
+            makeMove(pos, &undo, move->m);
             score = -qSearch<inPv>(pos, -beta, -alpha, newdepth, ss, thread_id);
             unmakeMove(pos, &undo);
         }
@@ -291,7 +295,7 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, SearchStack& 
         if (score > ss.bestvalue) {
             ss.bestvalue = score;
             if (score > alpha) {
-                ss.bestmove = move;
+                ss.bestmove = move->m;
                 if (score >= beta) {
                     transStore<HTLower>(pos->hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos->ply), thread_id);
                     ASSERT(valueIsOk(ss.bestvalue));
@@ -349,7 +353,6 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
     ASSERT(depth >= 1);
 
     initNode(pos, thread_id);
-    if (smpCutoffOccurred(Threads[thread_id].split_point)) Threads[thread_id].stop = true;
     if (Threads[thread_id].stop) return 0;
 
     if (!inRoot && !inSingular && !inSplitPoint) {
@@ -485,46 +488,46 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
     }
 
     int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 4) : (depth * depth));
-    basic_move_t move;
-    while ((move = sortNext(sp, pos, ss.mvlist, ss.mvlist_phase, thread_id)) != EMPTY) {
+    move_t* move;
+    while ((move = sortNext(sp, pos, ss.mvlist, ss.mvlist_phase, thread_id)) != NULL) {
         int score = -INF;
         if (inSplitPoint) {
             MutexLock(sp->updatelock);
             ss.playedMoves = ++sp->played;
             MutexUnlock(sp->updatelock);
         } else ++ss.playedMoves;
-        if (inSingular && move == ssprev.bannedMove) continue;
-        if (!inSplitPoint && ss.hisCnt < 64 && !moveIsTactical(move)) {
-            ss.hisMoves[ss.hisCnt++] = move;
+        if (inSingular && move->m == ssprev.bannedMove) continue;
+        if (!inSplitPoint && ss.hisCnt < 64 && !moveIsTactical(move->m)) {
+            ss.hisMoves[ss.hisCnt++] = move->m;
         }
-        if (anyRepNoMove(pos, move)) { 
+        if (anyRepNoMove(pos, move->m)) { 
             score = DrawValue[pos->side];
         } else {
             pos_store_t undo;
-            ss.moveGivesCheck = moveIsCheck(pos, move, ss.dcc);
+            ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
             int newdepth = depth - !(ss.firstExtend && ss.playedMoves==1);
             if (ss.bestvalue == -INF) {
-                makeMove(pos, &undo, move);
+                makeMove(pos, &undo, move->m);
                 score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, thread_id, invertNode(nt));
             } else {
                 int okToPruneOrReduce = (newdepth >= depth || inCheck || ss.moveGivesCheck || MoveGenPhase[ss.mvlist_phase] != PH_QUIET_MOVES) ? 0 : 1;
                 int newdepthclone = newdepth;
                 if (!inRoot && !inPvNode(nt) && okToPruneOrReduce) {
-                    if (ss.playedMoves > lateMove && (!ss.threatMove || !moveRefutesThreat(pos, move, ss.threatMove))) continue;
+                    if (ss.playedMoves > lateMove && (!ss.threatMove || !moveRefutesThreat(pos, move->m, ss.threatMove))) continue;
                     int predictedDepth = MAX(0, newdepth - ReductionTable[1][MIN(depth,63)][MIN(ss.playedMoves,63)]);
                     int scoreAprox = ss.evalvalue + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(ss.playedMoves,63)]
-                    + SearchInfo(thread_id).evalgains[historyIndex(pos->side, move)];
+                    + SearchInfo(thread_id).evalgains[historyIndex(pos->side, move->m)];
                     if (scoreAprox < beta) {
-                        if (!moveIsPassedPawn(pos, move)) continue;
+                        if (!moveIsPassedPawn(pos, move->m)) continue;
                         --newdepthclone;
                     }
-                    if (swap(pos, move) < 0) {
+                    if (swap(pos, move->m) < 0) {
                         if (predictedDepth <= 4) continue;
                         --newdepthclone;
                     }
                 }
                 if (okToPruneOrReduce && depth >= MIN_REDUCTION_DEPTH) newdepthclone -= ReductionTable[(inPvNode(nt)?0:1)][MIN(depth,63)][MIN(ss.playedMoves,63)];
-                makeMove(pos, &undo, move);
+                makeMove(pos, &undo, move->m);
                 if (inSplitPoint) alpha = sp->alpha;
                 ss.reducedMove = (newdepthclone < newdepth);
                 score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepthclone, ss, thread_id, CutNode);
@@ -535,14 +538,15 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 if (inPvNode(nt) && score > alpha) {
                     if (inRoot) SearchInfo(thread_id).research = 1;
                     score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, thread_id, PVNode);
-                    if (inRoot) SearchInfo(thread_id).research = 0;
+                    //////if (inRoot) SearchInfo(thread_id).research = 0;
                 }
             }
             unmakeMove(pos, &undo);
         }
-        if (Threads[thread_id].stop) return ss.bestvalue;
+        if (Threads[thread_id].stop) return 0;
+        if (inSplitPoint) MutexLock(sp->updatelock);
         if (inRoot) {
-            ss.mvlist->list[ss.mvlist->pos-1].s = score;
+            move->s = score;
             if (score > SearchInfo(thread_id).rbestscore1) {
                 SearchInfo(thread_id).rbestscore2 = SearchInfo(thread_id).rbestscore1;
                 SearchInfo(thread_id).rbestscore1 = score;
@@ -550,16 +554,15 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 SearchInfo(thread_id).rbestscore2 = score;
             }
         }
-        if (inSplitPoint) MutexLock(sp->updatelock);
         if (score > (inSplitPoint ? sp->bestvalue : ss.bestvalue)) {
             ss.bestvalue = inSplitPoint ? sp->bestvalue = score : score;
             if (inRoot) {
                 SearchInfo(thread_id).best_value = ss.bestvalue;
-                extractPvMovesFromHash(pos, &SearchInfo(thread_id).rootPV, move, true);
-                if (SearchInfo(thread_id).iteration > 1 && SearchInfo(thread_id).bestmove != move) SearchInfo(thread_id).change = 1;
+                extractPvMovesFromHash(pos, &SearchInfo(thread_id).rootPV, move->m, true);
+                if (SearchInfo(thread_id).iteration > 1 && SearchInfo(thread_id).bestmove != move->m) SearchInfo(thread_id).change = 1;
             }
             if (ss.bestvalue > (inSplitPoint ? sp->alpha : alpha)) {
-                ss.bestmove = inSplitPoint ? sp->bestmove = move : move;
+                ss.bestmove = inSplitPoint ? sp->bestmove = move->m : move->m;
                 if (inRoot) {
                     SearchInfo(thread_id).bestmove = ss.bestmove;
                     if (SearchInfo(thread_id).rootPV.length > 1) SearchInfo(thread_id).pondermove = SearchInfo(thread_id).rootPV.moves[1];
@@ -569,7 +572,9 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                     alpha = inSplitPoint ? sp->alpha = ss.bestvalue : ss.bestvalue;
                 } else {
                     if (inRoot) {
+                        if (inSplitPoint) MutexLock(sp->movelistlock);
                         for (int i = ss.mvlist->pos; i < ss.mvlist->size; ++i) ss.mvlist->list[i].s = -INF;
+                        if (inSplitPoint) MutexUnlock(sp->movelistlock);
                     }
                     if (inSplitPoint) {
                         sp->cutoff = true;
@@ -580,13 +585,13 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
             }
         }
         if (inSplitPoint) MutexUnlock(sp->updatelock);
-        if (!inRoot && !inSplitPoint && !inSingular && !Threads[thread_id].stop && !inCheck
+        if (/*!inRoot && */!inSplitPoint && !inSingular && !Threads[thread_id].stop && !inCheck && Threads[thread_id].num_sp < MaxNumSplitPointsPerThread
             && Guci_options->threads > 1 && depth >= Guci_options->min_split_depth && idleThreadExists(thread_id)
             && splitRemainingMoves(pos, ss.mvlist, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, thread_id)) {
                 break;
         }
     }
-    if (inRoot && ss.playedMoves == 0) {
+    if (inRoot && !inSplitPoint && ss.playedMoves == 0) {
         if (inCheck) return -INF;
         else return DrawValue[pos->side];
     }
