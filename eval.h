@@ -470,8 +470,10 @@ static const int EndgameQueenMob = 2;
 static const int EndgameXrayQueenMob = 2; 
 
 // rook specific evaluation
-static const int MidgameRook7th = 20;
-static const int EndgameRook7th = 40;
+static const int MidgameRookPawnPressure = 4; 
+static const int EndgameRookPawnPressure = 8; 
+static const int MidgameRook7th = 20 - MidgameRookPawnPressure*2; 
+static const int EndgameRook7th = 40 - EndgameRookPawnPressure*2; 
 
 // queen specific evaluation
 static const int MidgameQueen7th = 10;
@@ -548,7 +550,6 @@ static const int RookAttackValue = 3;
 static const int BishopAttackValue = 2;
 static const int KnightAttackValue = 2;
 static const int QueenSafeContactCheckValue = 3;
-static const int UndefendedAttacks = 1;
 static const int QueenSafeCheckValue = 2;
 static const int RookSafeCheckValue = 1;
 static const int BishopSafeCheckValue = 1;
@@ -903,7 +904,18 @@ void evalPawnsByColor(const position_t *pos, eval_info_t *ei, int mid_score[], i
     ei->mid_score[color] += mid_score[color];
     ei->end_score[color] += end_score[color];
 }
-
+inline int outpost(const position_t *pos, eval_info_t *ei, const int color, const int enemy, const int sq) {
+	int outpostValue = OutpostValue[color][sq];
+    if (outpostValue>0) {
+        if (BitMask[sq] & ei->atkpawns[color]) {
+            if (!(pos->knights & pos->color[enemy]) && !((BitMask[sq] & WhiteSquaresBB) ?
+                (pos->bishops & pos->color[enemy] & WhiteSquaresBB) : (pos->bishops & pos->color[enemy] & BlackSquaresBB)))
+                outpostValue += outpostValue + outpostValue/2;
+            else outpostValue += outpostValue/2;
+        }
+    }
+	return outpostValue;
+}
 void evalPieces(const position_t *pos, eval_info_t *ei, const int color, const int thread) {
 
     uint64 pc_bits, temp64, katemp64,xtemp64, weak_sq_mask;
@@ -935,16 +947,9 @@ void evalPieces(const position_t *pos, eval_info_t *ei, const int color, const i
         ei->mid_score[color] += temp1 * MidgameKnightMob;
         ei->end_score[color] += temp1 * EndgameKnightMob;
         if (BitMask[from] & weak_sq_mask) {
-            temp1 = PST(color, KNIGHT, from, MIDGAME);
-            if (temp1>0) {
-                if (BitMask[from] & ei->atkpawns[color]) {
-                    if (!(pos->knights & pos->color[enemy]) && !((BitMask[from] & WhiteSquaresBB) ?
-                        (pos->bishops & pos->color[enemy] & WhiteSquaresBB) : (pos->bishops & pos->color[enemy] & BlackSquaresBB)))
-                        temp1 *= 3;
-                    else temp1 *= 2;
-                }
-                ei->mid_score[color] += temp1/2;
-            }
+			temp1 = outpost(pos,ei,color,enemy,from);
+			ei->mid_score[color] += temp1;
+			ei->end_score[color] += temp1;
         }
     }
     pc_bits = pos->bishops & pos->color[color] ;
@@ -979,16 +984,10 @@ void evalPieces(const position_t *pos, eval_info_t *ei, const int color, const i
             if (showEval) Print(3," stuck bishop %s %d %d",sq2Str(from),personality(thread).stuck_bishop,personality(thread).stuck_bishop*personality(thread).stuck_end);
         }
         if (BitMask[from] & weak_sq_mask) {
-            temp1 = PST(color, KNIGHT, from, MIDGAME);
-            if (temp1>0) {
-                if (BitMask[from] & ei->atkpawns[color]) {
-                    if (!(pos->knights & pos->color[enemy]) && !((BitMask[from] & WhiteSquaresBB) ?
-                        (pos->bishops & pos->color[enemy] & WhiteSquaresBB) : (pos->bishops & pos->color[enemy] & BlackSquaresBB)))
-                        temp1 *= 3;
-                    else temp1 *= 2;
-                }
-                ei->mid_score[color] += temp1/3;
-            }
+			temp1 = outpost(pos,ei,color,enemy,from)/2;
+			ei->mid_score[color] += temp1;
+			ei->end_score[color] += temp1;
+
         }
 
     }
@@ -1020,12 +1019,23 @@ void evalPieces(const position_t *pos, eval_info_t *ei, const int color, const i
         ei->mid_score[color] += temp1 * MidgameXrayRookMob;
         ei->end_score[color] += temp1 * EndgameXrayRookMob;
 
-        if (BitMask[from] & Rank7ByColorBB[color]) {
+		//its good to be lined up with a lot of enemy pawns (7th rank most common example)
+		uint64 pressured = rookAttacksBB(from, ((pos->pawns | pos->kings) & pos->color[color]));
+		uint64 pawnsPressured = pressured & ei->pawns[enemy] & ~ei->atkpawns[enemy]; 
+		if (pawnsPressured) {
+			int numPawnsPressured = bitCnt(pawnsPressured);
+			if (showEval) Print(3,"pp %d ",numPawnsPressured);
+			ei->mid_score[color] += MidgameRookPawnPressure * numPawnsPressured;
+			ei->mid_score[color] += EndgameRookPawnPressure * numPawnsPressured;
+		}
+
+        if (BitMask[from] & Rank7ByColorBB[color]) { //7th rank is also good for other reasons
             if ((pos->pawns & pos->color[enemy] & Rank7ByColorBB[color]) || (BitMask[pos->kpos[enemy]] & Rank8ByColorBB[color])) {
                 ei->mid_score[color] += MidgameRook7th;
                 ei->end_score[color] += EndgameRook7th;
             }
         }
+		
     }
     pc_bits = pos->queens & pos->color[color];
     while (pc_bits) {
@@ -1035,9 +1045,6 @@ void evalPieces(const position_t *pos, eval_info_t *ei, const int color, const i
 
 
         if (temp64 & ei->kingzone[enemy]) {
-#ifdef TWEAK_030813
-            //			ei->draw[color] += bitCnt(temp64 & ei->kingzone[enemy] & ~(ei->atkpawns[enemy] | pos->color[enemy]))*2; //dreams of perpetual *NQ*
-#endif
             ei->atkcntpcs[enemy] += (1<<20) + bitCnt(temp64 & ei->kingadj[enemy])*2 + (QueenAttackValue<<10);
             if (ei->kingadj[enemy] & ei->atkpawns[color]) ei->atkcntpcs[enemy] += (1<<20);
         }
@@ -1140,7 +1147,11 @@ void evalThreats(const position_t *pos, eval_info_t *ei, const int color, int *u
 
         if (threatB) {
             int numThreats = bitCnt(threatB);
-            //if (pos->side != color) *upside += ThreatBonus[numThreats]; 
+			if (showEval) {
+				if (color==WHITE) Print(3,"WTHR %d ",numThreats);
+				else Print(3,"BTHR %d ",numThreats);
+			}
+            if (pos->side != color) *upside += ThreatBonus[numThreats]; 
             //only really takes double threats for the opponent seriously, since its not handled well by qsearch and such
             numThreats += (pos->side==color);
             ei->mid_score[color] += ThreatBonus[numThreats];
@@ -1192,7 +1203,7 @@ void evalKingAttacks(const position_t *pos, eval_info_t *ei, const int color, in
         penalty = KingPosPenalty[color][pos->kpos[color]] + ((pc_weights * tot_atkrs) / 2)
             + kzone_atkcnt;
         pc_defenders_mask = ei->atkqueens[color] | ei->atkrooks[color] | ei->atkbishops[color] | ei->atkknights[color] | ei->atkpawns[color];
-        penalty += bitCnt(king_atkmask & ei->atkall[color^1] & ~pc_defenders_mask) * UndefendedAttacks;
+        penalty += bitCnt(king_atkmask & ei->atkall[color^1] & ~pc_defenders_mask);
         pc_atkrs_mask = king_atkmask & ei->atkqueens[color^1] & (~pos->color[color^1]);
         if (pc_atkrs_mask) {
             uint64 queenContact;
@@ -1258,8 +1269,7 @@ void evalKingAttacks(const position_t *pos, eval_info_t *ei, const int color, in
         pc_atkrs_mask = discoveredCheckCandidates(pos, color^1) & ~pos->pawns;
         if (pc_atkrs_mask) penalty += bitCnt(pc_atkrs_mask) * DiscoveredCheckValue;
         ei->mid_score[color] -= (penalty * (penalty-EXP_PENALTY) * KING_ATT_W) / 20; 
-        *upside += (penalty * penalty*KING_ATT_W)/20; //072513 NEW consider reducing king attack strength to compensate
-        //		*upside += (penalty * penalty)/2; //072513 NEW consider reducing king attack strength to compensate /5
+        *upside += (penalty * penalty*KING_ATT_W)/20; 
 
         if (showEval) {
             if (color==WHITE) Print(3, " wa %d",penalty * (penalty-EXP_PENALTY)); 
@@ -1287,7 +1297,6 @@ void evalPassedvsKing(const position_t *pos, eval_info_t *ei, const int allied,u
         int from = popFirstBit(&passedpawn_mask);
         int score = 0;
         int rank = PAWN_RANK(from, allied);
-        //red = reduce 
         uint64 prom_path = (*FillPtr[allied])(BitMask[from]);
         uint64 path_attkd = prom_path & ei->atkall[enemy];
         uint64 path_dfndd = prom_path & ei->atkall[allied];
@@ -1447,21 +1456,21 @@ void evalPawns(const position_t *pos, eval_info_t *ei, int thread_id) {
 }
 
 
-int eval(const position_t *pos, int thread_id, int *optimism, int *pessimism) {
+int eval(const position_t *pos, int thread_id, int *pessimism) {
     eval_info_t ei;
     material_info_t *mat;
     int open, end, score;
     int winning;
     eval_entry_t *entry;
     uint64 whitePassed, blackPassed;
-    int upside[2] = {0,0};
+    int upside[2] = {0,0}; //this should never be negative
 
     entry = SearchInfo(thread_id).et.table + (KEY(pos->hash) & SearchInfo(thread_id).et.mask);
     if (entry->hashlock == LOCK(pos->hash)) {
-        //optimism and pessimism is hashed in 0.1 pawns
-        *optimism = entry->optimism;
-        *pessimism = entry->pessimism;
-        return entry->value;
+        *pessimism = entry->pessimism; //this was meant to be * 10
+		if (showEval) Print(3," from hash ");
+		return entry->value;
+
     }
 
     ASSERT(pos != NULL);
@@ -1585,17 +1594,14 @@ int eval(const position_t *pos, int thread_id, int *optimism, int *pessimism) {
         score = ((score * (MAX_DRAW-draw)) + (DrawValue[WHITE] * draw))/MAX_DRAW; 
     }
     score = score*sign[pos->side];
-    *optimism = upside[pos->side];
-    *pessimism = upside[pos->side^1];
+    *pessimism = upside[pos->side^1]; //make sure this can fit in 8 bits 
 
     if (score < -MAXEVAL) score = -MAXEVAL;
     else if (score > MAXEVAL) score = MAXEVAL;
 
     entry->hashlock = LOCK(pos->hash);
-    entry->optimism = MIN(127, *optimism);
-    entry->pessimism = MIN(127, *pessimism);
+	entry->pessimism = *pessimism;
     entry->value = score;
-
     return score;
 }
 

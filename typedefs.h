@@ -119,8 +119,7 @@ struct pawntable_t{
 struct eval_entry_t{
     uint32 hashlock;
     int16 value;
-    int8 optimism;
-    int8 pessimism;
+    int16 pessimism;
 };
 
 struct evaltable_t{

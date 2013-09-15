@@ -25,10 +25,9 @@ write situation specific transtores
 can knight catch pawns code from LL
 //68 at 3:29
 */
-#define TWEAK_030813 true
 #define OPT_EASY true
-#define VERSION            "20130914_nr"
-#define NUM_THREADS			    4
+#define VERSION            "20130914_nr_merged"
+#define NUM_THREADS			    1
 #define MIN_SPLIT_DEPTH			4 // best is 4
 #define MAX_SPLIT_THREADS		4 // best is 4
 #define TCEC true

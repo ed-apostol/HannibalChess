@@ -49,6 +49,16 @@ int epawn(int sq) {
     return (file[f] + rank[r]);
 }
 
+int outpost(int sq) {
+    int central[8] = {7,6,5,4,3,2,1,0};
+    int file[8] = {-20,-8,-2, 0, 0, -2,-8, -20};
+    int rank[8] = {-20,-20,-5, 1, 5, 1, -5, -10};
+    int f = SQFILE(sq);
+    int r = SQRANK(sq);
+    int value = (central[abs(f-r)] + central[abs(f+r-7)] + file[f] + rank[r]);
+	if (value < 0) value = 0;
+	return value;
+}
 int mknight(int sq) {
     //    int central[8] = {2,1,0,-1,-1,-1,-1,-1};
     int file[8] = {-26,-9,2,5,5,2,-9,-26};
@@ -117,10 +127,8 @@ int equeen(int sq) {
 #define MKR4 4 //4
 #define MKR5 4 //4
 int mking(int sq) {
-    //    int file[8] = {25,30,0,-20,-20,0,30,25};
     int file[8] = {MKF2-MKF1,MKF2,0,-MKF3,-MKF3,0,MKF2,MKF2-MKF1};
     int rank[8] = {MKR1,0,-MKR2,-MKR2-MKR3,-MKR2-MKR3-MKR4,-MKR2-MKR3-MKR4-MKR5,-MKR2-MKR3-MKR4-MKR5,-MKR2-MKR3-MKR4-MKR5};
-    //   int rank[8] = {3,0,-5,-9,-13,-17,-17,-17};
 
     int f = SQFILE(sq);
     int r = SQRANK(sq);
@@ -149,7 +157,7 @@ void initPST(uci_option_t *opt) {
 
     memset(PcSqTb, 0, sizeof(PcSqTb));
     for (i = 0; i < 64; i++) {
-        // do pawns
+       // do pawns
         PST(WHITE,PAWN,i,MIDGAME) = mpawn(i);
         PST(WHITE,PAWN,i,ENDGAME) = epawn(i);
         // do knights
@@ -168,22 +176,15 @@ void initPST(uci_option_t *opt) {
         PST(WHITE,KING,i,MIDGAME) = mking(i);
         PST(WHITE,KING,i,ENDGAME) = eking(i);
 
+		//do outposts
+		int oScore = outpost(i);
+		OutpostValue[WHITE][i] = oScore;
+		OutpostValue[BLACK][((7 - SQRANK(i)) * 8) + SQFILE(i)] = oScore;
     }
 
     for (i = 0; i < 8; i++) {
         for (j = 0; j < 64; j++) {
-            k = ((7 - SQRANK(j)) * 8) + SQFILE(j);/*
-                                                  if (i==KING) {
-                                                  PST(WHITE,i,j,MIDGAME) = (PST(WHITE,i,j,MIDGAME)*opt->king_pos_open_mult)/20;
-                                                  PST(WHITE,i,j,ENDGAME) = (PST(WHITE,i,j,ENDGAME)*opt->king_pos_end_mult)/20;
-                                                  }
-                                                  else {
-                                                  if (i!=KNIGHT || (j!= a8 && j!= h8)) {
-                                                  PST(WHITE,i,j,MIDGAME) = (PST(WHITE,i,j,MIDGAME)*opt->active_piece_open_mult)/20;
-                                                  PST(WHITE,i,j,ENDGAME) = (PST(WHITE,i,j,ENDGAME)*opt->active_piece_end_mult)/20;
-                                                  }
-                                                  }
-                                                  */
+            k = ((7 - SQRANK(j)) * 8) + SQFILE(j);
             PST(BLACK,i,k,MIDGAME) = PST(WHITE,i,j,MIDGAME);
             PST(BLACK,i,k,ENDGAME) = PST(WHITE,i,j,ENDGAME);
         }
