@@ -6,25 +6,26 @@
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
+#include <cstdlib>
 
 void quit(void) {
-    //    Print(2, "info string Hannibal is quitting.\n");
-    fclose(logfile);
-    fclose(errfile);
-    fclose(dumpfile);
+    stopThreads();
 
+	if (logfile) fclose(logfile);
+    if (errfile) fclose(errfile);
+    if (dumpfile) fclose(dumpfile);
+	
 #ifndef TCEC
     closeBook(&GpolyglotBook);
     closeLearn(&Glearn);
     closeBook(&GhannibalBook);
-#endif
-    stopThreads();
-    exit(EXIT_SUCCESS);
+#endif 
 }
 
 int main(void) {
+	std::atexit(quit);
+
     position_t pos;
-    uci_option_t uci_option;
     char command[8192];
     char* ptr;
 
@@ -54,17 +55,14 @@ int main(void) {
     initLearn("HannibalLearn.lrn", &Glearn);
     SearchInfo(0).outOfBook = 0;
 #endif
-
-    Guci_options = &uci_option;
-
     initTrans(INIT_HASH,0);
     initPVHashTab(&PVHashTable, INIT_PVHASH);
     initPawnTab(&SearchInfo(0).pt, INIT_PAWN);
     initEvalTab(&SearchInfo(0).et, INIT_EVAL);
 
-    initOption(&uci_option); // this should be initialized first
+    initOption(&Guci_options); // this should be initialized first
     initArr();
-    initPST(Guci_options);
+    initPST(&Guci_options);
     InitTrapped();
 
     initSmpVars();
@@ -153,5 +151,5 @@ int main(void) {
 #endif
         else Print(3, "info string Unknown UCI command.\n");
     }
-    quit();
+	exit(EXIT_SUCCESS);
 }

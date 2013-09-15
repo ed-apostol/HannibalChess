@@ -81,7 +81,7 @@ struct movelist_t {
 
 struct learn_t {
     learn_t() : learnFile(NULL) {}
-    ~learn_t() { if (learnFile) free(learnFile); }
+    ~learn_t() { } //TODO consider closing here
     FILE *learnFile;
     string name;
 };
@@ -89,7 +89,7 @@ struct learn_t {
 struct book_t {
     BookType type;
     book_t() : bookFile(NULL) {}
-    ~book_t() { if (bookFile) free(bookFile); }
+    ~book_t() { } //TODO consider closing here
     FILE *bookFile; 
     int64 size;
     string name;
@@ -110,7 +110,9 @@ struct pawn_entry_t{
 /* the pawn hash table type */
 struct pawntable_t{
     pawntable_t() : table(NULL) {}
-    ~pawntable_t() { if (table) free(table); }
+    ~pawntable_t() { 
+		if (table) free(table); 
+	}
     pawn_entry_t *table;
     uint64 size;
     uint64 mask;
@@ -124,7 +126,9 @@ struct eval_entry_t{
 
 struct evaltable_t{
     evaltable_t() : table(NULL) {}
-    ~evaltable_t() { if (table) free(table); }
+    ~evaltable_t() { 
+		if (table) free(table); 
+	}
     eval_entry_t *table;
     uint64 size;
     uint64 mask;
@@ -145,7 +149,9 @@ struct trans_entry_t{
 /* the trans table type */
 struct transtable_t{
     transtable_t() : table(NULL) {}
-    ~transtable_t() { if (table) free(table); }
+    ~transtable_t() { 
+		if (table) free(table); 
+	}
     trans_entry_t *table;
     uint64 size;
     uint64 mask;
@@ -164,7 +170,9 @@ struct pvhash_entry_t {
 
 struct pvhashtable_t {
     pvhashtable_t() : table(NULL) {}
-    ~pvhashtable_t() { if (table) free(table); }
+    ~pvhashtable_t() { 
+		if (table) free(table); 
+	}
     pvhash_entry_t *table;
     uint64 size;
     uint64 mask;
@@ -294,7 +302,6 @@ struct search_info_t{
     uint64 cutfail;
     uint64 allfail;
 
-    bool try_easy;
     int rbestscore1;
     int rbestscore2;
 

@@ -22,7 +22,7 @@ void setAllThreadsToStop(int thread) {
     Threads[thread].stop = true;
 #else
     MutexLock(SMPLock);
-    for (int i = 0; i < Guci_options->threads; i++) {
+    for (int i = 0; i < Guci_options.threads; i++) {
         Threads[i].stop = true;
     }
     MutexUnlock(SMPLock);
@@ -30,12 +30,12 @@ void setAllThreadsToStop(int thread) {
 }
 
 void idleLoop(const int thread_id, SplitPoint *master_sp) {
-    ASSERT(thread_id < Guci_options->threads || master_sp == NULL);
+    ASSERT(thread_id < Guci_options.threads || master_sp == NULL);
     //Print(3, "%s: thread_id:%d\n", __FUNCTION__, thread_id);
     Threads[thread_id].running = true;
     while(!Threads[thread_id].exit_flag) {
 #ifndef TCEC
-        if (thread_id >= MaxNumOfThreads - Guci_options->learnThreads) { //lets grab something and learn from it
+        if (thread_id >= MaxNumOfThreads - Guci_options.learnThreads) { //lets grab something and learn from it
             continuation_t toLearn;
             if (get_continuation_to_learn(&Glearn, &toLearn)) {
                 if (LOG_LEARNING) Print(2,"learning: got continuation from file\n");
@@ -53,7 +53,7 @@ void idleLoop(const int thread_id, SplitPoint *master_sp) {
 #endif
             while(master_sp == NULL && (SearchInfo(thread_id).thinking_status == STOPPED
 #ifndef TCEC
-                && (thread_id >= Guci_options->threads && thread_id < MaxNumOfThreads - Guci_options->learnThreads)
+                && (thread_id >= Guci_options.threads && thread_id < MaxNumOfThreads - Guci_options.learnThreads)
 #endif
                 )) {
                     Print(2, "Thread sleeping: %d\n", thread_id);
@@ -121,7 +121,7 @@ bool threadIsAvailable(int thread_id, int master) {
 }
 
 bool idleThreadExists(int master) {
-    for(int i = 0; i < Guci_options->threads; i++) {
+    for(int i = 0; i < Guci_options.threads; i++) {
         if(i != master && threadIsAvailable(i, master)) return true;
     }
     return false;
@@ -137,6 +137,10 @@ DWORD WINAPI winInitThread(LPVOID n) {
 void initThreads(void) {
     int i;
     DWORD iID[MaxNumOfThreads];
+#ifndef TCEC
+    MutexInit(LearningLock,NULL);
+    MutexInit(BookLock,NULL);
+#endif
     for (i = 0; i < MaxNumOfThreads; ++i) {
         Threads[i].num_sp = 0;
         Threads[i].exit_flag = false;
@@ -172,6 +176,10 @@ void stopThreads(void) {
         }
     }
     MutexDestroy(SMPLock);
+#ifndef TCEC
+    MutexDestroy(LearningLock);
+    MutexDestroy(BookLock);
+#endif
 }
 
 bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, const int master) {
@@ -202,15 +210,15 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* s
     Threads[master].split_point = split_point;
 
     int threadCnt = 1;
-    for(int i = 0; i < Guci_options->threads; i++) {
-        if(threadCnt < Guci_options->max_split_threads && threadIsAvailable(i, master)) {
+    for(int i = 0; i < Guci_options.threads; i++) {
+        if(threadCnt < Guci_options.max_split_threads && threadIsAvailable(i, master)) {
             threadCnt++;
             split_point->pos[i] = *p;
             Threads[i].split_point = split_point;
             split_point->workersBitMask |= ((uint64)1<<i);
         }
     }
-    for(int i = 0; i < Guci_options->threads; i++) {
+    for(int i = 0; i < Guci_options.threads; i++) {
         if(split_point->workersBitMask & ((uint64)1<<i)) {
             Threads[i].searching = true;
             Threads[i].stop = false;

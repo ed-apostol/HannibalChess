@@ -7,6 +7,11 @@
 /*  Description: A chess playing program.         */
 /**************************************************/
 
+#define PV_ASSOC 8
+#define EVAL_ASSOC 1
+#define HASH_ASSOC 4
+#define PAWN_ASSOC 1
+
 inline const uint32 transHashLock(trans_entry_t * te) { return te->hashlock; }
 inline const basic_move_t transMove(trans_entry_t * te) { return te->move; }
 inline const int transAge(trans_entry_t * te) { return te->age; }
@@ -35,7 +40,7 @@ basic_move_t transGetHashMove(const uint64 hash, const int thread) {
     basic_move_t hashMove = EMPTY;
     trans_entry_t *entry;
     entry = TransTable(thread).table + (KEY(hash) & TransTable(thread).mask);
-    for (int t = 0; t < 4; t++, entry++) {
+    for (int t = 0; t < HASH_ASSOC; t++, entry++) {
         if (transHashLock(entry) == LOCK(hash)) {
             if (transMove(entry) != EMPTY && transLowerDepth(entry) > hashDepth) {
                 hashDepth = transLowerDepth(entry);
@@ -55,7 +60,7 @@ void transStore(const uint64 hash, basic_move_t move, const int depth, const int
     
     replace = entry = TransTable(thread).table + (KEY(hash) & TransTable(thread).mask);
 
-    for (t = 0; t < 4; t++, entry++) {
+    for (t = 0; t < HASH_ASSOC; t++, entry++) {
         if (transHashLock(entry) == LOCK(hash)) {
             if (ht == HTLower && depth >= transLowerDepth(entry) && !(transMask(entry) & MExact)) {
                 transSetAge(entry, TransTable(thread).date);
@@ -98,7 +103,8 @@ void transStore(const uint64 hash, basic_move_t move, const int depth, const int
                 transSetLowerDepth(entry, depth);
                 transSetLowerValue(entry, value);
                 transReplaceMask(entry, MExact);
-                for (int x = t + 1; x < 4; x++) {
+				
+                for (int x = t + 1; x < HASH_ASSOC; x++) {
                     entry++;
                     if (transHashLock(entry) == LOCK(hash)) {
                         memset(entry, 0, sizeof(trans_entry_t));
@@ -184,31 +190,7 @@ void transClear(int thread) {
     }
 }
 
-void initTrans(uint64 target, int thread) {
-    uint64 size=2;
 
-    if (target < MIN_TRANS_SIZE) target = MIN_TRANS_SIZE;
-
-    target *= 1024 * 1024;
-
-    //	size should be a factor of 2 for size - 1 to work well I think -SAM
-    while (size * sizeof(trans_entry_t) <= target) size*=2;
-    size = size/2;
-    if (TransTable(thread).table != NULL) {
-        if (size==TransTable(thread).size) {
-            Print(3,"info string no change in transition table\n");
-            return; //don't reallocate if there is not change
-        }
-        free(TransTable(thread).table);
-    }
-    TransTable(thread).size = size;
-    TransTable(thread).mask = TransTable(thread).size - 4; //size needs to be a power of 2 for the masking to work
-    TransTable(thread).table = (trans_entry_t*) malloc((TransTable(thread).size) * sizeof(trans_entry_t)); //associativity of 4 means we need the +3 in theory
-    if (TransTable(thread).table == NULL) {
-        Print(3, "info string Not enough memory to allocate transposition table.\n");
-    }
-    transClear(thread);
-}
 
 inline uint32 pvGetHashLock (pvhash_entry_t * pve)      { return pve->hashlock; }
 inline basic_move_t pvGetMove (pvhash_entry_t * pve)    { return pve->move; }
@@ -225,7 +207,7 @@ inline void pvSetValue (pvhash_entry_t * pve, int16 value)         { pve->score 
 pvhash_entry_t *pvHashProbe(const uint64 hash) {
     pvhash_entry_t *entry = PVHashTable.table + (KEY(hash) & PVHashTable.mask);
     uint32 locked = LOCK(hash);
-    for (int t = 0; t < 8; t++, entry++) {
+    for (int t = 0; t < PV_ASSOC; t++, entry++) {
         if (pvGetHashLock(entry) == locked) {
             return entry;
         }
@@ -236,7 +218,7 @@ pvhash_entry_t *pvHashProbe(const uint64 hash) {
 pvhash_entry_t *getPvEntryFromMove(const uint64 hash, basic_move_t move) {
     pvhash_entry_t *entry = PVHashTable.table + (KEY(hash) & PVHashTable.mask);
     uint32 locked = LOCK(hash);
-    for (int t = 0; t < 8; t++, entry++) {
+    for (int t = 0; t < PV_ASSOC; t++, entry++) {
         if (pvGetHashLock(entry) == locked && pvGetMove(entry) == move) {
             return entry;
         }
@@ -249,7 +231,7 @@ void pvStore(const uint64 hash, const basic_move_t move, const uint8 depth, cons
     pvhash_entry_t *replace, *entry;
 
     replace = entry = PVHashTable.table + (KEY(hash) & PVHashTable.mask);
-    for (t = 0; t < 8; t++, entry++) {
+    for (t = 0; t < PV_ASSOC; t++, entry++) {
         if (pvGetHashLock(entry) == LOCK(hash)) {
             pvSetAge(entry, TransTable(thread).date);
             pvSetMove(entry, move);
@@ -273,12 +255,54 @@ void pvStore(const uint64 hash, const basic_move_t move, const uint8 depth, cons
 void pvHashTableClear(pvhashtable_t* pvt) {
     memset(pvt->table, 0, (pvt->size * sizeof(pvhash_entry_t)));
 }
+void initTrans(uint64 target, int thread) {
+    uint64 size=2;
+	uint64 adjSize;
 
-void initPVHashTab(pvhashtable_t* pvt, uint64 size) {
-    if (pvt->table != NULL) free(pvt->table);
-    pvt->size = size;
-    pvt->mask = pvt->size - 1;
-    pvt->table = (pvhash_entry_t*) malloc(pvt->size * sizeof(pvhash_entry_t));
+    if (target < MIN_TRANS_SIZE) target = MIN_TRANS_SIZE;
+
+    target *= 1024 * 1024;
+
+    //	size should be a factor of 2 for size - 1 to work well I think -SAM
+    while (size * sizeof(trans_entry_t) <= target) size*=2;
+    size = size/2;
+	adjSize = size + HASH_ASSOC - 1;
+    if (TransTable(thread).table != NULL) {
+        if (adjSize==TransTable(thread).size) {
+            Print(3,"info string no change in transition table\n");
+            return; //don't reallocate if there is not change
+        }
+        free(TransTable(thread).table);
+    }
+    TransTable(thread).size = adjSize;
+    TransTable(thread).mask = size - 1; //size needs to be a power of 2 for the masking to work
+    TransTable(thread).table = (trans_entry_t*) malloc((TransTable(thread).size) * sizeof(trans_entry_t)); //associativity of 4 means we need the +3 in theory
+    if (TransTable(thread).table == NULL) {
+        Print(3, "info string Not enough memory to allocate transposition table.\n");
+    }
+    transClear(thread);
+}
+
+void initPVHashTab(pvhashtable_t* pvt, uint64 target) {
+    uint64 size=2;
+	uint64 adjSize;
+
+    if (target < 1) target = 1;
+    target *= (1024 * 1024);
+
+    while (size * sizeof(pvhash_entry_t) <= target) size*=2;
+	size /= 2;
+	adjSize = size + (PV_ASSOC-1);
+    if (pvt->table != NULL) {
+        if (adjSize==pvt->size) {
+            Print(3,"info string no change in PV table\n");
+            return; //don't reallocate if there is not change
+        }
+        free(pvt->table);
+    }
+    pvt->size = adjSize;
+    pvt->mask = size - 1;
+    pvt->table = (pvhash_entry_t*) malloc((pvt->size) * sizeof(pvhash_entry_t));
     pvHashTableClear(pvt);
 }
 
@@ -288,22 +312,22 @@ void evalTableClear(evaltable_t* et) {
 
 void initEvalTab(evaltable_t* et, uint64 target) {
     uint64 size=2;
+	uint64 adjSize;
 
     if (target < 1) target = 1;
     target *= (1024 * 1024);
-    size = size/2;
-
-
     while (size * sizeof(eval_entry_t) <= target) size*=2;
+	size /= 2;
+	adjSize = size + EVAL_ASSOC-1;
     if (et->table != NULL) {
-        if (size==et->size) {
+        if (adjSize==et->size) {
             Print(3,"info string no change in eval table\n");
             return; //don't reallocate if there is not change
         }
         free(et->table);
     }
-    et->size = size;
-    et->mask = et->size - 1;
+    et->size = adjSize;
+    et->mask = size - 1;
     et->table = (eval_entry_t*) malloc(et->size * sizeof(eval_entry_t));
     evalTableClear(et);
 }
@@ -313,21 +337,23 @@ void pawnTableClear(pawntable_t* pt) {
 }
 void initPawnTab(pawntable_t* pt, uint64 target) {
     uint64 size=2;
+	uint64 adjSize;
 
     if (target < 1) target = 1;
     target *= 1024 * 1024;
 
     while (size * sizeof(pawn_entry_t) <= target) size*=2;
     size = size/2;
+	adjSize = size + PAWN_ASSOC - 1;
     if (pt->table != NULL) {
-        if (size==pt->size) {
+        if (adjSize==pt->size) {
             Print(3,"info string no change in pawn table\n");
             return; //don't reallocate if there is not change
         }
         free(pt->table);
     }
-    pt->size = size;
-    pt->mask = pt->size - 1;
+    pt->size = adjSize;
+    pt->mask = size - 1;
     pt->table = (pawn_entry_t*) malloc(pt->size * sizeof(pawn_entry_t));
     pawnTableClear(pt);
 }

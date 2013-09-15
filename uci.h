@@ -67,39 +67,39 @@ void uciSetOption(char string[]) {
     if (!memcmp(name,"Hash",4)) {
         initTrans(atoi(value),0);
     } else if (!memcmp(name,"Pawn Hash",9)) {
-        Guci_options->pawnhashsize = atoi(value);
-        initPawnTab(&SearchInfo(0).pt, Guci_options->pawnhashsize);
+        Guci_options.pawnhashsize = atoi(value);
+        initPawnTab(&SearchInfo(0).pt, Guci_options.pawnhashsize);
 
     } else if (!memcmp(name,"Eval Cache",10)) {
-        Guci_options->evalcachesize = atoi(value);
-        initEvalTab(&SearchInfo(0).et, Guci_options->evalcachesize);
+        Guci_options.evalcachesize = atoi(value);
+        initEvalTab(&SearchInfo(0).et, Guci_options.evalcachesize);
     } else if (!memcmp(name,"Clear Hash",10)) {
         transClear(0);
     } 
 #ifndef TCEC
     else if (!memcmp(name,"OwnBook",7)) {
-        if (value[0] == 't') Guci_options->try_book = TRUE;
-        else Guci_options->try_book = FALSE;
+        if (value[0] == 't') Guci_options.try_book = TRUE;
+        else Guci_options.try_book = FALSE;
     } else if (!memcmp(name,"Book File",9)) {
         initBook(value, &GpolyglotBook, POLYGLOT_BOOK);
     } else if (!memcmp(name,"HannibalBook File",17)) {
         initBook(value, &GhannibalBook, PUCK_BOOK);
     } else if (!memcmp(name,"Book Move Limit",15)) {
-        Guci_options->book_limit = atoi(value);
+        Guci_options.book_limit = atoi(value);
     }
     else if (!memcmp(name,"LearnTime",9)) {
-        Guci_options->learnTime = atoi(value);
+        Guci_options.learnTime = atoi(value);
     } 
     else if (!memcmp(name,"BookExplore",11)) {
-        Guci_options->bookExplore = atoi(value);
+        Guci_options.bookExplore = atoi(value);
     } 
     else if (!memcmp(name,"LearnThreads",12)) {
-        int oldValue = Guci_options->learnThreads;
+        int oldValue = Guci_options.learnThreads;
         int newValue  = atoi(value);
-        if (Guci_options->threads + newValue > MaxNumOfThreads) newValue = MaxNumOfThreads - Guci_options->threads;
+        if (Guci_options.threads + newValue > MaxNumOfThreads) newValue = MaxNumOfThreads - Guci_options.threads;
         if (newValue != oldValue) {
             if (SHOW_LEARNING) Print(3,"info string changing learn threads from %d to %d\n",oldValue,newValue);
-            Guci_options->learnThreads = newValue;
+            Guci_options.learnThreads = newValue;
 
             if (newValue < oldValue) { // go kill all the learning threads
                 for (int i = MaxNumOfThreads - oldValue; i < MaxNumOfThreads - newValue; i++) {
@@ -118,25 +118,25 @@ void uciSetOption(char string[]) {
     }
 #endif
     else if (!memcmp(name,"Time Buffer",11)) {
-        Guci_options->time_buffer = atoi(value);
+        Guci_options.time_buffer = atoi(value);
     } else if (!memcmp(name,"Contempt",8)) {
-        Guci_options->contempt = atoi(value);
+        Guci_options.contempt = atoi(value);
     } else if (!memcmp(name,"Threads",7)) {
-        int oldValue = Guci_options->threads;
+        int oldValue = Guci_options.threads;
         int newValue  = atoi(value);
 #ifndef TCEC
-        if (Guci_options->threads + Guci_options->learnThreads > MaxNumOfThreads) newValue = MaxNumOfThreads - Guci_options->learnThreads;
+        if (Guci_options.threads + Guci_options.learnThreads > MaxNumOfThreads) newValue = MaxNumOfThreads - Guci_options.learnThreads;
 #endif
         if (newValue > oldValue) {
             for (int i = oldValue; i < newValue; i++) {
                 initSearchThread(i);
             }
         }
-        Guci_options->threads = newValue;
+        Guci_options.threads = newValue;
     } else if (!memcmp(name,"Min Split Depth",15)) {
-        Guci_options->min_split_depth = atoi(value);
+        Guci_options.min_split_depth = atoi(value);
     } else if (!memcmp(name,"Max Split Threads",17)) {
-        Guci_options->max_split_threads = atoi(value);
+        Guci_options.max_split_threads = atoi(value);
     }
 }
 
@@ -205,7 +205,7 @@ void uciGo(position_t *pos, char *options) {
     SearchInfo(0).cutfail = 1;
     SearchInfo(0).allfail = 1;
 
-    for (int i = 0; i < Guci_options->threads; i++) {
+    for (int i = 0; i < Guci_options.threads; i++) {
         initSearchThread(i);
     }
 
@@ -278,7 +278,7 @@ void uciGo(position_t *pos, char *options) {
     }
     if (mytime > 0) {
         SearchInfo(0).time_is_limited = TRUE;
-        mytime = ((mytime * 95) / 100) - Guci_options->time_buffer;
+        mytime = ((mytime * 95) / 100) - Guci_options.time_buffer;
         if (mytime  < 0) mytime = 0;
         if (movestogo <= 0 || movestogo > TIME_DIVIDER) movestogo = TIME_DIVIDER;
         SearchInfo(0).time_limit_max = (mytime / movestogo) + ((t_inc * 4) / 5);
@@ -310,8 +310,8 @@ void uciGo(position_t *pos, char *options) {
         Print(2, "info string Search status is THINKING\n");
     }
     /* initialize UCI parameters to be used in search */
-    DrawValue[pos->side] = - Guci_options->contempt;
-    DrawValue[pos->side^1] = Guci_options->contempt;
+    DrawValue[pos->side] = - Guci_options.contempt;
+    DrawValue[pos->side^1] = Guci_options.contempt;
     getBestMove(pos,0);
     if (!SearchInfo(0).bestmove) {
         if (RETURN_MOVE)

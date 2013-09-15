@@ -66,7 +66,7 @@ extern uint64 bishopAttacksBB(uint32 from, uint64 occ);
 extern uint64 rookAttacksBB(uint32 from, uint64 occ);
 extern uint64 queenAttacksBB(uint32 from, uint64 occ);
 extern uint32 isAtt(const position_t *pos, uint32 color, uint64 target);
-extern uint32 kingIsInCheck(const position_t *pos);
+extern bool kingIsInCheck(const position_t *pos);
 extern uint64 pinnedPieces(const position_t *pos, uint32 c);
 extern uint64 discoveredCheckCandidates(const position_t *pos, uint32 c);
 extern uint32 moveIsLegal(const position_t *pos, uint32 move, uint64 pinned, uint32 incheck);

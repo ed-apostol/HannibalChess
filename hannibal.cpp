@@ -55,7 +55,7 @@ can knight catch pawns code from LL
 #define INIT_EVAL 64
 #define INIT_PAWN 32
 #define INIT_HASH 64
-#define INIT_PVHASH (1 << 16)
+#define INIT_PVHASH 32
 
 #else
 #define INIT_EVAL 64
@@ -73,7 +73,7 @@ can knight catch pawns code from LL
 #define DEFAULT_POLYGLOT_BOOK "HannibalPoly.bin"
 #define MAX_BOOK 60 //could be MAXPLY
 #define MAX_CONVERT 20
-#define HANNIBAL_BOOK_RANDOM (Guci_options->bookExplore*10)
+#define HANNIBAL_BOOK_RANDOM (Guci_options.bookExplore*10)
 #define MIN_RANDOM -20
 #define DEFAULT_BOOK_SCORE INF
 #define LEARN_NODES 10000000
