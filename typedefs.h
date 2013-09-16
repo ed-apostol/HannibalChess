@@ -42,29 +42,32 @@ typedef unsigned __int64	uint64;
 typedef unsigned int		uint;
 #endif
 
-enum NodeType { RootNode = 0, NormalNode, IidNode, VerificationNode };
+enum NodeType { CutNode = -1, PVNode = 0, AllNode };
 enum BookType { POLYGLOT_BOOK, PUCK_BOOK};
+enum HashType { HTLower, HTUpper, HTCutUpper, HTAllLower, HTExact, HTNoMoves };
+enum HashMask { MLower = 1, MUpper = 2, MCutUpper = 4, MAllLower = 8, MExact = 16, MNoMoves = 32, MClear = 255 };
 
 typedef uint32 basic_move_t;
 
-typedef struct
+struct continuation_t
 {
     basic_move_t moves[MAXPLY+1];
     int length;
-} continuation_t;
+};
 
 ///* the move structure */
-typedef struct move_t{
+struct move_t {
     basic_move_t m;
     int32 s;
-}move_t;
+};
 
 /* the structure used in generating moves */
-typedef struct _sort_t{
+struct movelist_t {
     volatile uint32 phase;
     basic_move_t transmove;
     basic_move_t killer1;
     basic_move_t killer2;
+    int32 evalvalue;
     int32 scout;
     int32 ply;
     int32 depth;
@@ -74,22 +77,26 @@ typedef struct _sort_t{
     volatile int32 startBad;
     uint64 pinned;
     move_t list[MAXMOVES];
-}movelist_t;
+};
 
 struct learn_t {
-    FILE *learnFile;// = NULL; //TODO make sure this is initialized correctly 
+    learn_t() : learnFile(NULL) {}
+    ~learn_t() { } //TODO consider closing here
+    FILE *learnFile;
     string name;
-    //    char name[MAX_FILENAME_LENGTH];
 };
+
 struct book_t {
     BookType type;
-    FILE *bookFile;// = NULL; TODO make sure this is initialized correctly 
+    book_t() : bookFile(NULL) {}
+    ~book_t() { } //TODO consider closing here
+    FILE *bookFile; 
     int64 size;
     string name;
-    //    char name[MAX_FILENAME_LENGTH];
 };
+
 /* the pawn hash table entry type */
-typedef struct pawn_entry_t{
+struct pawn_entry_t{
     uint32 hashlock;
     uint64 passedbits;
     int16 opn;
@@ -98,51 +105,80 @@ typedef struct pawn_entry_t{
     int8 kshelter[2];
     int8 qshelter[2];
     //	int8 halfPassed[2]; //currently unused
-}pawn_entry_t;
+};
 
 /* the pawn hash table type */
-typedef struct pawntable_t{
+struct pawntable_t{
+    pawntable_t() : table(NULL) {}
+    ~pawntable_t() { 
+        if (table) free(table); 
+    }
     pawn_entry_t *table;
     uint64 size;
     uint64 mask;
-}pawntable_t;
+};
 
-typedef struct eval_entry_t{
+struct eval_entry_t{
     uint32 hashlock;
     int16 value;
-    uint8 optimism;
-    uint8 pessimism;
-} eval_entry_t;
+    int16 pessimism;
+};
 
-typedef struct evaltable_t{
+struct evaltable_t{
+    evaltable_t() : table(NULL) {}
+    ~evaltable_t() { 
+        if (table) free(table); 
+    }
     eval_entry_t *table;
     uint64 size;
     uint64 mask;
-} evaltable_t;
+};
 
 /* the trans table entry type */
-typedef struct trans_entry_t{
+struct trans_entry_t{
     uint32 hashlock;
-    uint32 data;
-    int16 maxvalue;
-    int16 minvalue;
-    uint8 depth;
-    uint8 movedepth;
-    uint8 maxdepth;
-    uint8 mindepth;
-}trans_entry_t;
+    uint32 move;
+    int16 uppervalue;
+    int16 lowervalue;
+    uint8 mask;
+    uint8 age;
+    uint8 upperdepth;
+    uint8 lowerdepth;
+};
 
 /* the trans table type */
-typedef struct _transtable_t{
+struct transtable_t{
+    transtable_t() : table(NULL) {}
+    ~transtable_t() { 
+        if (table) free(table); 
+    }
     trans_entry_t *table;
     uint64 size;
     uint64 mask;
     int32 date;
-    uint32 used;
+    uint64 used;
     int32 age[DATESIZE];
-}transtable_t;
+};
 
-typedef struct _uci_option_t{
+struct pvhash_entry_t {
+    uint32 hashlock;
+    basic_move_t move;
+    int16 score;
+    uint8 depth;
+    uint8 age;
+};
+
+struct pvhashtable_t {
+    pvhashtable_t() : table(NULL) {}
+    ~pvhashtable_t() { 
+        if (table) free(table); 
+    }
+    pvhash_entry_t *table;
+    uint64 size;
+    uint64 mask;
+};
+
+struct uci_option_t{
     int time_buffer;
     int contempt;
     int threads;
@@ -155,12 +191,13 @@ typedef struct _uci_option_t{
     int bookExplore;
 #endif
     int min_split_depth;
+    int max_split_threads;
     int evalcachesize;
     int pawnhashsize;
-}uci_option_t;
+};
 
 /* the eval info structure */
-typedef struct _eval_info_t{
+struct eval_info_t{
     uint64 atkall[2];
     uint64 atkpawns[2];
     uint64 atkknights[2];
@@ -184,10 +221,10 @@ typedef struct _eval_info_t{
     int queening;
     uint8 endFlags[2];
     pawn_entry_t *pawn_entry;
-}eval_info_t;
+};
 
 /* the undo structure */
-typedef struct _pos_store_t{
+struct pos_store_t{
     uint32 lastmove;
     int castle;
     int fifty;
@@ -196,10 +233,10 @@ typedef struct _pos_store_t{
     int end[2];
     int mat_summ[2];
     uint64 phash;
-}pos_store_t;
+};
 
 /* the position structure */
-typedef struct _position_t{
+struct position_t{
     uint64 pawns;
     uint64 knights;
     uint64 bishops;
@@ -217,20 +254,20 @@ typedef struct _position_t{
     int sp;
     uint64 hash;
     uint64 stack[MAX_HASH_STORE];
-}position_t;
+};
 
 typedef uint8 mflag_t;
 
 /* the material info structure */
-typedef struct _material_info_t{
+struct material_info_t{
     int16 value;
     uint8 phase;
     uint8 draw[2];
     mflag_t flags[2];
-}material_info_t;
+};
 
 /* the search data structure */
-typedef struct _search_info_t{
+struct search_info_t{
     int thinking_status;
 #ifndef TCEC
     int outOfBook;
@@ -252,9 +289,6 @@ typedef struct _search_info_t{
     int last_last_value;
     int last_value;
     int best_value;
-    int best_value2;
-
-    int lastDepthSearched;
 
     int mate_found;
     int currmovenumber;
@@ -262,7 +296,16 @@ typedef struct _search_info_t{
     int research;
     int iteration;
 
-    bool try_easy;
+    // DEBUG
+    uint64 cutnodes;
+    uint64 allnodes;
+    uint64 cutfail;
+    uint64 allfail;
+
+    int rbestscore1;
+    int rbestscore2;
+
+    int lastDepthSearched;
 
     int legalmoves;
     basic_move_t bestmove;
@@ -270,44 +313,92 @@ typedef struct _search_info_t{
 
     basic_move_t moves[MAXMOVES];
     bool mvlist_initialized;
-    movelist_t rootmvlist;
     continuation_t rootPV;
     int32 evalgains[1024];
     int32 history[1024];
     evaltable_t et;
     pawntable_t pt;
     transtable_t tt;
-}search_info_t;
+};
+
+
+struct ThreadStack {
+    void Init () { 
+        killer1 = EMPTY;
+        killer2 = EMPTY;
+    }
+    basic_move_t killer1;
+    basic_move_t killer2;
+};
+
+struct SearchStack {
+    SearchStack () :
+        firstExtend(false),
+        reducedMove(false),
+        moveGivesCheck(false),
+        playedMoves(0),
+        hisCnt(0),
+        evalvalue(-INF),
+        bestvalue(-INF),
+        bestmove(EMPTY),
+        dcc(0),
+        counterMove(EMPTY),
+        threatMove(EMPTY),
+        bannedMove(EMPTY),
+        hashMove(EMPTY),
+        hashDepth(0),
+        mvlist(&movelist),
+        mvlist_phase(0)
+    { }
+    int playedMoves;
+    int hisCnt;
+    basic_move_t hisMoves[64];
+    int bestvalue;
+    basic_move_t bestmove;
+
+    bool firstExtend;
+    bool reducedMove;
+    bool moveGivesCheck;
+    int evalvalue;
+    uint64 dcc;
+    basic_move_t counterMove;
+    basic_move_t threatMove;
+    basic_move_t bannedMove;
+    basic_move_t hashMove;
+    int hashDepth;
+
+    movelist_t movelist;
+    movelist_t* mvlist;
+    int mvlist_phase;
+};
 
 typedef CRITICAL_SECTION mutex_t;
 
-typedef struct _split_point_t{
+struct SplitPoint {
     position_t pos[MaxNumOfThreads];
-    _split_point_t* parent;
-    movelist_t *parent_movestack;
+    SplitPoint* parent;
+    SearchStack* sscurr;
+    SearchStack* ssprev;
     int depth;
-    int inCheck;
-    bool inPv;
-    uint64 nullThreatBit;
+    bool inCheck;
+    bool inRoot;
+    NodeType nodeType;
     volatile int alpha;
     volatile int beta;
     volatile int bestvalue;
     volatile int played;
     volatile basic_move_t bestmove;
-    volatile int master;
-    volatile int slaves[MaxNumOfThreads];
-    volatile int cpus;
+    volatile uint64 workersBitMask;
+    volatile bool cutoff;
     mutex_t movelistlock[1];
     mutex_t updatelock[1];
-} split_point_t;
+};
 
-typedef struct {
-    split_point_t *split_point;
+struct thread_t {
+    SplitPoint *split_point;
     volatile bool stop;
     volatile bool running;
-    volatile bool idle;
-    volatile bool work_assigned;
-    volatile bool cutoff;
+    volatile bool searching;
     volatile bool exit_flag;
     HANDLE idle_event;
     uint64 nodes;
@@ -316,19 +407,13 @@ typedef struct {
     uint64 started; // DEBUG
     uint64 ended; // DEBUG
     int64 numsplits; // DEBUG
-    //    evaltable_t et;
-    //    pawntable_t pt;
     int num_sp;
-    int evalvalue[MAXPLY];
-    basic_move_t killer1[MAXPLY]; //consider moving
-    basic_move_t killer2[MAXPLY]; //consider moving 
-    //    int32 evalgains[1024];
-    //    int32 history[1024];
-    split_point_t sptable[MaxNumSplitPointsPerThread];
+    ThreadStack ts[MAXPLY];
+    SplitPoint sptable[MaxNumSplitPointsPerThread];
 #ifdef SELF_TUNE2
     bool playingGame;
 #endif
-} thread_t;
+};
 
 
 enum directions {SW,W,NW,N,NE,E,SE,S,NO_DIR };//{-9, -1, 7, 8, 9, 1, -7, -8};
@@ -366,7 +451,7 @@ enum movegen_phases {
 };
 
 #ifdef SELF_TUNE
-typedef struct player_t { //if you put an array in here you need to change the copy and compare functions
+struct player_t { //if you put an array in here you need to change the copy and compare functions
 
     /* MATERIAL
     int p1, p2, p3, p4;
@@ -401,5 +486,8 @@ typedef struct player_t { //if you put an array in here you need to change the c
     int games;
     int points; // win is 2, draw is 1.
     double rating;
-}player_t;
+};
 #endif
+
+
+

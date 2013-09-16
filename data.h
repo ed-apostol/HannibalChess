@@ -58,16 +58,16 @@ static const int MoveGenPhase[] = {
     PH_NONE, PH_TRANS, PH_GOOD_CAPTURES_PURE, PH_END, //MoveGenPhaseQuiescence
     PH_NONE, PH_TRANS, PH_GOOD_CAPTURES_PURE, PH_NONTACTICAL_CHECKS_WIN, PH_END, //MoveGenPhaseQuiescenceAndChecks
     PH_NONE, PH_TRANS, PH_GOOD_CAPTURES_PURE, PH_END, //MoveGenPhaseQuiescencePV
-    PH_NONE, PH_ROOT, PH_END, //MoveGenPhaseRoot
+    PH_NONE, PH_ROOT, PH_END //MoveGenPhaseRoot
 };
 
 /* contains the delta of possible piece moves between two squares,
 zero otherwise */
 static int DirFromTo[64][64];
 
-static int OutpostValue[2][64];
 /* used for pre-computed piece-square table */
 static int PcSqTb[2048];
+static int OutpostValue[2][64];
 /* used in updating the castle status of the position */
 static int CastleMask[64];
 /* used as initial king penalty */
@@ -88,7 +88,7 @@ static int origScore;
 static transtable_t global_trans_table;
 //#define TransTable(thread) (SearchInfo(thread).tt)
 #define TransTable(thread) global_trans_table
-
+pvhashtable_t PVHashTable;
 
 
 #ifndef TCEC
@@ -105,8 +105,10 @@ static search_info_t* SearchInfoMap[MaxNumOfThreads];
 static search_info_t global_search_info;
 #define SearchInfo(thread) global_search_info
 #endif
-static uci_option_t *Guci_options;
+static uci_option_t Guci_options;
 
-thread_t Threads[MaxNumOfThreads];
 mutex_t SMPLock[1];
+thread_t Threads[MaxNumOfThreads];
+
+
 

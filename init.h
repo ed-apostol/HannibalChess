@@ -56,8 +56,8 @@ int outpost(int sq) {
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     int value = (central[abs(f-r)] + central[abs(f+r-7)] + file[f] + rank[r]);
-	if (value < 0) value = 0;
-	return value;
+    if (value < 0) value = 0;
+    return value;
 }
 int mknight(int sq) {
     //    int central[8] = {2,1,0,-1,-1,-1,-1,-1};
@@ -127,10 +127,8 @@ int equeen(int sq) {
 #define MKR4 4 //4
 #define MKR5 4 //4
 int mking(int sq) {
-    //    int file[8] = {25,30,0,-20,-20,0,30,25};
     int file[8] = {MKF2-MKF1,MKF2,0,-MKF3,-MKF3,0,MKF2,MKF2-MKF1};
     int rank[8] = {MKR1,0,-MKR2,-MKR2-MKR3,-MKR2-MKR3-MKR4,-MKR2-MKR3-MKR4-MKR5,-MKR2-MKR3-MKR4-MKR5,-MKR2-MKR3-MKR4-MKR5};
-    //   int rank[8] = {3,0,-5,-9,-13,-17,-17,-17};
 
     int f = SQFILE(sq);
     int r = SQRANK(sq);
@@ -159,7 +157,7 @@ void initPST(uci_option_t *opt) {
 
     memset(PcSqTb, 0, sizeof(PcSqTb));
     for (i = 0; i < 64; i++) {
-       // do pawns
+        // do pawns
         PST(WHITE,PAWN,i,MIDGAME) = mpawn(i);
         PST(WHITE,PAWN,i,ENDGAME) = epawn(i);
         // do knights
@@ -178,13 +176,10 @@ void initPST(uci_option_t *opt) {
         PST(WHITE,KING,i,MIDGAME) = mking(i);
         PST(WHITE,KING,i,ENDGAME) = eking(i);
 
-		//do outposts
-		int oScore = outpost(i);
-		OutpostValue[WHITE][i] = oScore;
-		OutpostValue[BLACK][((7 - SQRANK(i)) * 8) + SQFILE(i)] = oScore;
-		Print(3,"%d",oScore);
-		if (i%8==7) Print(3,"\n");
-		else Print(3,"\t");
+        //do outposts
+        int oScore = outpost(i);
+        OutpostValue[WHITE][i] = oScore;
+        OutpostValue[BLACK][((7 - SQRANK(i)) * 8) + SQFILE(i)] = oScore;
     }
 
     for (i = 0; i < 8; i++) {
