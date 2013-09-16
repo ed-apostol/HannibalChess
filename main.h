@@ -11,10 +11,10 @@
 void quit(void) {
     stopThreads();
 
-	if (logfile) fclose(logfile);
+    if (logfile) fclose(logfile);
     if (errfile) fclose(errfile);
     if (dumpfile) fclose(dumpfile);
-	
+
 #ifndef TCEC
     closeBook(&GpolyglotBook);
     closeLearn(&Glearn);
@@ -23,7 +23,7 @@ void quit(void) {
 }
 
 int main(void) {
-	std::atexit(quit);
+    std::atexit(quit);
 
     position_t pos;
     char command[8192];
@@ -151,5 +151,5 @@ int main(void) {
 #endif
         else Print(3, "info string Unknown UCI command.\n");
     }
-	exit(EXIT_SUCCESS);
+    exit(EXIT_SUCCESS);
 }

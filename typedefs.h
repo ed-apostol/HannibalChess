@@ -111,8 +111,8 @@ struct pawn_entry_t{
 struct pawntable_t{
     pawntable_t() : table(NULL) {}
     ~pawntable_t() { 
-		if (table) free(table); 
-	}
+        if (table) free(table); 
+    }
     pawn_entry_t *table;
     uint64 size;
     uint64 mask;
@@ -127,8 +127,8 @@ struct eval_entry_t{
 struct evaltable_t{
     evaltable_t() : table(NULL) {}
     ~evaltable_t() { 
-		if (table) free(table); 
-	}
+        if (table) free(table); 
+    }
     eval_entry_t *table;
     uint64 size;
     uint64 mask;
@@ -150,8 +150,8 @@ struct trans_entry_t{
 struct transtable_t{
     transtable_t() : table(NULL) {}
     ~transtable_t() { 
-		if (table) free(table); 
-	}
+        if (table) free(table); 
+    }
     trans_entry_t *table;
     uint64 size;
     uint64 mask;
@@ -171,8 +171,8 @@ struct pvhash_entry_t {
 struct pvhashtable_t {
     pvhashtable_t() : table(NULL) {}
     ~pvhashtable_t() { 
-		if (table) free(table); 
-	}
+        if (table) free(table); 
+    }
     pvhash_entry_t *table;
     uint64 size;
     uint64 mask;

@@ -43,8 +43,8 @@ move_t* getMove(movelist_t *mvlist) {
     return start;
 }
 inline int scoreNonTactical(uint32 side, uint32 move) {
-	int score = SearchInfo(0).history[historyIndex(side,move)] /* + SearchInfo(0).evalgains[historyIndex(side, move)]*/;
-	return score;
+    int score = SearchInfo(0).history[historyIndex(side,move)] /* + SearchInfo(0).evalgains[historyIndex(side, move)]*/;
+    return score;
 }
 BOOL moveIsPassedPawn(const position_t * pos, uint32 move) {
     if (movePiece(move) == PAWN && !((*FillPtr[pos->side])(BitMask[moveTo(move)]) & pos->pawns)) {
@@ -101,7 +101,7 @@ void scoreNonCaptures(const position_t *pos, movelist_t *mvlist, int thread_id) 
     ASSERT(mvlist != NULL);
 
     for (m = &mvlist->list[mvlist->pos]; m < &mvlist->list[mvlist->size]; m++) {
-       m->s = scoreNonTactical(mvlist->side, m->m);
+        m->s = scoreNonTactical(mvlist->side, m->m);
     }
 }
 
