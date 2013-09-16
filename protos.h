@@ -66,11 +66,11 @@ extern uint64 bishopAttacksBB(uint32 from, uint64 occ);
 extern uint64 rookAttacksBB(uint32 from, uint64 occ);
 extern uint64 queenAttacksBB(uint32 from, uint64 occ);
 extern uint32 isAtt(const position_t *pos, uint32 color, uint64 target);
-extern uint32 kingIsInCheck(const position_t *pos);
+extern bool kingIsInCheck(const position_t *pos);
 extern uint64 pinnedPieces(const position_t *pos, uint32 c);
 extern uint64 discoveredCheckCandidates(const position_t *pos, uint32 c);
 extern uint32 moveIsLegal(const position_t *pos, uint32 move, uint64 pinned, uint32 incheck);
-extern uint32 moveIsCheck(const position_t *pos, uint32 m, uint64 dcc);
+extern bool moveIsCheck(const position_t *pos, uint32 m, uint64 dcc);
 extern uint64 attackingPiecesAll(const position_t *pos, uint64 occ, uint32 sq);
 extern uint64 attackingPiecesSide(const position_t *pos, uint32 sq, uint32 side);
 extern int moveAttacksSquare(const position_t *pos, uint32 move, uint32 sq);
@@ -99,16 +99,16 @@ extern char *positionToFEN(const position_t *pos);
 extern int kingPasser(const position_t *pos, int square, int color);
 extern int unstoppablePasser(const position_t *pos, int square, int color);
 //extern int eval(const position_t *pos, int thread_id);
-extern int eval(const position_t *pos, int thread_id, int *optimism, int *pessimism);
+extern int eval(const position_t *pos, int thread_id, int *pessimism);
 
 /* trans.c */
 extern void initTrans(uint64 target, int thread);
 extern void transClear(int thread);
 
 /* movepicker.c */
-extern void sortInit(const position_t *pos, movelist_t *mvlist, uint64 pinned, uint32 hashmove, int scout, int depth, int type, int thread_id);
-extern basic_move_t getMove(movelist_t *mvlist);
-extern basic_move_t sortNext(split_point_t* sp, position_t *pos, movelist_t *mvlist, int *phase, int thread_id);
+extern void sortInit(const position_t *pos, movelist_t *mvlist, uint64 pinned, uint32 hashmove, int scout, int eval, int depth, int type, int thread_id);
+extern move_t* getMove(movelist_t *mvlist);
+extern move_t* sortNext(SplitPoint* sp, position_t *pos, movelist_t *mvlist, int *phase, int thread_id);
 extern uint32 captureIsGood(const position_t *pos, uint32 m);
 extern void scoreCaptures(movelist_t *mvlist);
 extern void scoreCapturesPure(movelist_t *mvlist);
@@ -124,12 +124,9 @@ extern void initNode(position_t *pos, int thread_id);
 extern int moveIsTactical(uint32 m);
 extern int simpleStalemate(const position_t *pos);
 extern int historyIndex(uint32 side, uint32 move);
-//extern int qSearch(position_t *pos, int alpha, int beta, int depth, const int pv, const int inCheck, int thread_id);
-//template <bool inPv>
-//int qSearch(position_t *pos, int alpha, int beta, int depth, int inCheck, const int thread_id);
 
-template<bool inPv, bool inSplitPoint>
-int searchNode(position_t *pos, int alpha, int beta, int depth, int inCheck, int thread_id, const bool cutNode);
+template <bool inRoot, bool inSplitPoint, bool inSingular>
+int searchNode(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, const int thread_id, NodeType nt);
 extern void getBestMove(position_t *pos, int thread_id);
 
 /* debug.c */

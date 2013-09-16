@@ -631,7 +631,7 @@ int PlayOptimizeGame(position_t *pos, int startPos, int time) {
     return -1;
 }
 void optimize(position_t *pos, int threads) {
-    Guci_options->threads = threads;
+    Guci_options.threads = threads;
 
     for (int gameOn=0; gameOn < 21; gameOn++) {
         int position = rand()%NUM_START_POS;
@@ -785,7 +785,7 @@ void ShowActive() {
 void SetNewGame() { //this should be changed when we do one thread per personality
     origScore = 0;
     //	transClear();
-    for (int i = 0; i < Guci_options->threads; ++i) {
+    for (int i = 0; i < Guci_options.threads; ++i) {
         pawnTableClear(&Threads[i].pt);
         evalTableClear(&Threads[i].et);
     }

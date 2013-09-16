@@ -54,26 +54,29 @@ uint32 isAtt(const position_t *pos, uint32 color, uint64 target) {
     }
     return FALSE;
 }
-uint32 isSqAtt(const position_t *pos, uint64 occ, int sq,int color) {
+bool isSqAtt(const position_t *pos, uint64 occ, int sq,int color) {
 
     return ((PawnCaps[sq][color^1] & pos->pawns & pos->color[color])) || 
         (KnightMoves[sq] & pos->knights & pos->color[color]) || 
         (KingMoves[sq] & pos->kings & pos->color[color]) ||
         (bishopAttacksBB(sq, occ) & ((pos->bishops | pos->queens) & pos->color[color])) ||
         (rookAttacksBB(sq, occ) & ((pos->rooks | pos->queens) & pos->color[color]));
-
-    /*
-    return ((
-    (rookAttacksBB(sq, occ) & (pos->rooks | pos->queens)) |
-    (bishopAttacksBB(sq, occ) & (pos->bishops | pos->queens)) |
-    (KnightMoves[sq] & pos->knights) |
-    (KingMoves[sq] & pos->kings) |
-    (PawnCaps[sq][color^1] & pos->pawns)
-    ) & pos->color[color])!=0;
-    */
 }
+
+uint64 pieceAttacksFromBB(const position_t* pos, const int pc, const int sq, const uint64 occ) {
+    switch (pc) {
+    case PAWN: return PawnCaps[sq][pos->side];
+    case KNIGHT: return KnightMoves[sq];
+    case BISHOP: return bishopAttacksBB(sq, occ);
+    case ROOK: return rookAttacksBB(sq, occ);
+    case QUEEN: return queenAttacksBB(sq, occ);
+    case KING: return KingMoves[sq];
+    }
+    return 0;
+}
+
 /* this determines if the side to move is in check */
-uint32 kingIsInCheck(const position_t *pos) {
+bool kingIsInCheck(const position_t *pos) {
     return isSqAtt(pos,pos->occupied,pos->kpos[pos->side],pos->side^1);
     //    return isAtt(pos, pos->side^1, pos->kings & pos->color[pos->side]);
 }
@@ -95,40 +98,13 @@ uint32 isMoveDefence(const position_t *pos, uint32 move, uint64 target) {
         if (KnightMoves[to] & target) return 1;
         break;
     case BISHOP:
-        //        if (MinTwoBits(target))
-        //        {
         if (bishopAttacksBB(to, pos->occupied&~BitMask[from]) & target) return 1;
-        /*        }
-        else
-        {
-        sq = popFirstBit(&target);
-        dir = DirFromTo[to][sq];
-        if ((dir == 7 || dir == 9) && !(InBetween[to][sq]&pos->occupied&~BitMask[from])) return 1;
-        }*/
         break;
     case ROOK:
-        //      if (MinTwoBits(target))
-        //      {
         if (rookAttacksBB(to, pos->occupied&~BitMask[from]) & target) return 1;
-        /*        }
-        else
-        {
-        sq = popFirstBit(&target);
-        dir = abs(Direction[to][sq]);
-        if ((dir == 1 || dir == 8) && !(InBetween[to][sq]&pos->occupied&~BitMask[from])) return 1;
-        }*/
         break;
     case QUEEN:
-        //       if (MinTwoBits(target))
-        //        {
         if (queenAttacksBB(to, pos->occupied&~BitMask[from]) & target) return 1;
-        /* }
-
-        else
-        {
-        sq = popFirstBit(&target);
-        if (Direction[to][sq] && !(InBetween[to][sq]&pos->occupied&~BitMask[from])) return 1;
-        }*/
         break;
     }
     return 0;
@@ -217,7 +193,7 @@ uint32 moveIsLegal(const position_t *pos, uint32 move, uint64 pinned, uint32 inc
 }
 
 /* this determines if a move gives check */
-uint32 moveIsCheck(const position_t *pos, basic_move_t m, uint64 dcc) {
+bool moveIsCheck(const position_t *pos, basic_move_t m, uint64 dcc) {
     int us, them, ksq, from, to;
     uint64 temp;
     us = pos->side;
@@ -301,23 +277,6 @@ uint32 moveIsCheck(const position_t *pos, basic_move_t m, uint64 dcc) {
 
 
 
-/* not: this needs to be anded afterward with occupied to deal with unoccupied pawn captures and stuff in cases where occupied is not right*/
-/*
-uint64 attackingPiecesAll(const position_t *pos, uint64 occ, uint32 sq) {
-uint64 attackers = 0;
-
-ASSERT(pos != NULL);
-ASSERT(squareIsOk(sq));
-
-attackers |= PawnCaps[sq][BLACK] & pos->pawns & pos->color[WHITE];
-attackers |= PawnCaps[sq][WHITE] & pos->pawns & pos->color[BLACK];
-attackers |= KnightMoves[sq] & pos->knights;
-attackers |= KingMoves[sq] & pos->kings;
-attackers |= bishopAttacksBB(sq, occ) & (pos->bishops | pos->queens);
-attackers |= rookAttacksBB(sq, occ) & (pos->rooks | pos->queens);
-return attackers;
-}
-*/
 /* this returns the bitboard of all pieces of a given side attacking a certain square */
 
 uint64 attackingPiecesSide(const position_t *pos, uint32 sq, uint32 side) {
