@@ -655,7 +655,7 @@ void generateContinuation(continuation_t *variation) {
 	movelist_t moves;
 	setPosition(&pos, STARTPOS);
 	variation->length = 0;
-	int randomness = Guci_options->bookExplore*5 + 10 + Guci_options->learnThreads;
+	int randomness = Guci_options.bookExplore*5 + 10 + Guci_options.learnThreads;
 	do {
 		genLegal(&pos, &moves, true); 
 		move = getBookMove(&pos,&GhannibalBook,&moves,false,randomness);
@@ -755,7 +755,7 @@ basic_move_t getBookMove(position_t *p, book_t *book, movelist_t *ml, bool verbo
                 if (verbose && SHOW_LEARNING) cout << "info string bookmove " << move2Str(ml->list[on].m) << " score " << entries[numMoves].s << endl;
 				if (entries[numMoves].s == -DEFAULT_BOOK_SCORE && randomness>=10) //always try an untried book move if you are exploring
 					entries[numMoves].s = DEFAULT_BOOK_SCORE;
-				if (Guci_options->bookExplore) {
+				if (Guci_options.bookExplore) {
 					int colorAdjustedScore = entries[numMoves].s - TEMPO_OPEN * sign[p->side];
 					int random = rand()%randomness - rand()%randomness;
 					if (colorAdjustedScore > -randomness*2)

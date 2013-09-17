@@ -127,10 +127,8 @@ int equeen(int sq) {
 #define MKR4 4 //4
 #define MKR5 4 //4
 int mking(int sq) {
-    //    int file[8] = {25,30,0,-20,-20,0,30,25};
     int file[8] = {MKF2-MKF1,MKF2,0,-MKF3,-MKF3,0,MKF2,MKF2-MKF1};
     int rank[8] = {MKR1,0,-MKR2,-MKR2-MKR3,-MKR2-MKR3-MKR4,-MKR2-MKR3-MKR4-MKR5,-MKR2-MKR3-MKR4-MKR5,-MKR2-MKR3-MKR4-MKR5};
-    //   int rank[8] = {3,0,-5,-9,-13,-17,-17,-17};
 
     int f = SQFILE(sq);
     int r = SQRANK(sq);

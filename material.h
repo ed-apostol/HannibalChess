@@ -446,22 +446,15 @@ void initMaterial(void){
                                                         midscore2 += 10;
                                                         endscore += 12;
                                                     }
-
-#ifdef TWEAK_030813
                                                     //2 pieces work well against a rook even in endgame if one is a bishop
                                                     if (wr == br+1 && bq >= wq && wminors <= bminors-2 && bb) {
-                                                        //			openscore -= 20; //B+N already worth a lot more than rook in this phase
-                                                        //			midscore1 -= 20; //B+N already worth a lot more than rook in this phase
                                                         midscore2 -= 20;
                                                         endscore -= 20;
                                                     }
                                                     if (br == wr+1 && wq >= bq && bminors <= wminors-2 && wb) {
-                                                        //			openscore += 20; //B+N already worth a lot more than rook in this phase
-                                                        //			midscore1 += 20; //B+N already worth a lot more than rook in this phase
                                                         midscore2 += 20; 
                                                         endscore += 20;
                                                     }
-#endif
                                                     //N2BN 2 bishops works particularly well against 2 knights 
                                                     if (wb == 2 && wn == 0 && bb == 0 && bn == 2 && wr == br && wq== bq) {
                                                         openscore += 10;

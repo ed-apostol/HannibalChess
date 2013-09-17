@@ -50,13 +50,9 @@ const int BishopPairBonusMid2 = 51;	//49
 //#define ValueBP Value4Scaled (30, 40, 60, 70, 50, BPValue)
 //N+B - R + P = -12
 const int PawnValueEnd = 125;	//127
-//#ifdef TWEAK_030813 //NNb
-//const int KnightValueEnd = 363+10;	//357
-//const int BishopValueEnd = 362+10;	//361
-//#else
+
 const int KnightValueEnd = 363;	//357
 const int BishopValueEnd = 362;	//361
-//#endif
 const int RookValueEnd = 612;	//612
 const int QueenValueEnd = 1150;	//1152
 const int BishopPairBonusEnd = 55;	//55

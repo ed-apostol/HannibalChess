@@ -8,10 +8,11 @@
 /**************************************************/
 
 
-void sortInit(const position_t *pos, movelist_t *mvlist, uint64 pinned, uint32 hashmove, int scout, int depth, int type, int thread_id) {
+void sortInit(const position_t *pos, movelist_t *mvlist, uint64 pinned, uint32 hashmove, int scout, int eval, int depth, int type, int thread_id) {
     mvlist->transmove =  hashmove;
-    mvlist->killer1 = Threads[thread_id].killer1[pos->ply];
-    mvlist->killer2 = Threads[thread_id].killer2[pos->ply];
+    mvlist->killer1 = Threads[thread_id].ts[pos->ply].killer1;
+    mvlist->killer2 = Threads[thread_id].ts[pos->ply].killer2;
+    mvlist->evalvalue = eval;
     mvlist->pos = 0;
     mvlist->size = 0;
     mvlist->pinned = pinned;
@@ -23,23 +24,23 @@ void sortInit(const position_t *pos, movelist_t *mvlist, uint64 pinned, uint32 h
     mvlist->startBad = MAXMOVES;
 }
 
-basic_move_t getMove(movelist_t *mvlist) {
+move_t* getMove(movelist_t *mvlist) {
     move_t *best, *temp, *start, *end;
 
     ASSERT(mvlist != NULL);
 
-    if (mvlist->pos >= mvlist->size) return EMPTY;
+    if (mvlist->pos >= mvlist->size) return NULL;
     start = &mvlist->list[mvlist->pos++];
     end = &mvlist->list[mvlist->size];
     best = start;
     for (temp = start+1; temp < end; temp++) {
         if (temp->s > best->s) best = temp;
     }
-    if (best == start) return start->m;
+    if (best == start) return start;
     *temp = *start;
     *start = *best;
     *best = *temp;
-    return start->m;
+    return start;
 }
 inline int scoreNonTactical(uint32 side, uint32 move) {
 	int score = SearchInfo(0).history[historyIndex(side,move)] /* + SearchInfo(0).evalgains[historyIndex(side, move)]*/;
@@ -100,8 +101,8 @@ void scoreNonCaptures(const position_t *pos, movelist_t *mvlist, int thread_id) 
     ASSERT(mvlist != NULL);
 
     for (m = &mvlist->list[mvlist->pos]; m < &mvlist->list[mvlist->size]; m++) {
-        m->s = scoreNonTactical(mvlist->side, m->m);
-	}
+       m->s = scoreNonTactical(mvlist->side, m->m);
+    }
 }
 
 void scoreAll(const position_t *pos, movelist_t *mvlist, int thread_id) {
@@ -120,7 +121,7 @@ void scoreAll(const position_t *pos, movelist_t *mvlist, int thread_id) {
         else if (m->m == mvlist->killer1) m->s = MAXHIST + 4;
         else if (m->m == mvlist->killer2) m->s = MAXHIST + 2;
         else {
-            m->s = scoreNonTactical(mvlist->side, m->m); // TODO: change history with evalgains
+            m->s = scoreNonTactical(mvlist->side, m->m);
         }
     }
 }
@@ -132,7 +133,7 @@ void scoreAllQ(movelist_t *mvlist, int thread_id) {
 
     for (m = &mvlist->list[mvlist->pos]; m < &mvlist->list[mvlist->size]; m++) {
         if (moveIsTactical(m->m))  m->s = MAXHIST + (moveCapture(m->m) * 6) + movePromote(m->m) - movePiece(m->m);
-        else m->s = scoreNonTactical(mvlist->side, m->m); // TODO: change history with evalgains
+        else m->s = scoreNonTactical(mvlist->side, m->m);
     }
 }
 
@@ -148,13 +149,13 @@ void scoreRoot(movelist_t *mvlist) {
     }
 }
 
-basic_move_t sortNext(split_point_t* sp, position_t *pos, movelist_t *mvlist, int *phase, int thread_id) {
-    basic_move_t move;
+move_t* sortNext(SplitPoint* sp, position_t *pos, movelist_t *mvlist, int& phase, int thread_id) {
+    move_t* move;
     if (sp != NULL) MutexLock(sp->movelistlock);
-    *phase = mvlist->phase;
+    phase = mvlist->phase;
     if (MoveGenPhase[mvlist->phase] == PH_END) {  // SMP hack
         if (sp != NULL) MutexUnlock(sp->movelistlock);
-        return EMPTY;
+        return NULL;
     }
     while (TRUE) {
         while (mvlist->pos < mvlist->size) {
@@ -166,7 +167,7 @@ basic_move_t sortNext(split_point_t* sp, position_t *pos, movelist_t *mvlist, in
                 ASSERT(kingIsInCheck(pos));
                 break;
             case PH_TRANS:
-                if (!genMoveIfLegal(pos, move, mvlist->pinned)) {
+                if (!genMoveIfLegal(pos, move->m, mvlist->pinned)) {
                     continue;
                 }
                 if (mvlist->depth <= 0 && !moveIsTactical(mvlist->transmove)) { // TODO: test this
@@ -175,64 +176,64 @@ basic_move_t sortNext(split_point_t* sp, position_t *pos, movelist_t *mvlist, in
                 }
                 break;
             case PH_ALL_CAPTURES:
-                if (move == mvlist->transmove) continue;
+                if (move->m == mvlist->transmove) continue;
             case PH_ALL_CAPTURES_PURE:
-                if (!moveIsLegal(pos, move, mvlist->pinned, FALSE)) continue;
+                if (!moveIsLegal(pos, move->m, mvlist->pinned, FALSE)) continue;
                 break;
             case PH_GOOD_CAPTURES:
-                if (move == mvlist->transmove) continue;
-                if (!captureIsGood(pos, move)) {
-                    mvlist->list[--(mvlist->startBad)].m = move;
+                if (move->m == mvlist->transmove) continue;
+                if (!captureIsGood(pos, move->m)) {
+                    mvlist->list[--(mvlist->startBad)].m = move->m;
                     continue;
                 }
-                if (!moveIsLegal(pos, move, mvlist->pinned, FALSE)) continue;
+                if (!moveIsLegal(pos, move->m, mvlist->pinned, FALSE)) continue;
                 break;
             case PH_GOOD_CAPTURES_PURE:
-                if (move == mvlist->transmove) continue;
-                if (!captureIsGood(pos, move)) continue;
-                if (!moveIsLegal(pos, move, mvlist->pinned, FALSE)) continue;
+                if (move->m == mvlist->transmove) continue;
+                if (!captureIsGood(pos, move->m)) continue;
+                if (!moveIsLegal(pos, move->m, mvlist->pinned, FALSE)) continue;
                 break;
             case PH_BAD_CAPTURES:
-                if (!moveIsLegal(pos, move, mvlist->pinned, FALSE)) continue;
+                if (!moveIsLegal(pos, move->m, mvlist->pinned, FALSE)) continue;
                 break;
             case PH_KILLER_MOVES:
-                if (move == mvlist->transmove) continue;
-                if (!genMoveIfLegal(pos, move, mvlist->pinned)) continue;
+                if (move->m == mvlist->transmove) continue;
+                if (!genMoveIfLegal(pos, move->m, mvlist->pinned)) continue;
                 break;
             case PH_QUIET_MOVES:
-                if (move == mvlist->transmove) continue;
-                if (move == mvlist->killer1) continue;
-                if (move == mvlist->killer2) continue;
-                if (!moveIsLegal(pos, move, mvlist->pinned, FALSE)) continue;
+                if (move->m == mvlist->transmove) continue;
+                if (move->m == mvlist->killer1) continue;
+                if (move->m == mvlist->killer2) continue;
+                if (!moveIsLegal(pos, move->m, mvlist->pinned, FALSE)) continue;
                 break;
             case PH_NONTACTICAL_CHECKS:
-                if (move == mvlist->transmove) continue;
-                if (move == mvlist->killer1) continue;
-                if (move == mvlist->killer2) continue;
-                if (!moveIsLegal(pos, move, mvlist->pinned, FALSE)) continue;
+                if (move->m == mvlist->transmove) continue;
+                if (move->m == mvlist->killer1) continue;
+                if (move->m == mvlist->killer2) continue;
+                if (!moveIsLegal(pos, move->m, mvlist->pinned, FALSE)) continue;
                 break;
             case PH_NONTACTICAL_CHECKS_WIN:
-                if (swap(pos, move) < 0) continue;
+                if (swap(pos, move->m) < 0) continue;
             case PH_NONTACTICAL_CHECKS_PURE:
-                if (move == mvlist->transmove) continue;
-                if (!moveIsLegal(pos, move, mvlist->pinned, FALSE)) continue;
+                if (move->m == mvlist->transmove) continue;
+                if (!moveIsLegal(pos, move->m, mvlist->pinned, FALSE)) continue;
                 break;
             case PH_GAINING:
-                if (move == mvlist->transmove) continue;
-                if (moveIsCheck(pos, move, discoveredCheckCandidates(pos, pos->side))) continue;
-                if (!moveIsLegal(pos, move, mvlist->pinned, FALSE)) continue;
+                if (move->m == mvlist->transmove) continue;
+                if (moveIsCheck(pos, move->m, discoveredCheckCandidates(pos, pos->side))) continue;
+                if (!moveIsLegal(pos, move->m, mvlist->pinned, FALSE)) continue;
                 break;
             default:
                 // can't get here
                 if (sp != NULL) MutexUnlock(sp->movelistlock);
-                return EMPTY;
+                return NULL;
             }
             if (sp != NULL) MutexUnlock(sp->movelistlock);
             return move;
         }
 
         mvlist->phase++;
-        *phase = mvlist->phase;
+        phase = mvlist->phase;
 
         switch (MoveGenPhase[mvlist->phase]) {
         case PH_ROOT:
@@ -242,11 +243,12 @@ basic_move_t sortNext(split_point_t* sp, position_t *pos, movelist_t *mvlist, in
                     mvlist->list[mvlist->size].m = SearchInfo(thread_id).moves[mvlist->size];
                 }
             } else {
-                // generate all under promotion ONLY IF IN ANALYZE MODE
-                genLegal(pos, mvlist, (SearchInfo(thread_id).depth_is_limited && SearchInfo(thread_id).depth_limit == MAXPLY)); 
+                // generate all legal moves at least in the root
+                genLegal(pos, mvlist, true); 
             }
             scoreRoot(mvlist);
             SearchInfo(thread_id).mvlist_initialized = true;
+            SearchInfo(thread_id).legalmoves = mvlist->size;
             break;
         case PH_EVASION:
             genEvasions(pos, mvlist);
@@ -297,15 +299,15 @@ basic_move_t sortNext(split_point_t* sp, position_t *pos, movelist_t *mvlist, in
             scoreNonCaptures(pos, mvlist, thread_id);
             break;
         case PH_GAINING:
-            if (mvlist->scout - Threads[thread_id].evalvalue[pos->ply] > 150) continue; // TODO: test other values
-            genGainingMoves(pos, mvlist, mvlist->scout - Threads[thread_id].evalvalue[pos->ply], thread_id);
+            if (mvlist->scout - mvlist->evalvalue > 150) continue; // TODO: test other values
+            genGainingMoves(pos, mvlist, mvlist->scout - mvlist->evalvalue, thread_id);
             // Print(3, "delta = %d, mvlist->size = %d\n", mvlist->scout - SearchInfo.evalvalue[pos->ply], mvlist->size);
             scoreNonCaptures(pos, mvlist, thread_id);
             break;
         default:
             ASSERT(MoveGenPhase[mvlist->phase] == PH_END);
             if (sp != NULL) MutexUnlock(sp->movelistlock);
-            return EMPTY;
+            return NULL;
         }
     }
 }
