@@ -12,6 +12,10 @@
 #include "macros.h"
 #include "protos.h"
 #include "search.h"
+#include "threads.h"
+
+mutex_t SMPLock[1];
+thread_t Threads[MaxNumOfThreads];
 
 void initSearchThread(int i) {
     Threads[i].nodes_since_poll = 0;

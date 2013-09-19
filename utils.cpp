@@ -12,11 +12,9 @@
 #include "constants.h"
 #include "macros.h"
 #include "protos.h"
+#include "attacks.h"
 
-#ifndef TCEC
-#include <sstream>
-using namespace std;
-#endif
+
 
 /* a utility to print output into different files:
 bit 0: stdout
@@ -128,55 +126,7 @@ char *sq2Str(int sq) {
         );
     return str;
 }
-#ifndef TCEC
-string sqToStr(int sq) {
-    char c[3];
-    c[0] = 'a'+sq%8;
-    c[1] = '1'+sq/8;
-    c[2] = '\0';
-    return string(c);
-}
-string pieceToString(int pc) {
-    static const string PieceStrings[] = {"X","P","N","B","R","Q","K"};
-    return PieceStrings[pc];
-}
-string movenumToStr(int i) {
-    //	string s;
-    //	sprintf(s,"%d. ", i/2+1);
-    //	return s;
-    string result;//string which will contain the result
-    stringstream convert; // stringstream used for the conversion
-    convert << (i/2+1);//add the value of Number to the characters in the stream
-    result = convert.str();//set Result to the content of the stream
-    result.append(". ");
-    return result;
-}
-string moveToStr(basic_move_t m) {
-    if (m==0) return "none";
-    //    if (m==NULL_MOVE) return "0000";
-    string toReturn;
-    toReturn.append(sqToStr(moveFrom(m)));
-    toReturn.append(sqToStr(moveTo(m)));
-    if (movePromote(m)) {
-        toReturn.append(pieceToString(movePromote(m))); //learned the hard way this needs to be lower for comparisons to work
-    }
-    return toReturn;
-}
-string pv2Str(continuation_t *c) { //TODO promote use of this function throughout the code
-    if (c->length ==0) return "no_pv";
-    string s="";
-    string num;
-    for (int i=0; i < c->length; i++) {
-        if(i!=0) s.append(" ");
-        if (i%2==0) {
 
-            s.append(movenumToStr(i));
-        }
-        s.append(moveToStr(c->moves[i]));
-    }
-    return s;
-}
-#endif
 /* a utility to print the position */
 void displayBoard(const position_t *pos, int x) {
     static char pcstr[] = ".PNBRQK.pnbrqk";

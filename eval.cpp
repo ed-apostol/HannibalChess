@@ -11,6 +11,7 @@
 #include "constants.h"
 #include "macros.h"
 #include "protos.h"
+#include "attacks.h"
 
 // TODO
 

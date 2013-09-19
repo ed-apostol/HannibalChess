@@ -18,18 +18,23 @@ int showEval;
 #define showEval false
 #endif
 
+//attacks
 /* the precomputed piece 64 bit attacks */
 uint64 KnightMoves[64];
 uint64 KingMoves[64];
 uint64 PawnCaps[64][2];
 uint64 PawnMoves[64][2];
 uint64 PawnMoves2[64][2];
-
 uint64 MagicAttacks[107648];
 
+
+
+// eval
 uint64 bewareTrapped[2];
 uint64 escapeTrapped[2];
 
+
+// material
 /* the precomputed material values table and the flags table */
 material_info_t MaterialTable[MAX_MATERIAL][MAX_MATERIAL];
 
@@ -72,10 +77,7 @@ FILE *dumpfile;
 int origScore;
 
 
-transtable_t global_trans_table;
-//#define TransTable(thread) (SearchInfo(thread).tt)
-#define TransTable(thread) global_trans_table
-pvhashtable_t PVHashTable;
+
 
 
 #ifndef TCEC
@@ -94,8 +96,7 @@ search_info_t global_search_info;
 #endif
 uci_option_t Guci_options;
 
-mutex_t SMPLock[1];
-thread_t Threads[MaxNumOfThreads];
+
 
 
 

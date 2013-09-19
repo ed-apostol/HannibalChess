@@ -13,9 +13,12 @@
 #include "macros.h"
 #include "search.h"
 #include "protos.h"
+#include "trans.h"
+#include "movegen.h"
+#include "threads.h"
 
 #define MIN_TIME 2
-#define TIME_DIVIDER 30 //how many moves we divide remaining time into 
+#define TIME_DIVIDER 20 //how many moves we divide remaining time into 
 
 void initOption(uci_option_t* opt) {
     //TODO add hash size option

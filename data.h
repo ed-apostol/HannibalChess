@@ -70,10 +70,7 @@ extern FILE *dumpfile;
 extern int origScore;
 
 
-extern transtable_t global_trans_table;
-//#define TransTable(thread) (SearchInfo(thread).tt)
-#define TransTable(thread) global_trans_table
-extern pvhashtable_t PVHashTable;
+
 
 
 #ifndef TCEC
@@ -92,8 +89,7 @@ extern search_info_t global_search_info;
 #endif
 extern uci_option_t Guci_options;
 
-extern mutex_t SMPLock[1];
-extern thread_t Threads[MaxNumOfThreads];
+
 
 extern uint64 (*FillPtr[])(uint64);
 extern uint64 (*FillPtr2[])(uint64);

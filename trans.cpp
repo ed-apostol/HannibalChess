@@ -11,6 +11,14 @@
 #include "constants.h"
 #include "macros.h"
 #include "protos.h"
+#include "trans.h"
+
+transtable_t global_trans_table;
+//#define TransTable(thread) (SearchInfo(thread).tt)
+#define TransTable(thread) global_trans_table
+pvhashtable_t PVHashTable;
+
+
 
 basic_move_t transGetHashMove(const uint64 hash, const int thread) {
     int hashDepth = 0;
@@ -203,12 +211,6 @@ void initTrans(uint64 target, int thread) {
     }
     transClear(thread);
 }
-
-inline void pvSetHashLock (pvhash_entry_t * pve, uint32 hashlock)  { pve->hashlock = hashlock; }
-inline void pvSetMove (pvhash_entry_t * pve, basic_move_t move)    { pve->move = move; }
-inline void pvSetAge (pvhash_entry_t * pve, uint8 age)             { pve->age = age; }
-inline void pvSetDepth (pvhash_entry_t * pve, uint8 depth)         { pve->depth = depth; }
-inline void pvSetValue (pvhash_entry_t * pve, int16 value)         { pve->score = value; }
 
 pvhash_entry_t *pvHashProbe(const uint64 hash) {
     pvhash_entry_t *entry = PVHashTable.table + (KEY(hash) & PVHashTable.mask);

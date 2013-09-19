@@ -12,6 +12,9 @@
 #include "constants.h"
 #include "macros.h"
 #include "protos.h"
+#include "attacks.h"
+#include "movegen.h"
+#include "threads.h"
 
 void sortInit(const position_t *pos, movelist_t *mvlist, uint64 pinned, uint32 hashmove, int scout, int eval, int depth, int type, int thread_id) {
     mvlist->transmove =  hashmove;

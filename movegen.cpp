@@ -11,6 +11,8 @@
 #include "constants.h"
 #include "macros.h"
 #include "protos.h"
+#include "attacks.h"
+#include "movegen.h"
 
 /*
 // 00000000 00000000 00000000 00111111 = from square     = bits 1-6

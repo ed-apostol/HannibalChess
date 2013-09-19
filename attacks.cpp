@@ -11,6 +11,7 @@
 #include "data.h"
 #include "constants.h"
 #include "protos.h"
+#include "attacks.h"
 
 
 /* the following routines returns a 64 bit xray attacks of pieces

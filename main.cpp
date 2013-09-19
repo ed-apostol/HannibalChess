@@ -11,7 +11,8 @@
 #include "constants.h"
 #include "macros.h"
 #include "protos.h"
-
+#include "trans.h"
+#include "threads.h"
 
 #include <cstdlib>
 
