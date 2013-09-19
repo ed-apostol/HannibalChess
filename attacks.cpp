@@ -1,8 +1,8 @@
 /**************************************************/
 /*  Name: Hannibal						          */
-/*  Copyright: 2009                               */
+/*  Copyright: 2013                               */
 /*  Author: Sam Hamilton, Edsel Apostol           */
-/*  Contact: shamilton@distributedinfinity.com    */
+/*  Contact: snhamilton@rocketmail.com    */
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
@@ -10,8 +10,8 @@
 #include "typedefs.h"
 #include "data.h"
 #include "constants.h"
-#include "protos.h"
 #include "attacks.h"
+#include "bitutils.h"
 
 
 /* the following routines returns a 64 bit xray attacks of pieces

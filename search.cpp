@@ -1,8 +1,8 @@
 /**************************************************/
 /*  Name: Hannibal						          */
-/*  Copyright: 2009                               */
+/*  Copyright: 2013                               */
 /*  Author: Sam Hamilton, Edsel Apostol           */
-/*  Contact: shamilton@distributedinfinity.com    */
+/*  Contact: snhamilton@rocketmail.com    */
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
@@ -10,12 +10,17 @@
 #include "data.h"
 #include "constants.h"
 #include "macros.h"
-#include "protos.h"
 #include "search.h"
 #include "attacks.h"
 #include "trans.h"
 #include "movegen.h"
 #include "threads.h"
+#include "movepicker.h"
+#include "position.h"
+#include "utils.h"
+#include "bitutils.h"
+#include "uci.h"
+#include "eval.h"
 
 #define MAX_HDEPTH 20
 #define NEW_HISTORY (10 + MAX_HDEPTH)
@@ -210,6 +215,15 @@ void updateEvalgains(const position_t *pos, uint32 move, int before, int after, 
             else
                 SearchInfo(thread_id).evalgains[historyIndex(pos->side^1, move)]--;
     }
+}
+
+int moveIsTactical(uint32 m) {
+    ASSERT(moveIsOk(m));
+    return (m & 0x01fe0000UL);
+}
+
+int historyIndex(uint32 side, uint32 move) {
+    return ((((side) << 9) + ((movePiece(move)) << 6) + (moveTo(move))) & 0x3ff);
 }
 
 const int MaxPieceValue[] = {0, PawnValueEnd, KnightValueEnd, BishopValueEnd, RookValueEnd, QueenValueEnd, 10000};

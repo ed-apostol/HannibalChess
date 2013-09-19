@@ -1,8 +1,8 @@
 /**************************************************/
 /*  Name: Hannibal						          */
-/*  Copyright: 2009                               */
+/*  Copyright: 2013                               */
 /*  Author: Sam Hamilton, Edsel Apostol           */
-/*  Contact: shamilton@distributedinfinity.com    */
+/*  Contact: snhamilton@rocketmail.com    */
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
@@ -595,5 +595,16 @@ struct player_t { //if you put an array in here you need to change the copy and 
 };
 #endif
 
-
+// move
+inline uint moveFrom(basic_move_t m) {return (63&(m));}
+inline uint moveTo(basic_move_t m) {return (63&((m)>>6));}
+inline uint movePiece(basic_move_t m) {return (7&((m)>>12));}
+inline uint moveAction(basic_move_t m) {return (63&((m)>>12));}
+inline uint moveCapture(basic_move_t m) {return (7&((m)>>18));}
+inline uint moveRemoval(basic_move_t m) {return (15&((m)>>18));}
+inline uint movePromote(basic_move_t m) {return (7&((m)>>22));}
+inline uint isCastle(basic_move_t m) {return (((m)>>15)&1);}
+inline uint isPawn2Forward(basic_move_t m) {return (((m)>>16)&1);}
+inline uint isPromote(basic_move_t m) {return (((m)>>17)&1);}
+inline uint isEnPassant(basic_move_t m) {return  (((m)>>21)&1);}
 

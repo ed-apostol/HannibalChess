@@ -1,8 +1,8 @@
 /**************************************************/
 /*  Name: Hannibal						          */
-/*  Copyright: 2009                               */
+/*  Copyright: 2013                               */
 /*  Author: Sam Hamilton, Edsel Apostol           */
-/*  Contact: shamilton@distributedinfinity.com    */
+/*  Contact: snhamilton@rocketmail.com    */
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
@@ -10,8 +10,10 @@
 #include "data.h"
 #include "constants.h"
 #include "macros.h"
-#include "protos.h"
 #include "attacks.h"
+#include "utils.h"
+#include "bitutils.h"
+#include "eval.h"
 
 // TODO
 

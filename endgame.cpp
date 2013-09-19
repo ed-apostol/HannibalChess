@@ -1,8 +1,8 @@
 /**************************************************/
 /*  Name: Hannibal						          */
-/*  Copyright: 2009                               */
+/*  Copyright: 2013                               */
 /*  Author: Sam Hamilton, Edsel Apostol           */
-/*  Contact: shamilton@distributedinfinity.com    */
+/*  Contact: snhamilton@rocketmail.com    */
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
@@ -11,7 +11,8 @@
 #include "data.h"
 #include "constants.h"
 #include "macros.h"
-#include "protos.h"
+#include "utils.h"
+#include "bitutils.h"
 
 void RookvKnight(int attacker,const position_t *p, eval_info_t *ei,int *score, int *draw, int mover) {
     int nsq = GetOnlyBit(p->knights);

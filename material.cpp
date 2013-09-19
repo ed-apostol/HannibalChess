@@ -1,8 +1,8 @@
 /**************************************************/
 /*  Name: Hannibal						          */
-/*  Copyright: 2009                               */
+/*  Copyright: 2013                               */
 /*  Author: Sam Hamilton, Edsel Apostol           */
-/*  Contact: shamilton@distributedinfinity.com    */
+/*  Contact: snhamilton@rocketmail.com    */
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
@@ -10,7 +10,7 @@
 #include "data.h"
 #include "constants.h"
 #include "macros.h"
-#include "protos.h"
+#include "utils.h"
 
 /////SAM ENDGAME TODO NOTES
 ////1. rook and piece against rook and lots of pawns, is drawish if pawns are winning
