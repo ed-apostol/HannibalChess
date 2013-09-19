@@ -6,6 +6,11 @@
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
+#include "typedefs.h"
+#include "data.h"
+#include "constants.h"
+#include "macros.h"
+#include "protos.h"
 
 /*
 // 00000000 00000000 00000000 00111111 = from square     = bits 1-6
@@ -19,23 +24,6 @@
 // 00000001 11000000 00000000 00000000 = promotion piece = bits 23-25
 // 11111110 00000000 00000000 00000000 = reserve bits    = bits 26-32
 */
-
-/* utilities for move generation */
-INLINE basic_move_t GenOneForward(uint f, uint t) {return ((f) | ((t)<<6) | (PAWN<<12));}
-INLINE basic_move_t GenTwoForward(uint f, uint t) {return ((f) | ((t)<<6) | (PAWN<<12) | (1<<16));}
-INLINE basic_move_t GenPromote(uint f, uint t, uint r, uint c) {return ((f) | ((t)<<6) | (PAWN<<12) | ((c)<<18) | ((r)<<22) | (1<<17));}
-INLINE basic_move_t GenPromoteStraight(uint f, uint t, uint r) {return ((f) | ((t)<<6) | (PAWN<<12) | ((r)<<22)  | (1<<17));}
-INLINE basic_move_t GenEnPassant(uint f, uint t) {return ((f) | ((t)<<6) | (PAWN<<12) | (PAWN<<18) | (1<<21));}
-INLINE basic_move_t GenPawnMove(uint f, uint t, uint c) {return ((f) | ((t)<<6) | (PAWN<<12) | ((c)<<18));}
-INLINE basic_move_t GenKnightMove(uint f, uint t, uint c) {return ((f) | ((t)<<6) | (KNIGHT<<12) | ((c)<<18));}
-INLINE basic_move_t GenBishopMove(uint f, uint t, uint c) {return ((f) | ((t)<<6) | (BISHOP<<12) | ((c)<<18));}
-INLINE basic_move_t GenRookMove(uint f, uint t, uint c) {return ((f) | ((t)<<6) | (ROOK<<12) | ((c)<<18));}
-INLINE basic_move_t GenQueenMove(uint f, uint t, uint c) {return ((f) | ((t)<<6) | (QUEEN<<12) | ((c)<<18));}
-INLINE basic_move_t GenKingMove(uint f, uint t, uint c) {return ((f) | ((t)<<6) | (KING<<12) | ((c)<<18));}
-INLINE basic_move_t GenWhiteOO(void) {return (e1 | (g1<<6) | (KING<<12) | (1<<15));}
-INLINE basic_move_t GenWhiteOOO(void) {return (e1 | (c1<<6) | (KING<<12) | (1<<15));}
-INLINE basic_move_t GenBlackOO(void) {return (e8 | (g8<<6) | (KING<<12) | (1<<15));}
-INLINE basic_move_t GenBlackOOO(void) {return (e8 | (c8<<6) | (KING<<12) | (1<<15));}
 
 INLINE basic_move_t GenBasicMove(uint f, uint t, int pieceType, uint c) {return ((f) | ((t)<<6) | (pieceType<<12) | ((c)<<18));}
 /* the move generator, this generates all legal moves*/
@@ -72,7 +60,7 @@ void genLegal(const position_t *pos, movelist_t *mvlist, int promoteAll) {
         genCaptures(pos, &mlt);
         for (int i = 0; i < mlt.size; i++) {
             int mv = mlt.list[i].m;
-            if (!moveIsLegal(pos, mv , pinned, FALSE)) continue;
+            if (!moveIsLegal(pos, mv , pinned, false)) continue;
             mvlist->list[mvlist->size++] = mlt.list[i];
             if (promoteAll && movePromote(mv)==QUEEN) { // makes up for not generating ROOK and BISHOP promotes
                 int from = moveFrom(mv);
@@ -90,7 +78,7 @@ void genLegal(const position_t *pos, movelist_t *mvlist, int promoteAll) {
         mlt.pos = mlt.size;
         genNonCaptures(pos, &mlt);
         for (int i = mlt.pos; i < mlt.size; i++) {
-            if (!moveIsLegal(pos, mlt.list[i].m, pinned, FALSE)) continue;
+            if (!moveIsLegal(pos, mlt.list[i].m, pinned, false)) continue;
             mvlist->list[mvlist->size++] = mlt.list[i];
         }
     }
@@ -802,20 +790,20 @@ uint32 genMoveIfLegal(const position_t *pos, uint32 move, uint64 pinned) {
     opp = me ^ 1;
     occupied = pos->occupied;
 
-    if (from == to) return FALSE;
-    if (from < a1 || from > h8) return FALSE;
-    if (to < a1 || to > h8) return FALSE;
-    if (pc < PAWN || pc > KING) return FALSE;
-    if (capt < EMPTY || capt > QUEEN) return FALSE;
-    if (pc != PAWN && prom != EMPTY) return FALSE;
+    if (from == to) return false;
+    if (from < a1 || from > h8) return false;
+    if (to < a1 || to > h8) return false;
+    if (pc < PAWN || pc > KING) return false;
+    if (capt < EMPTY || capt > QUEEN) return false;
+    if (pc != PAWN && prom != EMPTY) return false;
 
     if (move == EMPTY || getPiece(pos, from) != pc || DiffColor(pos, from, me) ||
-        ((pinned & BitMask[from]) && (DirFromTo[from][pos->kpos[me]] != DirFromTo[to][pos->kpos[me]]))) return FALSE;
+        ((pinned & BitMask[from]) && (DirFromTo[from][pos->kpos[me]] != DirFromTo[to][pos->kpos[me]]))) return false;
     switch (pc) {
     case PAWN:
         if (isEnPassant(move)) {
             inc = ((me == WHITE) ? -8 : 8);
-            if (to != pos->posStore.epsq || getPiece(pos, pos->posStore.epsq + inc) != PAWN || DiffColor(pos, pos->posStore.epsq + inc,opp)) return FALSE;
+            if (to != pos->posStore.epsq || getPiece(pos, pos->posStore.epsq + inc) != PAWN || DiffColor(pos, pos->posStore.epsq + inc,opp)) return false;
             {
                 uint64 b = pos->occupied ^ BitMask[from] ^ BitMask[pos->posStore.epsq + inc] ^ BitMask[to];
                 int ksq =  pos->kpos[me];
@@ -825,67 +813,67 @@ uint32 genMoveIfLegal(const position_t *pos, uint32 move, uint64 pinned) {
             }
         }
         else {
-            if (prom > QUEEN || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to,opp)) return FALSE;
+            if (prom > QUEEN || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to,opp)) return false;
             inc = ((me == WHITE) ? 8 : -8);
             delta = to - from;
             if (capt == EMPTY) {
                 if (!(delta == inc) && !(delta == (2*inc)
                     && PAWN_RANK(from, me) == Rank2
-                    && getPiece(pos, from+inc) == EMPTY)) return FALSE;
+                    && getPiece(pos, from+inc) == EMPTY)) return false;
             } else {
-                if (!(delta == (inc-1)) && !(delta == (inc+1))) return FALSE;
+                if (!(delta == (inc-1)) && !(delta == (inc+1))) return false;
             }
             return ((prom!=0) == (PAWN_RANK(to, me) == Rank8));
         }
         break;
 
     case KNIGHT:
-        if (moveAction(move) != KNIGHT || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(KnightMoves[from] & BitMask[to])) return FALSE;
-        return TRUE;
+        if (moveAction(move) != KNIGHT || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(KnightMoves[from] & BitMask[to])) return false;
+        return true;
         break;
     case BISHOP:
-        if (moveAction(move) != BISHOP || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(bishopAttacksBB(from, occupied) & BitMask[to])) return FALSE;
-        return TRUE;
+        if (moveAction(move) != BISHOP || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(bishopAttacksBB(from, occupied) & BitMask[to])) return false;
+        return true;
         break;
 
     case ROOK:
-        if (moveAction(move) != ROOK || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(rookAttacksBB(from, occupied) & BitMask[to])) return FALSE;
-        return TRUE;
+        if (moveAction(move) != ROOK || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(rookAttacksBB(from, occupied) & BitMask[to])) return false;
+        return true;
         break;
 
     case QUEEN:
-        if (moveAction(move) != QUEEN || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(queenAttacksBB(from, occupied) & BitMask[to])) return FALSE;
-        return TRUE;
+        if (moveAction(move) != QUEEN || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(queenAttacksBB(from, occupied) & BitMask[to])) return false;
+        return true;
         break;
 
     case KING:
-        if ((getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) ) return FALSE;
+        if ((getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) ) return false;
         if (isCastle(move)) {
             if (me == WHITE) {
-                if (from!=e1) return FALSE;
+                if (from!=e1) return false;
                 if (to == g1) {
-                    if (!(pos->posStore.castle & WCKS) || (occupied&(F1|G1)) || isAtt(pos, opp, E1|F1|G1)) return FALSE;
+                    if (!(pos->posStore.castle & WCKS) || (occupied&(F1|G1)) || isAtt(pos, opp, E1|F1|G1)) return false;
                 }
                 else if (to == c1) {
-                    if (!(pos->posStore.castle & WCQS) || (occupied&(B1|C1|D1)) || isAtt(pos, opp, C1|D1|E1)) return FALSE;
+                    if (!(pos->posStore.castle & WCQS) || (occupied&(B1|C1|D1)) || isAtt(pos, opp, C1|D1|E1)) return false;
                 }
-                else return FALSE;
+                else return false;
             } else {
-                if (from!=e8) return FALSE;
+                if (from!=e8) return false;
                 if (to == g8) {
-                    if (!(pos->posStore.castle & BCKS) || (occupied&(F8|G8)) || isAtt(pos, opp, E8|F8|G8)) return FALSE;
+                    if (!(pos->posStore.castle & BCKS) || (occupied&(F8|G8)) || isAtt(pos, opp, E8|F8|G8)) return false;
                 }
                 else if (to==c8) {
-                    if (!(pos->posStore.castle & BCQS) || (occupied&(B8|C8|D8)) || isAtt(pos, opp, C8|D8|E8)) return FALSE;
+                    if (!(pos->posStore.castle & BCQS) || (occupied&(B8|C8|D8)) || isAtt(pos, opp, C8|D8|E8)) return false;
                 }
-                else return FALSE;
+                else return false;
             }
-            return TRUE;
+            return true;
         }//isSqAtt(const position_t *pos, uint64 occ, int sq,int color) {
-        else if (!(KingMoves[from] & BitMask[to]) || isSqAtt(pos,pos->occupied ^ (pos->kings & pos->color[me]),to,opp)) return FALSE;
-        return TRUE;
+        else if (!(KingMoves[from] & BitMask[to]) || isSqAtt(pos,pos->occupied ^ (pos->kings & pos->color[me]),to,opp)) return false;
+        return true;
         break;
     }
-    return FALSE;
+    return false;
 }
 

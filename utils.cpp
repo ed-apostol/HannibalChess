@@ -6,22 +6,17 @@
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
+
+#include "typedefs.h"
+#include "data.h"
+#include "constants.h"
+#include "macros.h"
+#include "protos.h"
+
 #ifndef TCEC
 #include <sstream>
 using namespace std;
 #endif
-
-INLINE uint moveFrom(basic_move_t m) {return (63&(m));}
-INLINE uint moveTo(basic_move_t m) {return (63&((m)>>6));}
-INLINE uint movePiece(basic_move_t m) {return (7&((m)>>12));}
-INLINE uint moveAction(basic_move_t m) {return (63&((m)>>12));}
-INLINE uint moveCapture(basic_move_t m) {return (7&((m)>>18));}
-INLINE uint moveRemoval(basic_move_t m) {return (15&((m)>>18));}
-INLINE uint movePromote(basic_move_t m) {return (7&((m)>>22));}
-INLINE uint isCastle(basic_move_t m) {return (((m)>>15)&1);}
-INLINE uint isPawn2Forward(basic_move_t m) {return (((m)>>16)&1);}
-INLINE uint isPromote(basic_move_t m) {return (((m)>>17)&1);}
-INLINE uint isEnPassant(basic_move_t m) {return  (((m)>>21)&1);}
 
 /* a utility to print output into different files:
 bit 0: stdout
@@ -348,7 +343,7 @@ int anyRep(const position_t *pos) //this is used for book repetition detection, 
 {
     int i;
     int lastCheck;
-    if (pos->posStore.fifty >= 100) return TRUE;
+    if (pos->posStore.fifty >= 100) return true;
 
     ASSERT (pos->sp >= pos->posStore.fifty);
 
@@ -360,9 +355,9 @@ int anyRep(const position_t *pos) //this is used for book repetition detection, 
     for (i = (int)pos->sp-4; i >= lastCheck; i -= 2)
     {
         //ASSERT(pos->stack[i] != 0); //hmmm, maybe this is needed?
-        if (pos->stack[i] == pos->hash) return TRUE;
+        if (pos->stack[i] == pos->hash) return true;
     }
-    return FALSE;
+    return false;
 }
 
 int anyRepNoMove(const position_t *pos, const int m) {//assumes no castle and no capture
@@ -372,10 +367,10 @@ int anyRepNoMove(const position_t *pos, const int m) {//assumes no castle and no
     uint64 compareTo;
     //    pos->posStore.lastmove = undo->lastmove;
 
-    if (moveCapture(m) || isCastle(m) || pos->posStore.fifty < 3) return FALSE;
+    if (moveCapture(m) || isCastle(m) || pos->posStore.fifty < 3) return false;
     moved = movePiece(m);
-    if (moved==PAWN) return FALSE;
-    if (pos->posStore.fifty >= 99) return TRUE;
+    if (moved==PAWN) return false;
+    if (pos->posStore.fifty >= 99) return true;
     lastCheck = pos->sp - pos->posStore.fifty;
     //TODO consider  castle check in here
     fromSq = moveFrom(m);
@@ -383,8 +378,8 @@ int anyRepNoMove(const position_t *pos, const int m) {//assumes no castle and no
     compareTo = pos->hash ^ ZobColor ^ ZobPiece[pos->side][moved][fromSq] ^ ZobPiece[pos->side][moved][toSq];
     i = (int)pos->sp-3;
     do {
-        if (pos->stack[i] == compareTo) return TRUE;
+        if (pos->stack[i] == compareTo) return true;
         i -= 2;
     } while (i >= lastCheck);
-    return FALSE;
+    return false;
 }

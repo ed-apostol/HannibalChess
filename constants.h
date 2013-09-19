@@ -6,6 +6,7 @@
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
+#pragma once
 
 const int sign[2] = {1,-1};
 
@@ -84,21 +85,16 @@ const int MatSummValue[8] = {0,1,9,27,81,243,0,0};
 #define MLR MatSummValue[ROOK]
 #define MLQ MatSummValue[QUEEN]
 
-// used in setting up the position and eval symmetry
-const char *FenString[] = {
-    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -",
-    "r3k2r/3q4/2n1b3/7n/1bB5/2N2N2/1B2Q3/R3K2R w KQkq - 0 1",
-    "rnbq1bnr/1pppkp1p/4p3/2P1P3/p5p1/8/PP1PKPPP/RNBQ1BNR w - - 0 1",
-    "rn1q1bnr/1bP1kp1P/1p2p3/p7/8/8/PP1pKPpP/RNBQ1BNR w - - 0 1",
-    "r6r/3qk3/2n1b3/7n/1bB5/2N2N2/1B2QK2/R6R w - - 0 1",
-    NULL
-};
-
-/* used in fill algorithms */
-uint64 (*FillPtr[])(uint64) = {&fillUp, &fillDown};
-uint64 (*FillPtr2[])(uint64) = {&fillUp2, &fillDown2};
-uint64 (*ShiftPtr[])(uint64, uint32) = {&shiftLeft, &shiftRight};
+//////////// used in setting up the position and eval symmetry
+//////////const char *FenString[] = {
+//////////    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+//////////    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -",
+//////////    "r3k2r/3q4/2n1b3/7n/1bB5/2N2N2/1B2Q3/R3K2R w KQkq - 0 1",
+//////////    "rnbq1bnr/1pppkp1p/4p3/2P1P3/p5p1/8/PP1PKPPP/RNBQ1BNR w - - 0 1",
+//////////    "rn1q1bnr/1bP1kp1P/1p2p3/p7/8/8/PP1pKPpP/RNBQ1BNR w - - 0 1",
+//////////    "r6r/3qk3/2n1b3/7n/1bB5/2N2N2/1B2QK2/R6R w - - 0 1",
+//////////    NULL
+//////////};
 
 /* the following constants are used by the magic bitboard attacks */
 const uint64 DiagonalMask[64]= {
@@ -704,4 +700,22 @@ const int ROffset[64] = {
     66688, 68736, 69760, 70784, 71808, 72832, 73856, 74880,
     76928, 78976, 80000, 81024, 82048, 83072, 84096, 85120,
     87168, 91264, 93312, 95360, 97408, 99456, 101504, 103552
+};
+
+#define MoveGenPhaseEvasion 0
+#define MoveGenPhaseStandard (MoveGenPhaseEvasion+3)
+#define MoveGenPhaseQuiescenceAndChecksPV (MoveGenPhaseStandard+7)
+#define MoveGenPhaseQuiescence (MoveGenPhaseQuiescenceAndChecksPV+6)
+#define MoveGenPhaseQuiescenceAndChecks (MoveGenPhaseQuiescence+4)
+#define MoveGenPhaseQuiescencePV (MoveGenPhaseQuiescenceAndChecks+5)
+#define MoveGenPhaseRoot (MoveGenPhaseQuiescencePV+4)
+
+const int MoveGenPhase[] = {
+    PH_NONE, PH_EVASION, PH_END, //MoveGenPhaseEvasion
+    PH_NONE, PH_TRANS, PH_GOOD_CAPTURES, PH_KILLER_MOVES, PH_QUIET_MOVES, PH_BAD_CAPTURES, PH_END, //MoveGenPhaseStandard
+    PH_NONE, PH_TRANS, PH_ALL_CAPTURES, PH_NONTACTICAL_CHECKS_PURE, PH_GAINING, PH_END, //MoveGenPhaseQuiescenceAndChecksPV
+    PH_NONE, PH_TRANS, PH_GOOD_CAPTURES_PURE, PH_END, //MoveGenPhaseQuiescence
+    PH_NONE, PH_TRANS, PH_GOOD_CAPTURES_PURE, PH_NONTACTICAL_CHECKS_WIN, PH_END, //MoveGenPhaseQuiescenceAndChecks
+    PH_NONE, PH_TRANS, PH_GOOD_CAPTURES_PURE, PH_END, //MoveGenPhaseQuiescencePV
+    PH_NONE, PH_ROOT, PH_END //MoveGenPhaseRoot
 };

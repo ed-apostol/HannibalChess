@@ -6,6 +6,10 @@
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
+#include "typedefs.h"
+#include "data.h"
+#include "constants.h"
+#include "macros.h"
 
 #include <iostream>
 #include <string>

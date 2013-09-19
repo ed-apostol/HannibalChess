@@ -6,6 +6,10 @@
 /*  Contact: ed_apostol@yahoo.com                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
+#include "typedefs.h"
+#include "data.h"
+#include "constants.h"
+#include "macros.h"
 
 #if defined OPTIMIZE || SELF_TUNE2
 
@@ -579,7 +583,7 @@ int PlayOptimizeGame(position_t *pos, int startPos, int time) {
     int moves = 0;
     SetStartingPosition(pos,startPos);
 
-    while (TRUE) {
+    while (true) {
         char s[255];
         SetNewGame();
         origScore = 0;
@@ -702,11 +706,11 @@ void SortPlayers() {
     int done;
     do {
         int i;
-        done = TRUE;
+        done = true;
         for (i=1; i < numPersonalities;i++) {
             if (AllPersonalities[i].rating > AllPersonalities[i-1].rating) {
                 AllPersonalities[i].Swap(&AllPersonalities[i-1]);
-                done = FALSE;
+                done = false;
             }
         }
     } while (!done);
@@ -797,13 +801,13 @@ void tuneGo(position_t *pos, int player, int64 nodes) {
     //	uciGo(pos,"nodes 5000");
     //	return;
     /* initialization */
-    SearchInfo(player).depth_is_limited = FALSE;
+    SearchInfo(player).depth_is_limited = false;
     SearchInfo(player).depth_limit = MAXPLY;
-    SearchInfo(player).moves_is_limited = FALSE;
-    SearchInfo(player).time_is_limited = FALSE;
+    SearchInfo(player).moves_is_limited = false;
+    SearchInfo(player).time_is_limited = false;
     SearchInfo(player).time_limit_max = 0;
     SearchInfo(player).time_limit_abs = 0;
-    SearchInfo(player).node_is_limited = TRUE;
+    SearchInfo(player).node_is_limited = true;
     SearchInfo(player).node_limit = nodes;
     SearchInfo(player).start_time = SearchInfo(player).last_time = getTime();
     SearchInfo(player).alloc_time = 0;
@@ -968,7 +972,7 @@ int PlayTuneGame(int startPos, int player1, int player2) {
     //	Print(3,"%s\n",FenStartString[startPos]);
     activePlayer = (pos.side==WHITE ? player1 : player2);
     transClear(player1); transClear(player2);
-    while (TRUE) {
+    while (true) {
         origScore = 0;
         pawnTableClear(&Threads[activePlayer].pt);
         evalTableClear(&Threads[activePlayer].et);
@@ -1347,7 +1351,7 @@ int PlayGame(position_t *pos, int player1, int player2, int startPos) {
     InitPlayer(player2,1);
     Print(3,"%d:%s(%.1f)\t vs. ",player1+1,PlayerString(player1),GetScore(player1));
     Print(3,"%d:%s(%.1f)\t",player2+1,PlayerString(player2),GetScore(player2));
-    while (TRUE) {
+    while (true) {
         if (pos->side==WHITE) {
             SetPlayer(player1,0);
         }
@@ -1645,7 +1649,7 @@ void selfTune(position_t *pos) {
         ShowBest(numPlayers);
 
     }
-    while (TRUE) {
+    while (true) {
         int matchOn = 1;
         int matchSize;
         double startScore1,startScore2;

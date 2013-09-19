@@ -6,15 +6,22 @@
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
+
+#include "typedefs.h"
+#include "data.h"
+#include "constants.h"
+#include "macros.h"
+
+
 #ifdef DEBUG
 int squareIsOk(int s) {
-    if (s < a1 || s > h8) return FALSE;
-    return TRUE;
+    if (s < a1 || s > h8) return false;
+    return true;
 }
 
 int colorIsOk(int c) {
-    if (c == WHITE || c == BLACK) return TRUE;
-    return FALSE;
+    if (c == WHITE || c == BLACK) return true;
+    return false;
 }
 
 int moveIsOk(basic_move_t m) {
@@ -23,28 +30,28 @@ int moveIsOk(basic_move_t m) {
     int pc = movePiece(m);
     int capt = moveCapture(m);
     int prom = movePromote(m);
-    int x = TRUE;
+    int x = true;
 
-    if (m == EMPTY) return TRUE;
-    if (from < a1 || from > h8) x = FALSE;
-    if (to < a1 || to > h8) x = FALSE;
-    if (pc < PAWN || pc > KING) x = FALSE;
-    if (capt < EMPTY || capt > QUEEN) x = FALSE;
-    if (prom < EMPTY || prom > QUEEN) x = FALSE;
+    if (m == EMPTY) return true;
+    if (from < a1 || from > h8) x = false;
+    if (to < a1 || to > h8) x = false;
+    if (pc < PAWN || pc > KING) x = false;
+    if (capt < EMPTY || capt > QUEEN) x = false;
+    if (prom < EMPTY || prom > QUEEN) x = false;
 
-    if (x == FALSE) Print(8, "%s: from = %d, to = %d, pc = %d, capt = %d, prom = %d\n",
+    if (x == false) Print(8, "%s: from = %d, to = %d, pc = %d, capt = %d, prom = %d\n",
         __FUNCTION__, from, to, pc, capt, prom);
     return x;
 }
 
 int valueIsOk(int v) {
-    if (abs(v) > INF) return FALSE;
-    return TRUE;
+    if (abs(v) > INF) return false;
+    return true;
 }
 
 int rankIsOk(int r) {
-    if (r < 0 || r > 7) return FALSE;
-    return TRUE;
+    if (r < 0 || r > 7) return false;
+    return true;
 }
 
 /* this flips the entire position and save it into another position
@@ -236,9 +243,9 @@ int evalSymmetryIsOk(const position_t *pos) {
         displayBoard(pos, 8);
         displayBoard(&clone, 8);
         Print(8, "\n==============================================\n");
-        return FALSE;
+        return false;
     }
-    return TRUE;
+    return true;
 }
 
 uint64 pawnHashRecalc(const position_t *pos) {

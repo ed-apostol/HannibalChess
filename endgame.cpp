@@ -7,6 +7,11 @@
 /*  Description: A chess playing program.         */
 /**************************************************/
 
+#include "typedefs.h"
+#include "data.h"
+#include "constants.h"
+#include "macros.h"
+#include "protos.h"
 
 void RookvKnight(int attacker,const position_t *p, eval_info_t *ei,int *score, int *draw, int mover) {
     int nsq = GetOnlyBit(p->knights);
@@ -243,11 +248,11 @@ void BishopEnding(int attacker, const position_t *p, eval_info_t *ei,int *score,
         }
         // if the king is blocking the passed pawns its quite drawish
         {
-            int blockingAll = TRUE;
+            int blockingAll = true;
             while (passed) { // this is for both colors
                 int sq = popFirstBit(&passed);
                 if (abs(SQFILE(p->kpos[defender]) - SQFILE(sq)) > 1 || !IN_FRONT(SQRANK(p->kpos[defender]), SQRANK(sq),attacker) ) {
-                    blockingAll = FALSE;
+                    blockingAll = false;
                     break;
                 }
             }

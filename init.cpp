@@ -6,31 +6,12 @@
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
-#define FUTILITY_MOVE 64
 
-//BEST 1160 0.516
-//#define REDUCE_MIN 1.5
-//#define REDUCE_SCALE 2.5 
-//#define PV_REDUCE_MIN 0.50
-//#define PV_REDUCE_SCALE 7.50
-
-
-//#define REDUCE_MIN 1.57
-//#define REDUCE_SCALE 3.87 
-#define REDUCE_MIN 1.5
-#define REDUCE_SCALE 2.5 
-
-//#define PV_REDUCE_MIN 0.57 
-//#define PV_REDUCE_SCALE 7.58 
-#define PV_REDUCE_MIN 0.5
-#define PV_REDUCE_SCALE 7.5
-
-//      double    pvRed = log(double(hd)) * log(double(mc)) / 3.0;
-//      double nonPVRed = 0.33 + log(double(hd)) * log(double(mc)) / 2.25;
-
-#define LATE_PRUNE_MIN 3 //3 range from 0 to 10
-#define FUTILITY_SCALE 18
-//#define FUTILITY_SCALE 18 //072613opt1 (15, originaly 20)
+#include "typedefs.h"
+#include "data.h"
+#include "constants.h"
+#include "macros.h"
+#include "protos.h"
 
 
 int mpawn(int sq) {

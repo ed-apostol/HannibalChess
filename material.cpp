@@ -6,76 +6,18 @@
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
+#include "typedefs.h"
+#include "data.h"
+#include "constants.h"
+#include "macros.h"
+#include "protos.h"
 
 /////SAM ENDGAME TODO NOTES
 ////1. rook and piece against rook and lots of pawns, is drawish if pawns are winning
 ////2. rook and 2 pawns vs. rook and pawn drawish when blockaded
 ////3. rook against knight more drawish than listed
 
-/*
-#define MAX_DRAW 100
-#define DRAWN 100
-#define DRAWN1 90
-#define DRAWN2 75
-#define DRAWN3 60
-#define DRAWN4 50
-#define DRAWN5 40
-#define DRAWN6 32
-#define DRAWN7 24
-#define DRAWN8 17
-#define DRAWN9 10
-#define DRAWN10 5
-#define DRAWN11 3
-*/
-//#define DRAW_ADJUST (ONESIDE_WEIGHT/2)
-//#define DRAW_ADJUST (ONESIDE_WEIGHT)
-#define DRAW_ADJUST 0
-//(ONESIDE_WEIGHT/2) //this is the amount contributed by other factors than endgame, such as drawish material balances and such
-//#define DRAW_ADJUST ONESIDE_WEIGHT //this is the amount contributed by other factors than endgame, such as drawish material balances and such
 
-
-#define MAX_DRAW 100
-#define DRAWN 100
-#define DRAWN1 (90 - (90 * DRAW_ADJUST) / 100) 
-#define DRAWN2 (75 - (75 * DRAW_ADJUST) / 100)
-#define DRAWN3 (60 - (60 * DRAW_ADJUST) / 100)
-#define DRAWN4 (50 - (50 * DRAW_ADJUST) / 100)
-#define DRAWN5 (40 - (40 * DRAW_ADJUST) / 100)
-#define DRAWN6 (32 - (32 * DRAW_ADJUST) / 100)
-#define DRAWN7 (24 - (24 * DRAW_ADJUST) / 100)
-#define DRAWN8 (17 - (17 * DRAW_ADJUST) / 100)
-#define DRAWN9 (10 - (10 * DRAW_ADJUST) / 100)
-#define DRAWN10 (5 - (5 * DRAW_ADJUST) / 100)
-#define DRAWN11 (3 - (3 * DRAW_ADJUST) / 100)
-
-#define NP_M1 1
-#define NP_M2 0
-#define NP_M3 0
-#define NP_M4 1
-#define NP_M5 0
-#define NP_M6 0
-#define NP_R1 2
-#define NP_R2 0
-#define NP_Q 2
-#define NP_QM1 0
-#define NP_QM2 0
-#define NP_QM3 0
-#define NP_QM4 0
-#define NP_QM5 0
-#define NP_QR1 0
-#define NP_QR2 0
-
-//#define DRAWISH (DRAWN2 - (ONESIDE_WEIGHT/2))
-//#define PRETTY_DRAWISH ((DRAWN2+DRAWN1)/2 - (ONESIDE_WEIGHT/2))
-//#define VERY_DRAWISH (DRAWN1 - (ONESIDE_WEIGHT/2))
-//#define SUPER_DRAWISH (((DRAWN1+DRAWN)/2)-(ONESIDE_WEIGHT/2))
-
-#define DRAWISH (DRAWN2)
-#define PRETTY_DRAWISH ((DRAWN2+DRAWN1)/2 )
-#define VERY_DRAWISH (DRAWN1 )
-#define SUPER_DRAWISH (((DRAWN1+DRAWN)/2))
-
-#define DEBUG_DRAW FALSE
 
 int SetPhase(int minors, int rooks, int queens) {
     //	return minors+rooks*3+queens*6; //090411

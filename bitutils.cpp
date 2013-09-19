@@ -6,6 +6,10 @@
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
+#include "typedefs.h"
+#include "data.h"
+#include "constants.h"
+#include "macros.h"
 
 #ifdef VERSION64BIT
 #ifdef _MSC_VER
@@ -42,14 +46,14 @@ static INLINE unsigned char _BitScanReverse64(unsigned int* const Index, const U
 #define USING_INTRINSICS
 #endif
 /* returns the least significant square from the 64 bitfield */
-INLINE uint32 getFirstBit(uint64 bb) {
+uint32 getFirstBit(uint64 bb) {
     DWORD index = 0;
     _BitScanForward64(&index, bb);
     return index;
 }
 
 /* returns the least significant square and clears it from the 64 bitfield */
-INLINE uint32 popFirstBit(uint64 *b) {
+uint32 popFirstBit(uint64 *b) {
     DWORD index = 0;
     _BitScanForward64(&index, *b);
     *b &= (*b - 1);
@@ -57,7 +61,7 @@ INLINE uint32 popFirstBit(uint64 *b) {
 }
 /* this count the number of bits in a given bitfield,
 it is using a SWAR algorithm I think */
-INLINE uint32 bitCnt(uint64 x) {
+uint32 bitCnt(uint64 x) {
     x -= (x >> 1) & 0x5555555555555555ULL;
     x = (x & 0x3333333333333333ULL) + ((x >> 2) & 0x3333333333333333ULL);
     x = (x + (x >> 4)) & 0x0f0f0f0f0f0f0f0fULL;
@@ -146,11 +150,13 @@ uint64 fillDown2(uint64 b) {
 }
 
 // shift the parameter b with i places to the left
-uint64 shiftLeft(uint64 b, uint32 i) {return (b << i);}
+inline uint64 shiftLeft(uint64 b, uint32 i) {return (b << i);}
 
 // shift the parameter b with i places to the right
-uint64 shiftRight(uint64 b, uint32 i) {return (b >> i);}
+inline uint64 shiftRight(uint64 b, uint32 i) {return (b >> i);}
 
-//
-#define MaxOneBit(x) (((x) & ((x)-1))==0) 
-#define MinTwoBits(x) ((x) & ((x)-1)) 
+/* used in fill algorithms */
+uint64 (*FillPtr[])(uint64) = {&fillUp, &fillDown};
+uint64 (*FillPtr2[])(uint64) = {&fillUp2, &fillDown2};
+uint64 (*ShiftPtr[])(uint64, uint32) = {&shiftLeft, &shiftRight};
+

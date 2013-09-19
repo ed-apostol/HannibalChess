@@ -6,7 +6,16 @@
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
+
+#include "typedefs.h"
+#include "data.h"
+#include "constants.h"
+#include "macros.h"
+#include "search.h"
+#include "protos.h"
+
 #define MIN_TIME 2
+#define TIME_DIVIDER 30 //how many moves we divide remaining time into 
 
 void initOption(uci_option_t* opt) {
     //TODO add hash size option
@@ -18,10 +27,10 @@ void initOption(uci_option_t* opt) {
     opt->evalcachesize = INIT_EVAL;
     opt->pawnhashsize = INIT_PAWN;
 #ifndef TCEC
-    opt->try_book = FALSE;
+    opt->try_book = false;
     opt->book_limit = 128;
     opt->learnThreads = DEFAULT_LEARN_THREADS;
-    opt->usehannibalbook = TRUE;//TODO fix
+    opt->usehannibalbook = true;//TODO fix
     opt->learnTime = DEFAULT_LEARN_TIME;
     opt->bookExplore = DEFAULT_BOOK_EXPLORE;
 #endif
@@ -78,8 +87,8 @@ void uciSetOption(char string[]) {
     } 
 #ifndef TCEC
     else if (!memcmp(name,"OwnBook",7)) {
-        if (value[0] == 't') Guci_options.try_book = TRUE;
-        else Guci_options.try_book = FALSE;
+        if (value[0] == 't') Guci_options.try_book = true;
+        else Guci_options.try_book = false;
     } else if (!memcmp(name,"Book File",9)) {
         initBook(value, &GpolyglotBook, POLYGLOT_BOOK);
     } else if (!memcmp(name,"HannibalBook File",17)) {
@@ -178,13 +187,13 @@ void uciGo(position_t *pos, char *options) {
     ASSERT(options != NULL);
 
     /* initialization */
-    SearchInfo(0).depth_is_limited = FALSE;
+    SearchInfo(0).depth_is_limited = false;
     SearchInfo(0).depth_limit = MAXPLY;
-    SearchInfo(0).moves_is_limited = FALSE;
-    SearchInfo(0).time_is_limited = FALSE;
+    SearchInfo(0).moves_is_limited = false;
+    SearchInfo(0).time_is_limited = false;
     SearchInfo(0).time_limit_max = 0;
     SearchInfo(0).time_limit_abs = 0;
-    SearchInfo(0).node_is_limited = FALSE;
+    SearchInfo(0).node_is_limited = false;
     SearchInfo(0).node_limit = 0;
     SearchInfo(0).start_time = SearchInfo(0).last_time = getTime();
     SearchInfo(0).alloc_time = 0;
@@ -233,37 +242,37 @@ void uciGo(position_t *pos, char *options) {
     if (c != NULL) sscanf(c + 9, "%d", &movetime);
     c = strstr(options, "searchmoves");
     if (c != NULL) {
-        genLegal(pos, &ml,TRUE);
+        genLegal(pos, &ml,true);
         uciParseSearchmoves(&ml, c + 12, &(SearchInfo(0).moves[0]));
     }
 
     if (infinite) {
-        SearchInfo(0).depth_is_limited = TRUE;
+        SearchInfo(0).depth_is_limited = true;
         SearchInfo(0).depth_limit = MAXPLY;
         Print(2, "info string Infinite\n");
     }
     if (upperdepth > 0) {
-        SearchInfo(0).depth_is_limited = TRUE;
+        SearchInfo(0).depth_is_limited = true;
         SearchInfo(0).depth_limit = upperdepth;
         Print(2, "info string Depth is limited to %d half moves\n", SearchInfo(0).depth_limit);
     }
     if (mate > 0) {
-        SearchInfo(0).depth_is_limited = TRUE;
+        SearchInfo(0).depth_is_limited = true;
         SearchInfo(0).depth_limit = mate * 2 - 1;
         Print(2, "info string Mate in %d half moves\n", SearchInfo(0).depth_limit);
     }
     if (nodes > 0) {
-        SearchInfo(0).node_is_limited = TRUE;
+        SearchInfo(0).node_is_limited = true;
         SearchInfo(0).node_limit = nodes;
         Print(2, "info string Nodes is limited to %d positions\n", SearchInfo(0).node_limit);
     }
     if (SearchInfo(0).moves[0]) {
-        SearchInfo(0).moves_is_limited = TRUE;
+        SearchInfo(0).moves_is_limited = true;
         Print(2, "info string Moves is limited\n");
     }
 
     if (movetime > 0) {
-        SearchInfo(0).time_is_limited = TRUE;
+        SearchInfo(0).time_is_limited = true;
         SearchInfo(0).alloc_time = movetime;
         SearchInfo(0).time_limit_max = SearchInfo(0).start_time + movetime;
         SearchInfo(0).time_limit_abs = SearchInfo(0).start_time + movetime;
@@ -277,7 +286,7 @@ void uciGo(position_t *pos, char *options) {
         t_inc = binc;
     }
     if (mytime > 0) {
-        SearchInfo(0).time_is_limited = TRUE;
+        SearchInfo(0).time_is_limited = true;
         mytime = ((mytime * 95) / 100) - Guci_options.time_buffer;
         if (mytime  < 0) mytime = 0;
         if (movestogo <= 0 || movestogo > TIME_DIVIDER) movestogo = TIME_DIVIDER;
@@ -360,7 +369,7 @@ void uciSetPosition(position_t *pos, char *str) {
             m = movestr;
             while (*c != '\0' && !isspace(*c)) *m++ = *c++;
             *m = '\0';
-            genLegal(pos, &ml,TRUE);
+            genLegal(pos, &ml,true);
             move = parseMove(&ml, movestr);
             if (!move) {
                 Print(3, "info string Illegal move: %s\n", movestr);

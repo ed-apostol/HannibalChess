@@ -6,6 +6,12 @@
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
+#include "typedefs.h"
+#include "data.h"
+#include "constants.h"
+#include "macros.h"
+
+
 #ifdef DEBUG
 /* the recursive perft routine */
 void perft(position_t *pos, int maxply, uint64 nodesx[]) {
@@ -16,7 +22,7 @@ void perft(position_t *pos, int maxply, uint64 nodesx[]) {
 
     if (pos->ply  >= maxply) return;
 
-    genLegal(pos, &movelist,TRUE);
+    genLegal(pos, &movelist,true);
     /* if(pos->ply + 1 >= maxply){
     nodesx[pos->ply+1] += movelist.size;
     return;
@@ -38,7 +44,7 @@ int perftDivide(position_t *pos, uint32 depth, uint32 maxply) {
     ASSERT(pos != NULL);
     if (depth > maxply) return 0;
 
-    genLegal(pos, &movelist,TRUE);
+    genLegal(pos, &movelist,true);
     for (movelist.pos = 0; movelist.pos < movelist.size; movelist.pos++) {
         makeMove(pos, &undo, movelist.list[movelist.pos].m);
         x += perftDivide(pos, depth + 1, maxply);
@@ -87,7 +93,7 @@ void runPerftDivide(position_t *pos, uint32 maxply) {
     Print(1, "See the logfile.txt on the same directory to view\n");
     Print(1, "the detailed output after running.\n");
     displayBoard(pos, 3);
-    genLegal(pos, &movelist,TRUE);
+    genLegal(pos, &movelist,true);
     if (maxply < 1) {
         Print(3, "Perft divide %d = %d\n", maxply, 0);
         return;
@@ -116,7 +122,7 @@ void nonUCI(position_t *pos) {
     Print(3, "Used for testing and debugging purposes\n");
     Print(3, "Type help for commands\n");
 
-    while (TRUE) {
+    while (true) {
         Print(1, "Logic >>");
         if (!fgets(command, 256, stdin)) break;
         if (command[0]=='\n') continue;
@@ -126,7 +132,7 @@ void nonUCI(position_t *pos) {
         } else if (!strcmp(temp, "undo")) {
             if (pos->sp > 0) unmakeMove(pos, &undo);
         } else if (!strcmp(temp, "moves")) {
-            genLegal(pos, &ml,TRUE);
+            genLegal(pos, &ml,true);
             Print(3, "legal moves = %d:", ml.size);
             for (ml.pos = 0; ml.pos < ml.size; ml.pos++) {
                 if (!(ml.pos%12)) Print(3, "\n");
@@ -310,7 +316,7 @@ void nonUCI(position_t *pos) {
             Print(3, "this are just the commands as of now\n");
             Print(3, "press any key to continue...\n");
         } else {
-            genLegal(pos, &ml,TRUE);
+            genLegal(pos, &ml,true);
             move = parseMove(&ml, command);
             if (move) makeMove(pos, &undo, move);
             else Print(3, "Unknown command: %s\n", command);

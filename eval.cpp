@@ -6,6 +6,11 @@
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
+#include "typedefs.h"
+#include "data.h"
+#include "constants.h"
+#include "macros.h"
+#include "protos.h"
 
 // TODO
 
@@ -1340,7 +1345,7 @@ void evalPassedvsKing(const position_t *pos, eval_info_t *ei, const int allied,u
 
                 if (eDist-1 > qDist) {
                     score += UnstoppablePassedPawn; 
-                    ei->queening = TRUE;
+                    ei->queening = true;
                     if (showEval) Print(3," unstoppable ");
                 }
                 // or king can escort pawn in
@@ -1350,7 +1355,7 @@ void evalPassedvsKing(const position_t *pos, eval_info_t *ei, const int allied,u
                     if (pFile == FileA || pFile == FileH) mDist++; // need more margin for error for rook pawns NOTE: may need to check for king in from of pawn if we allow this later
                     if (mDist < eDist || (mDist==eDist && myMove)) { //if this race is a tie we can still win it, but must spend move on king first not pawn
                         score += UnstoppablePassedPawn;
-                        ei->queening = TRUE;
+                        ei->queening = true;
                         if (showEval) Print(3," unstopable king escort ");
                     }
                 }
@@ -1368,13 +1373,13 @@ void evalPassedvsKing(const position_t *pos, eval_info_t *ei, const int allied,u
         if (fileDist > leftBestToQueen) { 
             ei->end_score[allied] += scale(UnstoppablePassedPawn, 7-leftBestToQueen);
             if (showEval) Print(3," unstoppable separated %d ",leftBestToQueen);
-            ei->queening = TRUE;
+            ei->queening = true;
         }
     }
     else if (fileDist > rightBestToQueen) { 
         ei->end_score[allied] += scale(UnstoppablePassedPawn, 7-rightBestToQueen);
         if (showEval) Print(3," unstoppable separated %d ",rightBestToQueen);
-        ei->queening = TRUE;
+        ei->queening = true;
     }
 }
 
@@ -1411,14 +1416,14 @@ void evalPassed(const position_t *pos, eval_info_t *ei, const int allied,uint64 
         }
 
         if (passed & (PawnCaps[from][allied] | PawnCaps[frontSq][enemy])
-            && ((pos->bishops|pos->queens) & pos->color[enemy])==0 && ei->queening == FALSE && rank >= Rank6 && MaxOneBit(pos->color[enemy] & ~(pos->kings | pos->pawns)))	//CON
+            && ((pos->bishops|pos->queens) & pos->color[enemy])==0 && ei->queening == false && rank >= Rank6 && MaxOneBit(pos->color[enemy] & ~(pos->kings | pos->pawns)))	//CON
         {
             int promotion = PAWN_PROMOTE(from, allied);
             int kDist = DISTANCE(pos->kpos[enemy],promotion) - (!myMove);
             if (kDist > (7-rank-myMove) )
             {
                 score += UnstoppablePassedPawn+RookValueMid2 - PawnValueMid2;
-                ei->queening = TRUE;
+                ei->queening = true;
                 if (showEval) Print(3,"info string unstopable connected ");
             }
         }
@@ -1546,7 +1551,7 @@ int eval(const position_t *pos, int thread_id, int *pessimism) {
     evalPieces(pos, &ei, WHITE,thread_id);
     evalPieces(pos, &ei, BLACK,thread_id);
 
-    ei.queening = FALSE;
+    ei.queening = false;
 
     blackPassed = ei.pawn_entry->passedbits & pos->color[BLACK];
 

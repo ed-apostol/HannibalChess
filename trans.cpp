@@ -6,34 +6,11 @@
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
-
-#define PV_ASSOC 8
-#define EVAL_ASSOC 1
-#define HASH_ASSOC 4
-#define PAWN_ASSOC 1
-
-inline const uint32 transHashLock(trans_entry_t * te) { return te->hashlock; }
-inline const basic_move_t transMove(trans_entry_t * te) { return te->move; }
-inline const int transAge(trans_entry_t * te) { return te->age; }
-inline const int transMask(trans_entry_t * te) { return te->mask; }
-inline const int transLowerDepth(trans_entry_t * te) { return te->lowerdepth; }
-inline const int transUpperDepth(trans_entry_t * te) { return te->upperdepth; }
-inline const int transLowerValue(trans_entry_t * te) { return te->lowervalue; }
-inline const int transUpperValue(trans_entry_t * te) { return te->uppervalue; }
-
-inline void transSetHashLock(trans_entry_t * te, const uint32 hashlock) { te->hashlock = hashlock; }
-inline void transSetMove(trans_entry_t * te, const basic_move_t move) { te->move = move; }
-inline void transSetAge(trans_entry_t * te, const uint8 date) { te->age = date; }
-inline void transSetMask(trans_entry_t * te, const uint8 mask) { te->mask |= mask; }
-inline void transRemMask(trans_entry_t * te, const uint8 mask) { te->mask &= ~mask; }
-inline void transReplaceMask(trans_entry_t * te, const uint8 mask) { te->mask = mask; }
-inline void transSetLowerDepth(trans_entry_t * te, const uint8 lowerdepth) { te->lowerdepth = lowerdepth; }
-inline void transSetUpperDepth(trans_entry_t * te, const uint8 upperdepth) { te->upperdepth = upperdepth; }
-inline void transSetLowerValue(trans_entry_t * te, const int16 lowervalue) { te->lowervalue = lowervalue; }
-inline void transSetUpperValue(trans_entry_t * te, const int16 uppervalue) { te->uppervalue = uppervalue; }
-
-inline int scoreFromTrans(int score, int ply) { return (score > MAXEVAL) ? (score-ply) : ((score < MAXEVAL) ? (score+ply) : score); }
-inline int scoreToTrans(int score, int ply) { return (score > MAXEVAL) ? (score+ply) : ((score < MAXEVAL) ? (score-ply) : score); }
+#include "typedefs.h"
+#include "data.h"
+#include "constants.h"
+#include "macros.h"
+#include "protos.h"
 
 basic_move_t transGetHashMove(const uint64 hash, const int thread) {
     int hashDepth = 0;
@@ -175,6 +152,18 @@ void transStore(const uint64 hash, basic_move_t move, const int depth, const int
     }
 }
 
+void transStore(HashType ht, const uint64 hash, basic_move_t move, const int depth, const int value, const int thread) {
+    switch (ht) {
+    case HTLower: transStore<HTLower>(hash, move, depth, value, thread); break;
+    case HTUpper: transStore<HTUpper>(hash, move, depth, value, thread); break; 
+    case HTCutUpper: transStore<HTCutUpper>(hash, move, depth, value, thread); break;
+    case HTAllLower: transStore<HTAllLower>(hash, move, depth, value, thread); break;
+    case HTExact: transStore<HTExact>(hash, move, depth, value, thread); break;
+    case HTNoMoves: transStore<HTNoMoves>(hash, move, depth, value, thread); break;
+    default: ASSERT(false && "Shouldn't gone here!"); break;
+    }
+}
+
 void transNewDate(int date, int thread) {
     TransTable(thread).date = (date+1)%DATESIZE;
     for (date = 0; date < DATESIZE; date++) {
@@ -214,12 +203,6 @@ void initTrans(uint64 target, int thread) {
     }
     transClear(thread);
 }
-
-inline uint32 pvGetHashLock (pvhash_entry_t * pve)      { return pve->hashlock; }
-inline basic_move_t pvGetMove (pvhash_entry_t * pve)    { return pve->move; }
-inline int pvGetAge (pvhash_entry_t * pve)              { return pve->age; }
-inline int pvGetDepth (pvhash_entry_t * pve)            { return pve->depth; }
-inline int pvGetValue (pvhash_entry_t * pve)            { return pve->score; }
 
 inline void pvSetHashLock (pvhash_entry_t * pve, uint32 hashlock)  { pve->hashlock = hashlock; }
 inline void pvSetMove (pvhash_entry_t * pve, basic_move_t move)    { pve->move = move; }

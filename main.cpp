@@ -6,6 +6,13 @@
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
+#include "typedefs.h"
+#include "data.h"
+#include "constants.h"
+#include "macros.h"
+#include "protos.h"
+
+
 #include <cstdlib>
 
 void quit(void) {
@@ -72,11 +79,11 @@ int main(void) {
     InitMateBoost();
 
     setPosition(&pos,STARTPOS);
-    needReplyReady = FALSE;
-    while (TRUE) {
+    needReplyReady = false;
+    while (true) {
         if (needReplyReady) {
             Print(3, "readyok\n");
-            needReplyReady = FALSE;
+            needReplyReady = false;
         }
         if (fgets(command, 8192, stdin) == NULL)
             strcpy(command, "quit\n");

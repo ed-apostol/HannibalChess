@@ -6,6 +6,12 @@
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
+#include "typedefs.h"
+#include "data.h"
+#include "constants.h"
+#include "macros.h"
+#include "protos.h"
+#include "search.h"
 
 void initSearchThread(int i) {
     Threads[i].nodes_since_poll = 0;
@@ -62,8 +68,7 @@ void idleLoop(const int thread_id, SplitPoint *master_sp) {
             if(Threads[thread_id].searching) {
                 ++Threads[thread_id].started;
                 SplitPoint* sp = Threads[thread_id].split_point;
-                if (sp->inRoot) searchNode<true, true, false>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, *sp->ssprev, thread_id, sp->nodeType);
-                else searchNode<false, true, false>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, *sp->ssprev, thread_id, sp->nodeType);
+                searchFromIdleLoop(sp, thread_id);
                 MutexLock(sp->updatelock);
                 sp->workersBitMask &= ~(1 << thread_id);
                 Threads[thread_id].searching = false;
@@ -145,7 +150,7 @@ void initThreads(void) {
         Threads[i].num_sp = 0;
         Threads[i].exit_flag = false;
         Threads[i].running = false;
-        Threads[i].idle_event = CreateEvent(0, FALSE, FALSE, 0);
+        Threads[i].idle_event = CreateEvent(0, false, false, 0);
         for (int j = 0; j < MaxNumSplitPointsPerThread; ++j) {
             MutexInit(Threads[i].sptable[j].movelistlock, NULL);
             MutexInit(Threads[i].sptable[j].updatelock, NULL);
