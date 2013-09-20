@@ -78,14 +78,15 @@ struct movelist_t {
     uint64 pinned;
     move_t list[MAXMOVES];
 };
-
+#ifndef TCEC
+#ifdef LEARNING_ON
 struct learn_t {
     learn_t() : learnFile(NULL) {}
     ~learn_t() { if (learnFile) free(learnFile); }
     FILE *learnFile;
     string name;
 };
-
+#endif
 struct book_t {
     BookType type;
     book_t() : bookFile(NULL) {}
@@ -94,7 +95,7 @@ struct book_t {
     int64 size;
     string name;
 };
-
+#endif
 /* the pawn hash table entry type */
 struct pawn_entry_t{
     uint32 hashlock;

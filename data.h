@@ -92,8 +92,9 @@ pvhashtable_t PVHashTable;
 
 
 #ifndef TCEC
-static book_t GhannibalBook;
 static book_t GpolyglotBook;
+#ifdef LEARNING
+static book_t GhannibalBook;
 static learn_t Glearn;
 mutex_t LearningLock[1];
 mutex_t BookLock[1];
@@ -104,6 +105,7 @@ static search_info_t* SearchInfoMap[MaxNumOfThreads];
 #else
 static search_info_t global_search_info;
 #define SearchInfo(thread) global_search_info
+#endif
 #endif
 static uci_option_t Guci_options;
 

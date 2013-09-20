@@ -34,7 +34,7 @@ void idleLoop(const int thread_id, SplitPoint *master_sp) {
     //Print(3, "%s: thread_id:%d\n", __FUNCTION__, thread_id);
     Threads[thread_id].running = true;
     while(!Threads[thread_id].exit_flag) {
-#ifndef TCEC
+#ifdef LEARNING_ON
         if (thread_id >= MaxNumOfThreads - Guci_options.learnThreads) { //lets grab something and learn from it
             continuation_t toLearn;
             if (get_continuation_to_learn(&Glearn, &toLearn)) {

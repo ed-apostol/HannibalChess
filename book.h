@@ -12,9 +12,32 @@
 using namespace std;
 
 #ifndef TCEC
-#define MOVE_BYTES 4
-
 const int Polyglot_Entry_Size = 16;
+
+void closeBook(book_t *book) { //TODO consider mutex ramifications
+	if (book->bookFile != NULL) fclose(book->bookFile);
+}
+void initBook(char* book_name, book_t *book, BookType type) {
+    if (type != POLYGLOT_BOOK) cout << "info string book type not supported" << endl;
+	else {
+		if (book->bookFile != NULL) fclose(book->bookFile);
+		book->bookFile = fopen(book_name, "rb");
+		book->name = string(book_name);
+
+		if (book->bookFile != NULL) {
+			book->type = type;
+			fseek(book->bookFile, 0, SEEK_END);
+			book->size = ftell(book->bookFile) / Polyglot_Entry_Size;
+		 }
+		if (DEBUG_BOOK) {
+			cout << "info string init polyglot book " << book_name << endl;
+		}
+	}
+}
+#endif
+
+#ifdef LEARNING_ON
+#define MOVE_BYTES 4
 const int Puck_Entry_Size = 12; //REDUCE with only 1 score (not white & black)
 struct PolyglotBookEntry {
     uint64 key;
@@ -285,10 +308,6 @@ void add_to_learn_begin(learn_t *learn, continuation_t *toLearn) {//we add it to
         fclose(tempFile);
 		MutexUnlock(LearningLock);
     }
-}
-
-void closeBook(book_t *book) { //TODO consider mutex ramifications
-	if (book->bookFile != NULL) fclose(book->bookFile);
 }
 
 void closeLearn(learn_t *learn) { //TODO consider mutex ramifications

@@ -455,7 +455,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 }
             }
         }
-        if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt)?6:8)) { // singular extension
+        if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt)?6:8)) { // singular extension (adding !inRoot)
             int newdepth = depth / 2;
             if (ss.hashMove != EMPTY && ss.hashDepth >= newdepth) { 
                 int targetScore = ss.evalvalue - EXPLORE_CUTOFF;
@@ -538,8 +538,8 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
 						partialReduction += goodMove ? (reduction+1)/2 : reduction; 
 					}
 				}
-//				else if ((MoveGenPhase[ss.mvlist_phase] == PH_BAD_CAPTURES || 
-//					(MoveGenPhase[ss.mvlist_phase] == PH_QUIET_MOVES && swap(pos, move->m) < 0)) && !inPvNode(nt)) fullReduction++;  //never happens when in check
+				else if ((MoveGenPhase[ss.mvlist_phase] == PH_BAD_CAPTURES || 
+					(MoveGenPhase[ss.mvlist_phase] == PH_QUIET_MOVES && swap(pos, move->m) < 0)) && !inRoot && !inPvNode(nt)) fullReduction++;  //never happens when in check
 				newdepth -= fullReduction;
 				int newdepthclone = newdepth - partialReduction;
                 makeMove(pos, &undo, move->m);
@@ -763,7 +763,7 @@ void timeManagement(int depth, int thread_id) {
     }
 }
 
-#ifndef TCEC
+#ifdef LEARNING_ON
 bool learn_position(position_t *pos,int thread_id, continuation_t *variation) {
     movelist_t mvlist;
     int bestScore = -INF;
@@ -782,7 +782,6 @@ bool learn_position(position_t *pos,int thread_id, continuation_t *variation) {
     SearchInfo(thread_id).node_limit = LEARN_NODES*(1+Guci_options.learnTime)+(LEARN_NODES*(Guci_options.learnThreads-1))/2; //add a little extra when using more threads
     SearchInfo(thread_id).time_is_limited = FALSE;
     SearchInfo(thread_id).depth_is_limited = FALSE;
-    SearchInfo(thread_id).easy = 0;
 
     SearchInfo(thread_id).pt.table = NULL;
     initPawnTab(&SearchInfo(thread_id).pt, LEARN_PAWN_HASH_SIZE);
@@ -923,7 +922,7 @@ void getBestMove(position_t *pos, int thread_id) {
             SearchInfo(thread_id).time_limit_max = SearchInfo(thread_id).time_limit_abs;
     }
 
-#ifndef TCEC
+#ifdef LEARNING_ON
     if (SearchInfo(thread_id).thinking_status == THINKING && opt->try_book && pos->sp <= opt->book_limit && !anyRep(pos) && SearchInfo(thread_id).outOfBook < 8) {
         if (DEBUG_BOOK) Print(3,"info string num moves %d\n",mvlist.size);
         book_t *book = opt->usehannibalbook ? &GhannibalBook : &GpolyglotBook;
