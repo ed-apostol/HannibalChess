@@ -26,7 +26,7 @@ int main(void) {
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stdin, NULL, _IONBF, 0);
 
-    logfile = fopen("logfile.txt", "a+");
+    logfile = fopen("logfile.txt", "w");
     errfile = fopen(ERROR_FILE, "a+");
     dumpfile = fopen("dumpfile.txt", "a+");
 
@@ -83,6 +83,7 @@ int main(void) {
 
         if (!memcmp(command, "ucinewgame", 10)) {
             origScore = 0;
+            SearchInfo(0).lastDepthSearched = MAXPLY;
             transClear(0);
             pvHashTableClear(&PVHashTable);
 #ifdef LEARNING_ON
