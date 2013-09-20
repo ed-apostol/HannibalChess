@@ -12,14 +12,6 @@ void quit(void) {
     fclose(logfile);
     fclose(errfile);
     fclose(dumpfile);
-
-#ifndef TCEC
-    closeBook(&GpolyglotBook);
-#ifdef LEARNING_ON
-    closeLearn(&Glearn);
-    closeBook(&GhannibalBook);
-#endif
-#endif
     stopThreads();
     exit(EXIT_SUCCESS);
 }

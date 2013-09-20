@@ -82,15 +82,16 @@ struct movelist_t {
 #ifdef LEARNING_ON
 struct learn_t {
     learn_t() : learnFile(NULL) {}
-    ~learn_t() { if (learnFile) free(learnFile); }
+    ~learn_t() { if (learnFile) fclose(learnFile); }
     FILE *learnFile;
     string name;
 };
 #endif
+
 struct book_t {
     BookType type;
     book_t() : bookFile(NULL) {}
-    ~book_t() { if (bookFile) free(bookFile); }
+    ~book_t() { if (bookFile) fclose(bookFile); }
     FILE *bookFile; 
     int64 size;
     string name;
