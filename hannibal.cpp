@@ -29,6 +29,7 @@ can knight catch pawns code from LL
 #define NUM_THREADS			    1
 #define MIN_SPLIT_DEPTH			4 // best is 4
 #define MAX_SPLIT_THREADS		4 // best is 4
+//#define TESTING_ON true
 //#define TCEC true
 //#define LEARNING_ON true
 

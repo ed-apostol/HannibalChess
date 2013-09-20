@@ -13,14 +13,17 @@ extern void initArr(void);
 
 /* utils.c */
 extern void Print(int vb, char *fmt, ...);
+
+#ifdef TESTING_ON
+extern void displayBoard(const position_t *pos, int x);
 extern void displayBit(uint64 a, int x);
 extern char *bit2Str(uint64 n);
 extern char *move2Str(basic_move_t m);
 extern char *sq2Str(int sq);
-extern void displayBoard(const position_t *pos, int x);
 extern int getPiece(const position_t *pos, uint32 sq);
 extern int getColor(const position_t *pos, uint32 sq);
 extern int DiffColor(const position_t *pos, uint32 sq,int color);
+#endif
 extern uint64 getTime(void);
 extern uint32 parseMove(movelist_t *mvlist, char *s);
 extern int biosKey(void);
