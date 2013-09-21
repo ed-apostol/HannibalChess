@@ -6,25 +6,17 @@
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
-#include <cstdlib>
 
 void quit(void) {
+    //    Print(2, "info string Hannibal is quitting.\n");
+    fclose(logfile);
+    fclose(errfile);
+    fclose(dumpfile);
     stopThreads();
-
-    if (logfile) fclose(logfile);
-    if (errfile) fclose(errfile);
-    if (dumpfile) fclose(dumpfile);
-
-#ifndef TCEC
-    closeBook(&GpolyglotBook);
-    closeLearn(&Glearn);
-    closeBook(&GhannibalBook);
-#endif 
+    exit(EXIT_SUCCESS);
 }
 
 int main(void) {
-    std::atexit(quit);
-
     position_t pos;
     char command[8192];
     char* ptr;
@@ -34,7 +26,7 @@ int main(void) {
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stdin, NULL, _IONBF, 0);
 
-    logfile = fopen("logfile.txt", "a+");
+    logfile = fopen("logfile.txt", "w");
     errfile = fopen(ERROR_FILE, "a+");
     dumpfile = fopen("dumpfile.txt", "a+");
 
@@ -43,17 +35,20 @@ int main(void) {
 
     //Print(1, "SplitPoint:%.2fkB\n", (float)sizeof(SplitPoint)/(float)1024);
     //Print(1, "position_t:%.2fkB\n", (float)sizeof(position_t)/(float)1024);
+
 #ifndef TCEC
+    GpolyglotBook.bookFile = NULL;
+    initBook(DEFAULT_POLYGLOT_BOOK, &GpolyglotBook, POLYGLOT_BOOK);
+    SearchInfo(0).outOfBook = 0;
+#endif
+#ifdef LEARNING
+    GhannibalBook.bookFile = NULL;
+    Glearn.learnFile = NULL;
     for (int i=0; i < MaxNumOfThreads;i++) {	//the default is every thread is a normal search
         SearchInfoMap[i] = &global_search_info;
     }
-    GhannibalBook.bookFile = NULL;
-    GpolyglotBook.bookFile = NULL;
-    Glearn.learnFile = NULL;
-    initBook(DEFAULT_POLYGLOT_BOOK, &GpolyglotBook, POLYGLOT_BOOK);
     initBook(DEFAULT_HANNIBAL_BOOK, &GhannibalBook, PUCK_BOOK);
     initLearn("HannibalLearn.lrn", &Glearn);
-    SearchInfo(0).outOfBook = 0;
 #endif
     initTrans(INIT_HASH,0);
     initPVHashTab(&PVHashTable, INIT_PVHASH);
@@ -88,8 +83,10 @@ int main(void) {
 
         if (!memcmp(command, "ucinewgame", 10)) {
             origScore = 0;
+            SearchInfo(0).lastDepthSearched = MAXPLY;
             transClear(0);
-#ifndef TCEC
+            pvHashTableClear(&PVHashTable);
+#ifdef LEARNING_ON
             SearchInfo(0).outOfBook = 0;
             movesSoFar.length = 0;
 #endif
@@ -129,7 +126,7 @@ int main(void) {
         else if (!memcmp(command, "optimize4",9)) optimize(&pos, 4);
         else if (!memcmp(command, "optimize8",9)) optimize(&pos, 8);
 #endif
-#ifndef TCEC
+#ifdef LEARNING_ON
         else if (!memcmp(command,"ConsumeBook",11)) {
             if (GpolyglotBook.bookFile != NULL && GpolyglotBook.type!=POLYGLOT_BOOK) { //CONSIDER UPDATING
                 book_t HannibalFormat;
@@ -151,5 +148,5 @@ int main(void) {
 #endif
         else Print(3, "info string Unknown UCI command.\n");
     }
-    exit(EXIT_SUCCESS);
+    quit();
 }

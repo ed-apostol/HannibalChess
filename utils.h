@@ -6,7 +6,7 @@
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
-#ifndef TCEC
+#ifdef TESTING_ON
 #include <sstream>
 using namespace std;
 #endif
@@ -133,7 +133,7 @@ char *sq2Str(int sq) {
         );
     return str;
 }
-#ifndef TCEC
+#ifdef TESTING_ON
 string sqToStr(int sq) {
     char c[3];
     c[0] = 'a'+sq%8;
@@ -181,7 +181,6 @@ string pv2Str(continuation_t *c) { //TODO promote use of this function throughou
     }
     return s;
 }
-#endif
 /* a utility to print the position */
 void displayBoard(const position_t *pos, int x) {
     static char pcstr[] = ".PNBRQK.pnbrqk";
@@ -212,6 +211,8 @@ void displayBoard(const position_t *pos, int x) {
     Print(x, "H = %s, ", bit2Str(pos->hash));
     Print(x, "PH = %s\n", bit2Str(pos->posStore.phash));
 }
+#endif
+
 
 /* a utility to get a certain piece from a position given a square */
 int getPiece(const position_t *pos, uint32 sq) {

@@ -13,14 +13,17 @@ extern void initArr(void);
 
 /* utils.c */
 extern void Print(int vb, char *fmt, ...);
+
+#ifdef TESTING_ON
+extern void displayBoard(const position_t *pos, int x);
 extern void displayBit(uint64 a, int x);
 extern char *bit2Str(uint64 n);
 extern char *move2Str(basic_move_t m);
 extern char *sq2Str(int sq);
-extern void displayBoard(const position_t *pos, int x);
 extern int getPiece(const position_t *pos, uint32 sq);
 extern int getColor(const position_t *pos, uint32 sq);
 extern int DiffColor(const position_t *pos, uint32 sq,int color);
+#endif
 extern uint64 getTime(void);
 extern uint32 parseMove(movelist_t *mvlist, char *s);
 extern int biosKey(void);
@@ -162,15 +165,20 @@ extern void uciStart(void);
 extern void uciSetPosition(position_t *pos, char *str);
 
 /*book.h*/
+#ifndef TCEC
+extern void initBook(char* book_name, book_t *book, BookType type);
+#ifdef LEARNING_ON
 extern int puck_book_score(position_t *p, book_t *book);
 extern basic_move_t getBookMove(position_t *p, book_t *book, movelist_t *ml, bool verbose, int randomness);
+
 extern void add_to_learn_begin(learn_t *learn, continuation_t *toLearn);
-extern void initBook(char* book_name, book_t *book, BookType type);
 extern int current_puck_book_score(position_t *p, book_t *book);
 extern bool get_continuation_to_learn(learn_t *learn, continuation_t *toLearn);
 extern void insert_score_to_puck_file(book_t *book, uint64 key, int score);
 extern bool learn_continuation(int thread_id, continuation_t *toLearn);
 extern void generateContinuation(continuation_t *variation);
+#endif
+#endif
 /* main.c */
 extern void quit(void);
 extern int main(void);

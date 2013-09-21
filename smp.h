@@ -34,7 +34,7 @@ void idleLoop(const int thread_id, SplitPoint *master_sp) {
     //Print(3, "%s: thread_id:%d\n", __FUNCTION__, thread_id);
     Threads[thread_id].running = true;
     while(!Threads[thread_id].exit_flag) {
-#ifndef TCEC
+#ifdef LEARNING_ON
         if (thread_id >= MaxNumOfThreads - Guci_options.learnThreads) { //lets grab something and learn from it
             continuation_t toLearn;
             if (get_continuation_to_learn(&Glearn, &toLearn)) {
@@ -52,8 +52,10 @@ void idleLoop(const int thread_id, SplitPoint *master_sp) {
         else 
 #endif
             while(master_sp == NULL && (SearchInfo(thread_id).thinking_status == STOPPED
-#ifndef TCEC
+#ifdef LEARNING_ON
                 && (thread_id >= Guci_options.threads && thread_id < MaxNumOfThreads - Guci_options.learnThreads)
+#else
+                || (thread_id >= Guci_options.threads)
 #endif
                 )) {
                     Print(2, "Thread sleeping: %d\n", thread_id);
@@ -137,10 +139,6 @@ DWORD WINAPI winInitThread(LPVOID n) {
 void initThreads(void) {
     int i;
     DWORD iID[MaxNumOfThreads];
-#ifndef TCEC
-    MutexInit(LearningLock,NULL);
-    MutexInit(BookLock,NULL);
-#endif
     for (i = 0; i < MaxNumOfThreads; ++i) {
         Threads[i].num_sp = 0;
         Threads[i].exit_flag = false;
@@ -176,10 +174,6 @@ void stopThreads(void) {
         }
     }
     MutexDestroy(SMPLock);
-#ifndef TCEC
-    MutexDestroy(LearningLock);
-    MutexDestroy(BookLock);
-#endif
 }
 
 bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, const int master) {

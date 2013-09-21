@@ -25,12 +25,13 @@ write situation specific transtores
 can knight catch pawns code from LL
 //68 at 3:29
 */
-#define OPT_EASY true
-#define VERSION            "20130914_nr_merged"
+#define VERSION            "1.4x64"
 #define NUM_THREADS			    1
 #define MIN_SPLIT_DEPTH			4 // best is 4
 #define MAX_SPLIT_THREADS		4 // best is 4
-#define TCEC true
+//#define TESTING_ON true
+//#define TCEC true
+//#define LEARNING_ON true
 
 //#define SPEED_TEST
 //#define NEW_EASY true
@@ -51,34 +52,39 @@ can knight catch pawns code from LL
 #define USE_PHASH TRUE
 #define MIN_TRANS_SIZE 16
 
+#ifdef LEARNING
+#define DEFAULT_LEARN_THREADS 0
+#define DEFAULT_LEARN_TIME 3
+#define LEARN_NODES 10000000
+#define SHOW_LEARNING false
+#define LOG_LEARNING true
+#define LEARN_PAWN_HASH_SIZE 32
+#define LEARN_EVAL_HASH_SIZE 32
+
+#define DEFAULT_BOOK_EXPLORE 2
+#define MAXLEARN_OUT_OF_BOOK 2
+#define DEFAULT_HANNIBAL_BOOK "HannibalBook.han"
+#define DEFAULT_HANNIBAL_LEARN "HannibalLearn.lrn"
+#define MAX_CONVERT 20
+#define HANNIBAL_BOOK_RANDOM (Guci_options.bookExplore*10)
+#define MIN_RANDOM -20
+#define DEFAULT_BOOK_SCORE INF
+#endif
+
 #ifdef TCEC
 #define INIT_EVAL 64
 #define INIT_PAWN 32
 #define INIT_HASH 64
-#define INIT_PVHASH 65536
+#define INIT_PVHASH 1
 
 #else
 #define INIT_EVAL 64
 #define INIT_PAWN 32
 #define INIT_HASH 128
+#define INIT_PVHASH 1
 
-#define DEFAULT_LEARN_THREADS 0
-#define DEFAULT_LEARN_TIME 3
-#define DEFAULT_BOOK_EXPLORE 2
-#define MAXLEARN_OUT_OF_BOOK 2
-#define LEARN_PAWN_HASH_SIZE 32
-#define LEARN_EVAL_HASH_SIZE 32
-#define DEFAULT_HANNIBAL_BOOK "HannibalBook.han"
-#define DEFAULT_HANNIBAL_LEARN "HannibalLearn.lrn"
 #define DEFAULT_POLYGLOT_BOOK "HannibalPoly.bin"
 #define MAX_BOOK 60 //could be MAXPLY
-#define MAX_CONVERT 20
-#define HANNIBAL_BOOK_RANDOM (Guci_options.bookExplore*10)
-#define MIN_RANDOM -20
-#define DEFAULT_BOOK_SCORE INF
-#define LEARN_NODES 10000000
-#define SHOW_LEARNING false
-#define LOG_LEARNING true
 #endif
 
 #define DEBUG_BOOK false

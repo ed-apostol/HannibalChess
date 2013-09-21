@@ -450,11 +450,13 @@ void makeMove(position_t *pos, pos_store_t *undo, basic_move_t m) {
         pos->hash ^= ZobPiece[xside][PAWN][epsq];
         pos->posStore.phash ^= ZobPiece[xside][PAWN][epsq];
         break;
+#ifdef TESTING_ON
     case KING:
         ASSERT(FALSE);
         Print(8, "Move capturing the King: %s\n", move2Str(m));
         displayBoard(pos, 8);
         break;
+#endif
     }
     pos->pieces[from] = EMPTY;
     pos->color[side] ^= (BitMask[from] | BitMask[to]);
