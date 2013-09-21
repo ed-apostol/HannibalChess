@@ -53,7 +53,7 @@ void idleLoop(const int thread_id, SplitPoint *master_sp) {
 #endif
             while(master_sp == NULL && (SearchInfo(thread_id).thinking_status == STOPPED
 #ifdef LEARNING_ON
-                && (thread_id >= Guci_options.threads && thread_id < MaxNumOfThreads - Guci_options.learnThreads)
+                || (thread_id >= Guci_options.threads && thread_id < MaxNumOfThreads - Guci_options.learnThreads)
 #else
                 || (thread_id >= Guci_options.threads)
 #endif
