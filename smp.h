@@ -55,7 +55,7 @@ void idleLoop(const int thread_id, SplitPoint *master_sp) {
 #ifdef LEARNING_ON
                 && (thread_id >= Guci_options.threads && thread_id < MaxNumOfThreads - Guci_options.learnThreads)
 #else
-                && (thread_id >= Guci_options.threads)
+                || (thread_id >= Guci_options.threads)
 #endif
                 )) {
                     Print(2, "Thread sleeping: %d\n", thread_id);
