@@ -213,7 +213,7 @@ void initTrans(uint64 target, int thread) {
 
 
 PvHashEntry* PvHashTable::pvHashProbe(const uint64 hash) {
-    PvHashEntry *entry = &table[(KEY(hash) & mask)];
+    PvHashEntry *entry = &m_pTable[(KEY(hash) & m_Mask)];
     for (int t = 0; t < PV_ASSOC; t++, entry++) {
         if (entry->pvGetHashLock() == LOCK(hash)) {
             return entry;
@@ -223,7 +223,7 @@ PvHashEntry* PvHashTable::pvHashProbe(const uint64 hash) {
 }
 
 PvHashEntry* PvHashTable::getPvEntryFromMove(const uint64 hash, basic_move_t move) {
-    PvHashEntry *entry = &table[(KEY(hash) & mask)];
+    PvHashEntry *entry = &m_pTable[(KEY(hash) & m_Mask)];
     for (int t = 0; t < PV_ASSOC; t++, entry++) {
         if (entry->pvGetHashLock() == LOCK(hash) && entry->pvGetMove() == move) {
             return entry;
@@ -236,7 +236,7 @@ void PvHashTable::pvStore(const uint64 hash, const basic_move_t move, const uint
     int worst = -INF, t, score;
     PvHashEntry *replace, *entry;
 
-    replace = entry = &table[(KEY(hash) & mask)];
+    replace = entry = &m_pTable[(KEY(hash) & m_Mask)];
     for (t = 0; t < PV_ASSOC; t++, entry++) {
         if (entry->pvGetHashLock() == LOCK(hash)) {
             entry->pvSetAge(TransTable(thread).date);
@@ -259,20 +259,16 @@ void PvHashTable::pvStore(const uint64 hash, const basic_move_t move, const uint
 }
 
 void PvHashTable::initPVHashTab(uint64 target) {
-    delete[] table;
-    size = target + PV_ASSOC - 1;
-    mask = target - 1;
-    table = new PvHashEntry[size];
+    delete[] m_pTable;
+    m_Size = target + PV_ASSOC - 1;
+    m_Mask = target - 1;
+    m_pTable = new PvHashEntry[m_Size];
 }
 
 
 
 
-void evalTableClear(EvalHashTable* et) {
-    memset(et->table, 0, (et->size * sizeof(EvalEntry)));
-}
-
-void initEvalTab(EvalHashTable* et, uint64 target) {
+void EvalHashTable::initEvalTab(uint64 target) {
     uint64 size=2;
     uint64 adjSize;
 
@@ -281,24 +277,13 @@ void initEvalTab(EvalHashTable* et, uint64 target) {
     while (size * sizeof(EvalEntry) <= target) size*=2;
     size /= 2;
     adjSize = size + EVAL_ASSOC-1;
-    if (et->table != NULL) {
-        if (adjSize==et->size) {
-            Print(3,"info string no change in eval table\n");
-            return; //don't reallocate if there is not change
-        }
-        free(et->table);
-    }
-    et->size = adjSize;
-    et->mask = size - 1;
-    et->table = (EvalEntry*) malloc(et->size * sizeof(EvalEntry));
-    evalTableClear(et);
+    delete [] m_Table;
+    size = adjSize;
+    m_Mask = size - 1;
+    m_Table = new EvalEntry[size];
 }
 
-void pawnTableClear(PawnHashTable* pt) {
-    memset(pt->table, 0, (pt->size * sizeof(PawnHashTable)));
-}
-
-void initPawnTab(PawnHashTable* pt, uint64 target) {
+void PawnHashTable::initPawnTab(uint64 target) {
     uint64 size=2;
     uint64 adjSize;
 
@@ -308,15 +293,8 @@ void initPawnTab(PawnHashTable* pt, uint64 target) {
     while (size * sizeof(PawnEntry) <= target) size*=2;
     size = size/2;
     adjSize = size + PAWN_ASSOC - 1;
-    if (pt->table != NULL) {
-        if (adjSize==pt->size) {
-            Print(3,"info string no change in pawn table\n");
-            return; //don't reallocate if there is not change
-        }
-        free(pt->table);
-    }
-    pt->size = adjSize;
-    pt->mask = size - 1;
-    pt->table = (PawnEntry*) malloc(pt->size * sizeof(PawnEntry));
-    pawnTableClear(pt);
+    delete [] m_Table;
+    size = adjSize;
+    m_Mask = size - 1;
+    m_Table = new PawnEntry[size];
 }

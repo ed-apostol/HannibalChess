@@ -82,11 +82,11 @@ void uciSetOption(char string[]) {
         initTrans(atoi(value),0);
     } else if (!memcmp(name,"Pawn Hash",9)) {
         Guci_options.pawnhashsize = atoi(value);
-        initPawnTab(&SearchInfo(0).pt, Guci_options.pawnhashsize);
+        SearchInfo(0).pt.initPawnTab(Guci_options.pawnhashsize);
 
     } else if (!memcmp(name,"Eval Cache",10)) {
         Guci_options.evalcachesize = atoi(value);
-        initEvalTab(&SearchInfo(0).et, Guci_options.evalcachesize);
+        SearchInfo(0).et.initEvalTab(Guci_options.evalcachesize);
     } else if (!memcmp(name,"Clear Hash",10)) {
         transClear(0);
     } 

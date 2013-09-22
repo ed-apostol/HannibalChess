@@ -70,8 +70,8 @@ int main(void) {
 #endif
     initTrans(INIT_HASH,0);
     PVHashTable.initPVHashTab(INIT_PVHASH);
-    initPawnTab(&SearchInfo(0).pt, INIT_PAWN);
-    initEvalTab(&SearchInfo(0).et, INIT_EVAL);
+    SearchInfo(0).pt.initPawnTab(INIT_PAWN);
+    SearchInfo(0).et.initEvalTab(INIT_EVAL);
 
     initOption(&Guci_options); // this should be initialized first
     initArr();
@@ -106,8 +106,8 @@ int main(void) {
             SearchInfo(0).outOfBook = 0;
             movesSoFar.length = 0;
 #endif
-            pawnTableClear(&SearchInfo(0).pt);
-            evalTableClear(&SearchInfo(0).et);
+            SearchInfo(0).pt.pawnTableClear();
+            SearchInfo(0).et.evalTableClear();
             SearchInfo(0).lastDepthSearched = MAXPLY;
         } else if (!memcmp(command, "uci", 3)) {
             uciStart();
