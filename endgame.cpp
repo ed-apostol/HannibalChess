@@ -13,6 +13,8 @@
 #include "macros.h"
 #include "utils.h"
 #include "bitutils.h"
+#include "trans.h"
+#include "eval.h"
 
 void RookvKnight(int attacker,const position_t *p, eval_info_t *ei,int *score, int *draw, int mover) {
     int nsq = GetOnlyBit(p->knights);

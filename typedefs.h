@@ -201,89 +201,6 @@ struct book_t {
     string name;
 };
 
-/* the pawn hash table entry type */
-struct pawn_entry_t{
-    uint32 hashlock;
-    uint64 passedbits;
-    int16 opn;
-    int16 end;
-    int8 shelter[2];
-    int8 kshelter[2];
-    int8 qshelter[2];
-    //	int8 halfPassed[2]; //currently unused
-};
-
-/* the pawn hash table type */
-struct pawntable_t{
-    pawntable_t() : table(NULL) {}
-    ~pawntable_t() { 
-        if (table) free(table); 
-    }
-    pawn_entry_t *table;
-    uint64 size;
-    uint64 mask;
-};
-
-struct eval_entry_t{
-    uint32 hashlock;
-    int16 value;
-    int16 pessimism;
-};
-
-struct evaltable_t{
-    evaltable_t() : table(NULL) {}
-    ~evaltable_t() { 
-        if (table) free(table); 
-    }
-    eval_entry_t *table;
-    uint64 size;
-    uint64 mask;
-};
-
-/* the trans table entry type */
-struct trans_entry_t{
-    uint32 hashlock;
-    uint32 move;
-    int16 uppervalue;
-    int16 lowervalue;
-    uint8 mask;
-    uint8 age;
-    uint8 upperdepth;
-    uint8 lowerdepth;
-};
-
-/* the trans table type */
-struct transtable_t{
-    transtable_t() : table(NULL) {}
-    ~transtable_t() { 
-        if (table) free(table); 
-    }
-    trans_entry_t *table;
-    uint64 size;
-    uint64 mask;
-    int32 date;
-    uint64 used;
-    int32 age[DATESIZE];
-};
-
-struct pvhash_entry_t {
-    uint32 hashlock;
-    basic_move_t move;
-    int16 score;
-    uint8 depth;
-    uint8 age;
-};
-
-struct pvhashtable_t {
-    pvhashtable_t() : table(NULL) {}
-    ~pvhashtable_t() { 
-        if (table) free(table); 
-    }
-    pvhash_entry_t *table;
-    uint64 size;
-    uint64 mask;
-};
-
 struct uci_option_t{
     int time_buffer;
     int contempt;
@@ -302,32 +219,6 @@ struct uci_option_t{
     int pawnhashsize;
 };
 
-/* the eval info structure */
-struct eval_info_t{
-    uint64 atkall[2];
-    uint64 atkpawns[2];
-    uint64 atkknights[2];
-    uint64 atkbishops[2];
-    uint64 kingatkbishops[2];
-    uint64 atkrooks[2];
-    uint64 kingatkrooks[2];
-    uint64 atkqueens[2];
-    uint64 atkkings[2];
-    uint64 kingzone[2];
-    uint64 kingadj[2];
-    uint64 potentialPawnAttack[2];
-    uint64 pawns[2];
-    int mid_score[2];
-    int end_score[2];
-    int draw[2];
-    int atkcntpcs[2];
-    int phase;
-    int MLindex[2];
-    int flags;
-    int queening;
-    uint8 endFlags[2];
-    pawn_entry_t *pawn_entry;
-};
 
 /* the undo structure */
 struct pos_store_t{
@@ -370,71 +261,6 @@ struct material_info_t{
     uint8 phase;
     uint8 draw[2];
     mflag_t flags[2];
-};
-
-/* the search data structure */
-struct search_info_t{
-    int thinking_status;
-#ifndef TCEC
-    int outOfBook;
-#endif
-    bool depth_is_limited;
-    int depth_limit;
-    bool moves_is_limited;
-    bool time_is_limited;
-
-    int64 time_limit_max;
-    int64 time_limit_abs;
-    bool node_is_limited;
-    int64 node_limit;
-
-    int64 start_time;
-    int64 last_time;
-    int64 alloc_time;
-
-    int last_last_value;
-    int last_value;
-    int best_value;
-
-    int mate_found;
-    int currmovenumber;
-    int change;
-    int research;
-    int iteration;
-
-    // DEBUG
-    uint64 cutnodes;
-    uint64 allnodes;
-    uint64 cutfail;
-    uint64 allfail;
-
-    int rbestscore1;
-    int rbestscore2;
-
-    int lastDepthSearched;
-
-    int legalmoves;
-    basic_move_t bestmove;
-    basic_move_t pondermove;
-
-    basic_move_t moves[MAXMOVES];
-    bool mvlist_initialized;
-    continuation_t rootPV;
-    int32 evalgains[1024];
-    int32 history[1024];
-    evaltable_t et;
-    pawntable_t pt;
-    transtable_t tt;
-};
-
-
-struct ThreadStack {
-    void Init () { 
-        killer1 = EMPTY;
-        killer2 = EMPTY;
-    }
-    basic_move_t killer1;
-    basic_move_t killer2;
 };
 
 struct SearchStack {
@@ -500,26 +326,9 @@ struct SplitPoint {
     mutex_t updatelock[1];
 };
 
-struct thread_t {
-    SplitPoint *split_point;
-    volatile bool stop;
-    volatile bool running;
-    volatile bool searching;
-    volatile bool exit_flag;
-    HANDLE idle_event;
-    uint64 nodes;
-    uint64 nodes_since_poll;
-    uint64 nodes_between_polls;
-    uint64 started; // DEBUG
-    uint64 ended; // DEBUG
-    int64 numsplits; // DEBUG
-    int num_sp;
-    ThreadStack ts[MAXPLY];
-    SplitPoint sptable[MaxNumSplitPointsPerThread];
-#ifdef SELF_TUNE2
-    bool playingGame;
-#endif
-};
+
+
+
 
 
 enum directions {SW,W,NW,N,NE,E,SE,S,NO_DIR };//{-9, -1, 7, 8, 9, 1, -7, -8};
@@ -607,4 +416,6 @@ inline uint isCastle(basic_move_t m) {return (((m)>>15)&1);}
 inline uint isPawn2Forward(basic_move_t m) {return (((m)>>16)&1);}
 inline uint isPromote(basic_move_t m) {return (((m)>>17)&1);}
 inline uint isEnPassant(basic_move_t m) {return  (((m)>>21)&1);}
+
+
 

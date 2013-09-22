@@ -1,6 +1,89 @@
 
 #pragma once
 
+/* the pawn hash table entry type */
+struct pawn_entry_t{
+    uint32 hashlock;
+    uint64 passedbits;
+    int16 opn;
+    int16 end;
+    int8 shelter[2];
+    int8 kshelter[2];
+    int8 qshelter[2];
+    //	int8 halfPassed[2]; //currently unused
+};
+
+struct eval_entry_t{
+    uint32 hashlock;
+    int16 value;
+    int16 pessimism;
+};
+
+/* the trans table entry type */
+struct trans_entry_t{
+    uint32 hashlock;
+    uint32 move;
+    int16 uppervalue;
+    int16 lowervalue;
+    uint8 mask;
+    uint8 age;
+    uint8 upperdepth;
+    uint8 lowerdepth;
+};
+
+/* the pawn hash table type */
+struct pawntable_t{
+    pawntable_t() : table(NULL) {}
+    ~pawntable_t() { 
+        if (table) free(table); 
+    }
+    pawn_entry_t *table;
+    uint64 size;
+    uint64 mask;
+};
+
+struct evaltable_t{
+    evaltable_t() : table(NULL) {}
+    ~evaltable_t() { 
+        if (table) free(table); 
+    }
+    eval_entry_t *table;
+    uint64 size;
+    uint64 mask;
+};
+
+/* the trans table type */
+struct transtable_t{
+    transtable_t() : table(NULL) {}
+    ~transtable_t() { 
+        if (table) free(table); 
+    }
+    trans_entry_t *table;
+    uint64 size;
+    uint64 mask;
+    int32 date;
+    uint64 used;
+    int32 age[DATESIZE];
+};
+
+struct pvhash_entry_t {
+    uint32 hashlock;
+    basic_move_t move;
+    int16 score;
+    uint8 depth;
+    uint8 age;
+};
+
+struct pvhashtable_t {
+    pvhashtable_t() : table(NULL) {}
+    ~pvhashtable_t() { 
+        if (table) free(table); 
+    }
+    pvhash_entry_t *table;
+    uint64 size;
+    uint64 mask;
+};
+
 extern transtable_t global_trans_table;
 //#define TransTable(thread) (SearchInfo(thread).tt)
 #define TransTable(thread) global_trans_table

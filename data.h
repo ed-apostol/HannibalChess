@@ -80,13 +80,8 @@ learn_t Glearn;
 mutex_t LearningLock[1];
 mutex_t BookLock[1];
 continuation_t movesSoFar;
-search_info_t global_search_info;
-search_info_t* SearchInfoMap[MaxNumOfThreads];
-#define SearchInfo(thread) (*SearchInfoMap[thread])
-#else
-extern search_info_t global_search_info;
-#define SearchInfo(thread) global_search_info
 #endif
+
 extern uci_option_t Guci_options;
 
 

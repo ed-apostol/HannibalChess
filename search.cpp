@@ -22,6 +22,14 @@
 #include "uci.h"
 #include "eval.h"
 
+#ifndef TCEC
+search_info_t global_search_info;
+search_info_t* SearchInfoMap[MaxNumOfThreads];
+#define SearchInfo(thread) (*SearchInfoMap[thread])
+#else
+search_info_t global_search_info;
+#endif
+
 #define MAX_HDEPTH 20
 #define NEW_HISTORY (10 + MAX_HDEPTH)
 
