@@ -165,7 +165,7 @@ extern void uciStart(void);
 extern void uciSetPosition(position_t *pos, char *str);
 
 /*book.h*/
-#ifndef TCEC
+#ifndef TESTING_ON
 extern void initBook(char* book_name, book_t *book, BookType type);
 #ifdef LEARNING_ON
 extern int puck_book_score(position_t *p, book_t *book);
@@ -177,6 +177,8 @@ extern bool get_continuation_to_learn(learn_t *learn, continuation_t *toLearn);
 extern void insert_score_to_puck_file(book_t *book, uint64 key, int score);
 extern bool learn_continuation(int thread_id, continuation_t *toLearn);
 extern void generateContinuation(continuation_t *variation);
+#else
+extern basic_move_t getBookMove(position_t *p, book_t *book/*, movelist_t *ml, bool verbose*/, int randomness);
 #endif
 #endif
 /* main.c */

@@ -35,8 +35,7 @@ int main(void) {
 
     //Print(1, "SplitPoint:%.2fkB\n", (float)sizeof(SplitPoint)/(float)1024);
     //Print(1, "position_t:%.2fkB\n", (float)sizeof(position_t)/(float)1024);
-
-#ifndef TCEC
+#ifndef TESTING_ON
     GpolyglotBook.bookFile = NULL;
     initBook(DEFAULT_POLYGLOT_BOOK, &GpolyglotBook, POLYGLOT_BOOK);
     SearchInfo(0).outOfBook = 0;
@@ -86,9 +85,12 @@ int main(void) {
             SearchInfo(0).lastDepthSearched = MAXPLY;
             transClear(0);
             pvHashTableClear(&PVHashTable);
-#ifdef LEARNING_ON
+#ifndef TRAINING_ON
             SearchInfo(0).outOfBook = 0;
+#else
+#ifdef LEARNING_ON
             movesSoFar.length = 0;
+#endif
 #endif
             pawnTableClear(&SearchInfo(0).pt);
             evalTableClear(&SearchInfo(0).et);

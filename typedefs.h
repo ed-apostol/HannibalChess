@@ -176,7 +176,7 @@ struct uci_option_t{
     int time_buffer;
     int contempt;
     int threads;
-#ifndef TCEC
+#ifndef TESTING_ON
     int try_book;
     int book_limit;
     int learnThreads;

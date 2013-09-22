@@ -921,9 +921,9 @@ void getBestMove(position_t *pos, int thread_id) {
         if (SearchInfo(thread_id).time_limit_max > SearchInfo(thread_id).time_limit_abs)
             SearchInfo(thread_id).time_limit_max = SearchInfo(thread_id).time_limit_abs;
     }
-
+#ifndef TESTING_ON
+    if (SearchInfo(thread_id).thinking_status == THINKING && Guci_options.try_book && pos->sp <= Guci_options.book_limit && !anyRep(pos) && SearchInfo(thread_id).outOfBook < 8) {
 #ifdef LEARNING_ON
-    if (SearchInfo(thread_id).thinking_status == THINKING && opt->try_book && pos->sp <= opt->book_limit && !anyRep(pos) && SearchInfo(thread_id).outOfBook < 8) {
         if (DEBUG_BOOK) Print(3,"info string num moves %d\n",mvlist.size);
         book_t *book = opt->usehannibalbook ? &GhannibalBook : &GpolyglotBook;
         if ((SearchInfo(thread_id).bestmove = getBookMove(pos,book,&mvlist,true,Guci_options.bookExplore*5)) != 0) {
@@ -932,6 +932,13 @@ void getBestMove(position_t *pos, int thread_id) {
         }
         if (opt->usehannibalbook /*&& Guci_options.try_book*/ && SearchInfo(thread_id).outOfBook < MAXLEARN_OUT_OF_BOOK && movesSoFar.length > 0) 
             add_to_learn_begin(&Glearn,&movesSoFar);
+#else
+        book_t *book = &GpolyglotBook;
+        if ((SearchInfo(thread_id).bestmove = getBookMove(pos,book/*,&mvlist,true*/,Guci_options.bookExplore*5)) != 0) {
+            SearchInfo(thread_id).outOfBook = 0;
+            return;
+        }
+#endif
     }
     if (SearchInfo(thread_id).thinking_status != PONDERING) SearchInfo(thread_id).outOfBook++;
 #endif

@@ -82,11 +82,13 @@ void uciSetOption(char string[]) {
     } 
 #ifndef TCEC
     else if (!memcmp(name,"OwnBook",7)) {
+        SearchInfo(thread_id).outOfBook = 0;
         if (value[0] == 't') Guci_options.try_book = TRUE;
         else Guci_options.try_book = FALSE;
     } else if (!memcmp(name,"Book File",9)) {
         initBook(value, &GpolyglotBook, POLYGLOT_BOOK);
     } else if (!memcmp(name,"Book Move Limit",15)) {
+        SearchInfo(thread_id).outOfBook = 0;
         Guci_options.book_limit = atoi(value);
     }
 #ifdef LEARNING_ON

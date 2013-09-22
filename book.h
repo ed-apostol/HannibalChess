@@ -11,58 +11,37 @@
 #include <string>
 using namespace std;
 
-#ifndef TCEC
+#ifndef TESTING_ON
+#define NO_MOVE 0
+const int MAX_MOVES = 256;
 const int Polyglot_Entry_Size = 16;
-
-void closeBook(book_t *book) { //TODO consider mutex ramifications
-	if (book->bookFile != NULL) fclose(book->bookFile);
-}
-void initBook(char* book_name, book_t *book, BookType type) {
-    if (type != POLYGLOT_BOOK) cout << "info string book type not supported" << endl;
-	else {
-		if (book->bookFile != NULL) fclose(book->bookFile);
-		book->bookFile = fopen(book_name, "rb");
-		book->name = string(book_name);
-
-		if (book->bookFile != NULL) {
-			book->type = type;
-			fseek(book->bookFile, 0, SEEK_END);
-			book->size = ftell(book->bookFile) / Polyglot_Entry_Size;
-		 }
-		if (DEBUG_BOOK) {
-			cout << "info string init polyglot book " << book_name << endl;
-		}
-	}
-}
-#endif
-
-#ifdef LEARNING_ON
-#define MOVE_BYTES 4
-const int Puck_Entry_Size = 12; //REDUCE with only 1 score (not white & black)
 struct PolyglotBookEntry {
     uint64 key;
     basic_move_t move;
     uint16 weight;
     uint32 learn;
 };
-
-struct PuckBookEntry {
-    uint64 key;
-    int score;
-};
-
-#define NO_MOVE 0
 const PolyglotBookEntry PolyglotBookEntryNone = {
     0, NO_MOVE, 0, 0
 };
-
-const PuckBookEntry PuckBookEntryNone = {
-    0, 0
-};
-
-const int MAX_MOVES = 256;
-
-
+void closeBook(book_t *book) { //TODO consider mutex ramifications
+	if (book->bookFile != NULL) fclose(book->bookFile);
+}
+int int_from_file(FILE *f, int l, uint64 *r) {
+    if (f==NULL) {
+        cout << "info string NULL file int_from_file\n";
+        return 0;
+    }
+    int i,c;
+    for (i=0;i<l;i++) {
+        c=fgetc(f);
+        if (c==EOF) {
+            return 1;
+        }
+        (*r)=((*r)<<8)+c;
+    }
+    return 0;
+}
 basic_move_t polyglot_move_to_move(uint16 move, position_t *p) {
     int from, to;
     from= ((move>>6)&077);
@@ -88,23 +67,64 @@ basic_move_t polyglot_move_to_move(uint16 move, position_t *p) {
     if (movedPiece == PAWN && to==p->posStore.epsq) return GenEnPassant(from, to);
     return GenBasicMove(from, to, movedPiece, capturedPiece);
 }
+int entry_from_polyglot_file(FILE *f, PolyglotBookEntry *entry, position_t *p) {
+    uint64 r;
+    if (int_from_file(f,8,&r)) return 1;
+    entry->key=r;
+    if (int_from_file(f,2,&r)) return 1;
+    entry->move=polyglot_move_to_move((uint16) r, p);
 
-int int_from_file(FILE *f, int l, uint64 *r) {
-    if (f==NULL) {
-        cout << "info string NULL file int_from_file\n";
-        return 0;
-    }
-    int i,c;
-    for (i=0;i<l;i++) {
-        c=fgetc(f);
-        if (c==EOF) {
-            return 1;
-        }
-        (*r)=((*r)<<8)+c;
-    }
+    if (int_from_file(f,2,&r)) return 1;
+    entry->weight=(uint16) r;
+    if (int_from_file(f,4,&r)) return 1;
+    entry->learn=(uint16) r;
     return 0;
 }
+long find_polyglot_key(FILE *f, uint64 key, PolyglotBookEntry *entry, position_t *p) {
+    long first, last, middle;
+    PolyglotBookEntry first_entry=PolyglotBookEntryNone, last_entry,middle_entry;
+    if (f==NULL) {
+        *entry=PolyglotBookEntryNone;
+        entry->key=key+1; //hack, should not be necessary if no entry can be 0
+		cout << "info string NULL file find_polyglot_key" << endl;
+        return -1;
+    }    
+    first=-1;
+    if (fseek(f,-Polyglot_Entry_Size,SEEK_END)) {
+        *entry=PolyglotBookEntryNone;
+        entry->key=key+1; //hack, should not be necessary if no entry can be 0
+        return -1;
+    }
+    last=ftell(f)/Polyglot_Entry_Size;
+    entry_from_polyglot_file(f,&last_entry, p);
+    while (true) {
+        if (last-first==1) {
+            *entry=last_entry;
+            return last;
+        }
+        middle=(first+last)/2;
+        fseek(f,Polyglot_Entry_Size*middle,SEEK_SET);
+        entry_from_polyglot_file(f,&middle_entry, p);
+        if (key<=middle_entry.key) {
+            last=middle;
+            last_entry=middle_entry;
+        } else {
+            first=middle;
+            first_entry=middle_entry;
+        }
+    }
+}
+#ifdef LEARNING_ON
+#define MOVE_BYTES 4
+const int Puck_Entry_Size = 12; //REDUCE with only 1 score (not white & black)
 
+struct PuckBookEntry {
+    uint64 key;
+    int score;
+};
+const PuckBookEntry PuckBookEntryNone = {
+    0, 0
+};
 void int_to_file(FILE *f, int l, uint64 r){
     if (f==NULL) {
         cout << "info string NULL file int_to_file\n";
@@ -121,21 +141,6 @@ void write_puck_entry(book_t *book, PuckBookEntry *entry){
     int_to_file(book->bookFile,8,entry->key);
     int_to_file(book->bookFile,4,entry->score);
 }
-
-int entry_from_polyglot_file(FILE *f, PolyglotBookEntry *entry, position_t *p) {
-    uint64 r;
-    if (int_from_file(f,8,&r)) return 1;
-    entry->key=r;
-    if (int_from_file(f,2,&r)) return 1;
-    entry->move=polyglot_move_to_move((uint16) r, p);
-
-    if (int_from_file(f,2,&r)) return 1;
-    entry->weight=(uint16) r;
-    if (int_from_file(f,4,&r)) return 1;
-    entry->learn=(uint16) r;
-    return 0;
-}
-
 int entry_from_puck_file(FILE *f, PuckBookEntry *entry) {
     uint64 r;
     if (int_from_file(f,8,&r)) return 1;
@@ -233,41 +238,6 @@ void insert_score_to_puck_file(book_t *book, uint64 key, int score){
     }
 	MutexUnlock(BookLock);
 
-}
-
-long find_polyglot_key(FILE *f, uint64 key, PolyglotBookEntry *entry, position_t *p) {
-    long first, last, middle;
-    PolyglotBookEntry first_entry=PolyglotBookEntryNone, last_entry,middle_entry;
-    if (f==NULL) {
-        *entry=PolyglotBookEntryNone;
-        entry->key=key+1; //hack, should not be necessary if no entry can be 0
-		cout << "info string NULL file find_polyglot_key" << endl;
-        return -1;
-    }    
-    first=-1;
-    if (fseek(f,-Polyglot_Entry_Size,SEEK_END)) {
-        *entry=PolyglotBookEntryNone;
-        entry->key=key+1; //hack, should not be necessary if no entry can be 0
-        return -1;
-    }
-    last=ftell(f)/Polyglot_Entry_Size;
-    entry_from_polyglot_file(f,&last_entry, p);
-    while (true) {
-        if (last-first==1) {
-            *entry=last_entry;
-            return last;
-        }
-        middle=(first+last)/2;
-        fseek(f,Polyglot_Entry_Size*middle,SEEK_SET);
-        entry_from_polyglot_file(f,&middle_entry, p);
-        if (key<=middle_entry.key) {
-            last=middle;
-            last_entry=middle_entry;
-        } else {
-            first=middle;
-            first_entry=middle_entry;
-        }
-    }
 }
 
 //TODO consider appending this, and having things get fromm back (and learned polyglot to reverse order of thing
@@ -806,7 +776,8 @@ basic_move_t getBookMove(position_t *p, book_t *book, movelist_t *ml, bool verbo
 }
 
 void initBook(char* book_name, book_t *book, BookType type) {
-	if (type != POLYGLOT_BOOK && type != PUCK_BOOK) cout << "info string book type not supported" << endl;
+    SearchInfo(thread_id).outOfBook = 0;
+    if (type != POLYGLOT_BOOK && type != PUCK_BOOK) cout << "info string book type not supported" << endl;
 	else {
 		if (book->bookFile != NULL) fclose(book->bookFile);
 		book->bookFile = fopen(book_name, "rb");
@@ -840,4 +811,75 @@ void initLearn(string learn_name, learn_t *learn) {
         if (DEBUG_LEARN) cout << "info string opened learn file " << learn_name << endl;        
     }
 }
+#else
+void initBook(char* book_name, book_t *book, BookType type) {
+    SearchInfo(thread_id).outOfBook = 0;
+    if (type != POLYGLOT_BOOK) cout << "info string book type not supported" << endl;
+	else {
+		if (book->bookFile != NULL) fclose(book->bookFile);
+		book->bookFile = fopen(book_name, "rb");
+		book->name = string(book_name);
+
+		if (book->bookFile != NULL) {
+			book->type = type;
+			fseek(book->bookFile, 0, SEEK_END);
+			book->size = ftell(book->bookFile) / Polyglot_Entry_Size;
+		 }
+		if (DEBUG_BOOK) {
+			cout << "info string init polyglot book " << book_name << endl;
+		}
+	}
+}
+basic_move_t getBookMove(position_t *p, book_t *book/*, movelist_t *ml, bool verbose*/, int randomness) {
+    uint64 key; 
+    int numMoves=0;
+    uint64 totalWeight=0;
+    long offset;
+    FILE *f = book->bookFile;
+
+ 	if (f == NULL || book->size == 0) {
+//		if (DEBUG_BOOK && verbose) cout << "info string no book\n";
+		return NO_MOVE;
+	}
+	PolyglotBookEntry entry;
+    PolyglotBookEntry entries[MAX_MOVES];
+	key = p->hash;
+//    if (DEBUG_BOOK && verbose) cout << "info string looking in polyglot book\n";
+    offset=find_polyglot_key(f,key,&entry,p);
+    if (entry.key!=key) {
+		return NO_MOVE;
+    }
+//    if (DEBUG_BOOK && verbose) cout << "info string key is there\n";
+    entries[numMoves]=entry;
+    totalWeight += entry.weight;
+    numMoves++;
+    fseek(f,Polyglot_Entry_Size*(offset+1),SEEK_SET);
+    while (true) {
+        if (numMoves>=MAX_MOVES-1){
+//            if (DEBUG_BOOK && verbose) cout << "info string too many book moves?\n";
+            break;
+        }
+        if (entry_from_polyglot_file(f,&entry,p)) break;
+        if (entry.key!=key) break;
+        entries[numMoves]=entry;
+        totalWeight += entry.weight;
+        numMoves++;
+    }
+    if (totalWeight <= 0) {
+//        if (verbose) cout << "info string book weights are 0\n";
+        return  NO_MOVE;
+    }
+    // chose here the move from the array and verify if it exists in the movelist
+    uint64 bookRandom = rand() % totalWeight; //TODO do a real randomization
+    uint64 bookIndex = 0;
+//    if (DEBUG_BOOK && verbose) cout << "info string random " << bookRandom << " out of " << totalWeight << endl;
+    for (int i=0;i<numMoves;i++) {
+        bookIndex += entries[i].weight;
+        if (bookIndex > bookRandom) {
+			return entries[i].move;
+        }
+    }
+    return NO_MOVE;
+}
+#endif
 #endif
