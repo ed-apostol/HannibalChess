@@ -26,7 +26,7 @@ struct eval_info_t{
     int flags;
     int queening;
     uint8 endFlags[2];
-    pawn_entry_t *pawn_entry;
+    PawnEntry *pawn_entry;
 };
 
 /* eval.c */

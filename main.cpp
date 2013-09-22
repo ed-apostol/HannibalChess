@@ -69,7 +69,7 @@ int main(void) {
     SearchInfo(0).outOfBook = 0;
 #endif
     initTrans(INIT_HASH,0);
-    initPVHashTab(&PVHashTable, INIT_PVHASH);
+    PVHashTable.initPVHashTab(INIT_PVHASH);
     initPawnTab(&SearchInfo(0).pt, INIT_PAWN);
     initEvalTab(&SearchInfo(0).et, INIT_EVAL);
 

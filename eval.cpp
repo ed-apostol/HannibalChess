@@ -1099,7 +1099,7 @@ int eval(const position_t *pos, int thread_id, int *pessimism) {
     material_info_t *mat;
     int open, end, score;
     int winning;
-    eval_entry_t *entry;
+    EvalEntry *entry;
     uint64 whitePassed, blackPassed;
     int upside[2] = {0,0}; //this should never be negative
 

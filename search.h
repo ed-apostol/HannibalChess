@@ -63,9 +63,9 @@ struct search_info_t{
     continuation_t rootPV;
     int32 evalgains[1024];
     int32 history[1024];
-    evaltable_t et;
-    pawntable_t pt;
-    transtable_t tt;
+    EvalHashTable et;
+    PawnHashTable pt;
+    TranspositionTable tt;
 };
 
 #ifndef TCEC

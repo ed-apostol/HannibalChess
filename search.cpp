@@ -251,7 +251,7 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, SearchStack& 
     if (Threads[thread_id].stop) return 0;
 
     int t = 0;
-    for (trans_entry_t* entry = TransTable(thread_id).table + (KEY(pos->hash) & TransTable(thread_id).mask); t < HASH_ASSOC; t++, entry++) {
+    for (TransEntry* entry = TransTable(thread_id).table + (KEY(pos->hash) & TransTable(thread_id).mask); t < HASH_ASSOC; t++, entry++) {
         if (transHashLock(entry) == LOCK(pos->hash)) {
             transSetAge(entry, TransTable(thread).date);
             if (!inPv) { // TODO: re-use values from here to evalvalue?
@@ -391,7 +391,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
         beta = MIN(INF - pos->ply - 1, beta);
         if (alpha >= beta) return alpha;
 
-        for (trans_entry_t * entry = TransTable(thread_id).table + (KEY(pos->hash) & TransTable(thread_id).mask); t < HASH_ASSOC; t++, entry++) {
+        for (TransEntry * entry = TransTable(thread_id).table + (KEY(pos->hash) & TransTable(thread_id).mask); t < HASH_ASSOC; t++, entry++) {
             if (transHashLock(entry) == LOCK(pos->hash)) {
                 transSetAge(entry, TransTable(thread).date);
                 if (transMask(entry) & MNoMoves) {
@@ -686,15 +686,15 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
 }
 
 void extractPvMovesFromHash(position_t *pos, continuation_t* pv, basic_move_t move, bool execMove) {
-    pvhash_entry_t *entry;
+    PvHashEntry *entry;
     pos_store_t undo[MAXPLY];
     int ply = 0;
     basic_move_t hashMove;
     pv->length = 0;
     pv->moves[pv->length++] = move;
     if (execMove) makeMove(pos, &(undo[ply++]), move);
-    while ((entry = pvHashProbe(pos->hash)) != NULL) {
-        hashMove = pvGetMove(entry);
+    while ((entry = PVHashTable.pvHashProbe(pos->hash)) != NULL) {
+        hashMove = entry->pvGetMove();
         if (hashMove == EMPTY) break;
         if (!genMoveIfLegal(pos, hashMove, pinnedPieces(pos, pos->side))) break;
         pv->moves[pv->length++] = hashMove;
@@ -713,9 +713,9 @@ void repopulateHash(position_t *pos, continuation_t *rootPV) {
     for (moveOn=0; moveOn+1 <= rootPV->length; moveOn++) {
         basic_move_t move = rootPV->moves[moveOn];
         if (!move) break;
-        pvhash_entry_t* entry = getPvEntryFromMove(pos->hash, move);
+        PvHashEntry* entry = PVHashTable.getPvEntryFromMove(pos->hash, move);
         if (NULL == entry) break;
-        transStore(HTExact, pos->hash, pvGetMove(entry), pvGetDepth(entry), pvGetValue(entry), 0);
+        transStore(HTExact, pos->hash, entry->pvGetMove(), entry->pvGetDepth(), entry->pvGetScore(), 0);
         makeMove(pos, &(undo[moveOn]), move);
     }
     for (moveOn = moveOn-1; moveOn >= 0; moveOn--) {
@@ -801,25 +801,25 @@ void getBestMove(position_t *pos, int thread_id) {
     transNewDate(TransTable(thread_id).date, thread_id);
 
     do {
-        pvhash_entry_t *entry = pvHashProbe(pos->hash);
+        PvHashEntry *entry = PVHashTable.pvHashProbe(pos->hash);
         if (NULL == entry) break;
         if (SearchInfo(thread_id).thinking_status == THINKING
-            && entry->depth >= SearchInfo(thread_id).lastDepthSearched - 2 
+            && entry->pvGetDepth() >= SearchInfo(thread_id).lastDepthSearched - 2 
             && SearchInfo(thread_id).rootPV.moves[1] == pos->posStore.lastmove
-            && SearchInfo(thread_id).rootPV.moves[2] == entry->move
-            && ((moveCapture(pos->posStore.lastmove) && (moveTo(pos->posStore.lastmove) == moveTo(entry->move))) 
-            || (PcValSEE[moveCapture(entry->move)] > PcValSEE[movePiece(entry->move)]))) {
-                SearchInfo(thread_id).bestmove =  entry->move;
-                SearchInfo(thread_id).best_value = entry->score;
-                extractPvMovesFromHash(pos, &SearchInfo(thread_id).rootPV, entry->move, true);
+            && SearchInfo(thread_id).rootPV.moves[2] == entry->pvGetMove()
+            && ((moveCapture(pos->posStore.lastmove) && (moveTo(pos->posStore.lastmove) == moveTo(entry->pvGetMove()))) 
+            || (PcValSEE[moveCapture(entry->pvGetMove())] > PcValSEE[movePiece(entry->pvGetMove())]))) {
+                SearchInfo(thread_id).bestmove =  entry->pvGetMove();
+                SearchInfo(thread_id).best_value = entry->pvGetScore();
+                extractPvMovesFromHash(pos, &SearchInfo(thread_id).rootPV, entry->pvGetMove(), true);
                 if (SearchInfo(thread_id).rootPV.length > 1) SearchInfo(thread_id).pondermove = SearchInfo(thread_id).rootPV.moves[1];
                 else SearchInfo(thread_id).pondermove = 0;
-                displayPV(pos, &SearchInfo(thread_id).rootPV, entry->depth, -INF, INF, SearchInfo(thread_id).best_value);
+                displayPV(pos, &SearchInfo(thread_id).rootPV, entry->pvGetDepth(), -INF, INF, SearchInfo(thread_id).best_value);
                 SearchInfo(thread_id).thinking_status = STOPPED;
                 setAllThreadsToStop(thread_id);
                 return;
         }
-        ss.hashMove = entry->move;
+        ss.hashMove = entry->pvGetMove();
     } while (false);
 
     // extend time when there is no hashmove from hashtable, this is useful when just out of the book
