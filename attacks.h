@@ -185,7 +185,6 @@ uint32 moveIsLegal(const position_t *pos, uint32 move, uint64 pinned, uint32 inc
             (!(rookAttacksBB(ksq, b) & (pos->queens | pos->rooks) & pos->color[them]) &&
             !(bishopAttacksBB(ksq, b) & (pos->queens | pos->bishops) & pos->color[them]));
     }
-    //    if (from == ksq) return !(isAtt(pos, them, BitMask[to]));
     if (from==ksq) return !(isSqAtt(pos,pos->occupied^(pos->kings&pos->color[us]),to,them)); 
     if (!(pinned & BitMask[from])) return TRUE;
     if (DirFromTo[from][ksq] == DirFromTo[to][ksq]) return TRUE;
@@ -301,7 +300,6 @@ behind the piece attacker */
 uint64 behindFigure(const position_t *pos,uint32 from, int dir) {
 
     ASSERT(squareIsOk(from));
-    //{SW,W,NW,N,NE,E,SE,S,NO_DIR };//{-9, -1, 7, 8, 9, 1, -7, -8};
     switch (dir) {
     case SW: return bishopAttacksBB(from, pos->occupied) & (pos->queens|pos->bishops) & DirBitmap[SW][from];
     case W: return rookAttacksBB(from, pos->occupied) & (pos->queens|pos->rooks) & DirBitmap[W][from];

@@ -17,13 +17,16 @@ void initOption(uci_option_t* opt) {
     opt->max_split_threads = MAX_SPLIT_THREADS;
     opt->evalcachesize = INIT_EVAL;
     opt->pawnhashsize = INIT_PAWN;
+#ifdef LEARNING_ON
+    opt->learnThreads = DEFAULT_LEARN_THREADS;
+    opt->learnTime = DEFAULT_LEARN_TIME;
+    opt->bookExplore = DEFAULT_BOOK_EXPLORE;
+    opt->usehannibalbook = TRUE;//TODO fix
+#endif
 #ifndef TCEC
     opt->try_book = FALSE;
     opt->book_limit = 128;
-    opt->learnThreads = DEFAULT_LEARN_THREADS;
-    opt->usehannibalbook = TRUE;//TODO fix
-    opt->learnTime = DEFAULT_LEARN_TIME;
-    opt->bookExplore = DEFAULT_BOOK_EXPLORE;
+
 #endif
 }
 
@@ -38,17 +41,18 @@ void uciStart(void) {
 #ifndef TCEC
     Print(3, "option name OwnBook type check default false\n");
     Print(3, "option name Book File type string default %s\n",DEFAULT_POLYGLOT_BOOK);
+#ifdef LEARNING_ON
     Print(3, "option name HannibalBook File type string default %s\n",DEFAULT_HANNIBAL_BOOK);
     Print(3, "option name UseHannibalBook type check default true\n"); //TODO fix
     Print(3, "option name LearnTime type spin min 0 max 20 default %d\n",DEFAULT_LEARN_TIME);
     Print(3, "option name BookExplore type spin min 0 max 4 default %d\n",DEFAULT_BOOK_EXPLORE);
+    Print(3, "option name LearnThreads type spin min 0 max %d default %d\n", MaxNumOfThreads, DEFAULT_LEARN_THREADS);
+#endif
     Print(3, "option name Book Move Limit type spin min 0 max 256 default 128\n");
 #endif
     Print(3, "option name Time Buffer type spin min 0 max 10000 default 1000\n");
     Print(3, "option name Threads type spin min 1 max %d default %d\n", MaxNumOfThreads, NUM_THREADS);
-#ifndef TCEC
-    Print(3, "option name LearnThreads type spin min 0 max %d default %d\n", MaxNumOfThreads, DEFAULT_LEARN_THREADS);
-#endif
+
     Print(3, "option name Min Split Depth type spin min 1 max 16 default %d\n", MIN_SPLIT_DEPTH);
     Print(3, "option name Max Split Threads type spin min 2 max 8 default %d\n", MAX_SPLIT_THREADS);
     Print(3, "option name Contempt type spin min -100 max 100 default 0\n");
@@ -78,14 +82,18 @@ void uciSetOption(char string[]) {
     } 
 #ifndef TCEC
     else if (!memcmp(name,"OwnBook",7)) {
+        SearchInfo(thread_id).outOfBook = 0;
         if (value[0] == 't') Guci_options.try_book = TRUE;
         else Guci_options.try_book = FALSE;
     } else if (!memcmp(name,"Book File",9)) {
         initBook(value, &GpolyglotBook, POLYGLOT_BOOK);
-    } else if (!memcmp(name,"HannibalBook File",17)) {
-        initBook(value, &GhannibalBook, PUCK_BOOK);
     } else if (!memcmp(name,"Book Move Limit",15)) {
+        SearchInfo(thread_id).outOfBook = 0;
         Guci_options.book_limit = atoi(value);
+    }
+#ifdef LEARNING_ON
+    else if (!memcmp(name,"HannibalBook File",17)) {
+        initBook(value, &GhannibalBook, PUCK_BOOK);
     }
     else if (!memcmp(name,"LearnTime",9)) {
         Guci_options.learnTime = atoi(value);
@@ -117,6 +125,7 @@ void uciSetOption(char string[]) {
         }
     }
 #endif
+#endif
     else if (!memcmp(name,"Time Buffer",11)) {
         Guci_options.time_buffer = atoi(value);
     } else if (!memcmp(name,"Contempt",8)) {
@@ -124,7 +133,7 @@ void uciSetOption(char string[]) {
     } else if (!memcmp(name,"Threads",7)) {
         int oldValue = Guci_options.threads;
         int newValue  = atoi(value);
-#ifndef TCEC
+#ifdef LEARNING_ON
         if (Guci_options.threads + Guci_options.learnThreads > MaxNumOfThreads) newValue = MaxNumOfThreads - Guci_options.learnThreads;
 #endif
         if (newValue > oldValue) {
@@ -334,7 +343,7 @@ void uciSetPosition(position_t *pos, char *str) {
     pos_store_t undo;
     bool startPos = false;
 
-#ifndef TCEC
+#ifdef LEARNING_ON
     movesSoFar.length = 0; //I don't trust this position to be from book
 #endif
     ASSERT(pos != NULL);
@@ -366,7 +375,7 @@ void uciSetPosition(position_t *pos, char *str) {
                 Print(3, "info string Illegal move: %s\n", movestr);
                 return;
             } else makeMove(pos, &undo, move);
-#ifndef TCEC
+#ifdef LEARNING_ON
             if (startPos && movesSoFar.length < MAXPLY-1) {
                 movesSoFar.moves[movesSoFar.length] = move;
                 movesSoFar.length++;
