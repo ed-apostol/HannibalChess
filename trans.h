@@ -158,14 +158,29 @@ public:
     enum {
         DATESIZE = 16
     };
-    void transNewDate(int date);
-    template<HashType ht>
-    void transStore(uint64 hash, basic_move_t move, int depth, int value);
-    basic_move_t TranspositionTable::transGetHashMove(uint64 hash);
+    void transNewDate (int date);
+    template<HashType ht> void transStore (uint64 hash, basic_move_t move, int depth, int value) {
+        switch (ht) {
+        case HTLower: transStoreLower(hash, move, depth, value); break;
+        case HTUpper: transStoreUpper(hash, move, depth, value); break;
+        case HTCutUpper: transStoreCutUpper(hash, move, depth, value); break; 
+        case HTAllLower: transStoreAllLower(hash, move, depth, value); break;
+        case HTExact: transStoreExact(hash, move, depth, value); break;
+        case HTNoMoves: transStoreNoMoves(hash, move, depth, value); break;
+        default: Print(1, "Can't be here!\n"); break;
+        }
+    }
+    void transStoreLower (uint64 hash, basic_move_t move, int depth, int value);
+    void transStoreUpper (uint64 hash, basic_move_t move, int depth, int value);
+    void transStoreCutUpper (uint64 hash, basic_move_t move, int depth, int value);
+    void transStoreAllLower (uint64 hash, basic_move_t move, int depth, int value);
+    void transStoreExact (uint64 hash, basic_move_t move, int depth, int value);
+    void transStoreNoMoves (uint64 hash, basic_move_t move, int depth, int value);
 
-    int32 Date() const { return m_Date; }
-    uint64 Used() const { return m_Used; }
-    int32 Age(const int Idx) const { return m_Age[Idx]; }
+    basic_move_t TranspositionTable::transGetHashMove(uint64 hash);
+    int32 Date () const { return m_Date; }
+    uint64 Used () const { return m_Used; }
+    int32 Age (const int Idx) const { return m_Age[Idx]; }
 private:
     int32 m_Date;
     uint64 m_Used;
@@ -175,131 +190,20 @@ private:
 inline int scoreFromTrans(int score, int ply) { return (score > MAXEVAL) ? (score-ply) : ((score < MAXEVAL) ? (score+ply) : score); }
 inline int scoreToTrans(int score, int ply) { return (score > MAXEVAL) ? (score+ply) : ((score < MAXEVAL) ? (score-ply) : score); }
 
-
 extern TranspositionTable TransTable;
 extern PvHashTable PVHashTable;
 
 
-template<HashType ht>
-void TranspositionTable::transStore(const uint64 hash, basic_move_t move, const int depth, const int value) {
-    int worst = -INF, t, score;
-    TransEntry *replace, *entry;
 
-    ASSERT(valueIsOk(value));
 
-    replace = entry = Entry(hash);
 
-    for (t = 0; t < HASH_ASSOC; t++, entry++) {
-        if (entry->transHashLock() == LOCK(hash)) {
-            if (ht == HTLower && depth >= entry->transLowerDepth() && !(entry->transMask() & MExact)) {
-                entry->transSetAge(m_Date);
-                entry->transSetMove(move);
-                entry->transSetLowerDepth(depth);
-                entry->transSetLowerValue(value);
-                entry->transSetMask(MLower);
-                entry->transRemMask(MAllLower);
-                return;
-            }
-            if (ht == HTAllLower && depth >= entry->transLowerDepth() && ((entry->transLowerDepth() == 0) || (entry->transMask() & MAllLower))) {
-                entry->transSetAge(m_Date);
-                entry->transSetMove(move);
-                entry->transSetLowerDepth(depth);
-                entry->transSetLowerValue(value);
-                entry->transSetMask(MLower|MAllLower);
-                return;
-            }
-            if (ht == HTUpper && depth >= entry->transUpperDepth() && !(entry->transMask() & MExact)) {
-                entry->transSetAge(m_Date);
-                entry->transSetUpperDepth(depth);
-                entry->transSetUpperValue(value);
-                entry->transSetMask(MUpper);
-                entry->transRemMask(MCutUpper);
-                return;
-            }
-            if (ht == HTCutUpper && depth >= entry->transUpperDepth() && ((entry->transUpperDepth() == 0) || (entry->transMask() & MCutUpper))) {
-                entry->transSetAge(m_Date);
-                entry->transSetUpperDepth(depth);
-                entry->transSetUpperValue(value);
-                entry->transSetMask(MUpper|MCutUpper);
-                return;
-            }
-            if (ht == HTExact && depth >= MAX(entry->transUpperDepth(), entry->transLowerDepth())) {
-                PVHashTable.pvStore(hash, move, depth, value);
-                entry->transSetMove(move);
-                entry->transSetAge(m_Date);
-                entry->transSetUpperDepth(depth);
-                entry->transSetUpperValue(value);
-                entry->transSetLowerDepth(depth);
-                entry->transSetLowerValue(value);
-                entry->transReplaceMask(MExact);
 
-                for (int x = t + 1; x < HASH_ASSOC; x++) {
-                    entry++;
-                    if (entry->transHashLock() == LOCK(hash)) {
-                        memset(entry, 0, sizeof(TransEntry));
-                        entry->transSetAge((m_Date+1) % DATESIZE);
-                    }
-                }
-                return;
-            }
-            m_Used++;
-        }
-        score = (m_Age[entry->transAge()] * 256) - MAX(entry->transUpperDepth(), entry->transLowerDepth());
-        if (score > worst) {
-            worst = score;
-            replace = entry;
-        }
-    }
 
-    replace->transSetHashLock(LOCK(hash));
-    replace->transSetAge(m_Date);
-    if (ht == HTLower) {
-        replace->transSetMove(move);
-        replace->transSetUpperDepth(0);
-        replace->transSetUpperValue(0);
-        replace->transSetLowerDepth(depth);
-        replace->transSetLowerValue(value);
-        replace->transReplaceMask(MLower);
-    }
-    if (ht == HTAllLower) {
-        replace->transSetMove(move);
-        replace->transSetUpperDepth(0);
-        replace->transSetUpperValue(0);
-        replace->transSetLowerDepth(depth);
-        replace->transSetLowerValue(value);
-        replace->transReplaceMask(MLower|MAllLower);
-    }
-    if (ht == HTUpper) {
-        replace->transSetMove(EMPTY);
-        replace->transSetUpperDepth(depth);
-        replace->transSetUpperValue(value);
-        replace->transSetLowerDepth(0);
-        replace->transSetLowerValue(0);
-        replace->transReplaceMask(MUpper);
-    }
-    if (ht == HTCutUpper) {
-        replace->transSetMove(EMPTY);
-        replace->transSetUpperDepth(depth);
-        replace->transSetUpperValue(value);
-        replace->transSetLowerDepth(0);
-        replace->transSetLowerValue(0);
-        replace->transReplaceMask(MUpper|MCutUpper);
-    }
-    if (ht == HTExact) {
-        PVHashTable.pvStore(hash, move, depth, value);
-        replace->transSetMove(move);
-        replace->transSetUpperDepth(depth);
-        replace->transSetUpperValue(value);
-        replace->transSetLowerDepth(depth);
-        replace->transSetLowerValue(value);
-        replace->transReplaceMask(MExact);
-    }
-    if (ht == HTNoMoves) {
-        replace->transSetMove(EMPTY);
-        replace->transSetUpperDepth(depth);
-        replace->transSetUpperValue(value);
-        replace->transSetLowerDepth(depth);
-        replace->transSetLowerValue(value);
-        replace->transReplaceMask(MExact|MNoMoves);
-    }
-}
+
+
+
+
+
+
+
+
