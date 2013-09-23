@@ -68,7 +68,7 @@ int main(void) {
     initLearn("HannibalLearn.lrn", &Glearn);
     SearchInfo(0).outOfBook = 0;
 #endif
-    initTrans(INIT_HASH,0);
+    TransTable.Init(INIT_HASH, HASH_ASSOC);
     PVHashTable.Init(INIT_PVHASH, PV_ASSOC);
     SearchInfo(0).pt.Init(INIT_PAWN, PAWN_ASSOC);
     SearchInfo(0).et.Init(INIT_EVAL, EVAL_ASSOC);
@@ -101,7 +101,7 @@ int main(void) {
 
         if (!memcmp(command, "ucinewgame", 10)) {
             origScore = 0;
-            transClear(0);
+            TransTable.Clear();
 #ifndef TCEC
             SearchInfo(0).outOfBook = 0;
             movesSoFar.length = 0;

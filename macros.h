@@ -100,8 +100,6 @@ enum ThinkingStatus {
     ANALYSING
 };
 
-#define DATESIZE            16
-
 #define REDUCED             4
 
 #define LOCK(x)             (uint32)((x)>>32)

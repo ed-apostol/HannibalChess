@@ -79,7 +79,7 @@ void uciSetOption(char string[]) {
     value += 6;
 
     if (!memcmp(name,"Hash",4)) {
-        initTrans(atoi(value),0);
+        TransTable.Init(atoi(value), HASH_ASSOC);
     } else if (!memcmp(name,"Pawn Hash",9)) {
         Guci_options.pawnhashsize = atoi(value);
         SearchInfo(0).pt.Init(Guci_options.pawnhashsize, PAWN_ASSOC);
@@ -88,7 +88,7 @@ void uciSetOption(char string[]) {
         Guci_options.evalcachesize = atoi(value);
         SearchInfo(0).et.Init(Guci_options.evalcachesize, EVAL_ASSOC);
     } else if (!memcmp(name,"Clear Hash",10)) {
-        transClear(0);
+        TransTable.Clear();
     } 
 #ifndef TCEC
     else if (!memcmp(name,"OwnBook",7)) {
