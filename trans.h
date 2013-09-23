@@ -1,7 +1,42 @@
 
 #pragma once
 
-class PvHashEntry { // TODO: should this be a class with set/get or just plain struct POD?
+template <typename Entity>
+class BaseHashTable {
+public:
+    BaseHashTable () :
+        m_pTable(NULL),
+        m_Size(0),
+        m_Mask(0),
+        m_BucketSize(0)
+    {}
+    ~BaseHashTable() { delete[] m_pTable; }
+    virtual Entity* Entry(const uint64 hash) const { return &m_pTable[KEY(hash) & m_Mask]; }
+    void Clear() { memset(m_pTable, 0, m_Size * sizeof(Entity)); }
+    void Init(uint64 target, const int bucket_size) {
+        uint64 size = 2;
+        m_BucketSize = bucket_size;
+        if (target < 1) target = 1;
+        target *= 1024 * 1024;
+        while (size * sizeof(Entity) <= target) size*=2;
+        size = size / 2;
+        if (size + bucket_size - 1 == m_Size) {
+            Clear();
+        } else {
+            m_Size = size + bucket_size - 1;;
+            m_Mask = size - 1;
+            delete [] m_pTable;
+            m_pTable = new Entity[m_Size];
+        }
+    }
+protected:
+    Entity* m_pTable;
+    uint64 m_Size;
+    uint64 m_Mask;
+    uint64 m_BucketSize;
+};
+
+struct PvHashEntry {
 public:
     PvHashEntry() :
         m_Hashlock(0),
@@ -29,18 +64,11 @@ private:
     uint8 m_Age;
 };
 
-class PvHashTable {
+class PvHashTable : public BaseHashTable<PvHashEntry> {
 public:
-    PvHashTable() : m_pTable(NULL) {}
-    ~PvHashTable() { delete[] m_pTable; }
-    void initPVHashTab(uint64 target);
-    void pvStore(const uint64 hash, const basic_move_t move, const uint8 depth, const int16 value, const int thread);
-    PvHashEntry *pvHashProbe(const uint64 hash);
-    PvHashEntry *getPvEntryFromMove(const uint64 hash, basic_move_t move);
-private:
-    PvHashEntry *m_pTable;
-    uint64 m_Size;
-    uint64 m_Mask;
+    void pvStore(uint64 hash, basic_move_t move, uint8 depth, int16 value, int thread);
+    PvHashEntry *pvHashProbe(const uint64 hash) const;
+    PvHashEntry *getPvEntryFromMove(const uint64 hash, basic_move_t move) const;
 };
 
 struct PawnEntry {
@@ -63,19 +91,7 @@ struct PawnEntry {
     int8 qshelter[2];
 };
 
-class PawnHashTable {
-public:
-    PawnHashTable() : m_Table(NULL) {}
-    ~PawnHashTable() { delete[] m_Table; }
-    PawnEntry* getPawnEntry(const uint64 hash) { return &m_Table[KEY(hash) & m_Mask]; }
-    void pawnTableClear() { memset(m_Table, 0, m_Size * sizeof(PawnEntry)); }
-
-    void initPawnTab(uint64 target);
-private:
-    PawnEntry *m_Table;
-    uint64 m_Size;
-    uint64 m_Mask;
-};
+class PawnHashTable : public BaseHashTable<PawnEntry> {};
 
 struct EvalEntry {
     EvalEntry() :
@@ -88,19 +104,8 @@ struct EvalEntry {
     int16 pessimism;
 };
 
-class EvalHashTable {
-public:
-    EvalHashTable() : m_Table(NULL) {}
-    ~EvalHashTable() { delete[] m_Table; }
-    EvalEntry* getEvalEntry(const uint64 hash) { return &m_Table[KEY(hash) & m_Mask]; }
-    void evalTableClear() { memset(m_Table, 0, m_Size * sizeof(EvalEntry)); }
+class EvalHashTable : public BaseHashTable<EvalEntry> {};
 
-    void initEvalTab (uint64 target);
-private:
-    EvalEntry *m_Table;
-    uint64 m_Size;
-    uint64 m_Mask;
-};
 
 
 
@@ -165,6 +170,5 @@ inline int scoreToTrans(int score, int ply) { return (score > MAXEVAL) ? (score+
 
 
 extern TranspositionTable global_trans_table;
-//#define TransTable(thread) (SearchInfo(thread).tt)
 #define TransTable(thread) global_trans_table
 extern PvHashTable PVHashTable;

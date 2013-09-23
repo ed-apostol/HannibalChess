@@ -14,8 +14,6 @@
 #include "utils.h"
 
 TranspositionTable global_trans_table;
-//#define TransTable(thread) (SearchInfo(thread).tt)
-#define TransTable(thread) global_trans_table
 PvHashTable PVHashTable;
 
 basic_move_t transGetHashMove(const uint64 hash, const int thread) {
@@ -212,9 +210,19 @@ void initTrans(uint64 target, int thread) {
 
 
 
-PvHashEntry* PvHashTable::pvHashProbe(const uint64 hash) {
+
+
+
+
+
+
+
+
+
+
+PvHashEntry* PvHashTable::pvHashProbe(const uint64 hash) const {
     PvHashEntry *entry = &m_pTable[(KEY(hash) & m_Mask)];
-    for (int t = 0; t < PV_ASSOC; t++, entry++) {
+    for (int t = 0; t < m_BucketSize; t++, entry++) {
         if (entry->pvGetHashLock() == LOCK(hash)) {
             return entry;
         }
@@ -222,9 +230,9 @@ PvHashEntry* PvHashTable::pvHashProbe(const uint64 hash) {
     return NULL;
 }
 
-PvHashEntry* PvHashTable::getPvEntryFromMove(const uint64 hash, basic_move_t move) {
+PvHashEntry* PvHashTable::getPvEntryFromMove(const uint64 hash, basic_move_t move) const {
     PvHashEntry *entry = &m_pTable[(KEY(hash) & m_Mask)];
-    for (int t = 0; t < PV_ASSOC; t++, entry++) {
+    for (int t = 0; t < m_BucketSize; t++, entry++) {
         if (entry->pvGetHashLock() == LOCK(hash) && entry->pvGetMove() == move) {
             return entry;
         }
@@ -237,7 +245,7 @@ void PvHashTable::pvStore(const uint64 hash, const basic_move_t move, const uint
     PvHashEntry *replace, *entry;
 
     replace = entry = &m_pTable[(KEY(hash) & m_Mask)];
-    for (t = 0; t < PV_ASSOC; t++, entry++) {
+    for (t = 0; t < m_BucketSize; t++, entry++) {
         if (entry->pvGetHashLock() == LOCK(hash)) {
             entry->pvSetAge(TransTable(thread).date);
             entry->pvSetMove(move);
@@ -258,43 +266,3 @@ void PvHashTable::pvStore(const uint64 hash, const basic_move_t move, const uint
     replace->pvSetValue(value);
 }
 
-void PvHashTable::initPVHashTab(uint64 target) {
-    delete[] m_pTable;
-    m_Size = target + PV_ASSOC - 1;
-    m_Mask = target - 1;
-    m_pTable = new PvHashEntry[m_Size];
-}
-
-
-
-
-void EvalHashTable::initEvalTab(uint64 target) {
-    uint64 size=2;
-    uint64 adjSize;
-
-    if (target < 1) target = 1;
-    target *= (1024 * 1024);
-    while (size * sizeof(EvalEntry) <= target) size*=2;
-    size /= 2;
-    adjSize = size + EVAL_ASSOC-1;
-    delete [] m_Table;
-    size = adjSize;
-    m_Mask = size - 1;
-    m_Table = new EvalEntry[size];
-}
-
-void PawnHashTable::initPawnTab(uint64 target) {
-    uint64 size=2;
-    uint64 adjSize;
-
-    if (target < 1) target = 1;
-    target *= 1024 * 1024;
-
-    while (size * sizeof(PawnEntry) <= target) size*=2;
-    size = size/2;
-    adjSize = size + PAWN_ASSOC - 1;
-    delete [] m_Table;
-    size = adjSize;
-    m_Mask = size - 1;
-    m_Table = new PawnEntry[size];
-}
