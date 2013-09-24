@@ -663,7 +663,7 @@ void setPosition(position_t *pos, const char *fen) {
         } while (isspace(*fen));
         if (isdigit(*fen)) { //Hannibal 0.1a
             int fiftyInt;
-            sscanf(fen, "%d", &fiftyInt);
+            sscanf_s(fen, "%d", &fiftyInt);
             if (fiftyInt >= 0 && fiftyInt <= 100) {
                 pos->posStore.fifty = (uint32) fiftyInt;
                 for(i=0;i<fiftyInt;i++) {

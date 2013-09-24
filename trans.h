@@ -23,7 +23,7 @@ public:
         if (size + bucket_size - 1 == m_Size) {
             Clear();
         } else {
-            m_Size = size + bucket_size - 1;;
+            m_Size = size + bucket_size - 1;
             m_Mask = size - 1;
             delete[] m_pTable;
             m_pTable = new Entity[m_Size];

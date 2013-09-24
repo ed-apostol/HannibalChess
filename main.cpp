@@ -42,14 +42,14 @@ int main(void) {
     char command[8192];
     char* ptr;
 
-    setbuf(stdout, NULL);
-    setbuf(stdin, NULL);
+    //////setbuf(stdout, NULL);
+    //////setbuf(stdin, NULL);
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stdin, NULL, _IONBF, 0);
 
-    logfile = fopen("logfile.txt", "a+");
-    errfile = fopen(ERROR_FILE, "a+");
-    dumpfile = fopen("dumpfile.txt", "a+");
+    fopen_s(&logfile, "logfile.txt", "a+");
+    fopen_s(&errfile, ERROR_FILE, "a+");
+    fopen_s(&dumpfile, "dumpfile.txt", "a+");
 
     Print(3, "Hannibal %s by Sam Hamilton & Edsel Apostol\n", VERSION);
     Print(3, "Use Universal Chess Interface(UCI) commands\n");
@@ -92,7 +92,7 @@ int main(void) {
             needReplyReady = false;
         }
         if (fgets(command, 8192, stdin) == NULL)
-            strcpy(command, "quit\n");
+            strcpy_s(command, "quit\n");
 
         ptr = strchr(command, '\n');
         if (ptr != NULL) *ptr = '\0';

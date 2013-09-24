@@ -126,7 +126,7 @@ void nonUCI(position_t *pos) {
         Print(1, "Logic >>");
         if (!fgets(command, 256, stdin)) break;
         if (command[0]=='\n') continue;
-        sscanf(command, "%s", temp);
+        sscanf_s(command, "%s", temp);
         if (!strcmp(temp, "new")) {
             setPosition(pos, STARTPOS);
         } else if (!strcmp(temp, "undo")) {
@@ -167,10 +167,10 @@ void nonUCI(position_t *pos) {
         } else if (!strcmp(temp, "d")) {
             displayBoard(pos, 3);
         } else if (!strcmp(temp, "perft")) {
-            sscanf(command, "perft %d", &move);
+            sscanf_s(command, "perft %d", &move);
             runPerft(pos, move);
         } else if (!strcmp(temp, "divide")) {
-            sscanf(command, "divide %d", &move);
+            sscanf_s(command, "divide %d", &move);
             runPerftDivide(pos, move);
         } else if (!strcmp(temp, "go")) {
             uciGo(pos, temp);

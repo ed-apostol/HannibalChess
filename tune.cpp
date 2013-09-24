@@ -587,8 +587,8 @@ int PlayOptimizeGame(position_t *pos, int startPos, int time) {
         char s[255];
         SetNewGame();
         origScore = 0;
-        if (time<4) sprintf(s,"go wtime 10000 winc 0 btime 10000 binc 0");
-        else sprintf(s,"go wtime 80000 winc 200 btime 80000 binc 200");
+        if (time<4) sprintf_s(s,"go wtime 10000 winc 0 btime 10000 binc 0");
+        else sprintf_s(s,"go wtime 80000 winc 200 btime 80000 binc 200");
 
         uciGo(pos,s);
         if (SearchInfo(0).last_value != -10000) value = SearchInfo(0).last_value;
@@ -1030,7 +1030,7 @@ int FindPlayer(Personality p) {
 }
 void PlayRatedGame(int startPos, int player1, int player2) {
     int result = PlayTuneGame(startPos,player1, player2);
-    MutexLock(SMPLock);
+    SMPLock->lock();
     //first find self
     int playerIndex1 = FindPlayer(personality(player1));
     int playerIndex2 = FindPlayer(personality(player2));
@@ -1133,7 +1133,7 @@ int PickOpponent() {
 void NewTuneGame(const int player1) {
     const int player2 = player1+1;
     int position = rand()%NUM_START_POS;
-    MutexLock(SMPLock);
+    SMPLock->lock();
     //OK lets see if we have a large enough pool of players
     if (numPersonalities < SUFFICIENT_DIVERSITY) {
         do {
@@ -1225,7 +1225,7 @@ void NewTuneGame(const int player1) {
     PlayRatedGame(position,player1, player2);
     PlayRatedGame(position,player2, player1);
 
-    MutexLock(SMPLock);
+    SMPLock->lock();
     //OK, find and copy back results
 
     for (int i=0; i < numPersonalities; i++) {
@@ -1257,7 +1257,7 @@ void NewTuneGame(const int player1) {
 void FilePrintHeader(int gameOn, int white, int black,int result) {
     FILE *fp;
 
-    fp=fopen(SELF_TUNE_F, "a+");
+    fp=fopen_s(SELF_TUNE_F, "a+");
     if (fp==NULL) {
         Print(3,"trouble opening training\n");
         return;
@@ -1369,15 +1369,15 @@ int PlayGame(position_t *pos, int player1, int player2, int startPos) {
             char s[255];
 
             if (NODE_BASED) {
-                sprintf(s,"nodes %d",TUNE_NODES+nodeTweak);
+                sprintf_s(s,"nodes %d",TUNE_NODES+nodeTweak);
             }
             else {
                 int numPieces = bitCnt(pieces);
                 if (numPieces==0)
-                    sprintf(s,"depth %d",TUNE_PDEPTH);
+                    sprintf_s(s,"depth %d",TUNE_PDEPTH);
                 else if (numPieces <= 4)
-                    sprintf(s,"depth %d",TUNE_EDEPTH);
-                else sprintf(s,"depth %d",TUNE_DEPTH);
+                    sprintf_s(s,"depth %d",TUNE_EDEPTH);
+                else sprintf_s(s,"depth %d",TUNE_DEPTH);
             }
             uciGo(pos,s);
         }
@@ -1814,17 +1814,17 @@ public:
         static char s[255], s1[255]="", s2[255]="", s3[255]="";
         if (tempo_open_range.low != tempo_open_range.high) {
             double sr = GetSimilarityRating(0);
-            sprintf(s1,"%d %d [%.2f]",tempo_open,tempo_end,sr);
+            sprintf_s(s1,"%d %d [%.2f]",tempo_open,tempo_end,sr);
         }
         if (stuck_end_range.low != stuck_end_range.high) {
             double sr = GetSimilarityRating(1);
-            sprintf(s2,"%d %d %d %d [%.2f]",stuck_end,stuck_bishop,stuck_rook,stuck_queen,sr);
+            sprintf_s(s2,"%d %d %d %d [%.2f]",stuck_end,stuck_bishop,stuck_rook,stuck_queen,sr);
         }
         if (trapped1_range.low != trapped1_range.high) {
             double sr = GetSimilarityRating(2);
-            sprintf(s3,"%d %d %d %d [%.2f]",GetTrapped1(),  GetTrapped2(),  GetTrapped3(),  GetTrapped4(),sr);
+            sprintf_s(s3,"%d %d %d %d [%.2f]",GetTrapped1(),  GetTrapped2(),  GetTrapped3(),  GetTrapped4(),sr);
         }
-        sprintf(s,"%s%s%s",s1,s2,s3);
+        sprintf_s(s,"%s%s%s",s1,s2,s3);
 
         return s;
     }
@@ -1894,7 +1894,7 @@ public:
     /*
     char* FileString() {
     static char s[255];
-    sprintf(s,"%.2f %d %d %d %d %d %d %d %d %d %d",rating, points, games, stuck_end,stuck_bishop,stuck_rook,stuck_queen, GetTrapped1(),  GetTrapped2(),  GetTrapped3(),  GetTrapped4());
+    sprintf_s(s,"%.2f %d %d %d %d %d %d %d %d %d %d",rating, points, games, stuck_end,stuck_bishop,stuck_rook,stuck_queen, GetTrapped1(),  GetTrapped2(),  GetTrapped3(),  GetTrapped4());
     return s;
     }*/
     bool Equal(Personality p) {
@@ -2071,7 +2071,7 @@ public:
     Personality(char *str) {
     int trapped1,trapped2,trapped3,trapped4;
     SetDefaults();
-    sscanf(str,"%d %d %d %d %d %d %d %d %d %d %d",&games, &rating, &points, &stuck_end,&stuck_bishop,&stuck_rook,&stuck_queen,&trapped1,&trapped2,&trapped3,&trapped4);
+    sscanf_s(str,"%d %d %d %d %d %d %d %d %d %d %d",&games, &rating, &points, &stuck_end,&stuck_bishop,&stuck_rook,&stuck_queen,&trapped1,&trapped2,&trapped3,&trapped4);
     }
 
     Personality(int stuckEnd, int stuckBishop, int stuckRook, int stuckQueen, int trapped1, int trapped2, int trapped3, int trapped4) {

@@ -14,8 +14,9 @@
 #include "threads.h"
 #include "utils.h"
 
-mutex_t SMPLock[1];
+std::mutex SMPLock[1];
 thread_t Threads[MaxNumOfThreads];
+std::vector<std::thread> RealThreads;
 
 void initSearchThread(int i) {
     Threads[i].nodes_since_poll = 0;
@@ -31,63 +32,41 @@ void setAllThreadsToStop(int thread) {
 #ifdef SELF_TUNE2
     Threads[thread].stop = true;
 #else
-    MutexLock(SMPLock);
+    SMPLock->lock();
     for (int i = 0; i < Guci_options.threads; i++) {
         Threads[i].stop = true;
     }
-    MutexUnlock(SMPLock);
+    SMPLock->unlock();
 #endif
 }
 
-void idleLoop(const int thread_id, SplitPoint *master_sp) {
+void idleLoop(int thread_id, SplitPoint *master_sp) {
     ASSERT(thread_id < Guci_options.threads || master_sp == NULL);
-    //Print(3, "%s: thread_id:%d\n", __FUNCTION__, thread_id);
     Threads[thread_id].running = true;
     while(!Threads[thread_id].exit_flag) {
-#ifndef TCEC
-        if (thread_id >= MaxNumOfThreads - Guci_options.learnThreads) { //lets grab something and learn from it
-            continuation_t toLearn;
-            if (get_continuation_to_learn(&Glearn, &toLearn)) {
-                if (LOG_LEARNING) Print(2,"learning: got continuation from file\n");
-                if (learn_continuation(thread_id,&toLearn)==false)
-                    Sleep(1000);
-            }
-            else {
-                srand (getTime()+thread_id);//help get different continuations even if multiple threads call at the same time
-                generateContinuation(&toLearn);
-                if (learn_continuation(thread_id,&toLearn)==false)
-                    Sleep(1000);
-            }
+        while(master_sp == NULL && (SearchInfo(thread_id).thinking_status == STOPPED)) {
+            Print(3, "Thread sleeping: %d\n", thread_id);
+            WaitForSingleObject(Threads[thread_id].idle_event, INFINITE);
         }
-        else 
-#endif
-            while(master_sp == NULL && (SearchInfo(thread_id).thinking_status == STOPPED
-#ifndef TCEC
-                && (thread_id >= Guci_options.threads && thread_id < MaxNumOfThreads - Guci_options.learnThreads)
-#endif
-                )) {
-                    Print(2, "Thread sleeping: %d\n", thread_id);
-                    WaitForSingleObject(Threads[thread_id].idle_event, INFINITE);
-            }
-            if(Threads[thread_id].searching) {
-                ++Threads[thread_id].started;
-                SplitPoint* sp = Threads[thread_id].split_point;
-                searchFromIdleLoop(sp, thread_id);
-                MutexLock(sp->updatelock);
-                sp->workersBitMask &= ~(1 << thread_id);
-                Threads[thread_id].searching = false;
-                MutexUnlock(sp->updatelock);
-                ++Threads[thread_id].ended;
-            }
-            if(master_sp != NULL && !master_sp->workersBitMask) return;
-            if (master_sp != NULL && master_sp->workersBitMask && SearchInfo(thread_id).thinking_status == STOPPED) {
-                Print(2, "Master Thread waiting: %d workersBitMask: %x\n", thread_id, master_sp->workersBitMask);
-                //// HACK: no need to wait for other threads, let's kill them all, and quit the search ASAP
-                setAllThreadsToStop(thread_id);
-                return;
-            }
+        if(Threads[thread_id].searching) {
+            ++Threads[thread_id].started;
+            searchFromIdleLoop(Threads[thread_id].split_point, thread_id);
+            sp->updatelock->lock();
+            sp->workersBitMask &= ~(1 << thread_id);
+            Threads[thread_id].searching = false;
+            sp->updatelock->unlock();
+            ++Threads[thread_id].ended;
+        }
+        if(master_sp != NULL && !master_sp->workersBitMask) return;
+        if (master_sp != NULL && master_sp->workersBitMask && SearchInfo(thread_id).thinking_status == STOPPED) {
+            Print(2, "Master Thread waiting: %d workersBitMask: %x\n", thread_id, master_sp->workersBitMask);
+            // HACK: no need to wait for other threads, let's kill them all, and quit the search ASAP
+            setAllThreadsToStop(thread_id);
+            return;
+        }
     }
     Threads[thread_id].running = false;
+    Print(3, "Thread quitting: %d\n", thread_id);
 }
 
 bool smpCutoffOccurred(SplitPoint *sp) {
@@ -136,40 +115,23 @@ bool idleThreadExists(int master) {
     return false;
 }
 
-DWORD WINAPI winInitThread(LPVOID n) {
-    int i = *((int*)((LPVOID*)n));
-    //Print(3, "%s: thread_id:%d\n", __FUNCTION__, i);
-    idleLoop(i, NULL); 
-    return 0;
-}
-
 void initThreads(void) {
     int i;
-    DWORD iID[MaxNumOfThreads];
-#ifndef TCEC
-    MutexInit(LearningLock,NULL);
-    MutexInit(BookLock,NULL);
-#endif
     for (i = 0; i < MaxNumOfThreads; ++i) {
         Threads[i].num_sp = 0;
         Threads[i].exit_flag = false;
         Threads[i].running = false;
         Threads[i].idle_event = CreateEvent(0, false, false, 0);
-        for (int j = 0; j < MaxNumSplitPointsPerThread; ++j) {
-            MutexInit(Threads[i].sptable[j].movelistlock, NULL);
-            MutexInit(Threads[i].sptable[j].updatelock, NULL);
-        }
         SearchInfo(i).thinking_status = STOPPED; // SMP HACK
     }
-
-    MutexInit(SMPLock, NULL);
 #ifdef SELF_TUNE2
     for(i = 0; i < MaxNumOfThreads; i++) {
 #else
     for(i = 1; i < MaxNumOfThreads; i++) {
 #endif
-        CreateThread(NULL, 0, winInitThread, (LPVOID)&i, 0, &iID[i]);
-        while(!Threads[i].running);
+        SplitPoint* sp = NULL;
+        RealThreads.push_back(std::thread(idleLoop, i, sp));
+        //while(!Threads[i].running);
     }
 }
 
@@ -179,25 +141,20 @@ void stopThreads(void) {
         Threads[i].exit_flag = true;
         Threads[i].searching = false;
         SetEvent(Threads[i].idle_event);
-        for (int j = 0; j < MaxNumSplitPointsPerThread; ++j) {
-            MutexDestroy(Threads[i].sptable[j].movelistlock);
-            MutexDestroy(Threads[i].sptable[j].updatelock);
-        }
     }
-    MutexDestroy(SMPLock);
-#ifndef TCEC
-    MutexDestroy(LearningLock);
-    MutexDestroy(BookLock);
-#endif
+    for(auto& thread : RealThreads){
+        thread.join();
+    }
+    Print(1, "Gone here\n");
 }
 
 bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, const int master) {
     SplitPoint *split_point = &Threads[master].sptable[Threads[master].num_sp];    
-    MutexLock(SMPLock);
-    MutexLock(split_point->updatelock);
+    SMPLock->lock();
+    split_point->updatelock->lock();
     if(Threads[master].num_sp >= MaxNumSplitPointsPerThread || !idleThreadExists(master)) {
-        MutexUnlock(split_point->updatelock); 
-        MutexUnlock(SMPLock); 
+        split_point->updatelock->unlock();
+        SMPLock->unlock();
         return false;
     }
     Threads[master].num_sp++;
@@ -233,13 +190,13 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* s
             Threads[i].stop = false;
         }
     }
-    MutexUnlock(split_point->updatelock); 
-    MutexUnlock(SMPLock);
+    split_point->updatelock->unlock();
+    SMPLock->unlock();
 
     idleLoop(master, split_point);
 
-    MutexLock(SMPLock);
-    MutexLock(split_point->updatelock);
+    SMPLock->lock();
+    split_point->updatelock->lock();
     ss->bestvalue = split_point->bestvalue;
     ss->bestmove = split_point->bestmove;
     ss->playedMoves = split_point->played;
@@ -250,7 +207,7 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* s
         Threads[master].stop = false; 
         Threads[master].searching = true;
     }
-    MutexUnlock(split_point->updatelock);
-    MutexUnlock(SMPLock);
+    split_point->updatelock->unlock();
+    SMPLock->unlock();
     return true;
 }

@@ -104,8 +104,8 @@ char *move2Str(basic_move_t m) {
 
     /* ASSERT(moveIsOk(m)); */
 
-    if (m == 0) sprintf(str, "%c%c%c%c%c", '0','0','0','0','\0');
-    else sprintf(str, "%c%c%c%c%c",
+    if (m == 0) sprintf_s(str, "%c%c%c%c%c", '0','0','0','0','\0');
+    else sprintf_s(str, "%c%c%c%c%c",
         SQFILE(moveFrom(m)) + 'a',
         '1' + SQRANK(moveFrom(m)),
         SQFILE(moveTo(m)) + 'a',
@@ -121,7 +121,7 @@ char *sq2Str(int sq) {
 
     /* ASSERT(moveIsOk(m)); */
 
-    sprintf(str, "%c%c%c",
+    sprintf_s(str, "%c%c%c",
         SQFILE(sq) + 'a',
         '1' + SQRANK(sq),
         '\0'
@@ -203,7 +203,7 @@ int DiffColor(const position_t *pos, uint32 sq,int color) {
 uint64 getTime(void) {
 #if defined(_WIN32) || defined(_WIN64)
     static struct _timeb tv;
-    _ftime(&tv);
+    _ftime_s(&tv);
     return(tv.time * 1000 + tv.millitm);
 #else
     static struct timeval tv;

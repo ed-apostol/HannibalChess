@@ -66,7 +66,7 @@ void check4Input(position_t *pos) {
 
     if (biosKey()) {
         if (fgets(input, 256, stdin) == NULL)
-            strcpy(input, "quit");
+            strcpy_s(input, "quit");
 
         Print(2, "%s\n", input);
         if (!memcmp(input, "quit", 4)) {
@@ -520,9 +520,9 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
     while ((move = sortNext(sp, pos, ss.mvlist, ss.mvlist_phase, thread_id)) != NULL) {
         int score = -INF;
         if (inSplitPoint) {
-            MutexLock(sp->updatelock);
+            sp->updatelock->lock();
             ss.playedMoves = ++sp->played;
-            MutexUnlock(sp->updatelock);
+            sp->updatelock->unlock();
         } else ++ss.playedMoves;
         if (inSingular && move->m == ssprev.bannedMove) continue;
         if (!inSplitPoint && ss.hisCnt < 64 && !moveIsTactical(move->m)) {
@@ -584,7 +584,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
             unmakeMove(pos, &undo);
         }
         if (Threads[thread_id].stop) return 0;
-        if (inSplitPoint) MutexLock(sp->updatelock);
+        if (inSplitPoint) sp->updatelock->lock();
         if (inRoot) {
             move->s = score;
             if (score > SearchInfo(thread_id).rbestscore1) {
@@ -612,19 +612,19 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                     alpha = inSplitPoint ? sp->alpha = ss.bestvalue : ss.bestvalue;
                 } else {
                     if (inRoot) {
-                        if (inSplitPoint) MutexLock(sp->movelistlock);
+                        if (inSplitPoint) sp->movelistlock->lock();
                         for (int i = ss.mvlist->pos; i < ss.mvlist->size; ++i) ss.mvlist->list[i].s = -INF;
-                        if (inSplitPoint) MutexUnlock(sp->movelistlock);
+                        if (inSplitPoint) sp->movelistlock->unlock();
                     }
                     if (inSplitPoint) {
                         sp->cutoff = true;
-                        MutexUnlock(sp->updatelock);
+                        sp->updatelock->unlock();
                     }
                     break;
                 }
             }
         }
-        if (inSplitPoint) MutexUnlock(sp->updatelock);
+        if (inSplitPoint) sp->updatelock->unlock();
         if (!inSplitPoint && !inSingular && !Threads[thread_id].stop && !inCheck && Threads[thread_id].num_sp < MaxNumSplitPointsPerThread
             && Guci_options.threads > 1 && depth >= Guci_options.min_split_depth && idleThreadExists(thread_id)
             && splitRemainingMoves(pos, ss.mvlist, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, thread_id)) {
@@ -938,7 +938,7 @@ void checkSpeedUp(position_t* pos, char string[]) {
     int threads = 1;
     char command[1024];
 
-    sscanf(string, "%d %d", &threads, &depth);
+    sscanf_s(string, "%d %d", &threads, &depth);
 
     for (int j = 0; j < MAXTHREADS; ++j) {
         timeSpeedupSum[j] = 0.0;
@@ -954,7 +954,7 @@ void checkSpeedUp(position_t* pos, char string[]) {
         Print(5, "\n\nPos#%d: %s\n", i+1, fenPos[i]);
         uciSetPosition(pos, fenPos[i]);
         int64 startTime = getTime();
-        sprintf(command, "movedepth %d", depth);
+        sprintf_s(command, "movedepth %d", depth);
         uciGo(pos, command);
         int64 spentTime1 = getTime() - startTime;
         uint64 nodes1 = Threads[0].nodes / spentTime1;
@@ -965,7 +965,7 @@ void checkSpeedUp(position_t* pos, char string[]) {
         Print(5, "Base: %0.2fs %dknps\n", timeSpeedUp, nodes1);
 
         for (int j = 2; j <= threads; ++j) {
-            sprintf(tempStr, "name Threads value %d\n", j);
+            sprintf_s(tempStr, "name Threads value %d\n", j);
             uciSetOption(tempStr);
             TransTable.Clear();
             for (int k = 0; k < Guci_options.threads; ++k) {
@@ -973,7 +973,7 @@ void checkSpeedUp(position_t* pos, char string[]) {
             }
             uciSetPosition(pos, fenPos[i]);
             startTime = getTime();
-            sprintf(command, "movedepth %d", depth);
+            sprintf_s(command, "movedepth %d", depth);
             uciGo(pos, command);
             int64 spentTime = getTime() - startTime;
             uint64 nodes = 0;
@@ -1011,14 +1011,14 @@ void benchSplitDepth(position_t* pos, char string[]) {
         timeSum[i] = nodesSum[i] = 0;
     }
 
-    sscanf(string, "%d %d", &threads, &depth);
+    sscanf_s(string, "%d %d", &threads, &depth);
 
-    sprintf(command, "name Threads value %d", threads);
+    sprintf_s(command, "name Threads value %d", threads);
     uciSetOption(command);
     for (int posIdx = 0; posIdx < NUMPOS; ++posIdx) {
         Print(5, "\n\nPos#%d: %s\n", posIdx+1, fenPos[posIdx]);
         for (int i = 1; i < MAXSPLIT; ++i) {
-            sprintf(command, "name Min Split Depth value %d", i);
+            sprintf_s(command, "name Min Split Depth value %d", i);
             uciSetOption(command);
             TransTable.Clear();
             for (int k = 0; k < Guci_options.threads; ++k) {
@@ -1026,7 +1026,7 @@ void benchSplitDepth(position_t* pos, char string[]) {
             }
             uciSetPosition(pos, fenPos[posIdx]);
             int64 startTime = getTime();
-            sprintf(command, "movedepth %d", depth);
+            sprintf_s(command, "movedepth %d", depth);
             uciGo(pos, command);
             int64 spentTime = getTime() - startTime;
             timeSum[i] += spentTime;
@@ -1068,14 +1068,14 @@ void benchSplitThreads(position_t* pos, char string[]) {
         timeSum[i] = nodesSum[i] = 0;
     }
 
-    sscanf(string, "%d %d", &threads, &depth);
+    sscanf_s(string, "%d %d", &threads, &depth);
 
-    sprintf(command, "name Threads value %d", threads);
+    sprintf_s(command, "name Threads value %d", threads);
     uciSetOption(command);
     for (int posIdx = 0; posIdx < NUMPOS; ++posIdx) {
         Print(5, "\n\nPos#%d: %s\n", posIdx+1, fenPos[posIdx]);
         for (int i = 2; i < MIN(MAXSPLIT, threads+1); ++i) {
-            sprintf(command, "name Max Split Threads value %d", i);
+            sprintf_s(command, "name Max Split Threads value %d", i);
             uciSetOption(command);
             TransTable.Clear();
             for (int k = 0; k < Guci_options.threads; ++k) {
@@ -1083,7 +1083,7 @@ void benchSplitThreads(position_t* pos, char string[]) {
             }
             uciSetPosition(pos, fenPos[posIdx]);
             int64 startTime = getTime();
-            sprintf(command, "movedepth %d", depth);
+            sprintf_s(command, "movedepth %d", depth);
             uciGo(pos, command);
             int64 spentTime = getTime() - startTime;
             timeSum[i] += spentTime;

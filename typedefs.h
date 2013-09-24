@@ -8,10 +8,11 @@
 /**************************************************/
 #pragma once
 #include "macros.h"
+#include <mutex>
 
 #define OPT_EASY true
 #define VERSION            "20130914_nr_merged"
-#define NUM_THREADS			    1
+#define NUM_THREADS			    4
 #define MIN_SPLIT_DEPTH			4 // best is 4
 #define MAX_SPLIT_THREADS		4 // best is 4
 #define TCEC true
@@ -304,7 +305,7 @@ struct SearchStack {
     int mvlist_phase;
 };
 
-typedef CRITICAL_SECTION mutex_t;
+//////typedef CRITICAL_SECTION mutex_t;
 
 struct SplitPoint {
     position_t pos[MaxNumOfThreads];
@@ -322,8 +323,8 @@ struct SplitPoint {
     volatile basic_move_t bestmove;
     volatile uint64 workersBitMask;
     volatile bool cutoff;
-    mutex_t movelistlock[1];
-    mutex_t updatelock[1];
+    std::mutex movelistlock[1];
+    std::mutex updatelock[1];
 };
 
 

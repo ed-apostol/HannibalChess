@@ -107,13 +107,13 @@ enum ThinkingStatus {
 //#define SETHASH(l,k)        (uint64)(((l)<<32)|(k))
 
 
-const int MaxNumOfThreads = 32;
+const int MaxNumOfThreads = 8;
 const int MaxNumSplitPointsPerThread = 8;
 
-#define MutexInit(x, y) InitializeCriticalSection(x)
-#define MutexLock(x) EnterCriticalSection(x)
-#define MutexUnlock(x) LeaveCriticalSection(x)
-#define MutexDestroy(x) DeleteCriticalSection(x)
+////////#define MutexInit(x, y) InitializeCriticalSection(x)
+////////#define MutexLock(x) EnterCriticalSection(x)
+////////#define MutexUnlock(x) LeaveCriticalSection(x)
+////////#define MutexDestroy(x) DeleteCriticalSection(x)
 
 
 

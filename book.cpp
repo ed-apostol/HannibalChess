@@ -36,7 +36,7 @@ string pieceToString(int pc) {
 }
 string movenumToStr(int i) {
     //	string s;
-    //	sprintf(s,"%d. ", i/2+1);
+    //	sprintf_s(s,"%d. ", i/2+1);
     //	return s;
     string result;//string which will contain the result
     stringstream convert; // stringstream used for the conversion
@@ -455,7 +455,7 @@ void add_to_learn_begin(learn_t *learn, continuation_t *toLearn) {//we add it to
         fclose(learn->learnFile);
         rewind(tempFile);
         //ok now we create a new learn file, stick our stuff in front, and then write the temp stuff in
-        learn->learnFile = fopen(learn->name.c_str(), "w+b"); // going to write over everything with new file stuff
+        learn->learnFile = fopen_s(learn->name.c_str(), "w+b"); // going to write over everything with new file stuff
         if (learn->learnFile==NULL) cout << "info string uhoh...trouble reopening learn file '" << learn->name << "'\n";
         for (int i = 0; i < toLearn->length; i++) {
             int_to_file(learn->learnFile, MOVE_BYTES, toLearn->moves[i]);
@@ -483,9 +483,9 @@ void open_write_book(string book_name, book_t *book, BookType type) {
     else {
         book->type = type;
         if (book->bookFile != NULL) fclose(book->bookFile);
-        book->bookFile = fopen(book_name.c_str(), "r+b"); 
+        book->bookFile = fopen_s(book_name.c_str(), "r+b"); 
         if (book->bookFile == NULL) {
-            book->bookFile = fopen(book_name.c_str(), "w+b"); 
+            book->bookFile = fopen_s(book_name.c_str(), "w+b"); 
             Print(3,"info string creating new file '%s'\n",book_name);
         }
         if (book->bookFile != NULL) {
@@ -524,7 +524,7 @@ bool learn_continuation(int thread_id, continuation_t *toLearn) {
     }
     //make sure book is open for writing
     fclose(GhannibalBook.bookFile);
-    GhannibalBook.bookFile = fopen(GhannibalBook.name.c_str(), "r+b"); 
+    GhannibalBook.bookFile = fopen_s(GhannibalBook.name.c_str(), "r+b"); 
     MutexUnlock(BookLock);
 
     if ( toLearn->length > MAX_BOOK) toLearn->length = MAX_BOOK;
@@ -655,7 +655,7 @@ bool get_continuation_to_learn(learn_t *learn, continuation_t *toLearn) {
     }
     fclose(f);
     rewind(tempFile);
-    learn->learnFile = fopen(learn->name.c_str(), "w+b"); // going to write over everything with new file stuff
+    learn->learnFile = fopen_s(learn->name.c_str(), "w+b"); // going to write over everything with new file stuff
     if (learn->learnFile==NULL) cout << "info string uhoh...trouble reopening learn file '" << learn->name << "'\n";
     while (int_from_file(tempFile,MOVE_BYTES,&r)==0) {
         int_to_file(learn->learnFile, MOVE_BYTES, r);
@@ -972,10 +972,10 @@ void initBook(char* book_name, book_t *book, BookType type) {
     if (type != POLYGLOT_BOOK && type != PUCK_BOOK) cout << "info string book type not supported" << endl;
     else {
         if (book->bookFile != NULL) fclose(book->bookFile);
-        book->bookFile = fopen(book_name, "rb");
+        book->bookFile = fopen_s(book_name, "rb");
         book->name = string(book_name);
         if (book->bookFile == NULL && type == PUCK_BOOK) {
-            book->bookFile = fopen(book_name, "w+b"); 
+            book->bookFile = fopen_s(book_name, "w+b"); 
             if (SHOW_LEARNING) Print(3,"info string creating new file '%s'\n",book_name);
         }
         if (book->bookFile != NULL) {
@@ -997,7 +997,7 @@ void initBook(char* book_name, book_t *book, BookType type) {
 void initLearn(string learn_name, learn_t *learn) {
     learn->name = string(learn_name);
     if (learn->learnFile!=NULL) fclose(learn->learnFile);
-    learn->learnFile = fopen(learn_name.c_str(), "a+b");
+    learn->learnFile = fopen_s(learn_name.c_str(), "a+b");
     if (learn->learnFile==NULL) cout << "info string failed to open learn file\n";
     else {
         if (DEBUG_LEARN) cout << "info string opened learn file " << learn_name << endl;        
