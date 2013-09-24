@@ -114,6 +114,16 @@ long find_polyglot_key(FILE *f, uint64 key, PolyglotBookEntry *entry, position_t
         }
     }
 }
+bool equalMove(const basic_move_t m1, const basic_move_t m2) {
+	return (moveTo(m1)==moveTo(m2) && moveFrom(m1)==moveFrom(m2));
+}
+bool move_in_list(const basic_move_t m, const movelist_t *ml) {
+	int on;
+	for (on = 0; on < ml->size; on++) {
+		if (equalMove(ml->list[on].m, m)) return true;
+	}
+    return false;
+}
 #ifdef LEARNING_ON
 #define MOVE_BYTES 4
 const int Puck_Entry_Size = 12; //REDUCE with only 1 score (not white & black)
@@ -307,17 +317,6 @@ void open_write_book(string book_name, book_t *book, BookType type) {
         else  if (DEBUG_BOOK) cout << "info string failed to open(write) book " << book_name << endl;
     }
 }
-bool equalMove(const basic_move_t m1, const basic_move_t m2) {
-	return (moveTo(m1)==moveTo(m2) && moveFrom(m1)==moveFrom(m2));
-}
-bool move_in_list(const basic_move_t m, const movelist_t *ml) {
-	int on;
-	for (on = 0; on < ml->size; on++) {
-		if (equalMove(ml->list[on].m, m)) return true;
-	}
-    return false;
-}
-
 bool learn_continuation(int thread_id, continuation_t *toLearn) {
     position_t pos;
 //    FILE *f = Glearn.learnFile;
@@ -838,35 +837,37 @@ basic_move_t getBookMove(position_t *p, book_t *book/*, movelist_t *ml, bool ver
     FILE *f = book->bookFile;
 
  	if (f == NULL || book->size == 0) {
-//		if (DEBUG_BOOK && verbose) cout << "info string no book\n";
 		return NO_MOVE;
 	}
 	PolyglotBookEntry entry;
     PolyglotBookEntry entries[MAX_MOVES];
 	key = p->hash;
-//    if (DEBUG_BOOK && verbose) cout << "info string looking in polyglot book\n";
     offset=find_polyglot_key(f,key,&entry,p);
     if (entry.key!=key) {
 		return NO_MOVE;
     }
-//    if (DEBUG_BOOK && verbose) cout << "info string key is there\n";
+    movelist_t moves;
+    genLegal(p, &moves, true); 
     entries[numMoves]=entry;
-    totalWeight += entry.weight;
-    numMoves++;
+    if (move_in_list(entry.move, &moves)) {
+        totalWeight += entry.weight;
+        numMoves++;
+    }
     fseek(f,Polyglot_Entry_Size*(offset+1),SEEK_SET);
+
     while (true) {
         if (numMoves>=MAX_MOVES-1){
-//            if (DEBUG_BOOK && verbose) cout << "info string too many book moves?\n";
             break;
         }
         if (entry_from_polyglot_file(f,&entry,p)) break;
         if (entry.key!=key) break;
         entries[numMoves]=entry;
-        totalWeight += entry.weight;
-        numMoves++;
+        if ( move_in_list(entry.move, &moves)) {
+            totalWeight += entry.weight;
+            numMoves++;
+        }
     }
     if (totalWeight <= 0) {
-//        if (verbose) cout << "info string book weights are 0\n";
         return  NO_MOVE;
     }
     // chose here the move from the array and verify if it exists in the movelist
