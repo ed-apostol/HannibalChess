@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <thread>
+#include <condition_variable>
 #include "search.h"
 
 
@@ -22,7 +23,8 @@ struct thread_t {
     volatile bool running;
     volatile bool searching;
     volatile bool exit_flag;
-    HANDLE idle_event;
+    std::condition_variable idle_event;
+    std::mutex threadLock;
     uint64 nodes;
     uint64 nodes_since_poll;
     uint64 nodes_between_polls;

@@ -44,13 +44,15 @@ void idleLoop(int thread_id, SplitPoint *master_sp) {
     ASSERT(thread_id < Guci_options.threads || master_sp == NULL);
     Threads[thread_id].running = true;
     while(!Threads[thread_id].exit_flag) {
-        while(master_sp == NULL && (SearchInfo(thread_id).thinking_status == STOPPED)) {
+        while(master_sp == NULL && SearchInfo(thread_id).thinking_status == STOPPED && !Threads[thread_id].exit_flag) {
             Print(3, "Thread sleeping: %d\n", thread_id);
-            WaitForSingleObject(Threads[thread_id].idle_event, INFINITE);
+            std::unique_lock<std::mutex> lk(Threads[thread_id].threadLock);
+            Threads[thread_id].idle_event.wait(lk);
         }
         if(Threads[thread_id].searching) {
             ++Threads[thread_id].started;
-            searchFromIdleLoop(Threads[thread_id].split_point, thread_id);
+            SplitPoint* sp = Threads[thread_id].split_point; // this is correctly located, don't move this, else bug
+            searchFromIdleLoop(sp, thread_id);
             sp->updatelock->lock();
             sp->workersBitMask &= ~(1 << thread_id);
             Threads[thread_id].searching = false;
@@ -121,17 +123,11 @@ void initThreads(void) {
         Threads[i].num_sp = 0;
         Threads[i].exit_flag = false;
         Threads[i].running = false;
-        Threads[i].idle_event = CreateEvent(0, false, false, 0);
         SearchInfo(i).thinking_status = STOPPED; // SMP HACK
     }
-#ifdef SELF_TUNE2
     for(i = 0; i < MaxNumOfThreads; i++) {
-#else
-    for(i = 1; i < MaxNumOfThreads; i++) {
-#endif
         SplitPoint* sp = NULL;
         RealThreads.push_back(std::thread(idleLoop, i, sp));
-        //while(!Threads[i].running);
     }
 }
 
@@ -140,11 +136,13 @@ void stopThreads(void) {
         Threads[i].stop = true;
         Threads[i].exit_flag = true;
         Threads[i].searching = false;
-        SetEvent(Threads[i].idle_event);
+        std::unique_lock<std::mutex>(Threads[i].threadLock);
+        Threads[i].idle_event.notify_one();
     }
-    for(auto& thread : RealThreads){
-        thread.join();
-    }
+    //////for(int i = 0; i < MaxNumOfThreads; i++) {
+    //////    Print(1, "Gone here\n");
+    //////    RealThreads[i].join();
+    //////}
     Print(1, "Gone here\n");
 }
 

@@ -305,8 +305,6 @@ struct SearchStack {
     int mvlist_phase;
 };
 
-//////typedef CRITICAL_SECTION mutex_t;
-
 struct SplitPoint {
     position_t pos[MaxNumOfThreads];
     SplitPoint* parent;
