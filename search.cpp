@@ -511,7 +511,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
         } else {
             ss.dcc = discoveredCheckCandidates(pos, pos->side);
             sortInit(pos, ss.mvlist, pinnedPieces(pos, pos->side), ss.hashMove, alpha, ss.evalvalue, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), thread_id);
-            if (!inRoot) ss.firstExtend = ss.firstExtend || (inCheck && ss.mvlist->size==1);
+            ss.firstExtend = ss.firstExtend || (inCheck && ss.mvlist->size==1);
         }
     }
 
@@ -544,8 +544,8 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 int partialReduction = 0;
                 int fullReduction = 0;
                 if (MoveGenPhase[ss.mvlist_phase] == PH_QUIET_MOVES && !ss.moveGivesCheck) { //never happens when in check
-                    bool goodMove = (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsPassedPawn(pos, move->m);
-                    if (!inRoot && !inPvNode(nt)) { //TODO consider adding something similar back in
+                    bool goodMove = (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsPassedPawn(pos, move->m); // add countermove here
+                    if (!inRoot && !inPvNode(nt)) {
                         if (ss.playedMoves > lateMove && !goodMove) continue;
                         int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(ss.playedMoves,63)]);
                         int scoreAprox = ss.evalvalue + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(ss.playedMoves,63)]
@@ -815,7 +815,6 @@ void getBestMove(position_t *pos, int thread_id) {
                 if (SearchInfo(thread_id).rootPV.length > 1) SearchInfo(thread_id).pondermove = SearchInfo(thread_id).rootPV.moves[1];
                 else SearchInfo(thread_id).pondermove = 0;
                 displayPV(pos, &SearchInfo(thread_id).rootPV, entry->pvDepth(), -INF, INF, SearchInfo(thread_id).best_value);
-                SearchInfo(thread_id).thinking_status = STOPPED;
                 setAllThreadsToStop(thread_id);
                 return;
         }
@@ -898,7 +897,8 @@ void getBestMove(position_t *pos, int thread_id) {
             SearchInfo(thread_id).last_last_value = SearchInfo(thread_id).last_value;
             SearchInfo(thread_id).last_value = SearchInfo(thread_id).best_value;
         }
-        //////Print(1, "info string cutfails: %d %% allfails: %d %%\n", (SearchInfo(0).cutfail * 100)/SearchInfo(0).cutnodes, (SearchInfo(0).allfail * 100)/SearchInfo(0).allnodes);
+        //////Print(1, "info string cutfails: %d %% cutnodes: %d  allfails: %d %% allnodes: %d\n", 
+        //////    (SearchInfo(0).cutfail * 100)/SearchInfo(0).cutnodes, SearchInfo(0).cutnodes, (SearchInfo(0).allfail * 100)/SearchInfo(0).allnodes, SearchInfo(0).allnodes);
     }
     SearchInfo(thread_id).lastDepthSearched = id;
     if (SearchInfo(thread_id).thinking_status != STOPPED) {
@@ -917,12 +917,12 @@ void getBestMove(position_t *pos, int thread_id) {
         }
     }
 
-    Print(2, "================================================================\n");
-    for (int i = 0; i < Guci_options.threads; ++i) {
-        Print(2, "%s: thread_id:%d, num_sp:%d searching:%d stop:%d started:%d ended:%d nodes:%d numsplits:%d\n", __FUNCTION__, i, 
-            Threads[i].num_sp, Threads[i].searching, Threads[i].stop, 
-            Threads[i].started, Threads[i].ended, Threads[i].nodes, Threads[i].numsplits);
-    }
+    //////Print(2, "================================================================\n");
+    //////for (int i = 0; i < Guci_options.threads; ++i) {
+    //////    Print(2, "%s: thread_id:%d, num_sp:%d searching:%d stop:%d started:%d ended:%d nodes:%d numsplits:%d\n", __FUNCTION__, i, 
+    //////        Threads[i].num_sp, Threads[i].searching, Threads[i].stop, 
+    //////        Threads[i].started, Threads[i].ended, Threads[i].nodes, Threads[i].numsplits);
+    //////}
 }
 
 void checkSpeedUp(position_t* pos, char string[]) {

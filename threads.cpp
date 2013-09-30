@@ -42,7 +42,6 @@ void setAllThreadsToStop(int thread) {
 
 void idleLoop(int thread_id, SplitPoint *master_sp) {
     ASSERT(thread_id < Guci_options.threads || master_sp == NULL);
-    Threads[thread_id].running = true;
     while(!Threads[thread_id].exit_flag) {
         while(master_sp == NULL && SearchInfo(thread_id).thinking_status == STOPPED && !Threads[thread_id].exit_flag) {
             Print(3, "Thread sleeping: %d\n", thread_id);
@@ -67,7 +66,6 @@ void idleLoop(int thread_id, SplitPoint *master_sp) {
             return;
         }
     }
-    Threads[thread_id].running = false;
     Print(3, "Thread quitting: %d\n", thread_id);
 }
 
@@ -122,28 +120,28 @@ void initThreads(void) {
     for (i = 0; i < MaxNumOfThreads; ++i) {
         Threads[i].num_sp = 0;
         Threads[i].exit_flag = false;
-        Threads[i].running = false;
         SearchInfo(i).thinking_status = STOPPED; // SMP HACK
     }
     for(i = 0; i < MaxNumOfThreads; i++) {
         SplitPoint* sp = NULL;
         RealThreads.push_back(std::thread(idleLoop, i, sp));
     }
+    Print(1, "Gone here 3\n");
 }
 
 void stopThreads(void) {
     for(int i = 0; i < MaxNumOfThreads; i++) {
         Threads[i].stop = true;
         Threads[i].exit_flag = true;
-        Threads[i].searching = false;
+        Threads[i].searching = false;        
+    }
+    for(int i = 0; i < MaxNumOfThreads; i++) {
         std::unique_lock<std::mutex>(Threads[i].threadLock);
         Threads[i].idle_event.notify_one();
+        RealThreads[i].join();
+        Print(1, "Gone here\n");
     }
-    //////for(int i = 0; i < MaxNumOfThreads; i++) {
-    //////    Print(1, "Gone here\n");
-    //////    RealThreads[i].join();
-    //////}
-    Print(1, "Gone here\n");
+    Print(1, "Gone here end\n");
 }
 
 bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, const int master) {

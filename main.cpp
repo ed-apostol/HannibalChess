@@ -36,8 +36,6 @@ void quit(void) {
 }
 
 int main(void) {
-    std::atexit(quit);
-
     position_t pos;
     char command[8192];
     char* ptr;
@@ -164,5 +162,6 @@ int main(void) {
 #endif
         else Print(3, "info string Unknown UCI command.\n");
     }
+    quit();
     exit(EXIT_SUCCESS);
 }

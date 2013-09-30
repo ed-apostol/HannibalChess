@@ -20,9 +20,8 @@ struct ThreadStack {
 struct thread_t {
     SplitPoint *split_point;
     volatile bool stop;
-    volatile bool running;
     volatile bool searching;
-    volatile bool exit_flag;
+    volatile bool exit_flag; // TODO: move to threads pool
     std::condition_variable idle_event;
     std::mutex threadLock;
     uint64 nodes;
@@ -45,52 +44,45 @@ extern thread_t Threads[MaxNumOfThreads]; // ThreadsPool this should be std::vec
 
 extern std::vector<std::thread> RealThreads;
 
-    //////for(int i = 0; i < 5; ++i){
-    //////    //threads.push_back(std::thread(hello));
-    //////}
-
-    ////////for(auto& thread : threads){
-    //////    //thread.join();
-    ////////}
-
-extern void setAllThreadsToStop(int thread);
+extern void setAllThreadsToStop(int thread); // ThreadsPool
 extern void initSearchThread(int i);
 extern bool smpCutoffOccurred(SplitPoint *sp);
 extern void initSmpVars();
-extern bool idleThreadExists(int master);
-extern void initThreads(void);
-extern void stopThreads(void);
+extern bool idleThreadExists(int master); // ThreadsPool
+extern void initThreads(void); // ThreadsPool
+extern void stopThreads(void); // ThreadsPool
 extern bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, const int master);
 
-//////class Thread {
-//////public:
-//////    Thread ();
-//////    ~Thread ();
-//////private:
-//////    SplitPoint *split_point;
-//////    volatile bool stop;
-//////    volatile bool running;
-//////    volatile bool searching;
-//////    volatile bool exit_flag;
-//////    HANDLE idle_event;
-//////    uint64 nodes;
-//////    uint64 nodes_since_poll;
-//////    uint64 nodes_between_polls;
-//////    uint64 started; // DEBUG
-//////    uint64 ended; // DEBUG
-//////    int64 numsplits; // DEBUG
-//////    int num_sp;
-//////    ThreadStack ts[MAXPLY];
-//////    SplitPoint sptable[MaxNumSplitPointsPerThread];
-//////};
-//////
-//////class ThreadsTab {
-//////public:
-//////    ThreadsTab ();
-//////    ~ThreadsTab ();
-//////    void ResizeNumThreads(int num);
-//////private:
-//////    std::vector<Thread*> m_ThreadsA;
-//////};
+class Thread {
+public:
+    Thread ();
+    ~Thread ();
+private:
+    SplitPoint *split_point;
+    volatile bool stop;
+    volatile bool searching;
+    volatile bool exit_flag; // TODO: move to threads pool
+    std::condition_variable idle_event;
+    std::mutex threadLock;
+    uint64 nodes;
+    uint64 nodes_since_poll;
+    uint64 nodes_between_polls;
+    uint64 started; // DEBUG
+    uint64 ended; // DEBUG
+    int64 numsplits; // DEBUG
+    int num_sp;
+    ThreadStack ts[MAXPLY];
+    SplitPoint sptable[MaxNumSplitPointsPerThread];
+};
+
+class ThreadsTab {
+public:
+    ThreadsTab ();
+    ~ThreadsTab ();
+    void ResizeNumThreads(int num);
+    std::mutex SMPLock[1];
+private:
+    std::vector<Thread*> m_ThreadsA;
+};
 //////
 //////std::thread Thraeds;
