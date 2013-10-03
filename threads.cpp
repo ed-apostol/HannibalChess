@@ -48,7 +48,7 @@ void checkForWork(int thread_id) {
 
     for(int threadIdx = 0; threadIdx < Guci_options.threads; threadIdx++) {
         if (threadIdx == thread_id) continue;
-        if(!Threads[threadIdx].searching) continue; // master waiting for other threads, no need to help
+        if(!Threads[threadIdx].searching) continue; // idle thread or master waiting for other threads, no need to help
         for (int splitIdx = 0; splitIdx < Threads[threadIdx].num_sp; splitIdx++) {
             SplitPoint* sp = &Threads[threadIdx].sptable[splitIdx];
             if (bitCnt(sp->workersBitMask) >= Guci_options.max_split_threads) continue; // enough threads working, no need to help
@@ -60,10 +60,9 @@ void checkForWork(int thread_id) {
         }
     }
     if (best_split_point != NULL) {
-        SMPLock->lock();
         best_split_point->updatelock->lock();
         if (Threads[master_thread].searching && Threads[master_thread].num_sp > 0 && best_split_point->workersBitMask
-            && bitCnt(best_split_point->workersBitMask) < Guci_options.max_split_threads) {
+            && bitCnt(best_split_point->workersBitMask) < Guci_options.max_split_threads) { // redundant criteria, just to be sure
                 best_split_point->pos[thread_id] = best_split_point->origpos;
                 Threads[thread_id].split_point = best_split_point;
                 best_split_point->workersBitMask |= ((uint64)1<<thread_id);
@@ -71,7 +70,6 @@ void checkForWork(int thread_id) {
                 Threads[thread_id].stop = false;
         }
         best_split_point->updatelock->unlock();
-        SMPLock->unlock();
     }
 }
 
@@ -82,7 +80,7 @@ void helpfulMaster(int thread_id, SplitPoint *master_sp) { // don't call if thre
 
     for(int threadIdx = 0; threadIdx < Guci_options.threads; threadIdx++) {
         if (threadIdx == thread_id) continue;
-        if(!Threads[threadIdx].searching) continue; // master waiting for other threads, no need to help
+        if(!Threads[threadIdx].searching) continue; // idle thread or master waiting for other threads, no need to help
         if (!(master_sp->workersBitMask & ((uint64)1<<threadIdx))) continue;
         for (int splitIdx = 0; splitIdx < Threads[threadIdx].num_sp; splitIdx++) {
             SplitPoint* sp = &Threads[threadIdx].sptable[splitIdx];
@@ -95,12 +93,13 @@ void helpfulMaster(int thread_id, SplitPoint *master_sp) { // don't call if thre
     }
     if (best_split_point != NULL) {
         best_split_point->updatelock->lock();
-        if (Threads[master_thread].searching && Threads[master_thread].num_sp > 0 && (best_split_point->workersBitMask & ((uint64)1<<master_thread))) {
-            best_split_point->pos[thread_id] = best_split_point->origpos;
-            best_split_point->workersBitMask |= ((uint64)1<<thread_id);
-            Threads[thread_id].split_point = best_split_point;
-            Threads[thread_id].searching = true;
-            Threads[thread_id].stop = false;
+        if (Threads[master_thread].searching && Threads[master_thread].num_sp > 0 
+            && (best_split_point->workersBitMask & ((uint64)1<<master_thread))) { // redundant criteria, just to be sure
+                best_split_point->pos[thread_id] = best_split_point->origpos;
+                best_split_point->workersBitMask |= ((uint64)1<<thread_id);
+                Threads[thread_id].split_point = best_split_point;
+                Threads[thread_id].searching = true;
+                Threads[thread_id].stop = false;
         }
         best_split_point->updatelock->unlock();
     }
@@ -129,8 +128,6 @@ void idleLoop(int thread_id, SplitPoint *master_sp) {
             if (!master_sp->workersBitMask) return;
             else {
                 if (SearchInfo(thread_id).thinking_status == STOPPED) {
-                    Print(2, "Master Thread waiting: %d workersBitMask: %x\n", thread_id, master_sp->workersBitMask);
-                    // HACK: no need to wait for other threads, let's kill them all, and quit the search ASAP
                     setAllThreadsToStop(thread_id);
                     return;
                 } else helpfulMaster(thread_id, master_sp);
@@ -217,20 +214,10 @@ void stopThreads(void) {
 
 bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, const int master) {
     SplitPoint *split_point = &Threads[master].sptable[Threads[master].num_sp];    
-    SMPLock->lock();
+
     split_point->updatelock->lock();
-
-    //////if(Threads[master].num_sp >= MaxNumSplitPointsPerThread || !idleThreadExists(master)) {
-    //////    split_point->updatelock->unlock();
-    //////    SMPLock->unlock();
-    //////    return false;
-    //////}
-
-    //Print(1, "Gone here ooo\n");
-
     split_point = &Threads[master].sptable[Threads[master].num_sp];  
     Threads[master].num_sp++;
-
     split_point->parent = Threads[master].split_point;
     split_point->depth = depth;
     split_point->alpha = alpha; 
@@ -250,29 +237,10 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* s
     Threads[master].split_point = split_point;
     Threads[master].searching = true;
     Threads[master].stop = false;
-
-    //////int threadCnt = 1;
-    //////for(int i = 0; i < Guci_options.threads; i++) {
-    //////    if(threadCnt < Guci_options.max_split_threads && threadIsAvailable(i, master)) {
-    //////        threadCnt++;
-    //////        split_point->pos[i] = *p;
-    //////        Threads[i].split_point = split_point;
-    //////        split_point->workersBitMask |= ((uint64)1<<i);
-    //////    }
-    //////}
-    //////for(int i = 0; i < Guci_options.threads; i++) {
-    //////    if(split_point->workersBitMask & ((uint64)1<<i)) {
-    //////        Threads[i].searching = true;
-    //////        Threads[i].stop = false;
-    //////    }
-    //////}
-
     split_point->updatelock->unlock();
-    SMPLock->unlock();
 
     idleLoop(master, split_point);
 
-    SMPLock->lock();
     split_point->updatelock->lock();
     Threads[master].num_sp--;
     ss->bestvalue = split_point->bestvalue;
@@ -285,6 +253,5 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* s
         Threads[master].searching = true;
     }
     split_point->updatelock->unlock();
-    SMPLock->unlock();
     return true;
 }
