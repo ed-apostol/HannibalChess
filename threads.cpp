@@ -13,6 +13,7 @@
 #include "search.h"
 #include "threads.h"
 #include "utils.h"
+#include "bitutils.h"
 
 Spinlock SMPLock[1];
 thread_t Threads[MaxNumOfThreads];
@@ -40,6 +41,37 @@ void setAllThreadsToStop(int thread) {
 #endif
 }
 
+void checkForWork(int thread_id) { 
+    if(Threads[thread_id].searching) return;
+    if(Threads[thread_id].num_sp > 0) return;
+    for(int threadIdx = 0; threadIdx < Guci_options.threads; threadIdx++) {
+        SplitPoint* sp = &Threads[threadIdx].sptable[0];
+        if (Threads[threadIdx].searching 
+            && Threads[threadIdx].num_sp > 0
+            && bitCnt(sp->allMask) < Guci_options.max_split_threads
+            && bitCnt(sp->allMask) > 1 
+            && sp->allMask == sp->workersBitMask) {
+                SMPLock->lock();
+                sp->updatelock->lock();
+                if (Threads[threadIdx].searching 
+                    && Threads[threadIdx].num_sp > 0
+                    && !Threads[thread_id].searching
+                    && Threads[thread_id].num_sp == 0
+                    && bitCnt(sp->allMask) < Guci_options.max_split_threads
+                    && bitCnt(sp->allMask) > 1 
+                    && sp->allMask == sp->workersBitMask) {
+                        sp->pos[thread_id] = sp->origpos;
+                        Threads[thread_id].split_point = sp;
+                        sp->workersBitMask |= ((uint64)1<<thread_id);
+                        Threads[thread_id].searching = true;
+                        Threads[thread_id].stop = false;
+                }
+                sp->updatelock->unlock();
+                SMPLock->unlock();
+        }
+    }
+}
+
 void idleLoop(int thread_id, SplitPoint *master_sp) {
     ASSERT(thread_id < Guci_options.threads || master_sp == NULL);
     while(!Threads[thread_id].exit_flag) {
@@ -58,13 +90,15 @@ void idleLoop(int thread_id, SplitPoint *master_sp) {
             sp->updatelock->unlock();
             ++Threads[thread_id].ended;
         }
-        if(master_sp != NULL && !master_sp->workersBitMask) return;
-        if (master_sp != NULL && master_sp->workersBitMask && SearchInfo(thread_id).thinking_status == STOPPED) {
-            Print(2, "Master Thread waiting: %d workersBitMask: %x\n", thread_id, master_sp->workersBitMask);
-            // HACK: no need to wait for other threads, let's kill them all, and quit the search ASAP
-            setAllThreadsToStop(thread_id);
-            return;
-        }
+        if(master_sp != NULL) {
+            if (!master_sp->workersBitMask) return;
+            else {
+                if (SearchInfo(thread_id).thinking_status == STOPPED) {
+                    setAllThreadsToStop(thread_id);
+                    return;
+                }
+            } 
+        } else checkForWork(thread_id); // active reparenting
     }
     Print(3, "Thread quitting: %d\n", thread_id);
 }
@@ -168,6 +202,7 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* s
     split_point->sscurr = ss;
     split_point->ssprev = ssprev;
     split_point->pos[master] = *p;
+    split_point->origpos = *p;
     split_point->workersBitMask = ((uint64)1<<master);
     Threads[master].split_point = split_point;
 
@@ -186,6 +221,7 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* s
             Threads[i].stop = false;
         }
     }
+    split_point->allMask = split_point->workersBitMask;
     split_point->updatelock->unlock();
     SMPLock->unlock();
 

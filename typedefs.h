@@ -318,6 +318,7 @@ private:
 
 struct SplitPoint {
     position_t pos[MaxNumOfThreads];
+    position_t origpos;
     SplitPoint* parent;
     SearchStack* sscurr;
     SearchStack* ssprev;
@@ -331,6 +332,7 @@ struct SplitPoint {
     volatile int played;
     volatile basic_move_t bestmove;
     volatile uint64 workersBitMask;
+    volatile uint64 allMask;
     volatile bool cutoff;
     Spinlock movelistlock[1];
     Spinlock updatelock[1];
