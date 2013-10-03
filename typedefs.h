@@ -244,15 +244,15 @@ struct position_t{
     uint64 kings;
     uint64 color[2];
     uint64 occupied;
-    int pieces[64];
-    int kpos[2];
+    uint8 pieces[64];
+    uint8 kpos[2];
     pos_store_t posStore;
 
-    int side;
-    int ply;
-    int sp;
+    uint8 side;
+    uint8 ply;
+    uint8 sp;
     uint64 hash;
-    uint64 stack[MAX_HASH_STORE];
+    uint64 stack[MAX_HASH_STORE]; // TODO: needs to reduce the size of this one
 };
 
 typedef uint8 mflag_t;
@@ -333,8 +333,10 @@ struct SplitPoint {
     volatile basic_move_t bestmove;
     volatile uint64 workersBitMask;
     volatile bool cutoff;
-    Spinlock movelistlock[1];
-    Spinlock updatelock[1];
+    //Spinlock movelistlock[1];
+    //Spinlock updatelock[1];
+    std::mutex movelistlock[1];
+    std::mutex updatelock[1];
 };
 
 

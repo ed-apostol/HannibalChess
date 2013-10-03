@@ -63,7 +63,7 @@ void checkForWork(int thread_id) {
         best_split_point->updatelock->lock();
         if (Threads[master_thread].searching && Threads[master_thread].num_sp > 0 && best_split_point->workersBitMask
             && bitCnt(best_split_point->workersBitMask) < Guci_options.max_split_threads) { // redundant criteria, just to be sure
-                best_split_point->pos[thread_id] = best_split_point->origpos;
+                best_split_point->pos[thread_id] = best_split_point->origpos; // this ones expensive, slow on AMD
                 Threads[thread_id].split_point = best_split_point;
                 best_split_point->workersBitMask |= ((uint64)1<<thread_id);
                 Threads[thread_id].searching = true;
@@ -95,7 +95,7 @@ void helpfulMaster(int thread_id, SplitPoint *master_sp) { // don't call if thre
         best_split_point->updatelock->lock();
         if (Threads[master_thread].searching && Threads[master_thread].num_sp > 0 
             && (best_split_point->workersBitMask & ((uint64)1<<master_thread))) { // redundant criteria, just to be sure
-                best_split_point->pos[thread_id] = best_split_point->origpos;
+                best_split_point->pos[thread_id] = best_split_point->origpos; // this ones expensive, slow on AMD
                 best_split_point->workersBitMask |= ((uint64)1<<thread_id);
                 Threads[thread_id].split_point = best_split_point;
                 Threads[thread_id].searching = true;
@@ -164,23 +164,6 @@ void initSmpVars() {
             }
         }
     }
-}
-
-bool threadIsAvailable(int thread_id, int master) {
-    if(Threads[thread_id].searching) return false;
-    if(Threads[thread_id].num_sp == 0) return true;
-    // the "thread_id" has this "master" as a slave in a higher split point
-    // since "thread_id" is not searching and probably waiting for this "master" thread to finish,
-    // it's better to help it finish the search (helpful master concept)
-    if(Threads[thread_id].sptable[Threads[thread_id].num_sp-1].workersBitMask & ((uint64)1<<master)) return true;
-    return false;
-}
-
-bool idleThreadExists(int master) {
-    for(int i = 0; i < Guci_options.threads; i++) {
-        if(i != master && threadIsAvailable(i, master)) return true;
-    }
-    return false;
 }
 
 void initThreads(void) {
