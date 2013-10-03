@@ -14,7 +14,7 @@
 #include "threads.h"
 #include "utils.h"
 
-std::mutex SMPLock[1];
+Spinlock SMPLock[1];
 thread_t Threads[MaxNumOfThreads];
 std::vector<std::thread> RealThreads;
 

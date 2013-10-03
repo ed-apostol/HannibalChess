@@ -38,7 +38,7 @@ struct thread_t {
 #endif
 };
 
-extern std::mutex SMPLock[1]; // ThreadsPool
+extern Spinlock SMPLock[1]; // ThreadsPool
 extern thread_t Threads[MaxNumOfThreads]; // ThreadsPool this should be std::vector
 
 
@@ -84,5 +84,5 @@ public:
 private:
     std::vector<Thread*> m_ThreadsA;
 };
-//////
-//////std::thread Thraeds;
+
+

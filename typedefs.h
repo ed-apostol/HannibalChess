@@ -9,10 +9,11 @@
 #pragma once
 #include "macros.h"
 #include <mutex>
+#include <atomic>
 
 #define OPT_EASY true
 #define VERSION            "20130914_nr_merged"
-#define NUM_THREADS			    1
+#define NUM_THREADS			    4
 #define MIN_SPLIT_DEPTH			4 // best is 4
 #define MAX_SPLIT_THREADS		4 // best is 4
 #define TCEC true
@@ -305,6 +306,16 @@ struct SearchStack {
     int mvlist_phase;
 };
 
+class Spinlock {
+public:
+    Spinlock() { m_Lock.clear(std::memory_order_release); }
+    ~Spinlock() { }
+    void lock() { while (m_Lock.test_and_set(std::memory_order_acquire)); }
+    void unlock() { m_Lock.clear(std::memory_order_release); }
+private:
+    std::atomic_flag m_Lock;
+};
+
 struct SplitPoint {
     position_t pos[MaxNumOfThreads];
     SplitPoint* parent;
@@ -321,8 +332,8 @@ struct SplitPoint {
     volatile basic_move_t bestmove;
     volatile uint64 workersBitMask;
     volatile bool cutoff;
-    std::mutex movelistlock[1];
-    std::mutex updatelock[1];
+    Spinlock movelistlock[1];
+    Spinlock updatelock[1];
 };
 
 
