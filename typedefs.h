@@ -318,6 +318,7 @@ private:
 
 struct SplitPoint {
     position_t pos[MaxNumOfThreads];
+    position_t origpos;
     SplitPoint* parent;
     SearchStack* sscurr;
     SearchStack* ssprev;

@@ -626,7 +626,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
         }
         if (inSplitPoint) sp->updatelock->unlock();
         if (!inSplitPoint && !inSingular && !Threads[thread_id].stop && !inCheck && Threads[thread_id].num_sp < MaxNumSplitPointsPerThread
-            && Guci_options.threads > 1 && depth >= Guci_options.min_split_depth && idleThreadExists(thread_id)
+            && Guci_options.threads > 1 && depth >= Guci_options.min_split_depth /*&& idleThreadExists(thread_id)*/
             && splitRemainingMoves(pos, ss.mvlist, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, thread_id)) {
                 break;
         }
@@ -917,12 +917,12 @@ void getBestMove(position_t *pos, int thread_id) {
         }
     }
 
-    //////Print(2, "================================================================\n");
-    //////for (int i = 0; i < Guci_options.threads; ++i) {
-    //////    Print(2, "%s: thread_id:%d, num_sp:%d searching:%d stop:%d started:%d ended:%d nodes:%d numsplits:%d\n", __FUNCTION__, i, 
-    //////        Threads[i].num_sp, Threads[i].searching, Threads[i].stop, 
-    //////        Threads[i].started, Threads[i].ended, Threads[i].nodes, Threads[i].numsplits);
-    //////}
+    Print(2, "================================================================\n");
+    for (int i = 0; i < Guci_options.threads; ++i) {
+        Print(2, "%s: thread_id:%d, num_sp:%d searching:%d stop:%d started:%d ended:%d nodes:%d numsplits:%d\n", __FUNCTION__, i, 
+            Threads[i].num_sp, Threads[i].searching, Threads[i].stop, 
+            Threads[i].started, Threads[i].ended, Threads[i].nodes, Threads[i].numsplits);
+    }
 }
 
 void checkSpeedUp(position_t* pos, char string[]) {

@@ -77,7 +77,6 @@ enum PieceTypes {
 #define PAWN_RANK(f,c)           (((c)==BLACK)?(7-SQRANK(f)):(SQRANK(f)))
 #define Q_DIST(f,c)              (((c)==WHITE)?(7-SQRANK(f)):(SQRANK(f)))
 #define PAWN_MOVE_INC(c)         ((c)?-8:8)
-//#define PAWN_PROMOTE(sq,c)       (SQFILE(sq) + ((c==BLACK)?0:56))
 
 #define PAWN_PROMOTE(sq,c)       ((c) ? ((sq) & 007) : ((sq) | 070))
 
@@ -104,41 +103,11 @@ enum ThinkingStatus {
 
 #define LOCK(x)             (uint32)((x)>>32)
 #define KEY(x)              (uint32)(x)
-//#define SETHASH(l,k)        (uint64)(((l)<<32)|(k))
-
 
 const int MaxNumOfThreads = 8;
-const int MaxNumSplitPointsPerThread = 8;
+const int MaxNumSplitPointsPerThread = 1;
 
-////////#define MutexInit(x, y) InitializeCriticalSection(x)
-////////#define MutexLock(x) EnterCriticalSection(x)
-////////#define MutexUnlock(x) LeaveCriticalSection(x)
-////////#define MutexDestroy(x) DeleteCriticalSection(x)
-
-
-
-/*
-#define MAX_DRAW 100
-#define DRAWN 100
-#define DRAWN1 90
-#define DRAWN2 75
-#define DRAWN3 60
-#define DRAWN4 50
-#define DRAWN5 40
-#define DRAWN6 32
-#define DRAWN7 24
-#define DRAWN8 17
-#define DRAWN9 10
-#define DRAWN10 5
-#define DRAWN11 3
-*/
-//#define DRAW_ADJUST (ONESIDE_WEIGHT/2)
-//#define DRAW_ADJUST (ONESIDE_WEIGHT)
 #define DRAW_ADJUST 0
-//(ONESIDE_WEIGHT/2) //this is the amount contributed by other factors than endgame, such as drawish material balances and such
-//#define DRAW_ADJUST ONESIDE_WEIGHT //this is the amount contributed by other factors than endgame, such as drawish material balances and such
-
-
 #define MAX_DRAW 100
 #define DRAWN 100
 #define DRAWN1 (90 - (90 * DRAW_ADJUST) / 100) 
