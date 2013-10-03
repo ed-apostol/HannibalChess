@@ -917,12 +917,12 @@ void getBestMove(position_t *pos, int thread_id) {
         }
     }
 
-    Print(2, "================================================================\n");
-    for (int i = 0; i < Guci_options.threads; ++i) {
-        Print(2, "%s: thread_id:%d, num_sp:%d searching:%d stop:%d started:%d ended:%d nodes:%d numsplits:%d\n", __FUNCTION__, i, 
-            Threads[i].num_sp, Threads[i].searching, Threads[i].stop, 
-            Threads[i].started, Threads[i].ended, Threads[i].nodes, Threads[i].numsplits);
-    }
+    //////Print(2, "================================================================\n");
+    //////for (int i = 0; i < Guci_options.threads; ++i) {
+    //////    Print(2, "%s: thread_id:%d, num_sp:%d searching:%d stop:%d started:%d ended:%d nodes:%d numsplits:%d\n", __FUNCTION__, i, 
+    //////        Threads[i].num_sp, Threads[i].searching, Threads[i].stop, 
+    //////        Threads[i].started, Threads[i].ended, Threads[i].nodes, Threads[i].numsplits);
+    //////}
 }
 
 void checkSpeedUp(position_t* pos, char string[]) {
