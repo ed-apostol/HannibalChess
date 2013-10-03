@@ -18,7 +18,6 @@
 #include "init.h"
 #include "uci.h"
 #include "material.h"
-
 #include <cstdlib>
 
 void quit(void) {
@@ -33,6 +32,10 @@ void quit(void) {
     closeLearn(&Glearn);
     closeBook(&GhannibalBook);
 #endif 
+}
+
+void Hello(int x) {
+    Print(1, "Hello world %d\n", x);
 }
 
 int main(void) {

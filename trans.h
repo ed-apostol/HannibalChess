@@ -10,7 +10,7 @@ public:
         m_Mask (0),
         m_BucketSize (0)
     {}
-    ~BaseHashTable() { delete[] m_pTable; }
+    virtual ~BaseHashTable() { delete[] m_pTable; }
     void Clear() { memset (m_pTable, 0, m_Size * sizeof (Entity)); }
     Entity* Entry (const uint64 hash) const { return &m_pTable[KEY (hash) & m_Mask]; }
     void Init (uint64 target, const int bucket_size) {

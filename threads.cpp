@@ -13,10 +13,13 @@
 #include "search.h"
 #include "threads.h"
 #include "utils.h"
+#include "threadpool.h"
+
 
 std::mutex SMPLock[1];
 thread_t Threads[MaxNumOfThreads];
-std::vector<std::thread> RealThreads;
+ThreadPool ThreadPool;
+std::vector<std::future<void>> Results;
 
 void initSearchThread(int i) {
     Threads[i].nodes_since_poll = 0;
@@ -61,13 +64,38 @@ void idleLoop(int thread_id, SplitPoint *master_sp) {
         if(master_sp != NULL && !master_sp->workersBitMask) return;
         if (master_sp != NULL && master_sp->workersBitMask && SearchInfo(thread_id).thinking_status == STOPPED) {
             Print(2, "Master Thread waiting: %d workersBitMask: %x\n", thread_id, master_sp->workersBitMask);
-            // HACK: no need to wait for other threads, let's kill them all, and quit the search ASAP
+            // HACK: no need to wait for other threads, let's stop them all, and quit the search ASAP
             setAllThreadsToStop(thread_id);
             return;
         }
     }
     Print(3, "Thread quitting: %d\n", thread_id);
 }
+
+//void idleLoop(int thread_id, SplitPoint *master_sp) {
+//    ASSERT(thread_id < Guci_options.threads || master_sp == NULL);
+//    while(!Threads[thread_id].exit_flag) {
+//        if(Threads[thread_id].searching) {
+//            ++Threads[thread_id].started;
+//            SplitPoint* sp = Threads[thread_id].split_point; // this is correctly located, don't move this, else bug
+//            searchFromIdleLoop(sp, thread_id);
+//            sp->updatelock->lock();
+//            sp->workersBitMask &= ~(1 << thread_id);
+//            Threads[thread_id].searching = false;
+//            sp->updatelock->unlock();
+//            ++Threads[thread_id].ended;
+//        }
+//        if(master_sp != NULL && !master_sp->workersBitMask) return;
+//        if (master_sp != NULL && master_sp->workersBitMask && SearchInfo(thread_id).thinking_status == STOPPED) {
+//            Print(2, "Master Thread waiting: %d workersBitMask: %x\n", thread_id, master_sp->workersBitMask);
+//            // HACK: no need to wait for other threads, let's stop them all, and quit the search ASAP
+//            setAllThreadsToStop(thread_id);
+//            return;
+//        }
+//        if (SearchInfo(thread_id).thinking_status == STOPPED) return;
+//    }
+//    Print(3, "Thread quitting: %d\n", thread_id);
+//}
 
 bool smpCutoffOccurred(SplitPoint *sp) {
     if (NULL == sp) return false;
@@ -122,9 +150,10 @@ void initThreads(void) {
         Threads[i].exit_flag = false;
         SearchInfo(i).thinking_status = STOPPED; // SMP HACK
     }
-    for(i = 0; i < MaxNumOfThreads; i++) {
+    ThreadPool.Init(MaxNumOfThreads);
+    for(auto i = 0; i < MaxNumOfThreads; ++i) {
         SplitPoint* sp = NULL;
-        RealThreads.push_back(std::thread(idleLoop, i, sp));
+        Results.emplace_back(ThreadPool.enqueue(std::bind(idleLoop, i, sp), i));
     }
     Print(1, "Gone here 3\n");
 }
@@ -138,9 +167,10 @@ void stopThreads(void) {
     for(int i = 0; i < MaxNumOfThreads; i++) {
         std::unique_lock<std::mutex>(Threads[i].threadLock);
         Threads[i].idle_event.notify_one();
-        RealThreads[i].join();
-        Print(1, "Gone here\n");
     }
+    //for(auto i = 0; i < MaxNumOfThreads; ++i) {
+    //    Results[i].get();
+    //}
     Print(1, "Gone here end\n");
 }
 

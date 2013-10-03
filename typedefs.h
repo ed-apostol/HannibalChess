@@ -12,7 +12,7 @@
 
 #define OPT_EASY true
 #define VERSION            "20130914_nr_merged"
-#define NUM_THREADS			    1
+#define NUM_THREADS			    4
 #define MIN_SPLIT_DEPTH			4 // best is 4
 #define MAX_SPLIT_THREADS		4 // best is 4
 #define TCEC true
