@@ -130,9 +130,11 @@ int main(void) {
         } else if (!memcmp(command, "speedup", 7)) {
             checkSpeedUp(&pos, command+8);
         } else if (!memcmp(command, "split", 5)) {
-            benchSplitDepth(&pos, command+6);
+            benchMinSplitDepth(&pos, command+6);
         } else if (!memcmp(command, "sthreads", 8)) {
-            benchSplitThreads(&pos, command+9);
+            benchThreadsperSplit(&pos, command+9);
+        } else if (!memcmp(command, "active", 6)) {
+            benchActiveSplits(&pos, command+7);
         }
 #ifdef OPTIMIZE
         else if (!memcmp(command, "optimize1",9)) optimize(&pos, 1);

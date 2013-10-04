@@ -91,7 +91,8 @@ extern void searchFromIdleLoop(SplitPoint* sp, const int thread_id);
 extern void getBestMove(position_t *pos, int thread_id);
 
 extern void checkSpeedUp(position_t* pos, char string[]);
-extern void benchSplitDepth(position_t* pos, char string[]);
-extern void benchSplitThreads(position_t* pos, char string[]);
+extern void benchMinSplitDepth(position_t* pos, char string[]);
+extern void benchThreadsperSplit(position_t* pos, char string[]);
+extern void benchActiveSplits(position_t* pos, char string[]);
 
 extern void quit(void);

@@ -14,9 +14,9 @@
 #define OPT_EASY true
 #define VERSION            "20131004_refactor"
 #define NUM_THREADS			    6
-#define MIN_SPLIT_DEPTH			4 // best is 4
-#define MAX_THREADS_PER_SPLIT   8 // best is 4
-#define MAX_ACTIVE_SPLITS		8
+#define MIN_SPLIT_DEPTH			5 // best is 4
+#define MAX_THREADS_PER_SPLIT   4 // best is 4
+#define MAX_ACTIVE_SPLITS		4
 #define TCEC true
 
 //#define SPEED_TEST
