@@ -60,11 +60,12 @@ void checkForWork(int thread_id) {
             }
         }
     }
-    if (best_split_point != NULL) {
+    if (best_split_point != NULL && !best_split_point->cutoff) {
         best_split_point->updatelock->lock();
-        if (Threads[master_thread].searching && Threads[master_thread].num_sp > 0 && best_split_point->workersBitMask
+        if (Threads[master_thread].searching && Threads[master_thread].num_sp > 0 
+            && (best_split_point->workersBitMask == best_split_point->maxWorkersBitMask)
             && bitCnt(best_split_point->workersBitMask) < Guci_options.max_threads_per_split) { // redundant criteria, just to be sure
-                best_split_point->pos[thread_id] = best_split_point->origpos; // this ones expensive, slow on AMD
+                best_split_point->pos[thread_id] = best_split_point->origpos;
                 Threads[thread_id].split_point = best_split_point;
                 best_split_point->workersBitMask |= ((uint64)1<<thread_id);
                 best_split_point->maxWorkersBitMask |= ((uint64)1<<thread_id);
@@ -87,7 +88,7 @@ void helpfulMaster(int thread_id, SplitPoint *master_sp) { // don't call if thre
         for (int splitIdx = 0; splitIdx < Threads[threadIdx].num_sp; splitIdx++) {
             SplitPoint* sp = &Threads[threadIdx].sptable[splitIdx];
             if (sp->workersBitMask != sp->maxWorkersBitMask) continue; // only search those with all threads still searching
-            //if (bitCnt(sp->workersBitMask) >= Guci_options.max_threads_per_split) continue; // enough threads working, no need to help
+            if (bitCnt(sp->workersBitMask) >= Guci_options.max_threads_per_split) continue; // enough threads working, no need to help
             if (sp->depth > best_depth) {
                 best_split_point = sp;
                 best_depth = sp->depth;
@@ -95,11 +96,13 @@ void helpfulMaster(int thread_id, SplitPoint *master_sp) { // don't call if thre
             }
         }
     }
-    if (best_split_point != NULL) {
+    if (best_split_point != NULL && !best_split_point->cutoff) {
         best_split_point->updatelock->lock();
-        if (Threads[master_thread].searching && Threads[master_thread].num_sp > 0 
-            && (best_split_point->workersBitMask & ((uint64)1<<master_thread))) { // redundant criteria, just to be sure
-                best_split_point->pos[thread_id] = best_split_point->origpos; // this ones expensive, slow on AMD
+        if (Threads[master_thread].searching && Threads[master_thread].num_sp > 0
+            && (best_split_point->workersBitMask == best_split_point->maxWorkersBitMask)
+            && (best_split_point->workersBitMask & ((uint64)1<<master_thread))
+            && bitCnt(best_split_point->workersBitMask) < Guci_options.max_threads_per_split) { // redundant criteria, just to be sure
+                best_split_point->pos[thread_id] = best_split_point->origpos;
                 best_split_point->workersBitMask |= ((uint64)1<<thread_id);
                 best_split_point->maxWorkersBitMask |= ((uint64)1<<thread_id);
                 Threads[thread_id].split_point = best_split_point;
