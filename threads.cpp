@@ -51,7 +51,8 @@ void checkForWork(int thread_id) {
         if(!Threads[threadIdx].searching) continue; // idle thread or master waiting for other threads, no need to help
         for (int splitIdx = 0; splitIdx < Threads[threadIdx].num_sp; splitIdx++) {
             SplitPoint* sp = &Threads[threadIdx].sptable[splitIdx];
-            if (bitCnt(sp->workersBitMask) >= Guci_options.max_split_threads) continue; // enough threads working, no need to help
+            if (sp->workersBitMask != sp->maxWorkersBitMask) continue; // only search those with all threads still searching
+            if (bitCnt(sp->workersBitMask) >= Guci_options.max_threads_per_split) continue; // enough threads working, no need to help
             if (sp->depth > best_depth) {
                 best_split_point = sp;
                 best_depth = sp->depth;
@@ -62,10 +63,11 @@ void checkForWork(int thread_id) {
     if (best_split_point != NULL) {
         best_split_point->updatelock->lock();
         if (Threads[master_thread].searching && Threads[master_thread].num_sp > 0 && best_split_point->workersBitMask
-            && bitCnt(best_split_point->workersBitMask) < Guci_options.max_split_threads) { // redundant criteria, just to be sure
+            && bitCnt(best_split_point->workersBitMask) < Guci_options.max_threads_per_split) { // redundant criteria, just to be sure
                 best_split_point->pos[thread_id] = best_split_point->origpos; // this ones expensive, slow on AMD
                 Threads[thread_id].split_point = best_split_point;
                 best_split_point->workersBitMask |= ((uint64)1<<thread_id);
+                best_split_point->maxWorkersBitMask |= ((uint64)1<<thread_id);
                 Threads[thread_id].searching = true;
                 Threads[thread_id].stop = false;
         }
@@ -84,6 +86,8 @@ void helpfulMaster(int thread_id, SplitPoint *master_sp) { // don't call if thre
         if (!(master_sp->workersBitMask & ((uint64)1<<threadIdx))) continue;
         for (int splitIdx = 0; splitIdx < Threads[threadIdx].num_sp; splitIdx++) {
             SplitPoint* sp = &Threads[threadIdx].sptable[splitIdx];
+            if (sp->workersBitMask != sp->maxWorkersBitMask) continue; // only search those with all threads still searching
+            //if (bitCnt(sp->workersBitMask) >= Guci_options.max_threads_per_split) continue; // enough threads working, no need to help
             if (sp->depth > best_depth) {
                 best_split_point = sp;
                 best_depth = sp->depth;
@@ -97,6 +101,7 @@ void helpfulMaster(int thread_id, SplitPoint *master_sp) { // don't call if thre
             && (best_split_point->workersBitMask & ((uint64)1<<master_thread))) { // redundant criteria, just to be sure
                 best_split_point->pos[thread_id] = best_split_point->origpos; // this ones expensive, slow on AMD
                 best_split_point->workersBitMask |= ((uint64)1<<thread_id);
+                best_split_point->maxWorkersBitMask |= ((uint64)1<<thread_id);
                 Threads[thread_id].split_point = best_split_point;
                 Threads[thread_id].searching = true;
                 Threads[thread_id].stop = false;
@@ -217,6 +222,7 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* s
     split_point->pos[master] = *p;
     split_point->origpos = *p;
     split_point->workersBitMask = ((uint64)1<<master);
+    split_point->maxWorkersBitMask = ((uint64)1<<master);
     Threads[master].split_point = split_point;
     Threads[master].searching = true;
     Threads[master].stop = false;

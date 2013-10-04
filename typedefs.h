@@ -15,7 +15,8 @@
 #define VERSION            "20130914_nr_merged"
 #define NUM_THREADS			    4
 #define MIN_SPLIT_DEPTH			4 // best is 4
-#define MAX_SPLIT_THREADS		4 // best is 4
+#define MAX_THREADS_PER_SPLIT   4 // best is 4
+#define MAX_ACTIVE_SPLITS		4
 #define TCEC true
 
 //#define SPEED_TEST
@@ -203,7 +204,7 @@ struct book_t {
     string name;
 };
 
-struct uci_option_t{
+struct uci_option_t{ // TODO: move this to uci file
     int time_buffer;
     int contempt;
     int threads;
@@ -216,7 +217,8 @@ struct uci_option_t{
     int bookExplore;
 #endif
     int min_split_depth;
-    int max_split_threads;
+    int max_threads_per_split;
+    int max_activesplits_per_thread;
     int evalcachesize;
     int pawnhashsize;
 };
@@ -332,6 +334,7 @@ struct SplitPoint {
     volatile int played;
     volatile basic_move_t bestmove;
     volatile uint64 workersBitMask;
+    volatile uint64 maxWorkersBitMask;
     volatile bool cutoff;
     //Spinlock movelistlock[1];
     //Spinlock updatelock[1];

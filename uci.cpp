@@ -28,7 +28,8 @@ void initOption(uci_option_t* opt) {
     opt->time_buffer = 1000;
     opt->threads = NUM_THREADS;
     opt->min_split_depth = MIN_SPLIT_DEPTH;
-    opt->max_split_threads = MAX_SPLIT_THREADS;
+    opt->max_threads_per_split = MAX_THREADS_PER_SPLIT;
+    opt->max_activesplits_per_thread = MAX_ACTIVE_SPLITS;
     opt->evalcachesize = INIT_EVAL;
     opt->pawnhashsize = INIT_PAWN;
 #ifndef TCEC
@@ -63,8 +64,9 @@ void uciStart(void) {
 #ifndef TCEC
     Print(3, "option name LearnThreads type spin min 0 max %d default %d\n", MaxNumOfThreads, DEFAULT_LEARN_THREADS);
 #endif
-    Print(3, "option name Min Split Depth type spin min 1 max 16 default %d\n", MIN_SPLIT_DEPTH);
-    Print(3, "option name Max Split Threads type spin min 2 max 8 default %d\n", MAX_SPLIT_THREADS);
+    Print(3, "option name Min Split Depth type spin min 1 max 12 default %d\n", MIN_SPLIT_DEPTH);
+    Print(3, "option name Max Threads/Split type spin min 2 max 8 default %d\n", MAX_THREADS_PER_SPLIT);
+    Print(3, "option name Max Active Splits/Thread type spin min 1 max 8 default %d\n", MAX_ACTIVE_SPLITS);
     Print(3, "option name Contempt type spin min -100 max 100 default 0\n");
     Print(3, "uciok\n"); //this makes sure there are no issues I hope?
 }
@@ -149,8 +151,10 @@ void uciSetOption(char string[]) {
         Guci_options.threads = newValue;
     } else if (!memcmp(name,"Min Split Depth",15)) {
         Guci_options.min_split_depth = atoi(value);
-    } else if (!memcmp(name,"Max Split Threads",17)) {
-        Guci_options.max_split_threads = atoi(value);
+    } else if (!memcmp(name,"Max Threads/Split",17)) {
+        Guci_options.max_threads_per_split = atoi(value);
+    } else if (!memcmp(name,"Max Active Splits/Thread",24)) {
+        Guci_options.max_activesplits_per_thread = atoi(value);
     }
 }
 
