@@ -46,79 +46,72 @@ void checkForWork(int thread_id) {
     int master_thread = 0;
     SplitPoint *best_split_point = NULL;
 
-    for (int splitIdx = 0; splitIdx < MaxNumSplitPointsPerThread; splitIdx++) {
-        for(int threadIdx = 0; threadIdx < Guci_options.threads; threadIdx++) {
+    for(int threadIdx = 0; threadIdx < Guci_options.threads; threadIdx++) {
+        if (threadIdx == thread_id) continue;
+        if(!Threads[threadIdx].searching) continue; // idle thread or master waiting for other threads, no need to help
+        for (int splitIdx = 0; splitIdx < Threads[threadIdx].num_sp; splitIdx++) {
             SplitPoint* sp = &Threads[threadIdx].sptable[splitIdx];
-            if (threadIdx != thread_id
-                && Threads[threadIdx].searching
-                && splitIdx < Threads[threadIdx].num_sp
-                && sp->workersBitMask == sp->allWorkersBitMask
-                && bitCnt(sp->allWorkersBitMask) < Guci_options.max_threads_per_split
-                && sp->depth > best_depth) {
-                    best_split_point = sp;
-                    best_depth = sp->depth;
-                    master_thread = threadIdx;
+            if (sp->workersBitMask != sp->allWorkersBitMask) continue; // only search those with all threads still searching
+            if (bitCnt(sp->allWorkersBitMask) >= Guci_options.max_threads_per_split) continue; // enough threads working, no need to help
+            if (sp->depth > best_depth) {
+                best_split_point = sp;
+                best_depth = sp->depth;
+                master_thread = threadIdx;
             }
         }
-        if (best_split_point != NULL) {
-            best_split_point->updatelock->lock();
-            if (Threads[master_thread].searching
-                && Threads[master_thread].num_sp > 0
-                && (best_split_point->workersBitMask == best_split_point->allWorkersBitMask)
-                && bitCnt(best_split_point->allWorkersBitMask) < Guci_options.max_threads_per_split) { 
-                    best_split_point->pos[thread_id] = best_split_point->origpos;
-                    Threads[thread_id].split_point = best_split_point;
-                    best_split_point->workersBitMask |= ((uint64)1<<thread_id);
-                    best_split_point->allWorkersBitMask |= ((uint64)1<<thread_id);
-                    Threads[thread_id].searching = true;
-                    Threads[thread_id].stop = false;
-            }
-            best_split_point->updatelock->unlock();
-            // the oldest set of splits has been searched, and best split is found, break immediately
-            // if it fails above, let it loop over idle loop and start over
-            break; 
+        if (best_split_point != NULL) break;
+    }
+    if (best_split_point != NULL) {
+        best_split_point->updatelock->lock();
+        if (Threads[master_thread].searching && Threads[master_thread].num_sp > 0 && !best_split_point->cutoff
+            && (best_split_point->workersBitMask == best_split_point->allWorkersBitMask)
+            && bitCnt(best_split_point->allWorkersBitMask) < Guci_options.max_threads_per_split) { // redundant criteria, just to be sure
+                best_split_point->pos[thread_id] = best_split_point->origpos;
+                Threads[thread_id].split_point = best_split_point;
+                best_split_point->workersBitMask |= ((uint64)1<<thread_id);
+                best_split_point->allWorkersBitMask |= ((uint64)1<<thread_id);
+                Threads[thread_id].searching = true;
+                Threads[thread_id].stop = false;
         }
+        best_split_point->updatelock->unlock();
     }
 }
 
-void helpfulMaster(int thread_id, SplitPoint *master_sp) {
+void helpfulMaster(int thread_id, SplitPoint *master_sp) { // don't call if thread is master
     int best_depth = 0;
     int master_thread = 0;
     SplitPoint *best_split_point = NULL;
 
-    for (int splitIdx = 0; splitIdx < MaxNumSplitPointsPerThread; splitIdx++) {
-        for(int threadIdx = 0; threadIdx < Guci_options.threads; threadIdx++) {
+    for(int threadIdx = 0; threadIdx < Guci_options.threads; threadIdx++) {
+        if (threadIdx == thread_id) continue;
+        if(!Threads[threadIdx].searching) continue; // idle thread or master waiting for other threads, no need to help
+        if (!(master_sp->allWorkersBitMask & ((uint64)1<<threadIdx))) continue;
+        for (int splitIdx = 0; splitIdx < Threads[threadIdx].num_sp; splitIdx++) {
             SplitPoint* sp = &Threads[threadIdx].sptable[splitIdx];
-            if (threadIdx != thread_id
-                && Threads[threadIdx].searching
-                && splitIdx < Threads[threadIdx].num_sp
-                && (master_sp->allWorkersBitMask & ((uint64)1<<threadIdx))
-                && sp->parent == master_sp // TODO: needs to remove this restriction, crashes without this for now, need to find bug elsewhere
-                && sp->workersBitMask == sp->allWorkersBitMask
-                && sp->depth > best_depth) {
-                    best_split_point = sp;
-                    best_depth = sp->depth;
-                    master_thread = threadIdx;
+            if (sp->workersBitMask != sp->allWorkersBitMask) continue; // only search those with all threads still searching
+            if (bitCnt(sp->workersBitMask) >= Guci_options.max_threads_per_split) continue; // enough threads working, no need to help
+            if (sp->depth > best_depth) {
+                best_split_point = sp;
+                best_depth = sp->depth;
+                master_thread = threadIdx;
             }
         }
-        if (best_split_point != NULL) {
-            best_split_point->updatelock->lock();
-            if (Threads[master_thread].searching  && !Threads[master_thread].stop
-                && Threads[master_thread].num_sp > 0 && !best_split_point->cutoff
-                && (best_split_point->workersBitMask == best_split_point->allWorkersBitMask)
-                && (best_split_point->allWorkersBitMask & ((uint64)1<<master_thread))) {
-                    best_split_point->pos[thread_id] = best_split_point->origpos;
-                    best_split_point->workersBitMask |= ((uint64)1<<thread_id);
-                    best_split_point->allWorkersBitMask |= ((uint64)1<<thread_id);
-                    Threads[thread_id].split_point = best_split_point;
-                    Threads[thread_id].searching = true;
-                    Threads[thread_id].stop = false;
-            }
-            best_split_point->updatelock->unlock();
-            // the oldest set of splits has been searched, and best split is found, break immediately
-            // if it fails above, let it loop over idle loop and start over
-            break;
+        if (best_split_point != NULL) break;
+    }
+    if (best_split_point != NULL) {
+        best_split_point->updatelock->lock();
+        if (Threads[master_thread].searching && Threads[master_thread].num_sp > 0 && !best_split_point->cutoff
+            && (best_split_point->workersBitMask == best_split_point->allWorkersBitMask)
+            && (best_split_point->allWorkersBitMask & ((uint64)1<<master_thread))
+            && bitCnt(best_split_point->allWorkersBitMask) < Guci_options.max_threads_per_split) { // redundant criteria, just to be sure
+                best_split_point->pos[thread_id] = best_split_point->origpos;
+                best_split_point->workersBitMask |= ((uint64)1<<thread_id);
+                best_split_point->allWorkersBitMask |= ((uint64)1<<thread_id);
+                Threads[thread_id].split_point = best_split_point;
+                Threads[thread_id].searching = true;
+                Threads[thread_id].stop = false;
         }
+        best_split_point->updatelock->unlock();
     }
 }
 
