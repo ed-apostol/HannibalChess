@@ -334,7 +334,7 @@ struct SplitPoint {
     volatile int played;
     volatile basic_move_t bestmove;
     volatile uint64 workersBitMask;
-    volatile uint64 maxWorkersBitMask;
+    volatile uint64 allWorkersBitMask;
     volatile bool cutoff;
     //Spinlock movelistlock[1];
     //Spinlock updatelock[1];
