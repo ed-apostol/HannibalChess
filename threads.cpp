@@ -63,6 +63,7 @@ void checkForWork(int thread_id) {
                         sp->pos[thread_id] = sp->origpos;
                         Threads[thread_id].split_point = sp;
                         sp->workersBitMask |= ((uint64)1<<thread_id);
+                        sp->allMask |= ((uint64)1<<thread_id);
                         Threads[thread_id].searching = true;
                         Threads[thread_id].stop = false;
                 }
