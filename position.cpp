@@ -35,7 +35,6 @@ void makeNullMove(position_t *pos, pos_store_t *undo) {
     pos->posStore.lastmove = EMPTY;
     pos->posStore.epsq = -1;
     pos->posStore.fifty++;
-    pos->posStore.pliesFromNull = 0;
 
     if (undo->epsq != -1) pos->posStore.hash ^= ZobEpsq[SQFILE(undo->epsq)];
 
@@ -213,7 +212,6 @@ void makeMove(position_t *pos, pos_store_t *undo, basic_move_t m) {
     pos->posStore.epsq = -1;
     pos->posStore.castle = undo->castle & CastleMask[from] & CastleMask[to];
     pos->posStore.fifty += 1;
-    pos->posStore.pliesFromNull += 1;
 
     if (undo->epsq != -1) pos->posStore.hash ^= ZobEpsq[SQFILE(undo->epsq)];
     pos->posStore.hash ^= ZobCastle[pos->posStore.castle ^ undo->castle];
@@ -485,7 +483,6 @@ void setPosition(position_t *pos, const char *fen) {
     pos->posStore.epsq = -1;
     pos->posStore.castle = 0;
     pos->posStore.fifty = 0;
-    pos->posStore.pliesFromNull = 0;
     pos->posStore.open[WHITE] = 0;
     pos->posStore.open[BLACK] = 0;
     pos->posStore.end[WHITE] = 0;

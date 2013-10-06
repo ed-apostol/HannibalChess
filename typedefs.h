@@ -229,7 +229,6 @@ struct pos_store_t {
     uint32 lastmove;
     int castle;
     int fifty;
-    int pliesFromNull;
     int epsq;
     int open[2];
     int end[2];

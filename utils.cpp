@@ -294,7 +294,7 @@ int biosKey(void) {
 int anyRep(const position_t *pos) {//this is used for book repetition detection, but should not be used in search
     if (pos->posStore.fifty >= 100) return true;
     ASSERT (pos->sp >= pos->posStore.fifty);
-    int plyForRep = 4, pliesToCheck = MIN(pos->posStore.fifty, pos->posStore.pliesFromNull);
+    int plyForRep = 4, pliesToCheck = pos->posStore.fifty;
     if (plyForRep <= pliesToCheck) {
         pos_store_t* psp = pos->posStore.previous->previous;
         do {
@@ -318,7 +318,7 @@ int anyRepNoMove(const position_t *pos, const int m) {//assumes no castle and no
     fromSq = moveFrom(m);
     toSq = moveTo(m);
     compareTo = pos->posStore.hash ^ ZobColor ^ ZobPiece[pos->side][moved][fromSq] ^ ZobPiece[pos->side][moved][toSq];
-    int plyForRep = 4, pliesToCheck = MIN(pos->posStore.fifty, pos->posStore.pliesFromNull);
+    int plyForRep = 4, pliesToCheck = pos->posStore.fifty;
     if (plyForRep <= pliesToCheck) {
         pos_store_t* psp = pos->posStore.previous->previous;
         do {
