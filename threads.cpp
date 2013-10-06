@@ -19,10 +19,22 @@ Spinlock SMPLock[1];
 thread_t Threads[MaxNumOfThreads];
 std::vector<std::thread> RealThreads;
 
-void initSearchThread(int i) {
+void initSearchThread (int i) {
     Threads[i].nodes_since_poll = 0;
     Threads[i].nodes_between_polls = 8192;
     Threads[i].nodes = 0;
+    Threads[i].searching = false;
+    Threads[i].stop = false;
+    Threads[i].started = 0;
+    Threads[i].ended = 0;
+    Threads[i].numsplits = 0;
+    Threads[i].num_sp = 0;
+    Threads[i].split_point = NULL;
+    for (int j = 0; j < MaxNumSplitPointsPerThread; ++j) {
+        for (int k = 0; k < MaxNumOfThreads; ++k) {
+            Threads[i].sptable[j].workersBitMask = 0;
+        }
+    }
     for (int Idx = 0; Idx < MAXPLY; Idx++) {
         Threads[i].ts[Idx].Init();
     }
@@ -57,9 +69,9 @@ void checkForWork(int thread_id) {
                 best_split_point = sp;
                 best_depth = sp->depth;
                 master_thread = threadIdx;
+                break; // best split found on this thread, break
             }
         }
-        if (best_split_point != NULL) break;
     }
     if (best_split_point != NULL) {
         best_split_point->updatelock->lock();
@@ -94,9 +106,9 @@ void helpfulMaster(int thread_id, SplitPoint *master_sp) { // don't call if thre
                 best_split_point = sp;
                 best_depth = sp->depth;
                 master_thread = threadIdx;
+                break; // best split found on this thread, break
             }
         }
-        if (best_split_point != NULL) break;
     }
     if (best_split_point != NULL) {
         best_split_point->updatelock->lock();
@@ -157,20 +169,7 @@ bool smpCutoffOccurred(SplitPoint *sp) {
 
 void initSmpVars() {
     for (int i = 0; i < MaxNumOfThreads; ++i) {
-#ifdef SELF_TUNE2
-        Threads[i].playingGame = false;
-#endif
-        Threads[i].searching = false;
-        Threads[i].stop = false;
-        Threads[i].started = 0;
-        Threads[i].ended = 0;
-        Threads[i].numsplits = 0;
-        Threads[i].num_sp = 0;
-        for (int j = 0; j < MaxNumSplitPointsPerThread; ++j) {
-            for (int k = 0; k < MaxNumOfThreads; ++k) {
-                Threads[i].sptable[j].workersBitMask = 0;
-            }
-        }
+        initSearchThread(i);
     }
 }
 

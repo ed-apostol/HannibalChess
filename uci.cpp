@@ -223,10 +223,6 @@ void uciGo(position_t *pos, char *options) {
     SearchInfo(0).cutfail = 1;
     SearchInfo(0).allfail = 1;
 
-    for (int i = 0; i < Guci_options.threads; i++) {
-        initSearchThread(i);
-    }
-
     memset(SearchInfo(0).moves, 0, sizeof(SearchInfo(0).moves));
 
     infinite = strstr(options, "infinite");

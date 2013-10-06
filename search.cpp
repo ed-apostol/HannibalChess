@@ -850,7 +850,6 @@ void getBestMove(position_t *pos, int thread_id) {
         std::unique_lock<std::mutex>(Threads[thread_id].threadLock);
         Threads[i].idle_event.notify_one();
     }
-    Threads[thread_id].split_point = NULL;
     SearchInfo(thread_id).mvlist_initialized = false;
 
     for (id = 1; id < MAXPLY; id++) {
