@@ -54,6 +54,8 @@ int main(void) {
 
     Print(1, "SplitPoint:%.2fkB\n", (float)sizeof(SplitPoint)/(float)1024);
     Print(1, "position_t:%.2fkB\n", (float)sizeof(position_t)/(float)1024);
+    Print(1, "SearchStack:%.2fkB\n", (float)sizeof(SearchStack)/(float)1024);
+    
 #ifndef TCEC
     for (int i=0; i < MaxNumOfThreads;i++) {	//the default is every thread is a normal search
         SearchInfoMap[i] = &global_search_info;

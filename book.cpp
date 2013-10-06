@@ -167,7 +167,7 @@ bool learn_position(position_t *pos,int thread_id, continuation_t *variation) {
                 if (SHOW_LEARNING) Print(3, "info string learning %s discovered: %d (%llu)\n",pv2Str(variation).c_str(),bestScore,usedTime/1000);
                 if (LOG_LEARNING) Print(2, "learning: %s discovered: %d (%llu)\n",pv2Str(variation).c_str(),bestScore,usedTime/1000);
                 makeMove(pos, &undo, SearchInfo(thread_id).bestmove); //write the resulting position score if it is an unknown position (not repetition)
-                insert_score_to_puck_file(&GhannibalBook, pos->hash, -bestScore);//learn this position score, and after the desired move
+                insert_score_to_puck_file(&GhannibalBook, pos->posStore.hash, -bestScore);//learn this position score, and after the desired move
                 unmakeMove(pos, &undo);
             }
             else {
@@ -177,7 +177,7 @@ bool learn_position(position_t *pos,int thread_id, continuation_t *variation) {
             }
             variation->length--;
             if (bestMove) { //write the current position score
-                insert_score_to_puck_file(&GhannibalBook, pos->hash, bestScore);//learn this position score, and after the desired move
+                insert_score_to_puck_file(&GhannibalBook, pos->posStore.hash, bestScore);//learn this position score, and after the desired move
             }
     }
     SearchInfoMap[thread_id] = &global_search_info; //reset before local variable disappears

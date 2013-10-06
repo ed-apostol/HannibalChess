@@ -225,15 +225,18 @@ struct uci_option_t{ // TODO: move this to uci file
 
 
 /* the undo structure */
-struct pos_store_t{
+struct pos_store_t {
     uint32 lastmove;
     int castle;
     int fifty;
+    int pliesFromNull;
     int epsq;
     int open[2];
     int end[2];
     int mat_summ[2];
     uint64 phash;
+    uint64 hash;
+    pos_store_t* previous;
 };
 
 /* the position structure */
@@ -253,8 +256,6 @@ struct position_t{
     uint8 side;
     uint8 ply;
     uint8 sp;
-    uint64 hash;
-    uint64 stack[MAX_HASH_STORE]; // TODO: needs to reduce the size of this one
 };
 
 typedef uint8 mflag_t;
@@ -274,6 +275,7 @@ struct SearchStack {
         moveGivesCheck(false),
         playedMoves(0),
         hisCnt(0),
+        hisMoves(hisMovesA),
         evalvalue(-INF),
         bestvalue(-INF),
         bestmove(EMPTY),
@@ -288,7 +290,8 @@ struct SearchStack {
     { }
     int playedMoves;
     int hisCnt;
-    basic_move_t hisMoves[64];
+    basic_move_t hisMovesA[64];
+    basic_move_t* hisMoves;
     int bestvalue;
     basic_move_t bestmove;
 
@@ -336,10 +339,10 @@ struct SplitPoint {
     volatile uint64 workersBitMask;
     volatile uint64 allWorkersBitMask;
     volatile bool cutoff;
-    //Spinlock movelistlock[1];
-    //Spinlock updatelock[1];
-    std::mutex movelistlock[1];
-    std::mutex updatelock[1];
+    Spinlock movelistlock[1];
+    Spinlock updatelock[1];
+    //std::mutex movelistlock[1];
+    //std::mutex updatelock[1];
 };
 
 

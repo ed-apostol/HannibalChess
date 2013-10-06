@@ -383,7 +383,7 @@ void uciSetPosition(position_t *pos, char *str) {
             if (!move) {
                 Print(3, "info string Illegal move: %s\n", movestr);
                 return;
-            } else makeMove(pos, &undo, move);
+            } else makeMove(pos, &undo, move); // TODO: fixed the undo here, should be put on stack
 #ifndef TCEC
             if (startPos && movesSoFar.length < MAXPLY-1) {
                 movesSoFar.moves[movesSoFar.length] = move;
@@ -392,7 +392,6 @@ void uciSetPosition(position_t *pos, char *str) {
 #endif
             // this is to allow any number of moves in a game by only keeping the last relevant ones for rep detection
             if (pos->posStore.fifty==0) {
-                pos->stack[0] = pos->hash;
                 pos->sp = 0;
             }
             while (isspace(*c)) c++;

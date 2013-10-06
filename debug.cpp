@@ -407,7 +407,7 @@ void positionIsOk(const position_t *pos) {
     ASSERT(pos->posStore.open[BLACK] == open_score[BLACK]);
     ASSERT(pos->posStore.end[WHITE] == end_score[WHITE]);
     ASSERT(pos->posStore.end[BLACK] == end_score[BLACK]);
-    ASSERT(pos->hash == hash);
+    ASSERT(pos->posStore.hash == hash);
     ASSERT(pos->posStore.phash == pawnhash);
     ASSERT(!(pos->color[BLACK] & pos->color[WHITE]));
     ASSERT((pos->side == WHITE || pos->side == BLACK));

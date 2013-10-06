@@ -623,7 +623,7 @@ int PlayOptimizeGame(position_t *pos, int startPos, int time) {
         if (moves%10==9 && pos->side == BLACK) Print(3,"\n");
         makeMove(pos, &undo, SearchInfo(0).bestmove);
         if (pos->posStore.fifty==0) {
-            pos->stack[0] = pos->hash;
+            pos->stack[0] = pos->posStore.hash;
             pos->sp = 0;
         }
         if (anyRep(pos)) {
@@ -1411,7 +1411,7 @@ int PlayGame(position_t *pos, int player1, int player2, int startPos) {
         }
         makeMove(pos, &undo, SearchInfo.bestmove);
         if (pos->posStore.fifty==0) {
-            pos->stack[0] = pos->hash;
+            pos->stack[0] = pos->posStore.hash;
             pos->sp = 0;
         }
         //		if (pos->posStore.fifty >= 100) return 0;

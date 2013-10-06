@@ -156,7 +156,7 @@ void displayBoard(const position_t *pos, int x) {
     Print(x, "Ch = %s,\n",
         isAtt(pos, pos->side^1, pos->kings&pos->color[pos->side])
         ? "T" : "F");
-    Print(x, "H = %s, ", bit2Str(pos->hash));
+    Print(x, "H = %s, ", bit2Str(pos->posStore.hash));
     Print(x, "PH = %s\n", bit2Str(pos->posStore.phash));
 }
 
@@ -291,47 +291,44 @@ int biosKey(void) {
 #endif
 }
 
-int anyRep(const position_t *pos) //this is used for book repetition detection, but should not be used in search
-{
-    int i;
-    int lastCheck;
+int anyRep(const position_t *pos) {//this is used for book repetition detection, but should not be used in search
     if (pos->posStore.fifty >= 100) return true;
-
     ASSERT (pos->sp >= pos->posStore.fifty);
-
-    lastCheck = pos->sp - pos->posStore.fifty;
-    //	ASSERT (pos->posStore.fifty <= 100);// might not be true, since checks in Qsearch and no
-    ASSERT (lastCheck < MAX_HASH_STORE);
-
-    //	if (lastCheck < 0) lastCheck = 0; // we need this because fen allows fifty to be greater than moves we can check
-    for (i = (int)pos->sp-4; i >= lastCheck; i -= 2)
-    {
-        //ASSERT(pos->stack[i] != 0); //hmmm, maybe this is needed?
-        if (pos->stack[i] == pos->hash) return true;
+    int i = 4, e = MIN(pos->posStore.fifty, pos->posStore.pliesFromNull);
+    if (i <= e) {
+        pos_store_t* psp = pos->posStore.previous->previous;
+        do {
+            psp = psp->previous->previous;
+            if (psp->hash == pos->posStore.hash) return true; // Draw after first repetition
+            i += 2;
+        } while (i <= e);
     }
     return false;
 }
 
 int anyRepNoMove(const position_t *pos, const int m) {//assumes no castle and no capture
-    int i;
-    int lastCheck;
     int moved, fromSq, toSq;
     uint64 compareTo;
-    //    pos->posStore.lastmove = undo->lastmove;
 
     if (moveCapture(m) || isCastle(m) || pos->posStore.fifty < 3) return false;
     moved = movePiece(m);
     if (moved==PAWN) return false;
-    if (pos->posStore.fifty >= 99) return true;
-    lastCheck = pos->sp - pos->posStore.fifty;
+    if (pos->posStore.fifty > 99) return true;
     //TODO consider  castle check in here
     fromSq = moveFrom(m);
     toSq = moveTo(m);
-    compareTo = pos->hash ^ ZobColor ^ ZobPiece[pos->side][moved][fromSq] ^ ZobPiece[pos->side][moved][toSq];
-    i = (int)pos->sp-3;
-    do {
-        if (pos->stack[i] == compareTo) return true;
-        i -= 2;
-    } while (i >= lastCheck);
+    compareTo = pos->posStore.hash ^ ZobColor ^ ZobPiece[pos->side][moved][fromSq] ^ ZobPiece[pos->side][moved][toSq];
+    int i = 4, e = MIN(pos->posStore.fifty, pos->posStore.pliesFromNull);
+    if (i <= e) {
+        pos_store_t* psp = pos->posStore.previous->previous;
+        do {
+            psp = psp->previous->previous;
+            if (psp->hash == compareTo) return true; // Draw after first repetition
+            i += 2;
+        } while (i <= e);
+    }
     return false;
 }
+
+
+
