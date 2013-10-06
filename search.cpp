@@ -517,10 +517,11 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
 
     int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 4) : (depth * depth));
     move_t* move;
+    bool inLocalSplitPoint = inSplitPoint;
     while ((move = sortNext(sp, pos, ss.mvlist, ss.mvlist_phase, thread_id)) != NULL) {
         int score = -INF;
         if (inSingular && move->m == ssprev.bannedMove) continue;
-        if (inSplitPoint) {
+        if (inLocalSplitPoint) {
             sp->updatelock->lock();
             ss.playedMoves = ++sp->played;
         }
@@ -528,7 +529,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
         if (ss.hisCnt < 64 && !moveIsTactical(move->m)) {
             ss.hisMoves[ss.hisCnt++] = move->m;
         }
-        if (inSplitPoint) sp->updatelock->unlock();
+        if (inLocalSplitPoint) sp->updatelock->unlock();
         if (anyRepNoMove(pos, move->m)) { 
             score = DrawValue[pos->side];
         } else {
@@ -569,7 +570,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 newdepth -= fullReduction;
                 int newdepthclone = newdepth - partialReduction;
                 makeMove(pos, &undo, move->m);
-                if (inSplitPoint) alpha = sp->alpha;
+                if (inLocalSplitPoint) alpha = sp->alpha;
                 ss.reducedMove = (newdepthclone < newdepth);
 
                 score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepthclone, ss, thread_id, CutNode);
@@ -584,8 +585,8 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
             }
             unmakeMove(pos, &undo);
         }
-        if (Threads[thread_id].stop) return 0;
-        if (inSplitPoint) sp->updatelock->lock();
+        if (Threads[thread_id].stop) break;
+        if (inLocalSplitPoint) sp->updatelock->lock();
         if (inRoot) {
             move->s = score;
             if (score > SearchInfo(thread_id).rbestscore1) {
@@ -595,29 +596,29 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 SearchInfo(thread_id).rbestscore2 = score;
             }
         }
-        if (score > (inSplitPoint ? sp->bestvalue : ss.bestvalue)) {
-            ss.bestvalue = inSplitPoint ? sp->bestvalue = score : score;
+        if (score > (inLocalSplitPoint ? sp->bestvalue : ss.bestvalue)) {
+            ss.bestvalue = inLocalSplitPoint ? sp->bestvalue = score : score;
             if (inRoot) {
                 SearchInfo(thread_id).best_value = ss.bestvalue;
                 extractPvMovesFromHash(pos, &SearchInfo(thread_id).rootPV, move->m, true);
                 if (SearchInfo(thread_id).iteration > 1 && SearchInfo(thread_id).bestmove != move->m) SearchInfo(thread_id).change = 1;
             }
-            if (ss.bestvalue > (inSplitPoint ? sp->alpha : alpha)) {
-                ss.bestmove = inSplitPoint ? sp->bestmove = move->m : move->m;
+            if (ss.bestvalue > (inLocalSplitPoint ? sp->alpha : alpha)) {
+                ss.bestmove = inLocalSplitPoint ? sp->bestmove = move->m : move->m;
                 if (inRoot) {
                     SearchInfo(thread_id).bestmove = ss.bestmove;
                     if (SearchInfo(thread_id).rootPV.length > 1) SearchInfo(thread_id).pondermove = SearchInfo(thread_id).rootPV.moves[1];
                     else SearchInfo(thread_id).pondermove = 0;
                 }
                 if (inPvNode(nt) && ss.bestvalue < beta) {
-                    alpha = inSplitPoint ? sp->alpha = ss.bestvalue : ss.bestvalue;
+                    alpha = inLocalSplitPoint ? sp->alpha = ss.bestvalue : ss.bestvalue;
                 } else {
                     if (inRoot) {
-                        if (inSplitPoint) sp->movelistlock->lock();
+                        if (inLocalSplitPoint) sp->movelistlock->lock();
                         for (int i = ss.mvlist->pos; i < ss.mvlist->size; ++i) ss.mvlist->list[i].s = -INF;
-                        if (inSplitPoint) sp->movelistlock->unlock();
+                        if (inLocalSplitPoint) sp->movelistlock->unlock();
                     }
-                    if (inSplitPoint) {
+                    if (inLocalSplitPoint) {
                         sp->cutoff = true;
                         sp->updatelock->unlock();
                     }
@@ -625,14 +626,25 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 }
             }
         }
-        if (inSplitPoint) sp->updatelock->unlock();
-        if (!inSplitPoint && !inSingular && !Threads[thread_id].stop && !inCheck && Threads[thread_id].num_sp < Guci_options.max_activesplits_per_thread
-            && Guci_options.threads > 1 && depth >= Guci_options.min_split_depth
-            //&& (!inCutNode(nt) || MoveGenPhase[ss.mvlist_phase] == PH_QUIET_MOVES)
-            && splitRemainingMoves(pos, ss.mvlist, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, thread_id)) {
-                break;
+        if (inLocalSplitPoint) sp->updatelock->unlock();
+        if (!inLocalSplitPoint && !inSingular && !Threads[thread_id].stop && !inCheck 
+            && Threads[thread_id].num_sp < Guci_options.max_activesplits_per_thread
+            && Guci_options.threads > 1 && depth >= Guci_options.min_split_depth) {
+                putUpSplitPoint(pos, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, thread_id);
+                sp = Threads[thread_id].split_point;
+                inLocalSplitPoint = true;
         }
     }
+
+    if (inLocalSplitPoint && !inSplitPoint) {
+        sp->updatelock->lock();
+        sp->workersBitMask &= ~(1 << thread_id);
+        Threads[thread_id].searching = false;
+        sp->updatelock->unlock();
+        helpfulMasterLoop(sp, thread_id);
+        putDownSplitPoint(sp, &ss, thread_id);
+    }
+    if (Threads[thread_id].stop) return 0;
     if (inRoot && !inSplitPoint && ss.playedMoves == 0) {
         if (inCheck) return -INF;
         else return DrawValue[pos->side];
@@ -850,7 +862,6 @@ void getBestMove(position_t *pos, int thread_id) {
         std::unique_lock<std::mutex>(Threads[thread_id].threadLock);
         Threads[i].idle_event.notify_one();
     }
-    Threads[thread_id].split_point = NULL;
     SearchInfo(thread_id).mvlist_initialized = false;
 
     for (id = 1; id < MAXPLY; id++) {
