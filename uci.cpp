@@ -349,7 +349,6 @@ void uciSetPosition(position_t *pos, char *str) {
     char movestr[10];
     basic_move_t move;
     movelist_t ml;
-    pos_store_t undo;
     bool startPos = false;
 
 #ifndef TCEC
@@ -383,7 +382,7 @@ void uciSetPosition(position_t *pos, char *str) {
             if (!move) {
                 Print(3, "info string Illegal move: %s\n", movestr);
                 return;
-            } else makeMove(pos, &undo, move); // TODO: fixed the undo here, should be put on stack
+            } else makeMove(pos, &UndoStack[pos->sp], move);
 #ifndef TCEC
             if (startPos && movesSoFar.length < MAXPLY-1) {
                 movesSoFar.moves[movesSoFar.length] = move;

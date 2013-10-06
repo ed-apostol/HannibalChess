@@ -44,7 +44,7 @@ extern int FutilityMarginTable[MAX_FUT_MARGIN+1][64];
 extern int ReductionTable[2][64][64];
 extern int needReplyReady;
 
-
+extern pos_store_t UndoStack[MAX_HASH_STORE];
 
 /* contains the delta of possible piece moves between two squares,
 zero otherwise */

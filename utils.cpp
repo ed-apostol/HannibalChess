@@ -294,14 +294,14 @@ int biosKey(void) {
 int anyRep(const position_t *pos) {//this is used for book repetition detection, but should not be used in search
     if (pos->posStore.fifty >= 100) return true;
     ASSERT (pos->sp >= pos->posStore.fifty);
-    int i = 4, e = MIN(pos->posStore.fifty, pos->posStore.pliesFromNull);
-    if (i <= e) {
+    int plyForRep = 4, pliesToCheck = MIN(pos->posStore.fifty, pos->posStore.pliesFromNull);
+    if (plyForRep <= pliesToCheck) {
         pos_store_t* psp = pos->posStore.previous->previous;
         do {
             psp = psp->previous->previous;
             if (psp->hash == pos->posStore.hash) return true; // Draw after first repetition
-            i += 2;
-        } while (i <= e);
+            plyForRep += 2;
+        } while (plyForRep <= pliesToCheck);
     }
     return false;
 }
@@ -318,14 +318,14 @@ int anyRepNoMove(const position_t *pos, const int m) {//assumes no castle and no
     fromSq = moveFrom(m);
     toSq = moveTo(m);
     compareTo = pos->posStore.hash ^ ZobColor ^ ZobPiece[pos->side][moved][fromSq] ^ ZobPiece[pos->side][moved][toSq];
-    int i = 4, e = MIN(pos->posStore.fifty, pos->posStore.pliesFromNull);
-    if (i <= e) {
+    int plyForRep = 4, pliesToCheck = MIN(pos->posStore.fifty, pos->posStore.pliesFromNull);
+    if (plyForRep <= pliesToCheck) {
         pos_store_t* psp = pos->posStore.previous->previous;
         do {
             psp = psp->previous->previous;
             if (psp->hash == compareTo) return true; // Draw after first repetition
-            i += 2;
-        } while (i <= e);
+            plyForRep += 2;
+        } while (plyForRep <= pliesToCheck);
     }
     return false;
 }
