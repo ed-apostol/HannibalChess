@@ -847,8 +847,7 @@ void getBestMove(position_t *pos, int thread_id) {
     // SMP 
     initSmpVars();
     for (int i = 1; i < Guci_options.threads; ++i) {
-        std::unique_lock<std::mutex>(Threads[thread_id].threadLock);
-        Threads[i].idle_event.notify_one();
+        Threads[i].triggerCondition();
     }
     SearchInfo(thread_id).mvlist_initialized = false;
 
@@ -953,7 +952,7 @@ void checkSpeedUp(position_t* pos, char string[]) {
         uciSetOption("name Threads value 1");
         TransTable.Clear();
         for (int k = 0; k < Guci_options.threads; ++k) {
-            initSearchThread(k);
+            Threads[k].Init();
         }
         Print(5, "\n\nPos#%d: %s\n", i+1, fenPos[i]);
         uciSetPosition(pos, fenPos[i]);
@@ -973,7 +972,7 @@ void checkSpeedUp(position_t* pos, char string[]) {
             uciSetOption(tempStr);
             TransTable.Clear();
             for (int k = 0; k < Guci_options.threads; ++k) {
-                initSearchThread(k);
+                Threads[k].Init();
             }
             uciSetPosition(pos, fenPos[i]);
             startTime = getTime();
@@ -1026,7 +1025,7 @@ void benchMinSplitDepth(position_t* pos, char string[]) {
             uciSetOption(command);
             TransTable.Clear();
             for (int k = 0; k < Guci_options.threads; ++k) {
-                initSearchThread(k);
+                Threads[k].Init();
             }
             uciSetPosition(pos, fenPos[posIdx]);
             int64 startTime = getTime();
@@ -1083,7 +1082,7 @@ void benchThreadsperSplit(position_t* pos, char string[]) {
             uciSetOption(command);
             TransTable.Clear();
             for (int k = 0; k < Guci_options.threads; ++k) {
-                initSearchThread(k);
+                Threads[k].Init();
             }
             uciSetPosition(pos, fenPos[posIdx]);
             int64 startTime = getTime();
@@ -1140,7 +1139,7 @@ void benchActiveSplits(position_t* pos, char string[]) {
             uciSetOption(command);
             TransTable.Clear();
             for (int k = 0; k < Guci_options.threads; ++k) {
-                initSearchThread(k);
+                Threads[k].Init();
             }
             uciSetPosition(pos, fenPos[posIdx]);
             int64 startTime = getTime();

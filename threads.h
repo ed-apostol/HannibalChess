@@ -5,6 +5,7 @@
 #include <thread>
 #include <condition_variable>
 #include "search.h"
+#include "utils.h"
 
 
 
@@ -17,13 +18,43 @@ struct ThreadStack {
     basic_move_t killer2;
 };
 
-struct thread_t {
+class Thread {
+public:
+    Thread() :
+        stop(false),
+        doSleep(true),
+        searching(false),
+        exit_flag(false)
+    {}
+    //~Thread() {
+    //    doSleep = false;
+    //    stop = true;
+    //    exit_flag = true;
+    //    searching = false;        
+    //    Print(1, "gone here 1\n");
+    //    triggerCondition();
+    //    Print(1, "gone here 2\n");
+    //    realThread.join();
+    //    Print(1, "gone here 3\n");
+    //}
+    void sleepAndWaitForCondition() {
+        std::unique_lock<std::mutex> lk(threadLock);
+        idle_event.wait(lk);
+    }
+    void triggerCondition() {
+        doSleep = false;
+        std::unique_lock<std::mutex>(threadLock);
+        idle_event.notify_one();
+    }
+    void Init();
+
     SplitPoint *split_point;
     volatile bool stop;
+    volatile bool doSleep;
     volatile bool searching;
     volatile bool exit_flag; // TODO: move to threads pool
-    std::condition_variable idle_event;
-    std::mutex threadLock;
+
+    std::thread realThread;
     uint64 nodes;
     uint64 nodes_since_poll;
     uint64 nodes_between_polls;
@@ -33,56 +64,51 @@ struct thread_t {
     int num_sp;
     ThreadStack ts[MAXPLY];
     SplitPoint sptable[MaxNumSplitPointsPerThread];
-#ifdef SELF_TUNE2
-    bool playingGame;
-#endif
+private:
+    std::condition_variable idle_event;
+    std::mutex threadLock;
 };
 
-extern Spinlock SMPLock[1]; // ThreadsPool
-extern thread_t Threads[MaxNumOfThreads]; // ThreadsPool this should be std::vector
+extern Thread Threads[MaxNumOfThreads]; // ThreadsPool this should be std::vector
 
-
-extern std::vector<std::thread> RealThreads;
+extern bool smpCutoffOccurred(SplitPoint *sp); // SplitPoint
 
 extern void setAllThreadsToStop(int thread); // ThreadsPool
-extern void initSearchThread(int i);
-extern bool smpCutoffOccurred(SplitPoint *sp);
 extern void initSmpVars();
-extern bool idleThreadExists(int master); // ThreadsPool
 extern void initThreads(void); // ThreadsPool
 extern void stopThreads(void); // ThreadsPool
 extern bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, const int master);
 
-class Thread {
-public:
-    Thread ();
-    ~Thread ();
-private:
-    SplitPoint *split_point;
-    volatile bool stop;
-    volatile bool searching;
-    volatile bool exit_flag; // TODO: move to threads pool
-    std::condition_variable idle_event;
-    std::mutex threadLock;
-    uint64 nodes;
-    uint64 nodes_since_poll;
-    uint64 nodes_between_polls;
-    uint64 started; // DEBUG
-    uint64 ended; // DEBUG
-    int64 numsplits; // DEBUG
-    int num_sp;
-    ThreadStack ts[MAXPLY];
-    SplitPoint sptable[MaxNumSplitPointsPerThread];
-};
-
-class ThreadsTab {
-public:
-    ThreadsTab ();
-    ~ThreadsTab ();
-    void ResizeNumThreads(int num);
-    std::mutex SMPLock[1];
-private:
-    std::vector<Thread*> m_ThreadsA;
-};
+//////class Thread {
+//////public:
+//////    Thread ();
+//////    ~Thread ();
+//////private:
+//////    SplitPoint *split_point;
+//////    volatile bool stop;
+//////    volatile bool searching;
+//////    volatile bool exit_flag; // TODO: move to threads pool
+//////    std::condition_variable idle_event;
+//////    std::mutex threadLock;
+//////    uint64 nodes;
+//////    uint64 nodes_since_poll;
+//////    uint64 nodes_between_polls;
+//////    uint64 started; // DEBUG
+//////    uint64 ended; // DEBUG
+//////    int64 numsplits; // DEBUG
+//////    int num_sp;
+//////    ThreadStack ts[MAXPLY];
+//////    SplitPoint sptable[MaxNumSplitPointsPerThread];
+//////};
+//////
+//////class ThreadsTab {
+//////public:
+//////    ThreadsTab ();
+//////    ~ThreadsTab ();
+//////    void ResizeNumThreads(int num);
+//////    std::mutex SMPLock[1];
+//////private:
+//////    std::vector<Thread*> m_ThreadsA;
+//////};
 
 

@@ -15,42 +15,36 @@
 #include "utils.h"
 #include "bitutils.h"
 
-Spinlock SMPLock[1];
-thread_t Threads[MaxNumOfThreads];
-std::vector<std::thread> RealThreads;
+Thread Threads[MaxNumOfThreads];
 
-void initSearchThread (int i) {
-    Threads[i].nodes_since_poll = 0;
-    Threads[i].nodes_between_polls = 8192;
-    Threads[i].nodes = 0;
-    Threads[i].searching = false;
-    Threads[i].stop = false;
-    Threads[i].started = 0;
-    Threads[i].ended = 0;
-    Threads[i].numsplits = 0;
-    Threads[i].num_sp = 0;
-    Threads[i].split_point = NULL;
+void Thread::Init() {
+    searching = false;
+    stop = false;
+    exit_flag = false;
+    nodes = 0;
+    nodes_since_poll = 0;
+    nodes_between_polls = 8192;
+    started = 0;
+    ended = 0;
+    numsplits = 0;
+    num_sp = 0;
+    split_point = NULL;
     for (int j = 0; j < MaxNumSplitPointsPerThread; ++j) {
         for (int k = 0; k < MaxNumOfThreads; ++k) {
-            Threads[i].sptable[j].workersBitMask = 0;
+            sptable[j].workersBitMask = 0;
         }
     }
     for (int Idx = 0; Idx < MAXPLY; Idx++) {
-        Threads[i].ts[Idx].Init();
+        ts[Idx].Init();
     }
 }
 
 void setAllThreadsToStop(int thread) {
     SearchInfo(thread).thinking_status = STOPPED;
-#ifdef SELF_TUNE2
-    Threads[thread].stop = true;
-#else
-    SMPLock->lock();
     for (int i = 0; i < Guci_options.threads; i++) {
+        Threads[i].doSleep = true;
         Threads[i].stop = true;
     }
-    SMPLock->unlock();
-#endif
 }
 
 void checkForWork(int thread_id) { 
@@ -130,11 +124,9 @@ void helpfulMaster(int thread_id, SplitPoint *master_sp) { // don't call if thre
 void idleLoop(int thread_id, SplitPoint *master_sp) {
     ASSERT(thread_id < Guci_options.threads || master_sp == NULL);
     while(!Threads[thread_id].exit_flag) {
-        while(master_sp == NULL && SearchInfo(thread_id).thinking_status == STOPPED && !Threads[thread_id].exit_flag) {
-            std::unique_lock<std::mutex> lk(Threads[thread_id].threadLock);
-            Threads[thread_id].idle_event.wait(lk);
+        if (master_sp == NULL && Threads[thread_id].doSleep) {
+            Threads[thread_id].sleepAndWaitForCondition();
         }
-
         if(Threads[thread_id].searching) {
             ++Threads[thread_id].started;
             SplitPoint* sp = Threads[thread_id].split_point; // this is correctly located, don't move this, else bug
@@ -169,33 +161,32 @@ bool smpCutoffOccurred(SplitPoint *sp) {
 
 void initSmpVars() {
     for (int i = 0; i < MaxNumOfThreads; ++i) {
-        initSearchThread(i);
+        Threads[i].Init();
     }
 }
 
 void initThreads(void) {
     int i;
     for (i = 0; i < MaxNumOfThreads; ++i) {
-        Threads[i].num_sp = 0;
-        Threads[i].exit_flag = false;
+        Threads[i].Init();
         SearchInfo(i).thinking_status = STOPPED; // SMP HACK
     }
     for(i = 0; i < MaxNumOfThreads; i++) {
         SplitPoint* sp = NULL;
-        RealThreads.push_back(std::thread(idleLoop, i, sp));
+        Threads[i].realThread = std::thread(idleLoop, i, sp);
     }
 }
 
 void stopThreads(void) {
     for(int i = 0; i < MaxNumOfThreads; i++) {
+        Threads[i].doSleep = false;
         Threads[i].stop = true;
         Threads[i].exit_flag = true;
         Threads[i].searching = false;        
     }
     for(int i = 0; i < MaxNumOfThreads; i++) {
-        std::unique_lock<std::mutex>(Threads[i].threadLock);
-        Threads[i].idle_event.notify_one();
-        RealThreads[i].join();
+        Threads[i].triggerCondition();
+        Threads[i].realThread.join();
         Print(1, "Gone here\n");
     }
     Print(1, "Gone here end\n");

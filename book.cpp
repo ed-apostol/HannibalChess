@@ -84,7 +84,7 @@ bool learn_position(position_t *pos,int thread_id, continuation_t *variation) {
     memset(SearchInfo(thread_id).history, 0, sizeof(SearchInfo(thread_id).history)); //TODO this is bad to share with learning
     memset(SearchInfo(thread_id).evalgains, 0, sizeof(SearchInfo(thread_id).evalgains)); //TODO this is bad to share with learning
 
-    initSearchThread(thread_id);
+    Threads[thread_id].Init();
 
     SearchInfo(thread_id).thinking_status = THINKING;
     SearchInfo(thread_id).node_is_limited = true;

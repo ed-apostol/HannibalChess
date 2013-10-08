@@ -13,6 +13,8 @@
 
 #if defined OPTIMIZE || SELF_TUNE2
 
+Spinlock SMPLock[1];
+
 #define NUM_START_POS 543 
 const char *FenStartString[NUM_START_POS] = {
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",

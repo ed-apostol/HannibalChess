@@ -145,7 +145,7 @@ void uciSetOption(char string[]) {
 #endif
         if (newValue > oldValue) {
             for (int i = oldValue; i < newValue; i++) {
-                initSearchThread(i);
+                Threads[i].Init();
             }
         }
         Guci_options.threads = newValue;
