@@ -78,7 +78,7 @@ bool learn_position(position_t *pos,int thread_id, continuation_t *variation) {
     int bestScore = -INF;
     basic_move_t bestMove = 0;
     pos_store_t undo;
-    search_info_t learnSearchInfo;
+    SearchInfo learnSearchInfo;
 
     SearchInfoMap[thread_id] = &learnSearchInfo;
     memset(SearchInfo(thread_id).history, 0, sizeof(SearchInfo(thread_id).history)); //TODO this is bad to share with learning

@@ -135,7 +135,7 @@ void idleLoop(int thread_id, SplitPoint *master_sp) {
         if(Threads[thread_id]->searching) {
             ++Threads[thread_id]->started;
             SplitPoint* sp = Threads[thread_id]->split_point; // this is correctly located, don't move this, else bug
-            searchFromIdleLoop(sp, thread_id);
+            SearchMgr::Inst().searchFromIdleLoop(sp, thread_id);
             sp->updatelock->lock();
             sp->workersBitMask &= ~(1 << thread_id);
             Threads[thread_id]->searching = false;

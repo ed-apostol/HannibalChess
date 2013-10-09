@@ -14,7 +14,7 @@
 
 
 /* the search data structure */
-struct search_info_t{
+struct SearchInfo{
     int thinking_status;
 #ifndef TCEC
     int outOfBook;
@@ -68,12 +68,14 @@ struct search_info_t{
     TranspositionTable tt;
 };
 
+
+// TODO: to be deleted
 #ifndef TCEC
-search_info_t global_search_info;
-search_info_t* SearchInfoMap[MaxNumOfThreads];
+SearchInfo global_search_info;
+SearchInfo* SearchInfoMap[MaxNumOfThreads];
 #define SearchInfo(thread) (*SearchInfoMap[thread])
 #else
-extern search_info_t global_search_info;
+extern SearchInfo global_search_info;
 #define SearchInfo(thread) global_search_info
 #endif
 
@@ -86,13 +88,22 @@ extern search_info_t global_search_info;
 extern inline int moveIsTactical(uint32 m);
 extern inline int historyIndex(uint32 side, uint32 move);
 
+class Search;
 
-
-extern void searchFromIdleLoop(SplitPoint* sp, const int thread_id);
-extern void getBestMove(position_t *pos, int thread_id);
-extern void checkSpeedUp(position_t* pos, char string[]);
-extern void benchMinSplitDepth(position_t* pos, char string[]);
-extern void benchThreadsperSplit(position_t* pos, char string[]);
-extern void benchActiveSplits(position_t* pos, char string[]);
+class SearchMgr {
+public:
+    SearchMgr();
+    ~SearchMgr();
+    static SearchMgr& Inst() { static SearchMgr inst; return inst; }
+    void searchFromIdleLoop(SplitPoint* sp, const int thread_id);
+    void getBestMove(position_t *pos, int thread_id);
+    void checkSpeedUp(position_t* pos, char string[]);
+    void benchMinSplitDepth(position_t* pos, char string[]);
+    void benchThreadsperSplit(position_t* pos, char string[]);
+    void benchActiveSplits(position_t* pos, char string[]);
+private:
+    SearchInfo info;
+    Search* search;
+};
 
 extern void quit(void);

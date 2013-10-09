@@ -23,11 +23,11 @@
 #include "eval.h"
 
 #ifndef TCEC
-search_info_t global_search_info;
-search_info_t* SearchInfoMap[MaxNumOfThreads];
+SearchInfo global_search_info;
+SearchInfo* SearchInfoMap[MaxNumOfThreads];
 #define SearchInfo(thread) (*SearchInfoMap[thread])
 #else
-search_info_t global_search_info;
+SearchInfo global_search_info;
 #endif
 
 #define MAX_HDEPTH 20
@@ -43,12 +43,53 @@ search_info_t global_search_info;
 
 #define WORSE_TIME_BONUS 20 //how many points more than 20 it takes to increase time by alloc to a maximum of 2*alloc
 #define CHANGE_TIME_BONUS 50 //what percentage of alloc to increase if the last move is a change move
-#define LAST_PLY_TIME 40 //what percentage of alloc remaining to be worth trying another complete ply
-#define INCREASE_CHANGE 0 //what percentage of alloc to increase during a change move
 
 const int WORSE_SCORE_CUTOFF = 20;
 
-void ponderHit() { //no pondering in tuning
+int moveIsTactical(uint32 m) {
+    ASSERT(moveIsOk(m));
+    return (m & 0x01fe0000UL);
+}
+
+int historyIndex(uint32 side, uint32 move) {
+    return ((((side) << 9) + ((movePiece(move)) << 6) + (moveTo(move))) & 0x3ff);
+}
+
+const int MaxPieceValue[] = {0, PawnValueEnd, KnightValueEnd, BishopValueEnd, RookValueEnd, QueenValueEnd, 10000};
+inline bool inPvNode(NodeType nt) { return (nt==PVNode);}
+inline bool inCutNode(NodeType nt) { return (nt==CutNode);}
+inline bool inAllNode(NodeType nt) { return (nt==AllNode);}
+inline NodeType invertNode(NodeType nt) { return ((nt==PVNode) ? PVNode : ((nt==CutNode) ? AllNode : CutNode));}
+
+
+class Search {
+public:
+    Search(SearchInfo* _info) :
+        info(_info)
+    {}
+    void ponderHit();
+    void check4Input(position_t *pos);
+    void initNode(position_t *pos, const int thread_id) ;
+    int simpleStalemate(const position_t *pos);
+    void displayPV(const position_t *pos, continuation_t *pv, int depth, int alpha, int beta, int score);
+    bool prevMoveAllowsThreat(const position_t* pos, basic_move_t first, basic_move_t second);
+    bool moveRefutesThreat(const position_t* pos, basic_move_t first, basic_move_t second);
+    void updateEvalgains(const position_t *pos, uint32 move, int before, int after, const int thread_id);
+    template<bool inPv>
+    int qSearch(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, const int thread_id);
+    template <bool inRoot, bool inSplitPoint, bool inSingular>
+    int searchNode(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, const int thread_id, NodeType nt);
+    template<bool inRoot, bool inSplitPoint, bool inCheck, bool inSingular>
+    int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, const int thread_id, NodeType nt);
+    void extractPvMovesFromHash(position_t *pos, continuation_t* pv, basic_move_t move, bool execMove);
+    void repopulateHash(position_t *pos, continuation_t *rootPV);
+    void timeManagement(int depth, int thread_id);
+private:
+    Search();
+    SearchInfo* info;
+};
+
+void Search::ponderHit() { //no pondering in tuning
     int64 time = getTime() - SearchInfo(0).start_time;
 
     if ((SearchInfo(0).iteration >= 8 && (SearchInfo(0).legalmoves == 1 || SearchInfo(0).mate_found >= 3)) ||
@@ -61,7 +102,7 @@ void ponderHit() { //no pondering in tuning
     }
 }
 
-void check4Input(position_t *pos) {
+void Search::check4Input(position_t *pos) {
     static char input[256];
 
     if (biosKey()) {
@@ -83,7 +124,7 @@ void check4Input(position_t *pos) {
     }
 }
 
-void initNode(position_t *pos, const int thread_id) {
+void Search::initNode(position_t *pos, const int thread_id) {
     int64 time2;
 
     if (smpCutoffOccurred(Threads[thread_id]->split_point)) {
@@ -135,7 +176,7 @@ void initNode(position_t *pos, const int thread_id) {
     }
 }
 
-int simpleStalemate(const position_t *pos) {
+int Search::simpleStalemate(const position_t *pos) {
     uint32 kpos, to;
     uint64 mv_bits;
     if (MinTwoBits(pos->color[pos->side] & ~pos->pawns)) return false; 
@@ -149,7 +190,7 @@ int simpleStalemate(const position_t *pos) {
     return true;
 }
 
-void displayPV(const position_t *pos, continuation_t *pv, int depth, int alpha, int beta, int score) {
+void Search::displayPV(const position_t *pos, continuation_t *pv, int depth, int alpha, int beta, int score) {
     uint64 time;
     uint64 sum_nodes = 0;
 
@@ -181,7 +222,7 @@ void displayPV(const position_t *pos, continuation_t *pv, int depth, int alpha, 
     Print(1, "\n");
 }
 
-bool prevMoveAllowsThreat(const position_t* pos, basic_move_t first, basic_move_t second) {
+bool Search::prevMoveAllowsThreat(const position_t* pos, basic_move_t first, basic_move_t second) {
     int m1from = moveFrom(first);
     int m2from = moveFrom(second);
     int m1to = moveTo(first);
@@ -195,7 +236,7 @@ bool prevMoveAllowsThreat(const position_t* pos, basic_move_t first, basic_move_
     return false;
 }
 
-bool moveRefutesThreat(const position_t* pos, basic_move_t first, basic_move_t second) {
+bool Search::moveRefutesThreat(const position_t* pos, basic_move_t first, basic_move_t second) {
     int m1from = moveFrom(first);
     int m2from = moveFrom(second);
     int m1to = moveTo(first);
@@ -213,7 +254,7 @@ bool moveRefutesThreat(const position_t* pos, basic_move_t first, basic_move_t s
     return false;
 }
 
-void updateEvalgains(const position_t *pos, uint32 move, int before, int after, const int thread_id) {
+void Search::updateEvalgains(const position_t *pos, uint32 move, int before, int after, const int thread_id) {
     if (move != EMPTY
         && before != -INF
         && after != -INF
@@ -225,19 +266,8 @@ void updateEvalgains(const position_t *pos, uint32 move, int before, int after, 
     }
 }
 
-int moveIsTactical(uint32 m) {
-    ASSERT(moveIsOk(m));
-    return (m & 0x01fe0000UL);
-}
-
-int historyIndex(uint32 side, uint32 move) {
-    return ((((side) << 9) + ((movePiece(move)) << 6) + (moveTo(move))) & 0x3ff);
-}
-
-const int MaxPieceValue[] = {0, PawnValueEnd, KnightValueEnd, BishopValueEnd, RookValueEnd, QueenValueEnd, 10000};
-
 template<bool inPv>
-int qSearch(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, const int thread_id) {
+int Search::qSearch(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, const int thread_id) {
     int pes = 0;
     SearchStack ss;
 
@@ -347,13 +377,8 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, SearchStack& 
     return ss.bestvalue;
 }
 
-inline bool inPvNode(NodeType nt) { return (nt==PVNode);}
-inline bool inCutNode(NodeType nt) { return (nt==CutNode);}
-inline bool inAllNode(NodeType nt) { return (nt==AllNode);}
-inline NodeType invertNode(NodeType nt) { return ((nt==PVNode) ? PVNode : ((nt==CutNode) ? AllNode : CutNode));}
-
 template <bool inRoot, bool inSplitPoint, bool inSingular>
-int searchNode(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, const int thread_id, NodeType nt) {
+int Search::searchNode(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, const int thread_id, NodeType nt) {
     if (depth <= 0) {
         if (inPvNode(nt)) return qSearch<true>(pos, alpha, beta, 0, ssprev, thread_id);
         else return qSearch<false>(pos, alpha, beta, 0, ssprev, thread_id);
@@ -363,13 +388,8 @@ int searchNode(position_t *pos, int alpha, int beta, const int depth, SearchStac
     }
 }
 
-void searchFromIdleLoop(SplitPoint* sp, const int thread_id) {
-    if (sp->inRoot) searchNode<true, true, false>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, *sp->ssprev, thread_id, sp->nodeType);
-    else searchNode<false, true, false>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, *sp->ssprev, thread_id, sp->nodeType);
-}
-
 template<bool inRoot, bool inSplitPoint, bool inCheck, bool inSingular>
-int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, const int thread_id, NodeType nt) {
+int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, const int thread_id, NodeType nt) {
     int pes = 0;
     SplitPoint* sp = NULL;
     SearchStack ss;
@@ -687,7 +707,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
     return ss.bestvalue;
 }
 
-void extractPvMovesFromHash(position_t *pos, continuation_t* pv, basic_move_t move, bool execMove) {
+void Search::extractPvMovesFromHash(position_t *pos, continuation_t* pv, basic_move_t move, bool execMove) {
     PvHashEntry *entry;
     pos_store_t undo[MAXPLY];
     int ply = 0;
@@ -709,7 +729,7 @@ void extractPvMovesFromHash(position_t *pos, continuation_t* pv, basic_move_t mo
     }
 }
 
-void repopulateHash(position_t *pos, continuation_t *rootPV) {
+void Search::repopulateHash(position_t *pos, continuation_t *rootPV) {
     int moveOn;
     pos_store_t undo[MAXPLY];
     for (moveOn=0; moveOn+1 <= rootPV->length; moveOn++) {
@@ -725,7 +745,7 @@ void repopulateHash(position_t *pos, continuation_t *rootPV) {
     }
 }
 
-void timeManagement(int depth, int thread_id) {
+void Search::timeManagement(int depth, int thread_id) {
     if (SearchInfo(thread_id).best_value > INF - MAXPLY) SearchInfo(thread_id).mate_found++;
     if (SearchInfo(thread_id).thinking_status == THINKING) {
         if (SearchInfo(thread_id).time_is_limited) {
@@ -790,8 +810,15 @@ void timeManagement(int depth, int thread_id) {
     }
 }
 
+SearchMgr::SearchMgr() { search = new Search(&info); }
+SearchMgr::~SearchMgr() { delete search; }
 
-void getBestMove(position_t *pos, int thread_id) {
+void SearchMgr::searchFromIdleLoop(SplitPoint* sp, const int thread_id) {
+    if (sp->inRoot) search->searchNode<true, true, false>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, *sp->ssprev, thread_id, sp->nodeType);
+    else search->searchNode<false, true, false>(&sp->pos[thread_id], sp->alpha, sp->beta, sp->depth, *sp->ssprev, thread_id, sp->nodeType);
+}
+
+void SearchMgr::getBestMove(position_t *pos, int thread_id) {
     int id;
     int alpha, beta;
     SearchStack ss;
@@ -813,10 +840,10 @@ void getBestMove(position_t *pos, int thread_id) {
             || (PcValSEE[moveCapture(entry->pvMove())] > PcValSEE[movePiece(entry->pvMove())]))) {
                 SearchInfo(thread_id).bestmove =  entry->pvMove();
                 SearchInfo(thread_id).best_value = entry->pvScore();
-                extractPvMovesFromHash(pos, &SearchInfo(thread_id).rootPV, entry->pvMove(), true);
+                search->extractPvMovesFromHash(pos, &SearchInfo(thread_id).rootPV, entry->pvMove(), true);
                 if (SearchInfo(thread_id).rootPV.length > 1) SearchInfo(thread_id).pondermove = SearchInfo(thread_id).rootPV.moves[1];
                 else SearchInfo(thread_id).pondermove = 0;
-                displayPV(pos, &SearchInfo(thread_id).rootPV, entry->pvDepth(), -INF, INF, SearchInfo(thread_id).best_value);
+                search->displayPV(pos, &SearchInfo(thread_id).rootPV, entry->pvDepth(), -INF, INF, SearchInfo(thread_id).best_value);
                 setAllThreadsToStop(thread_id);
                 return;
         }
@@ -871,13 +898,13 @@ void getBestMove(position_t *pos, int thread_id) {
             SearchInfo(thread_id).rbestscore1 = -INF;
             SearchInfo(thread_id).rbestscore2 = -INF;
 
-            searchNode<true, false, false>(pos, alpha, beta, id, ss, thread_id, PVNode);
+            search->searchNode<true, false, false>(pos, alpha, beta, id, ss, thread_id, PVNode);
 
             if (!Threads[thread_id]->stop || SearchInfo(thread_id).best_value != -INF) {
                 if (SHOW_SEARCH && id >= 8)
-                    displayPV(pos, &SearchInfo(thread_id).rootPV, id, alpha, beta, SearchInfo(thread_id).best_value);
+                    search->displayPV(pos, &SearchInfo(thread_id).rootPV, id, alpha, beta, SearchInfo(thread_id).best_value);
                 if (SearchInfo(thread_id).best_value > alpha && SearchInfo(thread_id).best_value < beta)
-                    repopulateHash(pos, &SearchInfo(thread_id).rootPV);
+                    search->repopulateHash(pos, &SearchInfo(thread_id).rootPV);
             }
             if (SearchInfo(thread_id).thinking_status == STOPPED) break;
             if (SearchInfo(thread_id).best_value <= alpha) {
@@ -891,7 +918,7 @@ void getBestMove(position_t *pos, int thread_id) {
             } else break;
         }
         if (SearchInfo(thread_id).thinking_status == STOPPED) break;
-        timeManagement(id, thread_id);
+        search->timeManagement(id, thread_id);
         if (SearchInfo(thread_id).thinking_status == STOPPED) break;
         if (SearchInfo(thread_id).best_value != -INF) {
             SearchInfo(thread_id).last_last_value = SearchInfo(thread_id).last_value;
@@ -910,7 +937,7 @@ void getBestMove(position_t *pos, int thread_id) {
         } else {
             Print(3, "info string Waiting for stop, quit, or ponderhit\n");
             do {
-                check4Input(pos);
+                search->check4Input(pos);
             } while (SearchInfo(thread_id).thinking_status != STOPPED);
             setAllThreadsToStop(thread_id);
             Print(2, "info string Aborting search: end of waiting for stop/quit/ponderhit\n");
@@ -926,7 +953,7 @@ void getBestMove(position_t *pos, int thread_id) {
     }
 }
 
-void checkSpeedUp(position_t* pos, char string[]) {
+void SearchMgr::checkSpeedUp(position_t* pos, char string[]) {
     const int NUMPOS = 4;
     const int MAXTHREADS = 32;
     char* fenPos[NUMPOS] = {
@@ -998,7 +1025,7 @@ void checkSpeedUp(position_t* pos, char string[]) {
     Print(5, "\n\n");
 }
 
-void benchMinSplitDepth(position_t* pos, char string[]) {
+void SearchMgr::benchMinSplitDepth(position_t* pos, char string[]) {
     const int NUMPOS = 4;
     const int MAXSPLIT = 11;
     char* fenPos[NUMPOS] = {
@@ -1055,7 +1082,7 @@ void benchMinSplitDepth(position_t* pos, char string[]) {
         threads, depth, bestIdx, timeSum[bestIdx]/NUMPOS, nodesSum[bestIdx]/NUMPOS, double(nodesSum[bestIdx])/double(timeSum[bestIdx]));
 }
 
-void benchThreadsperSplit(position_t* pos, char string[]) {
+void SearchMgr::benchThreadsperSplit(position_t* pos, char string[]) {
     const int NUMPOS = 4;
     const int MAXSPLIT = 9;
     char* fenPos[NUMPOS] = {
@@ -1112,7 +1139,7 @@ void benchThreadsperSplit(position_t* pos, char string[]) {
         threads, depth, bestIdx, timeSum[bestIdx]/NUMPOS, nodesSum[bestIdx]/NUMPOS, double(nodesSum[bestIdx])/double(timeSum[bestIdx]));
 }
 
-void benchActiveSplits(position_t* pos, char string[]) {
+void SearchMgr::benchActiveSplits(position_t* pos, char string[]) {
     const int NUMPOS = 4;
     const int MAXSPLIT = MaxNumSplitPointsPerThread+1;
     char* fenPos[NUMPOS] = {
