@@ -86,19 +86,19 @@ void check4Input(position_t *pos) {
 void initNode(position_t *pos, const int thread_id) {
     int64 time2;
 
-    if (smpCutoffOccurred(Threads[thread_id].split_point)) {
-        Threads[thread_id].stop = true;
+    if (smpCutoffOccurred(Threads[thread_id]->split_point)) {
+        Threads[thread_id]->stop = true;
         return;
     }
 
-    Threads[thread_id].nodes++;
+    Threads[thread_id]->nodes++;
 #ifdef SELF_TUNE2
-    if (Threads[thread_id].nodes >= SearchInfo(thread_id).node_limit && SearchInfo(thread_id).node_is_limited) {
+    if (Threads[thread_id]->nodes >= SearchInfo(thread_id).node_limit && SearchInfo(thread_id).node_is_limited) {
         setAllThreadsToStop(thread_id);
     }
 #endif
-    if (thread_id == 0 && ++Threads[thread_id].nodes_since_poll >= Threads[thread_id].nodes_between_polls) {
-        Threads[thread_id].nodes_since_poll = 0;
+    if (thread_id == 0 && ++Threads[thread_id]->nodes_since_poll >= Threads[thread_id]->nodes_between_polls) {
+        Threads[thread_id]->nodes_since_poll = 0;
         if (SHOW_SEARCH) check4Input(pos);
         time2 = getTime();
         if (time2 - SearchInfo(thread_id).last_time > 1000) {
@@ -109,7 +109,7 @@ void initNode(position_t *pos, const int thread_id) {
                 Print(1, "info ");
                 Print(1, "time %llu ", time);
                 sum_nodes = 0;
-                for (int i = 0; i < Guci_options.threads; ++i) sum_nodes += Threads[i].nodes;
+                for (int i = 0; i < Guci_options.threads; ++i) sum_nodes += Threads[i]->nodes;
                 Print(1, "nodes %llu ", sum_nodes);
                 Print(1, "hashfull %d ", (TransTable.Used()*1000)/TransTable.Size());
                 Print(1, "nps %llu ", (sum_nodes*1000ULL)/(time));
@@ -172,7 +172,7 @@ void displayPV(const position_t *pos, continuation_t *pv, int depth, int alpha, 
 
     Print(1, "time %llu ", time);
 
-    for (int i = 0; i < Guci_options.threads; ++i) sum_nodes += Threads[i].nodes;
+    for (int i = 0; i < Guci_options.threads; ++i) sum_nodes += Threads[i]->nodes;
     Print(1, "nodes %llu ", sum_nodes);
     Print(1, "hashfull %d ", (TransTable.Used()*1000)/TransTable.Size());
     if (time > 10) Print(1, "nps %llu ", (sum_nodes*1000)/(time));
@@ -248,7 +248,7 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, SearchStack& 
     ASSERT(pos->ply > 0);
 
     initNode(pos, thread_id);
-    if (Threads[thread_id].stop) return 0;
+    if (Threads[thread_id]->stop) return 0;
 
     int t = 0;
     for (TransEntry* entry = TransTable.Entry(pos->posStore.hash); t < HASH_ASSOC; t++, entry++) {
@@ -314,7 +314,7 @@ int qSearch(position_t *pos, int alpha, int beta, const int depth, SearchStack& 
             score = -qSearch<inPv>(pos, -beta, -alpha, newdepth, ss, thread_id);
             unmakeMove(pos, &undo);
         }
-        if (Threads[thread_id].stop) return ss.bestvalue;
+        if (Threads[thread_id]->stop) return ss.bestvalue;
         if (score > ss.bestvalue) {
             ss.bestvalue = score;
             if (score > alpha) {
@@ -381,7 +381,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
     ASSERT(depth >= 1);
 
     initNode(pos, thread_id);
-    if (Threads[thread_id].stop) return 0;
+    if (Threads[thread_id]->stop) return 0;
 
     if (!inRoot && !inSingular && !inSplitPoint) {
         int t = 0;
@@ -451,11 +451,11 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, thread_id, AllNode);
                 ss.threatMove = ss.counterMove;
                 unmakeNullMove(pos, &undo);
-                if (Threads[thread_id].stop) return 0;
+                if (Threads[thread_id]->stop) return 0;
                 if (score >= beta) {
                     if (depth >= 12) {
                         score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, ssprev, thread_id, nt);
-                        if (Threads[thread_id].stop) return 0;
+                        if (Threads[thread_id]->stop) return 0;
                     }
                     if (score >= beta) {
                         if (ss.hashMove == EMPTY) {
@@ -474,7 +474,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
             int newdepth = inPvNode(nt) ? depth - 2 : depth / 2;
             if (ss.hashMove == EMPTY || ss.hashDepth < newdepth) {
                 int score = searchNode<false, false, false>(pos, alpha, beta, newdepth, ssprev, thread_id, nt);
-                if (Threads[thread_id].stop) return 0;
+                if (Threads[thread_id]->stop) return 0;
                 ss.evalvalue = score;
                 if (score > alpha) {
                     ss.hashMove = ssprev.counterMove;
@@ -489,7 +489,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 int targetScore = ss.evalvalue - EXPLORE_CUTOFF;
                 ssprev.bannedMove = ss.hashMove;
                 int score = searchNode<false, false, true>(pos, targetScore, targetScore+1, newdepth, ssprev, thread_id, nt);
-                if (Threads[thread_id].stop) return 0;
+                if (Threads[thread_id]->stop) return 0;
                 ssprev.bannedMove = EMPTY;
                 if (score <= targetScore) ss.firstExtend = true;
             }
@@ -497,7 +497,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
     }
 
     if (inSplitPoint) {
-        sp = Threads[thread_id].split_point;
+        sp = Threads[thread_id]->split_point;
         ss = *sp->sscurr; // ss.mvlist points to master ss.mvlist, copied the entire searchstack also
     } else {
         if (inRoot) {
@@ -584,7 +584,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
             }
             unmakeMove(pos, &undo);
         }
-        if (Threads[thread_id].stop) return 0;
+        if (Threads[thread_id]->stop) return 0;
         if (inSplitPoint) sp->updatelock->lock();
         if (inRoot) {
             move->s = score;
@@ -626,7 +626,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
             }
         }
         if (inSplitPoint) sp->updatelock->unlock();
-        if (!inSplitPoint && !inSingular && !Threads[thread_id].stop && !inCheck && Threads[thread_id].num_sp < Guci_options.max_activesplits_per_thread
+        if (!inSplitPoint && !inSingular && !Threads[thread_id]->stop && !inCheck && Threads[thread_id]->num_sp < Guci_options.max_activesplits_per_thread
             && Guci_options.threads > 1 && depth >= Guci_options.min_split_depth
             //&& (!inCutNode(nt) || MoveGenPhase[ss.mvlist_phase] == PH_QUIET_MOVES)
             && splitRemainingMoves(pos, ss.mvlist, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, thread_id)) {
@@ -653,9 +653,9 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 index = historyIndex(pos->side, ss.hisMoves[i]);
                 SearchInfo(thread_id).history[index] -= SearchInfo(thread_id).history[index]/(NEW_HISTORY-hisDepth);
             }
-            if (Threads[thread_id].ts[pos->ply].killer1 != ss.bestmove) {
-                Threads[thread_id].ts[pos->ply].killer2 = Threads[thread_id].ts[pos->ply].killer1;
-                Threads[thread_id].ts[pos->ply].killer1 = ss.bestmove;
+            if (Threads[thread_id]->ts[pos->ply].killer1 != ss.bestmove) {
+                Threads[thread_id]->ts[pos->ply].killer2 = Threads[thread_id]->ts[pos->ply].killer1;
+                Threads[thread_id]->ts[pos->ply].killer1 = ss.bestmove;
             }
         }
         // DEBUG
@@ -847,7 +847,7 @@ void getBestMove(position_t *pos, int thread_id) {
     // SMP 
     initSmpVars();
     for (int i = 1; i < Guci_options.threads; ++i) {
-        Threads[i].triggerCondition();
+        Threads[i]->triggerCondition();
     }
     SearchInfo(thread_id).mvlist_initialized = false;
 
@@ -873,7 +873,7 @@ void getBestMove(position_t *pos, int thread_id) {
 
             searchNode<true, false, false>(pos, alpha, beta, id, ss, thread_id, PVNode);
 
-            if (!Threads[thread_id].stop || SearchInfo(thread_id).best_value != -INF) {
+            if (!Threads[thread_id]->stop || SearchInfo(thread_id).best_value != -INF) {
                 if (SHOW_SEARCH && id >= 8)
                     displayPV(pos, &SearchInfo(thread_id).rootPV, id, alpha, beta, SearchInfo(thread_id).best_value);
                 if (SearchInfo(thread_id).best_value > alpha && SearchInfo(thread_id).best_value < beta)
@@ -920,8 +920,8 @@ void getBestMove(position_t *pos, int thread_id) {
     Print(2, "================================================================\n");
     for (int i = 0; i < Guci_options.threads; ++i) {
         Print(2, "%s: thread_id:%d, num_sp:%d searching:%d stop:%d started:%d ended:%d nodes:%d numsplits:%d\n", __FUNCTION__, i, 
-            Threads[i].num_sp, Threads[i].searching, Threads[i].stop, 
-            Threads[i].started, Threads[i].ended, Threads[i].nodes, Threads[i].numsplits);
+            Threads[i]->num_sp, Threads[i]->searching, Threads[i]->stop, 
+            Threads[i]->started, Threads[i]->ended, Threads[i]->nodes, Threads[i]->numsplits);
     }
 }
 
@@ -952,7 +952,7 @@ void checkSpeedUp(position_t* pos, char string[]) {
         uciSetOption("name Threads value 1");
         TransTable.Clear();
         for (int k = 0; k < Guci_options.threads; ++k) {
-            Threads[k].Init();
+            Threads[k]->Init();
         }
         Print(5, "\n\nPos#%d: %s\n", i+1, fenPos[i]);
         uciSetPosition(pos, fenPos[i]);
@@ -960,7 +960,7 @@ void checkSpeedUp(position_t* pos, char string[]) {
         sprintf_s(command, "movedepth %d", depth);
         uciGo(pos, command);
         int64 spentTime1 = getTime() - startTime;
-        uint64 nodes1 = Threads[0].nodes / spentTime1;
+        uint64 nodes1 = Threads[0]->nodes / spentTime1;
         double timeSpeedUp = (double)spentTime1/1000.0;
         timeSpeedupSum[0] += timeSpeedUp;
         double nodesSpeedup = (double)nodes1;
@@ -972,7 +972,7 @@ void checkSpeedUp(position_t* pos, char string[]) {
             uciSetOption(tempStr);
             TransTable.Clear();
             for (int k = 0; k < Guci_options.threads; ++k) {
-                Threads[k].Init();
+                Threads[k]->Init();
             }
             uciSetPosition(pos, fenPos[i]);
             startTime = getTime();
@@ -980,7 +980,7 @@ void checkSpeedUp(position_t* pos, char string[]) {
             uciGo(pos, command);
             int64 spentTime = getTime() - startTime;
             uint64 nodes = 0;
-            for (int i = 0; i < Guci_options.threads; ++i) nodes += Threads[i].nodes;
+            for (int i = 0; i < Guci_options.threads; ++i) nodes += Threads[i]->nodes;
             nodes /= spentTime;
             timeSpeedUp = (double)spentTime1 / (double)spentTime;
             timeSpeedupSum[j] += timeSpeedUp;
@@ -1025,7 +1025,7 @@ void benchMinSplitDepth(position_t* pos, char string[]) {
             uciSetOption(command);
             TransTable.Clear();
             for (int k = 0; k < Guci_options.threads; ++k) {
-                Threads[k].Init();
+                Threads[k]->Init();
             }
             uciSetPosition(pos, fenPos[posIdx]);
             int64 startTime = getTime();
@@ -1034,7 +1034,7 @@ void benchMinSplitDepth(position_t* pos, char string[]) {
             int64 spentTime = getTime() - startTime;
             timeSum[i] += spentTime;
             uint64 nodes = 0;
-            for (int k = 0; k < Guci_options.threads; ++k) nodes += Threads[k].nodes;
+            for (int k = 0; k < Guci_options.threads; ++k) nodes += Threads[k]->nodes;
             nodes = nodes*1000/spentTime;
             nodesSum[i] += nodes;
             Print(5, "Threads: %d Depth: %d SplitDepth: %d Time: %d Nps: %d\n", threads, depth, i, spentTime, nodes);
@@ -1082,7 +1082,7 @@ void benchThreadsperSplit(position_t* pos, char string[]) {
             uciSetOption(command);
             TransTable.Clear();
             for (int k = 0; k < Guci_options.threads; ++k) {
-                Threads[k].Init();
+                Threads[k]->Init();
             }
             uciSetPosition(pos, fenPos[posIdx]);
             int64 startTime = getTime();
@@ -1091,7 +1091,7 @@ void benchThreadsperSplit(position_t* pos, char string[]) {
             int64 spentTime = getTime() - startTime;
             timeSum[i] += spentTime;
             uint64 nodes = 0;
-            for (int k = 0; k < Guci_options.threads; ++k) nodes += Threads[k].nodes;
+            for (int k = 0; k < Guci_options.threads; ++k) nodes += Threads[k]->nodes;
             nodes = nodes*1000/spentTime;
             nodesSum[i] += nodes;
             Print(5, "Threads: %d Depth: %d Threads/Split: %d Time: %d Nps: %d\n", threads, depth, i, spentTime, nodes);
@@ -1139,7 +1139,7 @@ void benchActiveSplits(position_t* pos, char string[]) {
             uciSetOption(command);
             TransTable.Clear();
             for (int k = 0; k < Guci_options.threads; ++k) {
-                Threads[k].Init();
+                Threads[k]->Init();
             }
             uciSetPosition(pos, fenPos[posIdx]);
             int64 startTime = getTime();
@@ -1148,7 +1148,7 @@ void benchActiveSplits(position_t* pos, char string[]) {
             int64 spentTime = getTime() - startTime;
             timeSum[i] += spentTime;
             uint64 nodes = 0;
-            for (int k = 0; k < Guci_options.threads; ++k) nodes += Threads[k].nodes;
+            for (int k = 0; k < Guci_options.threads; ++k) nodes += Threads[k]->nodes;
             nodes = nodes*1000/spentTime;
             nodesSum[i] += nodes;
             Print(5, "Threads: %d Depth: %d Active Splits: %d Time: %d Nps: %d\n", threads, depth, i, spentTime, nodes);

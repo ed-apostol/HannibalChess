@@ -7,7 +7,7 @@
 #include "search.h"
 #include "utils.h"
 
-
+extern void idleLoop(int thread_id, SplitPoint *master_sp);
 
 struct ThreadStack {
     void Init () { 
@@ -20,23 +20,24 @@ struct ThreadStack {
 
 class Thread {
 public:
-    Thread() :
-        stop(false),
-        doSleep(true),
-        searching(false),
-        exit_flag(false)
-    {}
-    //~Thread() {
-    //    doSleep = false;
-    //    stop = true;
-    //    exit_flag = true;
-    //    searching = false;        
-    //    Print(1, "gone here 1\n");
-    //    triggerCondition();
-    //    Print(1, "gone here 2\n");
-    //    realThread.join();
-    //    Print(1, "gone here 3\n");
-    //}
+    Thread(int thread_id)
+    {
+        SplitPoint* sp = NULL;
+        Init();
+        doSleep = true;
+        //realThread = std::thread(idleLoop, thread_id, sp);
+    }
+    ~Thread() {
+        doSleep = false;
+        stop = true;
+        exit_flag = true;
+        searching = false;        
+        Print(1, "gone here 1\n");
+        triggerCondition();
+        Print(1, "gone here 2\n");
+        realThread.join();
+        Print(1, "gone here 3\n");
+    }
     void sleepAndWaitForCondition() {
         std::unique_lock<std::mutex> lk(threadLock);
         idle_event.wait(lk);
@@ -52,7 +53,7 @@ public:
     volatile bool stop;
     volatile bool doSleep;
     volatile bool searching;
-    volatile bool exit_flag; // TODO: move to threads pool
+    volatile bool exit_flag;
 
     std::thread realThread;
     uint64 nodes;
@@ -69,7 +70,7 @@ private:
     std::mutex threadLock;
 };
 
-extern Thread Threads[MaxNumOfThreads]; // ThreadsPool this should be std::vector
+extern std::vector<Thread*> Threads; // ThreadsPool this should be std::vector
 
 extern bool smpCutoffOccurred(SplitPoint *sp); // SplitPoint
 

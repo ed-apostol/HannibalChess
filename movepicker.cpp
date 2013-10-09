@@ -19,8 +19,8 @@
 
 void sortInit(const position_t *pos, movelist_t *mvlist, uint64 pinned, uint32 hashmove, int scout, int eval, int depth, int type, int thread_id) {
     mvlist->transmove =  hashmove;
-    mvlist->killer1 = Threads[thread_id].ts[pos->ply].killer1;
-    mvlist->killer2 = Threads[thread_id].ts[pos->ply].killer2;
+    mvlist->killer1 = Threads[thread_id]->ts[pos->ply].killer1;
+    mvlist->killer2 = Threads[thread_id]->ts[pos->ply].killer2;
     mvlist->evalvalue = eval;
     mvlist->pos = 0;
     mvlist->size = 0;

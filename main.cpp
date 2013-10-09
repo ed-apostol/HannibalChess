@@ -78,7 +78,7 @@ int main(void) {
     initPST(&Guci_options);
     InitTrapped();
 
-    initSmpVars();
+    //initSmpVars();
     initThreads();
 
     initMaterial();

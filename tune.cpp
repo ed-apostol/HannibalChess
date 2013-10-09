@@ -792,8 +792,8 @@ void SetNewGame() { //this should be changed when we do one thread per personali
     origScore = 0;
     //	transClear();
     for (int i = 0; i < Guci_options.threads; ++i) {
-        pawnTableClear(&Threads[i].pt);
-        evalTableClear(&Threads[i].et);
+        pawnTableClear(&Threads[i]->pt);
+        evalTableClear(&Threads[i]->et);
     }
 }
 void tuneGo(position_t *pos, int player, int64 nodes) {

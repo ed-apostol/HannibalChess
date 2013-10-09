@@ -84,7 +84,7 @@ bool learn_position(position_t *pos,int thread_id, continuation_t *variation) {
     memset(SearchInfo(thread_id).history, 0, sizeof(SearchInfo(thread_id).history)); //TODO this is bad to share with learning
     memset(SearchInfo(thread_id).evalgains, 0, sizeof(SearchInfo(thread_id).evalgains)); //TODO this is bad to share with learning
 
-    Threads[thread_id].Init();
+    Threads[thread_id]->Init();
 
     SearchInfo(thread_id).thinking_status = THINKING;
     SearchInfo(thread_id).node_is_limited = true;
@@ -98,7 +98,7 @@ bool learn_position(position_t *pos,int thread_id, continuation_t *variation) {
     SearchInfo(thread_id).et.table = NULL;
     initEvalTab(&SearchInfo(thread_id).et, LEARN_EVAL_HASH_SIZE);
 
-    Threads[thread_id].nodes = 0;
+    Threads[thread_id]->nodes = 0;
     SearchInfo(thread_id).start_time = getTime();
 
     //first lets get the moves, and prune out ones that are already known
@@ -148,7 +148,7 @@ bool learn_position(position_t *pos,int thread_id, continuation_t *variation) {
                 beta = INF;
             }
             searchRoot(pos, &mvlist, alpha, beta, depth, thread_id,bestScore);
-            if (Threads[thread_id].nodes > SearchInfo(thread_id).node_limit/2) SearchInfo(thread_id).thinking_status = STOPPED;
+            if (Threads[thread_id]->nodes > SearchInfo(thread_id).node_limit/2) SearchInfo(thread_id).thinking_status = STOPPED;
             if (SearchInfo(thread_id).thinking_status == STOPPED) break;
         }
     }
@@ -156,8 +156,8 @@ bool learn_position(position_t *pos,int thread_id, continuation_t *variation) {
     free(SearchInfo(thread_id).pt.table);
     free(SearchInfo(thread_id).et.table);
 
-    if (Threads[thread_id].nodes > SearchInfo(thread_id).node_limit/2 ||
-        (Threads[thread_id].nodes > SearchInfo(thread_id).node_limit/3 && SearchInfo(thread_id).best_value <= bestScore)) { // if we stopped for some other reason don't trust the result
+    if (Threads[thread_id]->nodes > SearchInfo(thread_id).node_limit/2 ||
+        (Threads[thread_id]->nodes > SearchInfo(thread_id).node_limit/3 && SearchInfo(thread_id).best_value <= bestScore)) { // if we stopped for some other reason don't trust the result
             int64 usedTime = getTime() - SearchInfo(thread_id).start_time;
             variation->length++;
             if (SearchInfo(thread_id).bestmove &&SearchInfo(thread_id).best_value > bestScore ) { //if we found a better move than repetition or previously known move
