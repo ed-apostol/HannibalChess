@@ -917,6 +917,7 @@ void getBestMove(position_t *pos, int thread_id) {
         }
     }
 
+    setAllThreadsToSleep(thread_id);
     Print(2, "================================================================\n");
     for (int i = 0; i < Guci_options.threads; ++i) {
         Print(2, "%s: thread_id:%d, num_sp:%d searching:%d stop:%d started:%d ended:%d nodes:%d numsplits:%d\n", __FUNCTION__, i, 

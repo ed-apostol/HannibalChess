@@ -86,10 +86,10 @@ extern search_info_t global_search_info;
 extern inline int moveIsTactical(uint32 m);
 extern inline int historyIndex(uint32 side, uint32 move);
 
+
+
 extern void searchFromIdleLoop(SplitPoint* sp, const int thread_id);
-
 extern void getBestMove(position_t *pos, int thread_id);
-
 extern void checkSpeedUp(position_t* pos, char string[]);
 extern void benchMinSplitDepth(position_t* pos, char string[]);
 extern void benchThreadsperSplit(position_t* pos, char string[]);

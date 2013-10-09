@@ -75,6 +75,7 @@ extern std::vector<Thread*> Threads; // ThreadsPool this should be std::vector
 extern bool smpCutoffOccurred(SplitPoint *sp); // SplitPoint
 
 extern void setAllThreadsToStop(int thread); // ThreadsPool
+extern void setAllThreadsToSleep(int thread);
 extern void initSmpVars();
 extern void initThreads(void); // ThreadsPool
 extern void stopThreads(void); // ThreadsPool

@@ -42,8 +42,13 @@ void Thread::Init() {
 void setAllThreadsToStop(int thread) {
     SearchInfo(thread).thinking_status = STOPPED;
     for (int i = 0; i < Guci_options.threads; i++) {
-        Threads[i]->doSleep = true;
         Threads[i]->stop = true;
+    }
+}
+
+void setAllThreadsToSleep(int thread) {
+    for (int i = 0; i < Guci_options.threads; i++) {
+        Threads[i]->doSleep = true;
     }
 }
 
@@ -125,7 +130,6 @@ void idleLoop(int thread_id, SplitPoint *master_sp) {
     ASSERT(thread_id < Guci_options.threads || master_sp == NULL);
     while(!Threads[thread_id]->exit_flag) {
         if (master_sp == NULL && Threads[thread_id]->doSleep) {
-            Print(1, "Thread sleeping %d\n", thread_id);
             Threads[thread_id]->sleepAndWaitForCondition();
         }
         if(Threads[thread_id]->searching) {
@@ -140,12 +144,7 @@ void idleLoop(int thread_id, SplitPoint *master_sp) {
         }
         if(master_sp != NULL) {
             if (!master_sp->workersBitMask) return;
-            else {
-                if (SearchInfo(thread_id).thinking_status == STOPPED) {
-                    setAllThreadsToStop(thread_id);
-                    return;
-                } else helpfulMaster(thread_id, master_sp);
-            } 
+            else helpfulMaster(thread_id, master_sp);
         } else checkForWork(thread_id);
     }
 }
