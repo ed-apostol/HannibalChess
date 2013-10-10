@@ -109,8 +109,8 @@ public:
     SearchMgr();
     ~SearchMgr();
     static SearchMgr& Inst() { static SearchMgr inst; return inst; }
-    void searchFromIdleLoop(SplitPoint* sp, const int thread_id);
-    void getBestMove(position_t *pos, int thread_id);
+    void searchFromIdleLoop(SplitPoint* sp, Thread& sthread);
+    void getBestMove(position_t *pos, Thread& sthread);
     void checkSpeedUp(position_t* pos, char string[]);
     void benchMinSplitDepth(position_t* pos, char string[]);
     void benchThreadsperSplit(position_t* pos, char string[]);

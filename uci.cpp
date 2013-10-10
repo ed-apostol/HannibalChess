@@ -326,7 +326,11 @@ void uciGo(position_t *pos, char *options) {
     /* initialize UCI parameters to be used in search */
     DrawValue[pos->side] = - Guci_options.contempt;
     DrawValue[pos->side^1] = Guci_options.contempt;
-    SearchMgr::Inst().getBestMove(pos,0);
+
+
+    SearchMgr::Inst().getBestMove(pos, *Threads[0]);
+
+
     if (!info.bestmove) {
         if (RETURN_MOVE)
             Print(3, "info string No legal move found. Start a new game.\n\n");

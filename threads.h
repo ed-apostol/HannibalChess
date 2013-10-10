@@ -4,10 +4,8 @@
 #include <vector>
 #include <thread>
 #include <condition_variable>
-#include "search.h"
 #include "utils.h"
 
-extern void idleLoop(int thread_id, SplitPoint *master_sp);
 
 struct ThreadStack {
     void Init () { 
@@ -20,10 +18,11 @@ struct ThreadStack {
 
 class Thread {
 public:
-    Thread(int thread_id)
+    Thread(int _thread_id)
     {
         SplitPoint* sp = NULL;
         Init();
+        thread_id = _thread_id;
         doSleep = true;
         //realThread = std::thread(idleLoop, thread_id, sp);
     }
@@ -48,6 +47,7 @@ public:
         idle_event.notify_one();
     }
     void Init();
+    void idleLoop();
 
     SplitPoint *split_point;
     volatile bool stop;
@@ -56,6 +56,7 @@ public:
     volatile bool exit_flag;
 
     std::thread realThread;
+    int thread_id;
     uint64 nodes;
     uint64 nodes_since_poll;
     uint64 nodes_between_polls;
@@ -74,12 +75,12 @@ extern std::vector<Thread*> Threads; // ThreadsPool this should be std::vector
 
 extern bool smpCutoffOccurred(SplitPoint *sp); // SplitPoint
 
-extern void setAllThreadsToStop(int thread); // ThreadsPool
-extern void setAllThreadsToSleep(int thread);
+extern void setAllThreadsToStop(); // ThreadsPool
+extern void setAllThreadsToSleep();
 extern void initSmpVars();
 extern void initThreads(void); // ThreadsPool
 extern void stopThreads(void); // ThreadsPool
-extern bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, const int master);
+extern bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread);
 
 //////class Thread {
 //////public:
