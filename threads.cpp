@@ -40,7 +40,7 @@ void Thread::Init() {
 }
 
 void setAllThreadsToStop(int thread) {
-    SearchInfo(thread).thinking_status = STOPPED;
+    SearchMgr::Inst().Info().thinking_status = STOPPED;
     for (int i = 0; i < Guci_options.threads; i++) {
         Threads[i]->stop = true;
     }
@@ -217,7 +217,7 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* s
     ss->playedMoves = split_point->played;
     Threads[master]->split_point = split_point->parent;
     Threads[master]->numsplits++;
-    if (SearchInfo(master).thinking_status != STOPPED) {
+    if (SearchMgr::Inst().Info().thinking_status != STOPPED) {
         Threads[master]->stop = false; 
         Threads[master]->searching = true;
     }

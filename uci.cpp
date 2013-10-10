@@ -84,11 +84,11 @@ void uciSetOption(char string[]) {
         TransTable.Init(atoi(value), HASH_ASSOC);
     } else if (!memcmp(name,"Pawn Hash",9)) {
         Guci_options.pawnhashsize = atoi(value);
-        SearchInfo(0).pt.Init(Guci_options.pawnhashsize, PAWN_ASSOC);
+        SearchMgr::Inst().Info().pt.Init(Guci_options.pawnhashsize, PAWN_ASSOC);
 
     } else if (!memcmp(name,"Eval Cache",10)) {
         Guci_options.evalcachesize = atoi(value);
-        SearchInfo(0).et.Init(Guci_options.evalcachesize, EVAL_ASSOC);
+        SearchMgr::Inst().Info().et.Init(Guci_options.evalcachesize, EVAL_ASSOC);
     } else if (!memcmp(name,"Clear Hash",10)) {
         TransTable.Clear();
     } 
@@ -185,45 +185,45 @@ void uciParseSearchmoves(movelist_t *ml, char *str, uint32 moves[]) {
 }
 
 void uciGo(position_t *pos, char *options) {
-
     char *ponder, *infinite;
     char *c;
     int64 mytime = 0, t_inc = 0;
     int wtime=0, btime=0, winc=0, binc=0, movestogo=0, upperdepth=0, nodes=0, mate=0, movetime=0;
     movelist_t ml;
+    SearchInfo& info = SearchMgr::Inst().Info();
 
     ASSERT(pos != NULL);
     ASSERT(options != NULL);
 
     /* initialization */
-    SearchInfo(0).depth_is_limited = false;
-    SearchInfo(0).depth_limit = MAXPLY;
-    SearchInfo(0).moves_is_limited = false;
-    SearchInfo(0).time_is_limited = false;
-    SearchInfo(0).time_limit_max = 0;
-    SearchInfo(0).time_limit_abs = 0;
-    SearchInfo(0).node_is_limited = false;
-    SearchInfo(0).node_limit = 0;
-    SearchInfo(0).start_time = SearchInfo(0).last_time = getTime();
-    SearchInfo(0).alloc_time = 0;
-    SearchInfo(0).best_value = -INF;
-    SearchInfo(0).last_value = -INF;
-    SearchInfo(0).last_last_value = -INF;
-    SearchInfo(0).change = 0;
-    SearchInfo(0).research = 0;
-    SearchInfo(0).bestmove = 0;
-    SearchInfo(0).pondermove = 0;
-    SearchInfo(0).mate_found = 0;
-    memset(SearchInfo(0).history, 0, sizeof(SearchInfo(0).history)); //TODO this is bad to share with learning
-    memset(SearchInfo(0).evalgains, 0, sizeof(SearchInfo(0).evalgains)); //TODO this is bad to share with learning
+    info.depth_is_limited = false;
+    info.depth_limit = MAXPLY;
+    info.moves_is_limited = false;
+    info.time_is_limited = false;
+    info.time_limit_max = 0;
+    info.time_limit_abs = 0;
+    info.node_is_limited = false;
+    info.node_limit = 0;
+    info.start_time = info.last_time = getTime();
+    info.alloc_time = 0;
+    info.best_value = -INF;
+    info.last_value = -INF;
+    info.last_last_value = -INF;
+    info.change = 0;
+    info.research = 0;
+    info.bestmove = 0;
+    info.pondermove = 0;
+    info.mate_found = 0;
+    memset(info.history, 0, sizeof(info.history)); //TODO this is bad to share with learning
+    memset(info.evalgains, 0, sizeof(info.evalgains)); //TODO this is bad to share with learning
 
     // DEBUG
-    SearchInfo(0).cutnodes = 1;
-    SearchInfo(0).allnodes = 1;
-    SearchInfo(0).cutfail = 1;
-    SearchInfo(0).allfail = 1;
+    info.cutnodes = 1;
+    info.allnodes = 1;
+    info.cutfail = 1;
+    info.allfail = 1;
 
-    memset(SearchInfo(0).moves, 0, sizeof(SearchInfo(0).moves));
+    memset(info.moves, 0, sizeof(info.moves));
 
     infinite = strstr(options, "infinite");
     ponder = strstr(options, "ponder");
@@ -248,39 +248,39 @@ void uciGo(position_t *pos, char *options) {
     c = strstr(options, "searchmoves");
     if (c != NULL) {
         genLegal(pos, &ml,true);
-        uciParseSearchmoves(&ml, c + 12, &(SearchInfo(0).moves[0]));
+        uciParseSearchmoves(&ml, c + 12, &(info.moves[0]));
     }
 
     if (infinite) {
-        SearchInfo(0).depth_is_limited = true;
-        SearchInfo(0).depth_limit = MAXPLY;
+        info.depth_is_limited = true;
+        info.depth_limit = MAXPLY;
         Print(2, "info string Infinite\n");
     }
     if (upperdepth > 0) {
-        SearchInfo(0).depth_is_limited = true;
-        SearchInfo(0).depth_limit = upperdepth;
-        Print(2, "info string Depth is limited to %d half moves\n", SearchInfo(0).depth_limit);
+        info.depth_is_limited = true;
+        info.depth_limit = upperdepth;
+        Print(2, "info string Depth is limited to %d half moves\n", info.depth_limit);
     }
     if (mate > 0) {
-        SearchInfo(0).depth_is_limited = true;
-        SearchInfo(0).depth_limit = mate * 2 - 1;
-        Print(2, "info string Mate in %d half moves\n", SearchInfo(0).depth_limit);
+        info.depth_is_limited = true;
+        info.depth_limit = mate * 2 - 1;
+        Print(2, "info string Mate in %d half moves\n", info.depth_limit);
     }
     if (nodes > 0) {
-        SearchInfo(0).node_is_limited = true;
-        SearchInfo(0).node_limit = nodes;
-        Print(2, "info string Nodes is limited to %d positions\n", SearchInfo(0).node_limit);
+        info.node_is_limited = true;
+        info.node_limit = nodes;
+        Print(2, "info string Nodes is limited to %d positions\n", info.node_limit);
     }
-    if (SearchInfo(0).moves[0]) {
-        SearchInfo(0).moves_is_limited = true;
+    if (info.moves[0]) {
+        info.moves_is_limited = true;
         Print(2, "info string Moves is limited\n");
     }
 
     if (movetime > 0) {
-        SearchInfo(0).time_is_limited = true;
-        SearchInfo(0).alloc_time = movetime;
-        SearchInfo(0).time_limit_max = SearchInfo(0).start_time + movetime;
-        SearchInfo(0).time_limit_abs = SearchInfo(0).start_time + movetime;
+        info.time_is_limited = true;
+        info.alloc_time = movetime;
+        info.time_limit_max = info.start_time + movetime;
+        info.time_limit_abs = info.start_time + movetime;
         Print(2, "info string Fixed time per move: %d ms\n", movetime);
     }
     if (pos->side == WHITE) {
@@ -291,53 +291,53 @@ void uciGo(position_t *pos, char *options) {
         t_inc = binc;
     }
     if (mytime > 0) {
-        SearchInfo(0).time_is_limited = true;
+        info.time_is_limited = true;
         mytime = ((mytime * 95) / 100) - Guci_options.time_buffer;
         if (mytime  < 0) mytime = 0;
         if (movestogo <= 0 || movestogo > TIME_DIVIDER) movestogo = TIME_DIVIDER;
-        SearchInfo(0).time_limit_max = (mytime / movestogo) + ((t_inc * 4) / 5);
-        if (ponder) SearchInfo(0).time_limit_max += SearchInfo(0).time_limit_max / 4;
+        info.time_limit_max = (mytime / movestogo) + ((t_inc * 4) / 5);
+        if (ponder) info.time_limit_max += info.time_limit_max / 4;
 
-        if (SearchInfo(0).time_limit_max > mytime) SearchInfo(0).time_limit_max = mytime;
-        SearchInfo(0).time_limit_abs = ((mytime * 2) / 5) + ((t_inc * 4) / 5);
-        if (SearchInfo(0).time_limit_abs < SearchInfo(0).time_limit_max) SearchInfo(0).time_limit_abs = SearchInfo(0).time_limit_max;
-        if (SearchInfo(0).time_limit_abs > mytime) SearchInfo(0).time_limit_abs = mytime;
+        if (info.time_limit_max > mytime) info.time_limit_max = mytime;
+        info.time_limit_abs = ((mytime * 2) / 5) + ((t_inc * 4) / 5);
+        if (info.time_limit_abs < info.time_limit_max) info.time_limit_abs = info.time_limit_max;
+        if (info.time_limit_abs > mytime) info.time_limit_abs = mytime;
 
-        if (SearchInfo(0).time_limit_max < MIN_TIME) SearchInfo(0).time_limit_max = MIN_TIME; //SAM added to deail with issues when time < time_buffer
-        if (SearchInfo(0).time_limit_abs < MIN_TIME) SearchInfo(0).time_limit_abs = MIN_TIME;
+        if (info.time_limit_max < MIN_TIME) info.time_limit_max = MIN_TIME; //SAM added to deail with issues when time < time_buffer
+        if (info.time_limit_abs < MIN_TIME) info.time_limit_abs = MIN_TIME;
 
         Print(2, "info string Time is limited: ");
-        Print(2, "max = %d, ", SearchInfo(0).time_limit_max);
-        Print(2, "abs = %d\n", SearchInfo(0).time_limit_abs);
-        SearchInfo(0).alloc_time = SearchInfo(0).time_limit_max;
-        SearchInfo(0).time_limit_max += SearchInfo(0).start_time;
-        SearchInfo(0).time_limit_abs += SearchInfo(0).start_time;
+        Print(2, "max = %d, ", info.time_limit_max);
+        Print(2, "abs = %d\n", info.time_limit_abs);
+        info.alloc_time = info.time_limit_max;
+        info.time_limit_max += info.start_time;
+        info.time_limit_abs += info.start_time;
     }
     if (infinite) {
-        SearchInfo(0).thinking_status = ANALYSING;
+        info.thinking_status = ANALYSING;
         Print(2, "info string Search status is ANALYSING\n");
     } else if (ponder) {
-        SearchInfo(0).thinking_status = PONDERING;
+        info.thinking_status = PONDERING;
         Print(2, "info string Search status is PONDERING\n");
     } else {
-        SearchInfo(0).thinking_status = THINKING;
+        info.thinking_status = THINKING;
         Print(2, "info string Search status is THINKING\n");
     }
     /* initialize UCI parameters to be used in search */
     DrawValue[pos->side] = - Guci_options.contempt;
     DrawValue[pos->side^1] = Guci_options.contempt;
     SearchMgr::Inst().getBestMove(pos,0);
-    if (!SearchInfo(0).bestmove) {
+    if (!info.bestmove) {
         if (RETURN_MOVE)
             Print(3, "info string No legal move found. Start a new game.\n\n");
         return;
     } else {
         if (RETURN_MOVE) {
-            Print(3, "bestmove %s", move2Str(SearchInfo(0).bestmove));
-            if (SearchInfo(0).pondermove) Print(3, " ponder %s", move2Str(SearchInfo(0).pondermove));
+            Print(3, "bestmove %s", move2Str(info.bestmove));
+            if (info.pondermove) Print(3, " ponder %s", move2Str(info.pondermove));
             Print(3, "\n\n");
         }
-        origScore = SearchInfo(0).last_value; // just to be safe
+        origScore = info.last_value; // just to be safe
     }
 }
 void uciSetPosition(position_t *pos, char *str) {

@@ -52,7 +52,7 @@ move_t* getMove(movelist_t *mvlist) {
     return start;
 }
 inline int scoreNonTactical(uint32 side, uint32 move) {
-    int score = SearchInfo(0).history[historyIndex(side,move)] /* + SearchInfo(0).evalgains[historyIndex(side, move)]*/;
+    int score = SearchMgr::Inst().Info().history[historyIndex(side,move)];
     return score;
 }
 bool moveIsPassedPawn(const position_t * pos, uint32 move) {
@@ -104,7 +104,7 @@ void scoreCaptures(movelist_t *mvlist) {
     }
 }
 
-void scoreNonCaptures(const position_t *pos, movelist_t *mvlist, int thread_id) {
+void scoreNonCaptures(const position_t *pos, movelist_t *mvlist) {
     move_t *m;
 
     ASSERT(mvlist != NULL);
@@ -114,7 +114,7 @@ void scoreNonCaptures(const position_t *pos, movelist_t *mvlist, int thread_id) 
     }
 }
 
-void scoreAll(const position_t *pos, movelist_t *mvlist, int thread_id) {
+void scoreAll(const position_t *pos, movelist_t *mvlist) {
     move_t *m;
 
     ASSERT(pos != NULL);
@@ -135,7 +135,7 @@ void scoreAll(const position_t *pos, movelist_t *mvlist, int thread_id) {
     }
 }
 
-void scoreAllQ(movelist_t *mvlist, int thread_id) {
+void scoreAllQ(movelist_t *mvlist) {
     move_t *m;
 
     ASSERT(mvlist != NULL);
@@ -246,23 +246,23 @@ move_t* sortNext(SplitPoint* sp, position_t *pos, movelist_t *mvlist, int& phase
 
         switch (MoveGenPhase[mvlist->phase]) {
         case PH_ROOT:
-            if (SearchInfo(thread_id).mvlist_initialized) break;
-            if (SearchInfo(thread_id).moves_is_limited == true) {
-                for (mvlist->size = 0; SearchInfo(thread_id).moves[mvlist->size] != EMPTY; mvlist->size++) {
-                    mvlist->list[mvlist->size].m = SearchInfo(thread_id).moves[mvlist->size];
+            if (SearchMgr::Inst().Info().mvlist_initialized) break;
+            if (SearchMgr::Inst().Info().moves_is_limited == true) {
+                for (mvlist->size = 0; SearchMgr::Inst().Info().moves[mvlist->size] != EMPTY; mvlist->size++) {
+                    mvlist->list[mvlist->size].m = SearchMgr::Inst().Info().moves[mvlist->size];
                 }
             } else {
                 // generate all legal moves at least in the root
                 genLegal(pos, mvlist, true); 
             }
             scoreRoot(mvlist);
-            SearchInfo(thread_id).mvlist_initialized = true;
-            SearchInfo(thread_id).legalmoves = mvlist->size;
+            SearchMgr::Inst().Info().mvlist_initialized = true;
+            SearchMgr::Inst().Info().legalmoves = mvlist->size;
             break;
         case PH_EVASION:
             genEvasions(pos, mvlist);
-            if (mvlist->depth <= 0) scoreAllQ(mvlist, thread_id);
-            else scoreAll(pos, mvlist, thread_id);
+            if (mvlist->depth <= 0) scoreAllQ(mvlist);
+            else scoreAll(pos, mvlist);
             break;
         case PH_TRANS:
             if (mvlist->transmove != EMPTY) {
@@ -299,19 +299,19 @@ move_t* sortNext(SplitPoint* sp, position_t *pos, movelist_t *mvlist, int& phase
             break;
         case PH_QUIET_MOVES:
             genNonCaptures(pos, mvlist);
-            scoreNonCaptures(pos, mvlist, thread_id);
+            scoreNonCaptures(pos, mvlist);
             break;
         case PH_NONTACTICAL_CHECKS:
         case PH_NONTACTICAL_CHECKS_WIN:
         case PH_NONTACTICAL_CHECKS_PURE:
             genQChecks(pos, mvlist);
-            scoreNonCaptures(pos, mvlist, thread_id);
+            scoreNonCaptures(pos, mvlist);
             break;
         case PH_GAINING:
             if (mvlist->scout - mvlist->evalvalue > 150) continue; // TODO: test other values
             genGainingMoves(pos, mvlist, mvlist->scout - mvlist->evalvalue, thread_id);
             // Print(3, "delta = %d, mvlist->size = %d\n", mvlist->scout - SearchInfo.evalvalue[pos->ply], mvlist->size);
-            scoreNonCaptures(pos, mvlist, thread_id);
+            scoreNonCaptures(pos, mvlist);
             break;
         default:
             ASSERT(MoveGenPhase[mvlist->phase] == PH_END);

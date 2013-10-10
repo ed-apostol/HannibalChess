@@ -66,12 +66,12 @@ int main(void) {
     initBook(DEFAULT_POLYGLOT_BOOK, &GpolyglotBook, POLYGLOT_BOOK);
     initBook(DEFAULT_HANNIBAL_BOOK, &GhannibalBook, PUCK_BOOK);
     initLearn("HannibalLearn.lrn", &Glearn);
-    SearchInfo(0).outOfBook = 0;
+    SearchMgr::Inst().Info().outOfBook = 0;
 #endif
     TransTable.Init(INIT_HASH, HASH_ASSOC);
     PVHashTable.Init(INIT_PVHASH, PV_ASSOC);
-    SearchInfo(0).pt.Init(INIT_PAWN, PAWN_ASSOC);
-    SearchInfo(0).et.Init(INIT_EVAL, EVAL_ASSOC);
+    SearchMgr::Inst().Info().pt.Init(INIT_PAWN, PAWN_ASSOC);
+    SearchMgr::Inst().Info().et.Init(INIT_EVAL, EVAL_ASSOC);
 
     initOption(&Guci_options); // this should be initialized first
     initArr();
@@ -103,12 +103,12 @@ int main(void) {
             origScore = 0;
             TransTable.Clear();
 #ifndef TCEC
-            SearchInfo(0).outOfBook = 0;
+            SearchMgr::Inst().Info().outOfBook = 0;
             movesSoFar.length = 0;
 #endif
-            SearchInfo(0).pt.Clear();
-            SearchInfo(0).et.Clear();
-            SearchInfo(0).lastDepthSearched = MAXPLY;
+            SearchMgr::Inst().Info().pt.Clear();
+            SearchMgr::Inst().Info().et.Clear();
+            SearchMgr::Inst().Info().lastDepthSearched = MAXPLY;
         } else if (!memcmp(command, "uci", 3)) {
             uciStart();
         } else if (!memcmp(command, "debug", 5)) {
