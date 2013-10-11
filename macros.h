@@ -104,7 +104,7 @@ enum ThinkingStatus {
 #define LOCK(x)             (uint32)((x)>>32)
 #define KEY(x)              (uint32)(x)
 
-const int MaxNumOfThreads = 8;
+const int MaxNumOfThreads = 32;
 const int MaxNumSplitPointsPerThread = 8;
 
 #define DRAW_ADJUST 0

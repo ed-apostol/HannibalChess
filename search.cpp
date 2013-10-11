@@ -119,7 +119,7 @@ void Search::check4Input(position_t *pos) {
 void Search::initNode(position_t *pos, Thread& sthread) {
     int64 time2;
 
-    if (smpCutoffOccurred(sthread.split_point)) {
+    if (sthread.split_point && sthread.split_point->cutoffOccurred()) {
         sthread.stop = true;
         return;
     }

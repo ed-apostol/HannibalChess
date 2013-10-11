@@ -17,28 +17,6 @@
 
 ThreadMgr ThreadsMgr;
 
-void Thread::Init() {
-    searching = false;
-    stop = false;
-    exit_flag = false;
-    nodes = 0;
-    nodes_since_poll = 0;
-    nodes_between_polls = 8192;
-    started = 0;
-    ended = 0;
-    numsplits = 0;
-    num_sp = 0;
-    split_point = NULL;
-    for (int j = 0; j < MaxNumSplitPointsPerThread; ++j) {
-        for (int k = 0; k < MaxNumOfThreads; ++k) {
-            sptable[j].workersBitMask = 0;
-        }
-    }
-    for (int Idx = 0; Idx < MAXPLY; Idx++) {
-        ts[Idx].Init();
-    }
-}
-
 void ThreadMgr::idleLoop(const int thread_id) {
     SplitPoint *master_sp = m_Threads[thread_id]->split_point;
     while(!m_Threads[thread_id]->exit_flag) {
@@ -136,16 +114,6 @@ void ThreadMgr::helpfulMaster(const int thread_id, SplitPoint *master_sp) { // d
     }
 }
 
-bool smpCutoffOccurred(SplitPoint *sp) {
-    if (NULL == sp) return false;
-    if (sp->cutoff) return true;
-    if (smpCutoffOccurred(sp->parent)) {
-        sp->cutoff = true;
-        return true;
-    }
-    return false;
-}
-
 void ThreadMgr::setAllThreadsToStop() {
     SearchMgr::Inst().Info().thinking_status = STOPPED;
     for (Thread* th: m_Threads) {
@@ -169,7 +137,7 @@ void ThreadMgr::initThreads(int num) {
     while (m_Threads.size() < num) {
         int id = m_Threads.size();
         m_Threads.push_back(new Thread(id));
-        m_Threads[id]->realThread = std::thread(&ThreadMgr::idleLoop, this, id);
+        m_Threads[id]->RThread() = std::thread(&ThreadMgr::idleLoop, this, id);
     }
     while (m_Threads.size() > num) {
         delete m_Threads.back();
@@ -224,7 +192,7 @@ bool ThreadMgr::splitRemainingMoves(const position_t* p, movelist_t* mvlist, Sea
     sthread.stop = false;
     split_point->updatelock->unlock();
 
-    ThreadsMgr.idleLoop(sthread.thread_id);
+    idleLoop(sthread.thread_id);
 
     split_point->updatelock->lock();
     sthread.num_sp--;

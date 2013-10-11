@@ -16,7 +16,17 @@ private:
     std::atomic_flag m_Lock;
 };
 
+
+
 struct SplitPoint {
+    bool cutoffOccurred() {
+        if (cutoff) return true;
+        if (parent && parent->cutoffOccurred()) {
+            cutoff = true;
+            return true;
+        }
+        return false;
+    }
     position_t pos[MaxNumOfThreads];
     position_t origpos;
     SplitPoint* parent;
@@ -49,7 +59,7 @@ struct ThreadStack {
     basic_move_t killer2;
 };
 
-class Thread {
+class Thread { // TODO: extract baseclass
 public:
     Thread(int _thread_id)
     {
@@ -75,15 +85,34 @@ public:
         std::unique_lock<std::mutex>(threadLock);
         idle_event.notify_one();
     }
-    void Init();
+    void Init() {
+        searching = false;
+        stop = false;
+        exit_flag = false;
+        nodes = 0;
+        nodes_since_poll = 0;
+        nodes_between_polls = 8192;
+        started = 0;
+        ended = 0;
+        numsplits = 0;
+        num_sp = 0;
+        split_point = NULL;
+        for (int j = 0; j < MaxNumSplitPointsPerThread; ++j) {
+            for (int k = 0; k < MaxNumOfThreads; ++k) {
+                sptable[j].workersBitMask = 0;
+            }
+        }
+        for (int Idx = 0; Idx < MAXPLY; Idx++) {
+            ts[Idx].Init();
+        }
+    }
+    std::thread& RThread() { return realThread; }
 
-    SplitPoint *split_point;
     volatile bool stop;
     volatile bool doSleep;
     volatile bool searching;
     volatile bool exit_flag;
 
-    std::thread realThread;
     int thread_id;
     uint64 nodes;
     uint64 nodes_since_poll;
@@ -92,14 +121,14 @@ public:
     uint64 ended; // DEBUG
     int64 numsplits; // DEBUG
     int num_sp;
-    ThreadStack ts[MAXPLY];
+    SplitPoint *split_point;
     SplitPoint sptable[MaxNumSplitPointsPerThread];
+    ThreadStack ts[MAXPLY];
 private:
+    std::thread realThread;
     std::condition_variable idle_event;
     std::mutex threadLock;
 };
-
-extern bool smpCutoffOccurred(SplitPoint *sp); // SplitPoint
 
 class ThreadMgr {
 public:
