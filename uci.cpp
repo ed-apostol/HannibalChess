@@ -138,17 +138,8 @@ void uciSetOption(char string[]) {
     } else if (!memcmp(name,"Contempt",8)) {
         Guci_options.contempt = atoi(value);
     } else if (!memcmp(name,"Threads",7)) {
-        int oldValue = Guci_options.threads;
-        int newValue  = atoi(value);
-#ifndef TCEC
-        if (Guci_options.threads + Guci_options.learnThreads > MaxNumOfThreads) newValue = MaxNumOfThreads - Guci_options.learnThreads;
-#endif
-        if (newValue > oldValue) {
-            for (int i = oldValue; i < newValue; i++) {
-                Threads[i]->Init();
-            }
-        }
-        Guci_options.threads = newValue;
+        Guci_options.threads = atoi(value);
+        ThreadsMgr.initSmpVars();
     } else if (!memcmp(name,"Min Split Depth",15)) {
         Guci_options.min_split_depth = atoi(value);
     } else if (!memcmp(name,"Max Threads/Split",17)) {
@@ -328,7 +319,7 @@ void uciGo(position_t *pos, char *options) {
     DrawValue[pos->side^1] = Guci_options.contempt;
 
 
-    SearchMgr::Inst().getBestMove(pos, *Threads[0]);
+    SearchMgr::Inst().getBestMove(pos, ThreadsMgr.ThreadFromIdx(0));
 
 
     if (!info.bestmove) {

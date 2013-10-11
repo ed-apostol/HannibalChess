@@ -22,7 +22,7 @@
 #include <cstdlib>
 
 void quit(void) {
-    stopThreads();
+    ThreadsMgr.stopThreads();
 
     if (logfile) fclose(logfile);
     if (errfile) fclose(errfile);
@@ -79,7 +79,7 @@ int main(void) {
     InitTrapped();
 
     //initSmpVars();
-    initThreads();
+    ThreadsMgr.initThreads();
 
     initMaterial();
     InitMateBoost();
