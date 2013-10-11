@@ -26,7 +26,6 @@ void initOption(uci_option_t* opt) {
     //TODO add hash size option
     opt->contempt = 0;
     opt->time_buffer = 1000;
-    opt->threads = NUM_THREADS;
     opt->min_split_depth = MIN_SPLIT_DEPTH;
     opt->max_threads_per_split = MAX_THREADS_PER_SPLIT;
     opt->max_activesplits_per_thread = MAX_ACTIVE_SPLITS;
@@ -138,8 +137,7 @@ void uciSetOption(char string[]) {
     } else if (!memcmp(name,"Contempt",8)) {
         Guci_options.contempt = atoi(value);
     } else if (!memcmp(name,"Threads",7)) {
-        Guci_options.threads = atoi(value);
-        ThreadsMgr.initSmpVars();
+        ThreadsMgr.initThreads(atoi(value));
     } else if (!memcmp(name,"Min Split Depth",15)) {
         Guci_options.min_split_depth = atoi(value);
     } else if (!memcmp(name,"Max Threads/Split",17)) {

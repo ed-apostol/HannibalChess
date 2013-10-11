@@ -79,7 +79,7 @@ int main(void) {
     InitTrapped();
 
     //initSmpVars();
-    ThreadsMgr.initThreads();
+    ThreadsMgr.initThreads(NUM_THREADS);
 
     initMaterial();
     InitMateBoost();

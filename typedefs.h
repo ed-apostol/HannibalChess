@@ -207,7 +207,6 @@ struct book_t {
 struct uci_option_t{ // TODO: move this to uci file
     int time_buffer;
     int contempt;
-    int threads;
 #ifndef TCEC
     int try_book;
     int book_limit;
@@ -310,45 +309,6 @@ struct SearchStack {
     movelist_t* mvlist;
     int mvlist_phase;
 };
-
-class Spinlock {
-public:
-    Spinlock() { m_Lock.clear(std::memory_order_release); }
-    ~Spinlock() { }
-    void lock() { while (m_Lock.test_and_set(std::memory_order_acquire)); }
-    void unlock() { m_Lock.clear(std::memory_order_release); }
-private:
-    std::atomic_flag m_Lock;
-};
-
-struct SplitPoint {
-    position_t pos[MaxNumOfThreads];
-    position_t origpos;
-    SplitPoint* parent;
-    SearchStack* sscurr;
-    SearchStack* ssprev;
-    int depth;
-    bool inCheck;
-    bool inRoot;
-    NodeType nodeType;
-    volatile int alpha;
-    volatile int beta;
-    volatile int bestvalue;
-    volatile int played;
-    volatile basic_move_t bestmove;
-    volatile uint64 workersBitMask;
-    volatile uint64 allWorkersBitMask;
-    volatile bool cutoff;
-    Spinlock movelistlock[1];
-    Spinlock updatelock[1];
-    //std::mutex movelistlock[1];
-    //std::mutex updatelock[1];
-};
-
-
-
-
-
 
 enum directions {SW,W,NW,N,NE,E,SE,S,NO_DIR };//{-9, -1, 7, 8, 9, 1, -7, -8};
 

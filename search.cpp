@@ -638,7 +638,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
         }
         if (inSplitPoint) sp->updatelock->unlock();
         if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < Guci_options.max_activesplits_per_thread
-            && Guci_options.threads > 1 && depth >= Guci_options.min_split_depth
+            && ThreadsMgr.Size() > 1 && depth >= Guci_options.min_split_depth
             //&& (!inCutNode(nt) || MoveGenPhase[ss.mvlist_phase] == PH_QUIET_MOVES)
             && ThreadsMgr.splitRemainingMoves(pos, ss.mvlist, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, sthread)) {
                 break;
