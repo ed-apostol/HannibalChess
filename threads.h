@@ -16,8 +16,6 @@ private:
     std::atomic_flag m_Lock;
 };
 
-
-
 struct SplitPoint {
     bool cutoffOccurred() {
         if (cutoff) return true;
@@ -63,7 +61,6 @@ class Thread { // TODO: extract baseclass
 public:
     Thread(int _thread_id)
     {
-        SplitPoint* sp = NULL;
         Init();
         thread_id = _thread_id;
         doSleep = true;
@@ -133,8 +130,7 @@ private:
 class ThreadMgr {
 public:
     void idleLoop(const int thread_id);
-    void checkForWork(const int thread_id);
-    void helpfulMaster(const int thread_id, SplitPoint *master_sp);
+    void checkForWork(const int thread_id, SplitPoint *master_sp);
     void setAllThreadsToStop();
     void setAllThreadsToSleep();
     void wakeUpThreads();
