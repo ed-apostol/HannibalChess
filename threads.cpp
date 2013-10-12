@@ -34,11 +34,11 @@ void ThreadMgr::idleLoop(const int thread_id) {
             ++m_Threads[thread_id]->ended;
         }
         if(master_sp != NULL && !master_sp->workersBitMask) return;
-        checkForWork(thread_id, master_sp);
+        getWork(thread_id, master_sp);
     }
 }
 
-void ThreadMgr::checkForWork(const int thread_id, SplitPoint *master_sp) {
+void ThreadMgr::getWork(const int thread_id, SplitPoint *master_sp) {
     int best_depth = 0;
     Thread* master_thread = NULL;
     SplitPoint *best_split_point = NULL;
@@ -89,13 +89,13 @@ void ThreadMgr::setAllThreadsToSleep() {
     }
 }
 
-void ThreadMgr::initSmpVars() {
+void ThreadMgr::initVars() {
     for (Thread* th: m_Threads) {
         th->Init();
     }
 }
 
-void ThreadMgr::initThreads(int num) {
+void ThreadMgr::spawnThreads(int num) {
     while (m_Threads.size() < num) {
         int id = m_Threads.size();
         m_Threads.push_back(new Thread(id));
@@ -107,7 +107,7 @@ void ThreadMgr::initThreads(int num) {
     }
 }
 
-void ThreadMgr::stopThreads(void) {
+void ThreadMgr::killThreads(void) {
     while (m_Threads.size() > 0) {
         delete m_Threads.back();
         m_Threads.pop_back();
@@ -126,12 +126,10 @@ uint64 ThreadMgr::computeNodes() {
     return nodes;
 }
 
-bool ThreadMgr::splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread) {
+void ThreadMgr::searchSplitPoint(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread) {
     SplitPoint *split_point = &sthread.sptable[sthread.num_sp];    
 
     split_point->updatelock->lock();
-    split_point = &sthread.sptable[sthread.num_sp];  
-    sthread.num_sp++;
     split_point->parent = sthread.split_point;
     split_point->depth = depth;
     split_point->alpha = alpha; 
@@ -152,6 +150,7 @@ bool ThreadMgr::splitRemainingMoves(const position_t* p, movelist_t* mvlist, Sea
     sthread.split_point = split_point;
     sthread.searching = true;
     sthread.stop = false;
+    sthread.num_sp++;
     split_point->updatelock->unlock();
 
     idleLoop(sthread.thread_id);
@@ -168,5 +167,4 @@ bool ThreadMgr::splitRemainingMoves(const position_t* p, movelist_t* mvlist, Sea
         sthread.searching = true;
     }
     split_point->updatelock->unlock();
-    return true;
 }

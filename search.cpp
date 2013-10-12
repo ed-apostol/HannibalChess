@@ -143,7 +143,7 @@ void Search::initNode(position_t *pos, Thread& sthread) {
                 Print(1, "time %llu ", time);
                 sum_nodes = ThreadsMgr.computeNodes();
                 Print(1, "nodes %llu ", sum_nodes);
-                Print(1, "hashfull %d ", (TransTable.Used()*1000)/TransTable.Size());
+                Print(1, "hashfull %d ", (TransTable.Used()*1000)/TransTable.threadNum());
                 Print(1, "nps %llu ", (sum_nodes*1000ULL)/(time));
                 Print(1, "\n");
             }
@@ -206,7 +206,7 @@ void Search::displayPV(const position_t *pos, continuation_t *pv, int depth, int
 
     sum_nodes = ThreadsMgr.computeNodes();
     Print(1, "nodes %llu ", sum_nodes);
-    Print(1, "hashfull %d ", (TransTable.Used()*1000)/TransTable.Size());
+    Print(1, "hashfull %d ", (TransTable.Used()*1000)/TransTable.threadNum());
     if (time > 10) Print(1, "nps %llu ", (sum_nodes*1000)/(time));
     Print(1, "pv ");
     for (int i = 0; i < pv->length; i++) printf("%s ", move2Str(pv->moves[i]));
@@ -638,9 +638,8 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
         }
         if (inSplitPoint) sp->updatelock->unlock();
         if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < Guci_options.max_activesplits_per_thread
-            && ThreadsMgr.Size() > 1 && depth >= Guci_options.min_split_depth
-            //&& (!inCutNode(nt) || MoveGenPhase[ss.mvlist_phase] == PH_QUIET_MOVES)
-            && ThreadsMgr.splitRemainingMoves(pos, ss.mvlist, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, sthread)) {
+            && ThreadsMgr.threadNum() > 1 && depth >= Guci_options.min_split_depth) {
+                ThreadsMgr.searchSplitPoint(pos, ss.mvlist, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, sthread);
                 break;
         }
     }
@@ -863,7 +862,7 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
 #endif
 
     // SMP 
-    ThreadsMgr.initSmpVars();
+    ThreadsMgr.initVars();
     ThreadsMgr.wakeUpThreads();
     info.mvlist_initialized = false;
 
@@ -968,7 +967,7 @@ void SearchMgr::checkSpeedUp(position_t* pos, char string[]) {
     for (int i = 0; i < NUMPOS; ++i) {
         uciSetOption("name Threads value 1");
         TransTable.Clear();
-        ThreadsMgr.initSmpVars();
+        ThreadsMgr.initVars();
         Print(5, "\n\nPos#%d: %s\n", i+1, fenPos[i]);
         uciSetPosition(pos, fenPos[i]);
         int64 startTime = getTime();
@@ -986,7 +985,7 @@ void SearchMgr::checkSpeedUp(position_t* pos, char string[]) {
             sprintf_s(tempStr, "name Threads value %d\n", j);
             uciSetOption(tempStr);
             TransTable.Clear();
-            ThreadsMgr.initSmpVars();
+            ThreadsMgr.initVars();
             uciSetPosition(pos, fenPos[i]);
             startTime = getTime();
             sprintf_s(command, "movedepth %d", depth);
@@ -1037,7 +1036,7 @@ void SearchMgr::benchMinSplitDepth(position_t* pos, char string[]) {
             sprintf_s(command, "name Min Split Depth value %d", i);
             uciSetOption(command);
             TransTable.Clear();
-            ThreadsMgr.initSmpVars();
+            ThreadsMgr.initVars();
             uciSetPosition(pos, fenPos[posIdx]);
             int64 startTime = getTime();
             sprintf_s(command, "movedepth %d", depth);
@@ -1092,7 +1091,7 @@ void SearchMgr::benchThreadsperSplit(position_t* pos, char string[]) {
             sprintf_s(command, "name Max Threads/Split value %d", i);
             uciSetOption(command);
             TransTable.Clear();
-            ThreadsMgr.initSmpVars();
+            ThreadsMgr.initVars();
             uciSetPosition(pos, fenPos[posIdx]);
             int64 startTime = getTime();
             sprintf_s(command, "movedepth %d", depth);
@@ -1147,7 +1146,7 @@ void SearchMgr::benchActiveSplits(position_t* pos, char string[]) {
             sprintf_s(command, "name Max Active Splits/Thread value %d", i);
             uciSetOption(command);
             TransTable.Clear();
-            ThreadsMgr.initSmpVars();
+            ThreadsMgr.initVars();
             uciSetPosition(pos, fenPos[posIdx]);
             int64 startTime = getTime();
             sprintf_s(command, "movedepth %d", depth);

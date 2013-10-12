@@ -130,17 +130,17 @@ private:
 class ThreadMgr {
 public:
     void idleLoop(const int thread_id);
-    void checkForWork(const int thread_id, SplitPoint *master_sp);
+    void getWork(const int thread_id, SplitPoint *master_sp);
     void setAllThreadsToStop();
     void setAllThreadsToSleep();
     void wakeUpThreads();
-    void initSmpVars();
-    void initThreads(int num);
-    void stopThreads(void);
+    void initVars();
+    void spawnThreads(int num);
+    void killThreads(void);
     uint64 computeNodes();
-    bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread);
-    Thread& ThreadFromIdx(int thread_id) { return *m_Threads[thread_id]; }
-    size_t Size() const { return m_Threads.size(); }
+    void searchSplitPoint(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread);
+    Thread& threadFromIdx(int thread_id) { return *m_Threads[thread_id]; }
+    size_t threadNum() const { return m_Threads.size(); }
 private:
     std::vector<Thread*> m_Threads;
 };

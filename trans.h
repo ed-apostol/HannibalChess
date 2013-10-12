@@ -29,7 +29,7 @@ public:
             m_pTable = new Entity[m_Size];
         }
     }
-    uint64 Size() const { return m_Size; }
+    uint64 threadNum() const { return m_Size; }
 protected:
     Entity* m_pTable;
     uint64 m_Size;
