@@ -21,7 +21,7 @@ void ThreadMgr::IdleLoop(const int thread_id) {
     SplitPoint *master_sp = m_Threads[thread_id]->split_point;
     while(!m_Threads[thread_id]->exit_flag) {
         if (master_sp == NULL && m_Threads[thread_id]->doSleep) {
-            m_Threads[thread_id]->sleepAndWaitForCondition();
+            m_Threads[thread_id]->SleepAndWaitForCondition();
         }
         if(m_Threads[thread_id]->searching) {
             ++m_Threads[thread_id]->started;
@@ -99,7 +99,7 @@ void ThreadMgr::SpawnThreads(int num) {
     while (m_Threads.size() < num) {
         int id = m_Threads.size();
         m_Threads.push_back(new Thread(id));
-        m_Threads[id]->RThread() = std::thread(&ThreadMgr::IdleLoop, this, id);
+        m_Threads[id]->NativeThread() = std::thread(&ThreadMgr::IdleLoop, this, id);
     }
     while (m_Threads.size() > num) {
         delete m_Threads.back();
@@ -116,7 +116,7 @@ void ThreadMgr::KillThreads(void) {
 
 void ThreadMgr::WakeUpThreads() {
     for (int i = 1; i < m_Threads.size(); ++i) { // TODO: implement GetBestMove to use Thread(0), move blocking input to main thread
-        m_Threads[i]->triggerCondition();
+        m_Threads[i]->TriggerCondition();
     }
 }
 

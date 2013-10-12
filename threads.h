@@ -70,17 +70,17 @@ public:
         stop = true;
         exit_flag = true;
         searching = false;
-        triggerCondition();
-        realThread.join();
+        TriggerCondition();
+        nativeThread.join();
     }
-    void sleepAndWaitForCondition() {
+    void SleepAndWaitForCondition() {
         std::unique_lock<std::mutex> lk(threadLock);
-        idle_event.wait(lk);
+        sleepCondition.wait(lk);
     }
-    void triggerCondition() {
+    void TriggerCondition() {
         doSleep = false;
         std::unique_lock<std::mutex>(threadLock);
-        idle_event.notify_one();
+        sleepCondition.notify_one();
     }
     void Init() {
         searching = false;
@@ -103,7 +103,7 @@ public:
             ts[Idx].Init();
         }
     }
-    std::thread& RThread() { return realThread; }
+    std::thread& NativeThread() { return nativeThread; }
 
     volatile bool stop;
     volatile bool doSleep;
@@ -122,8 +122,8 @@ public:
     SplitPoint sptable[MaxNumSplitPointsPerThread];
     ThreadStack ts[MAXPLY];
 private:
-    std::thread realThread;
-    std::condition_variable idle_event;
+    std::thread nativeThread;
+    std::condition_variable sleepCondition;
     std::mutex threadLock;
 };
 

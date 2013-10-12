@@ -125,7 +125,7 @@ void uciSetOption(char string[]) {
             else if (newValue > oldValue) {
                 for (int i = MaxNumOfThreads-newValue; i < MaxNumOfThreads-oldValue; i++) { //wake up if it needs to
                     if (SHOW_LEARNING) Print(3,"info string about to wakup thread %d\n",i);
-                    SetEvent(Threads[i]->idle_event);
+                    SetEvent(Threads[i]->sleepCondition);
                     if (SHOW_LEARNING) Print(3,"info string wokeup thread %d\n",i);
                 }
             }
