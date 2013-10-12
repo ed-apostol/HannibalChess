@@ -22,7 +22,7 @@
 #include <cstdlib>
 
 void quit(void) {
-    ThreadsMgr.killThreads();
+    ThreadsMgr.KillThreads();
 
     if (logfile) fclose(logfile);
     if (errfile) fclose(errfile);
@@ -78,8 +78,8 @@ int main(void) {
     initPST(&Guci_options);
     InitTrapped();
 
-    //initVars();
-    ThreadsMgr.spawnThreads(NUM_THREADS);
+    //InitVars();
+    ThreadsMgr.SpawnThreads(NUM_THREADS);
 
     initMaterial();
     InitMateBoost();

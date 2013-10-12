@@ -129,18 +129,18 @@ private:
 
 class ThreadMgr {
 public:
-    void idleLoop(const int thread_id);
-    void getWork(const int thread_id, SplitPoint *master_sp);
-    void setAllThreadsToStop();
-    void setAllThreadsToSleep();
-    void wakeUpThreads();
-    void initVars();
-    void spawnThreads(int num);
-    void killThreads(void);
-    uint64 computeNodes();
-    void searchSplitPoint(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread);
-    Thread& threadFromIdx(int thread_id) { return *m_Threads[thread_id]; }
-    size_t threadNum() const { return m_Threads.size(); }
+    void IdleLoop(const int thread_id);
+    void GetWork(const int thread_id, SplitPoint *master_sp);
+    void SetAllThreadsToStop();
+    void SetAllThreadsToSleep();
+    void WakeUpThreads();
+    void InitVars();
+    void SpawnThreads(int num);
+    void KillThreads(void);
+    uint64 ComputeNodes();
+    void SearchSplitPoint(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread);
+    Thread& ThreadFromIdx(int thread_id) { return *m_Threads[thread_id]; }
+    size_t ThreadNum() const { return m_Threads.size(); }
 private:
     std::vector<Thread*> m_Threads;
 };

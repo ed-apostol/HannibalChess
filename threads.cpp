@@ -17,7 +17,7 @@
 
 ThreadMgr ThreadsMgr;
 
-void ThreadMgr::idleLoop(const int thread_id) {
+void ThreadMgr::IdleLoop(const int thread_id) {
     SplitPoint *master_sp = m_Threads[thread_id]->split_point;
     while(!m_Threads[thread_id]->exit_flag) {
         if (master_sp == NULL && m_Threads[thread_id]->doSleep) {
@@ -34,11 +34,11 @@ void ThreadMgr::idleLoop(const int thread_id) {
             ++m_Threads[thread_id]->ended;
         }
         if(master_sp != NULL && !master_sp->workersBitMask) return;
-        getWork(thread_id, master_sp);
+        GetWork(thread_id, master_sp);
     }
 }
 
-void ThreadMgr::getWork(const int thread_id, SplitPoint *master_sp) {
+void ThreadMgr::GetWork(const int thread_id, SplitPoint *master_sp) {
     int best_depth = 0;
     Thread* master_thread = NULL;
     SplitPoint *best_split_point = NULL;
@@ -76,30 +76,30 @@ void ThreadMgr::getWork(const int thread_id, SplitPoint *master_sp) {
     }
 }
 
-void ThreadMgr::setAllThreadsToStop() {
+void ThreadMgr::SetAllThreadsToStop() {
     SearchMgr::Inst().Info().thinking_status = STOPPED;
     for (Thread* th: m_Threads) {
         th->stop = true;
     }
 }
 
-void ThreadMgr::setAllThreadsToSleep() {
+void ThreadMgr::SetAllThreadsToSleep() {
     for (Thread* th: m_Threads) {
         th->doSleep = true;
     }
 }
 
-void ThreadMgr::initVars() {
+void ThreadMgr::InitVars() {
     for (Thread* th: m_Threads) {
         th->Init();
     }
 }
 
-void ThreadMgr::spawnThreads(int num) {
+void ThreadMgr::SpawnThreads(int num) {
     while (m_Threads.size() < num) {
         int id = m_Threads.size();
         m_Threads.push_back(new Thread(id));
-        m_Threads[id]->RThread() = std::thread(&ThreadMgr::idleLoop, this, id);
+        m_Threads[id]->RThread() = std::thread(&ThreadMgr::IdleLoop, this, id);
     }
     while (m_Threads.size() > num) {
         delete m_Threads.back();
@@ -107,26 +107,26 @@ void ThreadMgr::spawnThreads(int num) {
     }
 }
 
-void ThreadMgr::killThreads(void) {
+void ThreadMgr::KillThreads(void) {
     while (m_Threads.size() > 0) {
         delete m_Threads.back();
         m_Threads.pop_back();
     }
 }
 
-void ThreadMgr::wakeUpThreads() {
+void ThreadMgr::WakeUpThreads() {
     for (int i = 1; i < m_Threads.size(); ++i) { // TODO: implement GetBestMove to use Thread(0), move blocking input to main thread
         m_Threads[i]->triggerCondition();
     }
 }
 
-uint64 ThreadMgr::computeNodes() {
+uint64 ThreadMgr::ComputeNodes() {
     uint64 nodes = 0;
     for (Thread* th: m_Threads) nodes += th->nodes;
     return nodes;
 }
 
-void ThreadMgr::searchSplitPoint(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread) {
+void ThreadMgr::SearchSplitPoint(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread) {
     SplitPoint *split_point = &sthread.sptable[sthread.num_sp];    
 
     split_point->updatelock->lock();
@@ -153,7 +153,7 @@ void ThreadMgr::searchSplitPoint(const position_t* p, movelist_t* mvlist, Search
     sthread.num_sp++;
     split_point->updatelock->unlock();
 
-    idleLoop(sthread.thread_id);
+    IdleLoop(sthread.thread_id);
 
     split_point->updatelock->lock();
     sthread.num_sp--;

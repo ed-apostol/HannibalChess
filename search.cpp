@@ -86,7 +86,7 @@ void Search::ponderHit() { //no pondering in tuning
 
     if ((info.iteration >= 8 && (info.legalmoves == 1 || info.mate_found >= 3)) ||
         (time > info.time_limit_abs)) {
-            ThreadsMgr.setAllThreadsToStop();
+            ThreadsMgr.SetAllThreadsToStop();
             Print(3, "info string Has searched enough the ponder move: aborting\n");
     } else {
         info.thinking_status = THINKING;
@@ -105,7 +105,7 @@ void Search::check4Input(position_t *pos) {
         if (!memcmp(input, "quit", 4)) {
             quit();
         } else if (!memcmp(input, "stop", 4)) {
-            ThreadsMgr.setAllThreadsToStop();
+            ThreadsMgr.SetAllThreadsToStop();
             Print(2, "info string Aborting search: stop\n");
             return;
         } else if (!memcmp(input, "ponderhit", 9)) {
@@ -127,7 +127,7 @@ void Search::initNode(position_t *pos, Thread& sthread) {
     sthread.nodes++;
 #ifdef SELF_TUNE2
     if (sthread.nodes >= info.node_limit && info.node_is_limited) {
-        setAllThreadsToStop(thread_id);
+        SetAllThreadsToStop(thread_id);
     }
 #endif
     if (sthread.thread_id == 0 && ++sthread.nodes_since_poll >= sthread.nodes_between_polls) {
@@ -141,9 +141,9 @@ void Search::initNode(position_t *pos, Thread& sthread) {
                 uint64 sum_nodes;
                 Print(1, "info ");
                 Print(1, "time %llu ", time);
-                sum_nodes = ThreadsMgr.computeNodes();
+                sum_nodes = ThreadsMgr.ComputeNodes();
                 Print(1, "nodes %llu ", sum_nodes);
-                Print(1, "hashfull %d ", (TransTable.Used()*1000)/TransTable.threadNum());
+                Print(1, "hashfull %d ", (TransTable.Used()*1000)/TransTable.HashSize());
                 Print(1, "nps %llu ", (sum_nodes*1000ULL)/(time));
                 Print(1, "\n");
             }
@@ -154,12 +154,12 @@ void Search::initNode(position_t *pos, Thread& sthread) {
                     if (!info.research && !info.change) {
                         bool gettingWorse = info.best_value != -INF && info.best_value + WORSE_SCORE_CUTOFF <= info.last_value;
                         if (!gettingWorse) { 
-                            ThreadsMgr.setAllThreadsToStop();
+                            ThreadsMgr.SetAllThreadsToStop();
                             Print(2, "info string Aborting search: time limit 2: %d\n", time2 - info.start_time);
                         }
                     }
                 } else {
-                    ThreadsMgr.setAllThreadsToStop();
+                    ThreadsMgr.SetAllThreadsToStop();
                     Print(2, "info string Aborting search: time limit 1: %d\n", time2 - info.start_time);
                 }
             }
@@ -204,9 +204,9 @@ void Search::displayPV(const position_t *pos, continuation_t *pv, int depth, int
 
     Print(1, "time %llu ", time);
 
-    sum_nodes = ThreadsMgr.computeNodes();
+    sum_nodes = ThreadsMgr.ComputeNodes();
     Print(1, "nodes %llu ", sum_nodes);
-    Print(1, "hashfull %d ", (TransTable.Used()*1000)/TransTable.threadNum());
+    Print(1, "hashfull %d ", (TransTable.Used()*1000)/TransTable.HashSize());
     if (time > 10) Print(1, "nps %llu ", (sum_nodes*1000)/(time));
     Print(1, "pv ");
     for (int i = 0; i < pv->length; i++) printf("%s ", move2Str(pv->moves[i]));
@@ -638,8 +638,8 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
         }
         if (inSplitPoint) sp->updatelock->unlock();
         if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < Guci_options.max_activesplits_per_thread
-            && ThreadsMgr.threadNum() > 1 && depth >= Guci_options.min_split_depth) {
-                ThreadsMgr.searchSplitPoint(pos, ss.mvlist, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, sthread);
+            && ThreadsMgr.ThreadNum() > 1 && depth >= Guci_options.min_split_depth) {
+                ThreadsMgr.SearchSplitPoint(pos, ss.mvlist, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, sthread);
                 break;
         }
     }
@@ -744,7 +744,7 @@ void Search::timeManagement(int depth, Thread& sthread) {
 
             if (info.legalmoves == 1 || info.mate_found >= 3) { 
                 if (depth >= 8) {
-                    ThreadsMgr.setAllThreadsToStop();
+                    ThreadsMgr.SetAllThreadsToStop();
                     Print(2, "info string Aborting search: legalmove/mate found depth >= 8\n");
                     return;
                 }
@@ -764,7 +764,7 @@ void Search::timeManagement(int depth, Thread& sthread) {
                     if (info.time_limit_max > info.time_limit_abs) 
                         info.time_limit_max = info.time_limit_abs;
                 } else { // if we are unlikely to get deeper, save our time
-                    ThreadsMgr.setAllThreadsToStop();
+                    ThreadsMgr.SetAllThreadsToStop();
                     Print(2, "info string Aborting search: root time limit 1: %d\n", time - info.start_time);
                     return;
                 }
@@ -779,13 +779,13 @@ void Search::timeManagement(int depth, Thread& sthread) {
                 int64 timeExpended = time - info.start_time;
 
                 if (timeExpended > (timeLimit * EasyTime1)/100 && info.rbestscore1 > info.rbestscore2 + EasyCutoff1) {
-                    ThreadsMgr.setAllThreadsToStop();
+                    ThreadsMgr.SetAllThreadsToStop();
                     Print(2, "info string Aborting search: easy move1: score1: %d score2: %d time: %d\n", 
                         info.rbestscore1, info.rbestscore2, time - info.start_time);
                     return;
                 }
                 if (timeExpended > (timeLimit * EasyTime2)/100 && info.rbestscore1 > info.rbestscore2 + EasyCutoff2) {
-                    ThreadsMgr.setAllThreadsToStop();
+                    ThreadsMgr.SetAllThreadsToStop();
                     Print(2, "info string Aborting search: easy move2: score1: %d score2: %d time: %d\n", 
                         info.rbestscore1, info.rbestscore2, time - info.start_time);
                     return;
@@ -794,7 +794,7 @@ void Search::timeManagement(int depth, Thread& sthread) {
         }
     } 
     if (info.depth_is_limited && depth >= info.depth_limit) {
-        ThreadsMgr.setAllThreadsToStop();
+        ThreadsMgr.SetAllThreadsToStop();
         Print(2, "info string Aborting search: depth limit 1\n");
         return;
     }
@@ -834,7 +834,7 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
                 if (info.rootPV.length > 1) info.pondermove = info.rootPV.moves[1];
                 else info.pondermove = 0;
                 search->displayPV(pos, &info.rootPV, entry->pvDepth(), -INF, INF, info.best_value);
-                ThreadsMgr.setAllThreadsToStop();
+                ThreadsMgr.SetAllThreadsToStop();
                 return;
         }
         ss.hashMove = entry->pvMove();
@@ -862,8 +862,8 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
 #endif
 
     // SMP 
-    ThreadsMgr.initVars();
-    ThreadsMgr.wakeUpThreads();
+    ThreadsMgr.InitVars();
+    ThreadsMgr.WakeUpThreads();
     info.mvlist_initialized = false;
 
     for (id = 1; id < MAXPLY; id++) {
@@ -919,7 +919,7 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
     if (info.thinking_status != STOPPED) {
         if ((info.depth_is_limited || info.time_is_limited) && info.thinking_status == THINKING) {
             info.thinking_status = STOPPED;
-            ThreadsMgr.setAllThreadsToStop();
+            ThreadsMgr.SetAllThreadsToStop();
             Print(2, "info string Aborting search: end of getBestMove: id=%d, best_value = %d sp = %d, ply = %d\n", 
                 id, info.best_value, pos->sp, pos->ply);
         } else {
@@ -927,12 +927,12 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
             do {
                 search->check4Input(pos);
             } while (info.thinking_status != STOPPED);
-            ThreadsMgr.setAllThreadsToStop();
+            ThreadsMgr.SetAllThreadsToStop();
             Print(2, "info string Aborting search: end of waiting for stop/quit/ponderhit\n");
         }
     }
 
-    ThreadsMgr.setAllThreadsToSleep();
+    ThreadsMgr.SetAllThreadsToSleep();
     //////Print(2, "================================================================\n");
     //////for (int i = 0; i < Guci_options.threads; ++i) {
     //////    Print(2, "%s: thread_id:%d, num_sp:%d searching:%d stop:%d started:%d ended:%d nodes:%d numsplits:%d\n", __FUNCTION__, i, 
@@ -967,14 +967,14 @@ void SearchMgr::checkSpeedUp(position_t* pos, char string[]) {
     for (int i = 0; i < NUMPOS; ++i) {
         uciSetOption("name Threads value 1");
         TransTable.Clear();
-        ThreadsMgr.initVars();
+        ThreadsMgr.InitVars();
         Print(5, "\n\nPos#%d: %s\n", i+1, fenPos[i]);
         uciSetPosition(pos, fenPos[i]);
         int64 startTime = getTime();
         sprintf_s(command, "movedepth %d", depth);
         uciGo(pos, command);
         int64 spentTime1 = getTime() - startTime;
-        uint64 nodes1 = ThreadsMgr.computeNodes() / spentTime1;
+        uint64 nodes1 = ThreadsMgr.ComputeNodes() / spentTime1;
         double timeSpeedUp = (double)spentTime1/1000.0;
         timeSpeedupSum[0] += timeSpeedUp;
         double nodesSpeedup = (double)nodes1;
@@ -985,14 +985,14 @@ void SearchMgr::checkSpeedUp(position_t* pos, char string[]) {
             sprintf_s(tempStr, "name Threads value %d\n", j);
             uciSetOption(tempStr);
             TransTable.Clear();
-            ThreadsMgr.initVars();
+            ThreadsMgr.InitVars();
             uciSetPosition(pos, fenPos[i]);
             startTime = getTime();
             sprintf_s(command, "movedepth %d", depth);
             uciGo(pos, command);
             int64 spentTime = getTime() - startTime;
             uint64 nodes = 0;
-            nodes = ThreadsMgr.computeNodes();
+            nodes = ThreadsMgr.ComputeNodes();
             nodes /= spentTime;
             timeSpeedUp = (double)spentTime1 / (double)spentTime;
             timeSpeedupSum[j] += timeSpeedUp;
@@ -1036,7 +1036,7 @@ void SearchMgr::benchMinSplitDepth(position_t* pos, char string[]) {
             sprintf_s(command, "name Min Split Depth value %d", i);
             uciSetOption(command);
             TransTable.Clear();
-            ThreadsMgr.initVars();
+            ThreadsMgr.InitVars();
             uciSetPosition(pos, fenPos[posIdx]);
             int64 startTime = getTime();
             sprintf_s(command, "movedepth %d", depth);
@@ -1044,7 +1044,7 @@ void SearchMgr::benchMinSplitDepth(position_t* pos, char string[]) {
             int64 spentTime = getTime() - startTime;
             timeSum[i] += spentTime;
             uint64 nodes = 0;
-            nodes = ThreadsMgr.computeNodes();
+            nodes = ThreadsMgr.ComputeNodes();
             nodes = nodes*1000/spentTime;
             nodesSum[i] += nodes;
             Print(5, "Threads: %d Depth: %d SplitDepth: %d Time: %d Nps: %d\n", threads, depth, i, spentTime, nodes);
@@ -1091,7 +1091,7 @@ void SearchMgr::benchThreadsperSplit(position_t* pos, char string[]) {
             sprintf_s(command, "name Max Threads/Split value %d", i);
             uciSetOption(command);
             TransTable.Clear();
-            ThreadsMgr.initVars();
+            ThreadsMgr.InitVars();
             uciSetPosition(pos, fenPos[posIdx]);
             int64 startTime = getTime();
             sprintf_s(command, "movedepth %d", depth);
@@ -1099,7 +1099,7 @@ void SearchMgr::benchThreadsperSplit(position_t* pos, char string[]) {
             int64 spentTime = getTime() - startTime;
             timeSum[i] += spentTime;
             uint64 nodes = 0;
-            nodes = ThreadsMgr.computeNodes();
+            nodes = ThreadsMgr.ComputeNodes();
             nodes = nodes*1000/spentTime;
             nodesSum[i] += nodes;
             Print(5, "Threads: %d Depth: %d Threads/Split: %d Time: %d Nps: %d\n", threads, depth, i, spentTime, nodes);
@@ -1146,7 +1146,7 @@ void SearchMgr::benchActiveSplits(position_t* pos, char string[]) {
             sprintf_s(command, "name Max Active Splits/Thread value %d", i);
             uciSetOption(command);
             TransTable.Clear();
-            ThreadsMgr.initVars();
+            ThreadsMgr.InitVars();
             uciSetPosition(pos, fenPos[posIdx]);
             int64 startTime = getTime();
             sprintf_s(command, "movedepth %d", depth);
@@ -1154,7 +1154,7 @@ void SearchMgr::benchActiveSplits(position_t* pos, char string[]) {
             int64 spentTime = getTime() - startTime;
             timeSum[i] += spentTime;
             uint64 nodes = 0;
-            nodes = ThreadsMgr.computeNodes();
+            nodes = ThreadsMgr.ComputeNodes();
             nodes = nodes*1000/spentTime;
             nodesSum[i] += nodes;
             Print(5, "Threads: %d Depth: %d Active Splits: %d Time: %d Nps: %d\n", threads, depth, i, spentTime, nodes);
