@@ -119,7 +119,7 @@ void Search::check4Input(position_t *pos) {
 void Search::initNode(position_t *pos, Thread& sthread) {
     int64 time2;
 
-    if (sthread.split_point && sthread.split_point->cutoffOccurred()) {
+    if (sthread.activeSplitPoint && sthread.activeSplitPoint->cutoffOccurred()) {
         sthread.stop = true;
         return;
     }
@@ -508,7 +508,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
     }
 
     if (inSplitPoint) {
-        sp = sthread.split_point;
+        sp = sthread.activeSplitPoint;
         ss = *sp->sscurr; // ss.mvlist points to master ss.mvlist, copied the entire searchstack also
     } else {
         if (inRoot) {
@@ -863,7 +863,7 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
 
     // SMP 
     ThreadsMgr.InitVars();
-    ThreadsMgr.WakeUpThreads();
+    ThreadsMgr.SetAllThreadsToWork();
     info.mvlist_initialized = false;
 
     for (id = 1; id < MAXPLY; id++) {

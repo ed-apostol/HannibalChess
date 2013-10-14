@@ -22,7 +22,7 @@
 #include <cstdlib>
 
 void quit(void) {
-    ThreadsMgr.KillThreads();
+    ThreadsMgr.SetNumThreads(0);
 
     if (logfile) fclose(logfile);
     if (errfile) fclose(errfile);
@@ -79,7 +79,7 @@ int main(void) {
     InitTrapped();
 
     //InitVars();
-    ThreadsMgr.SpawnThreads(NUM_THREADS);
+    ThreadsMgr.SetNumThreads(NUM_THREADS);
 
     initMaterial();
     InitMateBoost();

@@ -137,7 +137,7 @@ void uciSetOption(char string[]) {
     } else if (!memcmp(name,"Contempt",8)) {
         Guci_options.contempt = atoi(value);
     } else if (!memcmp(name,"Threads",7)) {
-        ThreadsMgr.SpawnThreads(atoi(value));
+        ThreadsMgr.SetNumThreads(atoi(value));
     } else if (!memcmp(name,"Min Split Depth",15)) {
         Guci_options.min_split_depth = atoi(value);
     } else if (!memcmp(name,"Max Threads/Split",17)) {
@@ -184,35 +184,7 @@ void uciGo(position_t *pos, char *options) {
     ASSERT(pos != NULL);
     ASSERT(options != NULL);
 
-    /* initialization */
-    info.depth_is_limited = false;
-    info.depth_limit = MAXPLY;
-    info.moves_is_limited = false;
-    info.time_is_limited = false;
-    info.time_limit_max = 0;
-    info.time_limit_abs = 0;
-    info.node_is_limited = false;
-    info.node_limit = 0;
-    info.start_time = info.last_time = getTime();
-    info.alloc_time = 0;
-    info.best_value = -INF;
-    info.last_value = -INF;
-    info.last_last_value = -INF;
-    info.change = 0;
-    info.research = 0;
-    info.bestmove = 0;
-    info.pondermove = 0;
-    info.mate_found = 0;
-    memset(info.history, 0, sizeof(info.history)); //TODO this is bad to share with learning
-    memset(info.evalgains, 0, sizeof(info.evalgains)); //TODO this is bad to share with learning
-
-    // DEBUG
-    info.cutnodes = 1;
-    info.allnodes = 1;
-    info.cutfail = 1;
-    info.allfail = 1;
-
-    memset(info.moves, 0, sizeof(info.moves));
+    info.Init();
 
     infinite = strstr(options, "infinite");
     ponder = strstr(options, "ponder");

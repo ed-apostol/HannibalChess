@@ -44,8 +44,6 @@ struct SplitPoint {
     volatile bool cutoff;
     Spinlock movelistlock[1];
     Spinlock updatelock[1];
-    //std::mutex movelistlock[1];
-    //std::mutex updatelock[1];
 };
 
 struct ThreadStack {
@@ -57,21 +55,22 @@ struct ThreadStack {
     basic_move_t killer2;
 };
 
-class Thread { // TODO: extract baseclass
+class ThreadBase {
 public:
-    Thread(int _thread_id)
-    {
+    ThreadBase(int _thread_id) : thread_id(_thread_id) {
         Init();
-        thread_id = _thread_id;
         doSleep = true;
     }
-    ~Thread() {
-        doSleep = false;
+    ~ThreadBase() {
         stop = true;
         exit_flag = true;
-        searching = false;
         TriggerCondition();
         nativeThread.join();
+    }
+    virtual void Init() {
+        searching = false;
+        stop = false;
+        exit_flag = false;
     }
     void SleepAndWaitForCondition() {
         std::unique_lock<std::mutex> lk(threadLock);
@@ -82,10 +81,26 @@ public:
         std::unique_lock<std::mutex>(threadLock);
         sleepCondition.notify_one();
     }
+    std::thread& NativeThread() { return nativeThread; }
+
+    int thread_id;
+    volatile bool stop;
+    volatile bool doSleep;
+    volatile bool searching;
+    volatile bool exit_flag;
+private:
+    std::thread nativeThread;
+    std::condition_variable sleepCondition;
+    std::mutex threadLock;
+};
+
+class Thread : public ThreadBase {
+public:
+    Thread(int _thread_id) : ThreadBase(_thread_id) {
+        Init();
+    }
     void Init() {
-        searching = false;
-        stop = false;
-        exit_flag = false;
+        ThreadBase::Init();
         nodes = 0;
         nodes_since_poll = 0;
         nodes_between_polls = 8192;
@@ -93,7 +108,7 @@ public:
         ended = 0;
         numsplits = 0;
         num_sp = 0;
-        split_point = NULL;
+        activeSplitPoint = NULL;
         for (int j = 0; j < MaxNumSplitPointsPerThread; ++j) {
             for (int k = 0; k < MaxNumOfThreads; ++k) {
                 sptable[j].workersBitMask = 0;
@@ -103,14 +118,6 @@ public:
             ts[Idx].Init();
         }
     }
-    std::thread& NativeThread() { return nativeThread; }
-
-    volatile bool stop;
-    volatile bool doSleep;
-    volatile bool searching;
-    volatile bool exit_flag;
-
-    int thread_id;
     uint64 nodes;
     uint64 nodes_since_poll;
     uint64 nodes_between_polls;
@@ -118,13 +125,9 @@ public:
     uint64 ended; // DEBUG
     int64 numsplits; // DEBUG
     int num_sp;
-    SplitPoint *split_point;
+    SplitPoint *activeSplitPoint;
     SplitPoint sptable[MaxNumSplitPointsPerThread];
     ThreadStack ts[MAXPLY];
-private:
-    std::thread nativeThread;
-    std::condition_variable sleepCondition;
-    std::mutex threadLock;
 };
 
 class ThreadMgr {
@@ -133,10 +136,9 @@ public:
     void GetWork(const int thread_id, SplitPoint *master_sp);
     void SetAllThreadsToStop();
     void SetAllThreadsToSleep();
-    void WakeUpThreads();
+    void SetAllThreadsToWork();
     void InitVars();
-    void SpawnThreads(int num);
-    void KillThreads(void);
+    void SetNumThreads(int num);
     uint64 ComputeNodes();
     void SearchSplitPoint(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread);
     Thread& ThreadFromIdx(int thread_id) { return *m_Threads[thread_id]; }
