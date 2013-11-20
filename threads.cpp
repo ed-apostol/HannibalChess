@@ -23,6 +23,7 @@ void ThreadMgr::IdleLoop(const int thread_id) {
         if (master_sp == NULL && m_Threads[thread_id]->doSleep) {
             m_Threads[thread_id]->SleepAndWaitForCondition();
         }
+        GetWork(thread_id, master_sp);
         if(m_Threads[thread_id]->searching) {
             ++m_Threads[thread_id]->started;
             SplitPoint* sp = m_Threads[thread_id]->activeSplitPoint; // this is correctly located, don't move this, else bug
@@ -34,7 +35,6 @@ void ThreadMgr::IdleLoop(const int thread_id) {
             ++m_Threads[thread_id]->ended;
         }
         if(master_sp != NULL && !master_sp->workersBitMask) return;
-        GetWork(thread_id, master_sp);
     }
 }
 
@@ -42,6 +42,8 @@ void ThreadMgr::GetWork(const int thread_id, SplitPoint *master_sp) {
     int best_depth = 0;
     Thread* master_thread = NULL;
     SplitPoint *best_split_point = NULL;
+
+    if (m_Threads[thread_id]->searching) return;
 
     for (Thread* th: m_Threads) {
         if (th->thread_id == thread_id) continue;
@@ -89,6 +91,18 @@ void ThreadMgr::SetAllThreadsToSleep() {
     }
 }
 
+void ThreadMgr::SetAllThreadsToWork() {
+    for (Thread* th: m_Threads) { // TODO: implement GetBestMove to use Thread(0), move blocking input to main thread
+        if (th->thread_id != 0) th->TriggerCondition();
+    }
+}
+
+uint64 ThreadMgr::ComputeNodes() {
+    uint64 nodes = 0;
+    for (Thread* th: m_Threads) nodes += th->nodes;
+    return nodes;
+}
+
 void ThreadMgr::InitVars() {
     for (Thread* th: m_Threads) {
         th->Init();
@@ -105,18 +119,6 @@ void ThreadMgr::SetNumThreads(int num) {
         delete m_Threads.back();
         m_Threads.pop_back();
     }
-}
-
-void ThreadMgr::SetAllThreadsToWork() {
-    for (int i = 1; i < m_Threads.size(); ++i) { // TODO: implement GetBestMove to use Thread(0), move blocking input to main thread
-        m_Threads[i]->TriggerCondition();
-    }
-}
-
-uint64 ThreadMgr::ComputeNodes() {
-    uint64 nodes = 0;
-    for (Thread* th: m_Threads) nodes += th->nodes;
-    return nodes;
 }
 
 void ThreadMgr::SearchSplitPoint(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread) {
