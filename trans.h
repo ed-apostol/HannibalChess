@@ -176,10 +176,10 @@ private:
 };
 
 inline int scoreFromTrans (int score, int ply) {
-    return (score > MAXEVAL) ? (score - ply) : ((score < MAXEVAL) ? (score + ply) : score);
+    return (score > MAXEVAL) ? (score - ply) : ((score < -MAXEVAL) ? (score + ply) : score);
 }
 inline int scoreToTrans (int score, int ply) {
-    return (score > MAXEVAL) ? (score + ply) : ((score < MAXEVAL) ? (score - ply) : score);
+    return (score > MAXEVAL) ? (score + ply) : ((score < -MAXEVAL) ? (score - ply) : score);
 }
 
 extern TranspositionTable TransTable;
