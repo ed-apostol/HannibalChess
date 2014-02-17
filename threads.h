@@ -108,6 +108,7 @@ public:
         started = 0;
         ended = 0;
         numsplits = 0;
+        joined = 0;
         num_sp = 0;
         activeSplitPoint = NULL;
         for (int j = 0; j < MaxNumSplitPointsPerThread; ++j) {
@@ -124,10 +125,11 @@ public:
     uint64 nodes_between_polls;
     uint64 started; // DEBUG
     uint64 ended; // DEBUG
-    int64 numsplits; // DEBUG
+    uint64 numsplits; // DEBUG
+    uint64 joined; // DEBUG
     int num_sp;
     SplitPoint *activeSplitPoint;
-    SplitPoint sptable[MaxNumSplitPointsPerThread];
+    SplitPoint sptable[MaxNumSplitPointsPerThread]; // TODO: convert to vector?
     ThreadStack ts[MAXPLY];
     EvalHashTable et;
     PawnHashTable pt;
@@ -150,6 +152,15 @@ public:
     void InitEvalHash(int size) { for (Thread* th: m_Threads) th->et.Init(size, EVAL_ASSOC); }
     void ClearPawnHash() { for (Thread* th: m_Threads) th->pt.Clear(); }
     void ClearEvalHash() { for (Thread* th: m_Threads) th->et.Clear(); }
+    void PrintDebugData() {
+        Print(2, "================================================================\n");
+        for (Thread* th: m_Threads) {
+            Print(2, "%s: thread_id:%d, num_sp:%d searching:%d stop:%d started:%d ended:%d nodes:%d numsplits:%d joined:%d\n", 
+                __FUNCTION__, th->thread_id, 
+                th->num_sp, th->searching, th->stop, 
+                th->started, th->ended, th->nodes, th->numsplits, th->joined);
+        }
+    }
 private:
     std::vector<Thread*> m_Threads;
 };

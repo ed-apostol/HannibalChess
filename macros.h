@@ -105,7 +105,7 @@ enum ThinkingStatus {
 #define KEY(x)              (uint32)(x)
 
 const int MaxNumOfThreads = 32;
-const int MaxNumSplitPointsPerThread = 8;
+const int MaxNumSplitPointsPerThread = 16;
 
 #define DRAW_ADJUST 0
 #define MAX_DRAW 100

@@ -73,6 +73,7 @@ void ThreadMgr::GetWork(const int thread_id, SplitPoint *master_sp) {
                 m_Threads[thread_id]->activeSplitPoint = best_split_point;
                 m_Threads[thread_id]->searching = true;
                 m_Threads[thread_id]->stop = false;
+                ++master_thread->joined;
         }
         best_split_point->updatelock->unlock();
     }

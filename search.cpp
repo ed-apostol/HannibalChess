@@ -632,7 +632,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
         }
         if (inSplitPoint) sp->updatelock->unlock();
         if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < Guci_options.max_activesplits_per_thread
-            && ThreadsMgr.ThreadNum() > 1 && depth >= Guci_options.min_split_depth) { // add constraints here for CUT nodes
+            && ThreadsMgr.ThreadNum() > 1 && depth >= Guci_options.min_split_depth) {
                 ThreadsMgr.SearchSplitPoint(pos, ss.mvlist, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, sthread);
                 break;
         }
@@ -892,12 +892,7 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
     }
 
     ThreadsMgr.SetAllThreadsToSleep();
-    //////Print(2, "================================================================\n");
-    //////for (int i = 0; i < Guci_options.threads; ++i) {
-    //////    Print(2, "%s: thread_id:%d, num_sp:%d searching:%d stop:%d started:%d ended:%d nodes:%d numsplits:%d\n", __FUNCTION__, i, 
-    //////        Threads[i]->num_sp, Threads[i]->searching, Threads[i]->stop, 
-    //////        Threads[i]->started, Threads[i]->ended, Threads[i]->nodes, Threads[i]->numsplits);
-    //////}
+    ThreadsMgr.PrintDebugData();
 }
 
 void SearchMgr::checkSpeedUp(position_t* pos, char string[]) {
