@@ -662,15 +662,6 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                 sthread.ts[pos->ply].killer1 = ss.bestmove;
             }
         }
-        // DEBUG
-        if (inCutNode(nt)) {
-            info.cutnodes++;
-            if (ss.bestvalue < beta) info.cutfail++;
-        }
-        if (inAllNode(nt)) {
-            info.allnodes++;
-            if (ss.bestvalue >= beta) info.allfail++;
-        }
 
         if (ss.bestvalue >= beta) {
             ASSERT(valueIsOk(ss.bestvalue));
@@ -882,8 +873,6 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
             info.last_last_value = info.last_value;
             info.last_value = info.best_value;
         }
-        //////Print(1, "info string cutfails: %d %% cutnodes: %d  allfails: %d %% allnodes: %d\n", 
-        //////    (info.cutfail * 100)/info.cutnodes, info.cutnodes, (info.allfail * 100)/info.allnodes, info.allnodes);
     }
     info.lastDepthSearched = id;
     if (info.thinking_status != STOPPED) {

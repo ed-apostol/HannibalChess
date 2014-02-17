@@ -36,15 +36,9 @@ struct SearchInfo{
         bestmove = 0;
         pondermove = 0;
         mate_found = 0;
+
         memset(history, 0, sizeof(history)); //TODO this is bad to share with learning
         memset(evalgains, 0, sizeof(evalgains)); //TODO this is bad to share with learning
-
-        // DEBUG
-        cutnodes = 1;
-        allnodes = 1;
-        cutfail = 1;
-        allfail = 1;
-
         memset(moves, 0, sizeof(moves));
     }
     int thinking_status;
@@ -71,12 +65,6 @@ struct SearchInfo{
     int change;
     int research;
     int iteration;
-
-    // DEBUG
-    uint64 cutnodes;
-    uint64 allnodes;
-    uint64 cutfail;
-    uint64 allfail;
 
     int lastDepthSearched;
 
