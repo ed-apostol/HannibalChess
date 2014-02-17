@@ -110,9 +110,7 @@ public:
         num_sp = 0;
         activeSplitPoint = NULL;
         for (int j = 0; j < MaxNumSplitPointsPerThread; ++j) {
-            for (int k = 0; k < MaxNumOfThreads; ++k) {
-                sptable[j].workersBitMask = 0;
-            }
+            sptable[j].workersBitMask = 0;
         }
         for (int Idx = 0; Idx < MAXPLY; Idx++) {
             ts[Idx].Init();

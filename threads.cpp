@@ -122,44 +122,44 @@ void ThreadMgr::SetNumThreads(int num) {
 }
 
 void ThreadMgr::SearchSplitPoint(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread) {
-    SplitPoint *activeSplitPoint = &sthread.sptable[sthread.num_sp];    
+    SplitPoint *active_sp = &sthread.sptable[sthread.num_sp];    
 
-    activeSplitPoint->updatelock->lock();
-    activeSplitPoint->parent = sthread.activeSplitPoint;
-    activeSplitPoint->depth = depth;
-    activeSplitPoint->alpha = alpha; 
-    activeSplitPoint->beta = beta;
-    activeSplitPoint->nodeType = nt;
-    activeSplitPoint->bestvalue = ss->bestvalue;
-    activeSplitPoint->bestmove = ss->bestmove;
-    activeSplitPoint->played = ss->playedMoves;
-    activeSplitPoint->inCheck = inCheck;
-    activeSplitPoint->inRoot = inRoot;
-    activeSplitPoint->cutoff = false;
-    activeSplitPoint->sscurr = ss;
-    activeSplitPoint->ssprev = ssprev;
-    activeSplitPoint->pos[sthread.thread_id] = *p;
-    activeSplitPoint->origpos = *p;
-    activeSplitPoint->workersBitMask = ((uint64)1<<sthread.thread_id);
-    activeSplitPoint->allWorkersBitMask = ((uint64)1<<sthread.thread_id);
-    sthread.activeSplitPoint = activeSplitPoint;
+    active_sp->updatelock->lock();
+    active_sp->parent = sthread.activeSplitPoint;
+    active_sp->depth = depth;
+    active_sp->alpha = alpha; 
+    active_sp->beta = beta;
+    active_sp->nodeType = nt;
+    active_sp->bestvalue = ss->bestvalue;
+    active_sp->bestmove = ss->bestmove;
+    active_sp->played = ss->playedMoves;
+    active_sp->inCheck = inCheck;
+    active_sp->inRoot = inRoot;
+    active_sp->cutoff = false;
+    active_sp->sscurr = ss;
+    active_sp->ssprev = ssprev;
+    active_sp->pos[sthread.thread_id] = *p;
+    active_sp->origpos = *p;
+    active_sp->workersBitMask = ((uint64)1<<sthread.thread_id);
+    active_sp->allWorkersBitMask = ((uint64)1<<sthread.thread_id);
+    sthread.activeSplitPoint = active_sp;
     sthread.searching = true;
     sthread.stop = false;
     sthread.num_sp++;
-    activeSplitPoint->updatelock->unlock();
+    active_sp->updatelock->unlock();
 
     IdleLoop(sthread.thread_id);
 
-    activeSplitPoint->updatelock->lock();
+    active_sp->updatelock->lock();
     sthread.num_sp--;
-    ss->bestvalue = activeSplitPoint->bestvalue;
-    ss->bestmove = activeSplitPoint->bestmove;
-    ss->playedMoves = activeSplitPoint->played;
-    sthread.activeSplitPoint = activeSplitPoint->parent;
+    ss->bestvalue = active_sp->bestvalue;
+    ss->bestmove = active_sp->bestmove;
+    ss->playedMoves = active_sp->played;
+    sthread.activeSplitPoint = active_sp->parent;
     sthread.numsplits++;
     if (SearchMgr::Inst().Info().thinking_status != STOPPED) {
         sthread.stop = false; 
         sthread.searching = true;
     }
-    activeSplitPoint->updatelock->unlock();
+    active_sp->updatelock->unlock();
 }

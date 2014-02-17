@@ -457,7 +457,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
             }
             if (depth >= 2 && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) && ss.evalvalue >= beta) {
                 pos_store_t undo;
-                int nullDepth = depth - (4 + depth/5 + (ss.evalvalue - beta > PawnValue));
+                int nullDepth = depth - (4 + depth/5 + (ss.evalvalue - beta > PawnValue)); // TODO: test (eval-beta)/PawnVal here
                 makeNullMove(pos, &undo);
                 int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, sthread, AllNode);
                 ss.threatMove = ss.counterMove;
