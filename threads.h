@@ -5,6 +5,7 @@
 #include <thread>
 #include <condition_variable>
 #include "utils.h"
+#include "trans.h"
 
 class Spinlock {
 public:
@@ -115,6 +116,8 @@ public:
         for (int Idx = 0; Idx < MAXPLY; Idx++) {
             ts[Idx].Init();
         }
+        pt.Init(INIT_PAWN, PAWN_ASSOC);
+        et.Init(INIT_EVAL, EVAL_ASSOC);
     }
     uint64 nodes;
     uint64 nodes_since_poll;
@@ -126,6 +129,8 @@ public:
     SplitPoint *activeSplitPoint;
     SplitPoint sptable[MaxNumSplitPointsPerThread];
     ThreadStack ts[MAXPLY];
+    EvalHashTable et;
+    PawnHashTable pt;
 };
 
 class ThreadMgr {
@@ -141,6 +146,10 @@ public:
     void SearchSplitPoint(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread);
     Thread& ThreadFromIdx(int thread_id) { return *m_Threads[thread_id]; }
     size_t ThreadNum() const { return m_Threads.size(); }
+    void InitPawnHash(int size) { for (Thread* th: m_Threads) th->pt.Init(size, PAWN_ASSOC); }
+    void InitEvalHash(int size) { for (Thread* th: m_Threads) th->et.Init(size, EVAL_ASSOC); }
+    void ClearPawnHash() { for (Thread* th: m_Threads) th->pt.Clear(); }
+    void ClearEvalHash() { for (Thread* th: m_Threads) th->et.Clear(); }
 private:
     std::vector<Thread*> m_Threads;
 };

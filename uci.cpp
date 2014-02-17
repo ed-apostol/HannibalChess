@@ -83,11 +83,11 @@ void uciSetOption(char string[]) {
         TransTable.Init(atoi(value), HASH_ASSOC);
     } else if (!memcmp(name,"Pawn Hash",9)) {
         Guci_options.pawnhashsize = atoi(value);
-        SearchMgr::Inst().Info().pt.Init(Guci_options.pawnhashsize, PAWN_ASSOC);
+        ThreadsMgr.InitPawnHash(Guci_options.pawnhashsize);
 
     } else if (!memcmp(name,"Eval Cache",10)) {
         Guci_options.evalcachesize = atoi(value);
-        SearchMgr::Inst().Info().et.Init(Guci_options.evalcachesize, EVAL_ASSOC);
+        ThreadsMgr.InitEvalHash(Guci_options.evalcachesize);
     } else if (!memcmp(name,"Clear Hash",10)) {
         TransTable.Clear();
     } 

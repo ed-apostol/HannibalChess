@@ -39,8 +39,8 @@
 #define MIN_TRANS_SIZE 16
 
 #ifdef TCEC
-#define INIT_EVAL 64
-#define INIT_PAWN 32
+#define INIT_EVAL 4
+#define INIT_PAWN 4
 #define INIT_HASH 64
 #define INIT_PVHASH 1
 
