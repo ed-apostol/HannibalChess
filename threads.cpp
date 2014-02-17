@@ -48,7 +48,7 @@ void ThreadMgr::GetWork(const int thread_id, SplitPoint *master_sp) {
     for (Thread* th: m_Threads) {
         if (th->thread_id == thread_id) continue;
         if(!th->searching) continue; // idle thread or master waiting for other threads, no need to help
-        if (master_sp && !(master_sp->allWorkersBitMask & ((uint64)1<<th->thread_id))) continue;
+        if (master_sp && !(master_sp->allWorkersBitMask & ((uint64)1<<th->thread_id))) continue; // helpful master: looking to help threads working for it
         for (int splitIdx = 0; splitIdx < th->num_sp; splitIdx++) {
             SplitPoint* sp = &th->sptable[splitIdx];
             if (sp->workersBitMask != sp->allWorkersBitMask) continue; // only search those with all threads still searching

@@ -78,9 +78,6 @@ struct SearchInfo{
     uint64 cutfail;
     uint64 allfail;
 
-    int rbestscore1;
-    int rbestscore2;
-
     int lastDepthSearched;
 
     int legalmoves;

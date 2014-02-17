@@ -599,12 +599,6 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
         if (inSplitPoint) sp->updatelock->lock();
         if (inRoot) {
             move->s = score;
-            if (score > info.rbestscore1) {
-                info.rbestscore2 = info.rbestscore1;
-                info.rbestscore1 = score;
-            } else if (score > info.rbestscore2) {
-                info.rbestscore2 = score;
-            }
         }
         if (score > (inSplitPoint ? sp->bestvalue : ss.bestvalue)) {
             ss.bestvalue = inSplitPoint ? sp->bestvalue = score : score;
@@ -638,7 +632,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
         }
         if (inSplitPoint) sp->updatelock->unlock();
         if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < Guci_options.max_activesplits_per_thread
-            && ThreadsMgr.ThreadNum() > 1 && depth >= Guci_options.min_split_depth) {
+            && ThreadsMgr.ThreadNum() > 1 && depth >= Guci_options.min_split_depth) { // add constraints here for CUT nodes
                 ThreadsMgr.SearchSplitPoint(pos, ss.mvlist, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, sthread);
                 break;
         }
@@ -769,28 +763,6 @@ void Search::timeManagement(int depth, Thread& sthread) {
                     return;
                 }
             }
-            if (!gettingWorse && depth >= 8) {
-                const int EasyTime1 = 20;
-                const int EasyCutoff1 = 120;
-                const int EasyTime2 = 30;
-                const int EasyCutoff2 = 60;
-
-                int64 timeLimit = info.time_limit_max - info.start_time;
-                int64 timeExpended = time - info.start_time;
-
-                if (timeExpended > (timeLimit * EasyTime1)/100 && info.rbestscore1 > info.rbestscore2 + EasyCutoff1) {
-                    ThreadsMgr.SetAllThreadsToStop();
-                    Print(2, "info string Aborting search: easy move1: score1: %d score2: %d time: %d\n", 
-                        info.rbestscore1, info.rbestscore2, time - info.start_time);
-                    return;
-                }
-                if (timeExpended > (timeLimit * EasyTime2)/100 && info.rbestscore1 > info.rbestscore2 + EasyCutoff2) {
-                    ThreadsMgr.SetAllThreadsToStop();
-                    Print(2, "info string Aborting search: easy move2: score1: %d score2: %d time: %d\n", 
-                        info.rbestscore1, info.rbestscore2, time - info.start_time);
-                    return;
-                }
-            }
         }
     } 
     if (info.depth_is_limited && depth >= info.depth_limit) {
@@ -883,8 +855,6 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
             if (beta > RookValue) beta = INF;
         }
         while (true) {
-            info.rbestscore1 = -INF;
-            info.rbestscore2 = -INF;
 
             search->searchNode<true, false, false>(pos, alpha, beta, id, ss, sthread, PVNode);
 
