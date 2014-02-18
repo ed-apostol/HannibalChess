@@ -117,8 +117,6 @@ public:
         for (int Idx = 0; Idx < MAXPLY; Idx++) {
             ts[Idx].Init();
         }
-        pt.Init(INIT_PAWN, PAWN_ASSOC);
-        et.Init(INIT_EVAL, EVAL_ASSOC);
     }
     uint64 nodes;
     uint64 nodes_since_poll;
