@@ -36,9 +36,6 @@ struct SearchInfo{
         bestmove = 0;
         pondermove = 0;
         mate_found = 0;
-
-        memset(history, 0, sizeof(history)); //TODO this is bad to share with learning
-        memset(evalgains, 0, sizeof(evalgains)); //TODO this is bad to share with learning
         memset(moves, 0, sizeof(moves));
     }
     int thinking_status;
@@ -75,8 +72,6 @@ struct SearchInfo{
     basic_move_t moves[MAXMOVES];
     bool mvlist_initialized;
     continuation_t rootPV;
-    int32 evalgains[1024];
-    int32 history[1024];
 };
 
 

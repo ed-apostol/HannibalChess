@@ -76,7 +76,6 @@ int main(void) {
     initPST(&Guci_options);
     InitTrapped();
 
-    //InitVars();
     ThreadsMgr.SetNumThreads(NUM_THREADS);
 
     initMaterial();

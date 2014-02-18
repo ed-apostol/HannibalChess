@@ -250,10 +250,10 @@ void Search::updateEvalgains(const position_t *pos, uint32 move, int before, int
         && before != -INF
         && after != -INF
         && !moveIsTactical(move)) {
-            if (-(before + after) >= info.evalgains[historyIndex(pos->side^1, move)])
-                info.evalgains[historyIndex(pos->side^1, move)] = -(before + after);
+            if (-(before + after) >= sthread.evalgains[historyIndex(pos->side^1, move)])
+                sthread.evalgains[historyIndex(pos->side^1, move)] = -(before + after);
             else
-                info.evalgains[historyIndex(pos->side^1, move)]--;
+                sthread.evalgains[historyIndex(pos->side^1, move)]--;
     }
 }
 
@@ -561,7 +561,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                         if (ss.playedMoves > lateMove && !goodMove) continue;
                         int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(ss.playedMoves,63)]);
                         int scoreAprox = ss.evalvalue + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(ss.playedMoves,63)]
-                        + info.evalgains[historyIndex(pos->side, move->m)];
+                        + sthread.evalgains[historyIndex(pos->side, move->m)];
 
                         if (scoreAprox < beta) {
                             if (predictedDepth < 8 && !goodMove) continue;
@@ -651,11 +651,11 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
         if (ss.bestmove != EMPTY && !moveIsTactical(ss.bestmove) && ss.bestvalue >= beta) { //> alpha account for pv better maybe? Sam
             int index = historyIndex(pos->side, ss.bestmove);
             int hisDepth = MIN(depth,MAX_HDEPTH);
-            info.history[index] += hisDepth * hisDepth;
+            sthread.history[index] += hisDepth * hisDepth;
             for (int i=0; i < ss.hisCnt; ++i) {
                 if (ss.hisMoves[i] == ss.bestmove) continue;
                 index = historyIndex(pos->side, ss.hisMoves[i]);
-                info.history[index] -= info.history[index]/(NEW_HISTORY-hisDepth);
+                sthread.history[index] -= sthread.history[index]/(NEW_HISTORY-hisDepth);
             }
             if (sthread.ts[pos->ply].killer1 != ss.bestmove) {
                 sthread.ts[pos->ply].killer2 = sthread.ts[pos->ply].killer1;

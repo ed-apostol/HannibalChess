@@ -117,8 +117,8 @@ public:
         for (int Idx = 0; Idx < MAXPLY; Idx++) {
             ts[Idx].Init();
         }
-        pt.Init(INIT_PAWN, PAWN_ASSOC);
-        et.Init(INIT_EVAL, EVAL_ASSOC);
+        memset(history, 0, sizeof(history));
+        memset(evalgains, 0, sizeof(evalgains));
     }
     uint64 nodes;
     uint64 nodes_since_poll;
@@ -131,6 +131,8 @@ public:
     SplitPoint *activeSplitPoint;
     SplitPoint sptable[MaxNumSplitPointsPerThread]; // TODO: convert to vector?
     ThreadStack ts[MAXPLY];
+    int64 evalgains[1024];
+    int64 history[1024];
     EvalHashTable et;
     PawnHashTable pt;
 };

@@ -120,6 +120,8 @@ void ThreadMgr::SetNumThreads(int num) {
         delete m_Threads.back();
         m_Threads.pop_back();
     }
+    InitPawnHash(Guci_options.pawnhashsize);
+    InitEvalHash(Guci_options.evalcachesize);
 }
 
 void ThreadMgr::SearchSplitPoint(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread) {
