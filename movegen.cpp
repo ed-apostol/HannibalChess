@@ -245,7 +245,6 @@ void genGainingMoves(const position_t *pos, movelist_t *mvlist, int delta, int t
                 mvlist->list[mvlist->size++].m = GenKingMove(from, to, EMPTY);
         }
     }
-
 }
 
 /* the move generator, this generates all pseudo-legal non tactical moves,

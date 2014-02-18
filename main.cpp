@@ -99,6 +99,7 @@ int main(void) {
         if (!memcmp(command, "ucinewgame", 10)) {
             origScore = 0;
             TransTable.Clear();
+            PVHashTable.Clear();
 #ifndef TCEC
             SearchMgr::Inst().Info().outOfBook = 0;
             movesSoFar.length = 0;
