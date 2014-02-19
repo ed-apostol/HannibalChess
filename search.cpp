@@ -94,7 +94,7 @@ void Search::ponderHit() { //no pondering in tuning
     }
 }
 
-void Search::check4Input(position_t *pos) {
+void Search::check4Input(position_t *pos) { // TODO: move this inside main loop
     static char input[256];
 
     if (biosKey()) {
@@ -893,16 +893,28 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
 
     ThreadsMgr.SetAllThreadsToSleep();
     ThreadsMgr.PrintDebugData();
+
+    if (!info.bestmove) {
+        if (RETURN_MOVE)
+            Print(3, "info string No legal move found. Start a new game.\n\n");
+    } else {
+        if (RETURN_MOVE) {
+            Print(3, "bestmove %s", move2Str(info.bestmove));
+            if (info.pondermove) Print(3, " ponder %s", move2Str(info.pondermove));
+            Print(3, "\n\n");
+        }
+        origScore = info.last_value; // just to be safe
+    }
 }
 
 void SearchMgr::checkSpeedUp(position_t* pos, char string[]) {
     const int NUMPOS = 4;
     const int MAXTHREADS = 32;
     char* fenPos[NUMPOS] = {
-        "r2qkb1r/pp3p1pp2n2/nB1P4/3P1Qb1N2p2/PPP3PP/R1B1R1K1 b kq - 2 12",
-        "r4b1r/p1kq1p1p/8/np6/3P1R2/5Q2/PPP3PP/R1B3K1 b - - 2 18",
-        "4qRr1/p3b2p/1kn5/1p2B3/3P4P2Q2/PP4PP/4R1K1 b - - 0 24",
-        "3q4/p3b2p/1k6P1Q3/p2P4/8/1P4PP/6K1 b - - 0 30",
+        "rn1qk1nr/pp3pp1/2pbp1bp/8/2BP3P/6N1/PPP1NPP1/R1BQK2R w KQkq - 0 9",
+        "r2qk2r/1p1n1pbb/2p1pnpp/p7/2BP3P/3N1QN1/PPPB1PP1/2KR3R w kq - 2 16",
+        "r4rk1/4qpbb/4p1pp/ppN5/3P3P/2Q5/1PPB1PP1/2KR3R w - - 0 24",
+        "r4rk1/4qp1b/4p1pQ/2N5/1p1P3P/p7/1PP2PP1/2KR3R w - - 0 28",
     };
     double timeSpeedupSum[MAXTHREADS];
     double nodesSpeedupSum[MAXTHREADS];
@@ -921,6 +933,9 @@ void SearchMgr::checkSpeedUp(position_t* pos, char string[]) {
     for (int i = 0; i < NUMPOS; ++i) {
         uciSetOption("name Threads value 1");
         TransTable.Clear();
+        PVHashTable.Clear();
+        ThreadsMgr.ClearPawnHash();
+        ThreadsMgr.ClearEvalHash();
         ThreadsMgr.InitVars();
         Print(5, "\n\nPos#%d: %s\n", i+1, fenPos[i]);
         uciSetPosition(pos, fenPos[i]);
@@ -939,6 +954,9 @@ void SearchMgr::checkSpeedUp(position_t* pos, char string[]) {
             sprintf_s(tempStr, "name Threads value %d\n", j);
             uciSetOption(tempStr);
             TransTable.Clear();
+            PVHashTable.Clear();
+            ThreadsMgr.ClearPawnHash();
+            ThreadsMgr.ClearEvalHash();
             ThreadsMgr.InitVars();
             uciSetPosition(pos, fenPos[i]);
             startTime = getTime();
@@ -967,10 +985,10 @@ void SearchMgr::benchMinSplitDepth(position_t* pos, char string[]) {
     const int NUMPOS = 4;
     const int MAXSPLIT = 11;
     char* fenPos[NUMPOS] = {
-        "r2qkb1r/pp3p1p/2p2n2/nB1P4/3P1Qb1/2N2p2/PPP3PP/R1B1R1K1 b kq - 2 12",
-        "r4b1r/p1kq1p1p/8/np6/3P1R2/5Q2/PPP3PP/R1B3K1 b - - 2 18",
-        "4qRr1/p3b2p/1kn5/1p2B3/3P4/2P2Q2/PP4PP/4R1K1 b - - 0 24",
-        "3q4/p3b2p/1k6/2P1Q3/p2P4/8/1P4PP/6K1 b - - 0 30",
+        "rn1qk1nr/pp3pp1/2pbp1bp/8/2BP3P/6N1/PPP1NPP1/R1BQK2R w KQkq - 0 9",
+        "r2qk2r/1p1n1pbb/2p1pnpp/p7/2BP3P/3N1QN1/PPPB1PP1/2KR3R w kq - 2 16",
+        "r4rk1/4qpbb/4p1pp/ppN5/3P3P/2Q5/1PPB1PP1/2KR3R w - - 0 24",
+        "r4rk1/4qp1b/4p1pQ/2N5/1p1P3P/p7/1PP2PP1/2KR3R w - - 0 28",
     };
     char command[1024] = {0};
     uint64 timeSum[MAXSPLIT];
@@ -990,6 +1008,9 @@ void SearchMgr::benchMinSplitDepth(position_t* pos, char string[]) {
             sprintf_s(command, "name Min Split Depth value %d", i);
             uciSetOption(command);
             TransTable.Clear();
+            PVHashTable.Clear();
+            ThreadsMgr.ClearPawnHash();
+            ThreadsMgr.ClearEvalHash();
             ThreadsMgr.InitVars();
             uciSetPosition(pos, fenPos[posIdx]);
             int64 startTime = getTime();
@@ -1022,10 +1043,10 @@ void SearchMgr::benchThreadsperSplit(position_t* pos, char string[]) {
     const int NUMPOS = 4;
     const int MAXSPLIT = 9;
     char* fenPos[NUMPOS] = {
-        "r2qkb1r/pp3p1p/2p2n2/nB1P4/3P1Qb1/2N2p2/PPP3PP/R1B1R1K1 b kq - 2 12",
-        "r4b1r/p1kq1p1p/8/np6/3P1R2/5Q2/PPP3PP/R1B3K1 b - - 2 18",
-        "4qRr1/p3b2p/1kn5/1p2B3/3P4/2P2Q2/PP4PP/4R1K1 b - - 0 24",
-        "3q4/p3b2p/1k6/2P1Q3/p2P4/8/1P4PP/6K1 b - - 0 30",
+        "rn1qk1nr/pp3pp1/2pbp1bp/8/2BP3P/6N1/PPP1NPP1/R1BQK2R w KQkq - 0 9",
+        "r2qk2r/1p1n1pbb/2p1pnpp/p7/2BP3P/3N1QN1/PPPB1PP1/2KR3R w kq - 2 16",
+        "r4rk1/4qpbb/4p1pp/ppN5/3P3P/2Q5/1PPB1PP1/2KR3R w - - 0 24",
+        "r4rk1/4qp1b/4p1pQ/2N5/1p1P3P/p7/1PP2PP1/2KR3R w - - 0 28",
     };
     char command[1024] = {0};
     uint64 timeSum[MAXSPLIT];
@@ -1045,6 +1066,9 @@ void SearchMgr::benchThreadsperSplit(position_t* pos, char string[]) {
             sprintf_s(command, "name Max Threads/Split value %d", i);
             uciSetOption(command);
             TransTable.Clear();
+            PVHashTable.Clear();
+            ThreadsMgr.ClearPawnHash();
+            ThreadsMgr.ClearEvalHash();
             ThreadsMgr.InitVars();
             uciSetPosition(pos, fenPos[posIdx]);
             int64 startTime = getTime();
@@ -1077,10 +1101,10 @@ void SearchMgr::benchActiveSplits(position_t* pos, char string[]) {
     const int NUMPOS = 4;
     const int MAXSPLIT = MaxNumSplitPointsPerThread+1;
     char* fenPos[NUMPOS] = {
-        "r2qkb1r/pp3p1p/2p2n2/nB1P4/3P1Qb1/2N2p2/PPP3PP/R1B1R1K1 b kq - 2 12",
-        "r4b1r/p1kq1p1p/8/np6/3P1R2/5Q2/PPP3PP/R1B3K1 b - - 2 18",
-        "4qRr1/p3b2p/1kn5/1p2B3/3P4/2P2Q2/PP4PP/4R1K1 b - - 0 24",
-        "3q4/p3b2p/1k6/2P1Q3/p2P4/8/1P4PP/6K1 b - - 0 30",
+        "rn1qk1nr/pp3pp1/2pbp1bp/8/2BP3P/6N1/PPP1NPP1/R1BQK2R w KQkq - 0 9",
+        "r2qk2r/1p1n1pbb/2p1pnpp/p7/2BP3P/3N1QN1/PPPB1PP1/2KR3R w kq - 2 16",
+        "r4rk1/4qpbb/4p1pp/ppN5/3P3P/2Q5/1PPB1PP1/2KR3R w - - 0 24",
+        "r4rk1/4qp1b/4p1pQ/2N5/1p1P3P/p7/1PP2PP1/2KR3R w - - 0 28",
     };
     char command[1024] = {0};
     uint64 timeSum[MAXSPLIT];
@@ -1100,6 +1124,9 @@ void SearchMgr::benchActiveSplits(position_t* pos, char string[]) {
             sprintf_s(command, "name Max Active Splits/Thread value %d", i);
             uciSetOption(command);
             TransTable.Clear();
+            PVHashTable.Clear();
+            ThreadsMgr.ClearPawnHash();
+            ThreadsMgr.ClearEvalHash();
             ThreadsMgr.InitVars();
             uciSetPosition(pos, fenPos[posIdx]);
             int64 startTime = getTime();
@@ -1127,4 +1154,3 @@ void SearchMgr::benchActiveSplits(position_t* pos, char string[]) {
     Print(5, "\n\nThe best Active Splits for Threads: %d Depth: %d is:\n\nActive Splits: %d Time: %d Nps: %d Ratio: %0.2f\n\n\n",
         threads, depth, bestIdx, timeSum[bestIdx]/NUMPOS, nodesSum[bestIdx]/NUMPOS, double(nodesSum[bestIdx])/double(timeSum[bestIdx]));
 }
-

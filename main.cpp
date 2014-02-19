@@ -22,8 +22,6 @@
 #include <cstdlib>
 
 void quit(void) {
-    ThreadsMgr.SetNumThreads(0);
-
     if (logfile) fclose(logfile);
     if (errfile) fclose(errfile);
     if (dumpfile) fclose(dumpfile);
@@ -126,6 +124,7 @@ int main(void) {
 #endif
         } else if (!memcmp(command, "stop", 4)) {
             /* no op */
+            Print(1, "Gone here yeah boy!!!!!\n");
         } else if (!memcmp(command, "quit", 4)) {
             break;
         } else if (!memcmp(command, "speedup", 7)) {

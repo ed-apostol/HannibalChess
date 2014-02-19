@@ -12,6 +12,7 @@
 #include "constants.h"
 #include "macros.h"
 #include "search.h"
+#include "threads.h"
 #include "trans.h"
 #include "movegen.h"
 #include "threads.h"
@@ -288,22 +289,7 @@ void uciGo(position_t *pos, char *options) {
     DrawValue[pos->side] = - Guci_options.contempt;
     DrawValue[pos->side^1] = Guci_options.contempt;
 
-
-    SearchMgr::Inst().getBestMove(pos, ThreadsMgr.ThreadFromIdx(0));
-
-
-    if (!info.bestmove) {
-        if (RETURN_MOVE)
-            Print(3, "info string No legal move found. Start a new game.\n\n");
-        return;
-    } else {
-        if (RETURN_MOVE) {
-            Print(3, "bestmove %s", move2Str(info.bestmove));
-            if (info.pondermove) Print(3, " ponder %s", move2Str(info.pondermove));
-            Print(3, "\n\n");
-        }
-        origScore = info.last_value; // just to be safe
-    }
+    ThreadsMgr.StartThinking(pos);
 }
 void uciSetPosition(position_t *pos, char *str) {
     char *c = str, *m;

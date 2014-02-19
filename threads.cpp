@@ -17,14 +17,27 @@
 
 ThreadMgr ThreadsMgr;
 
+void ThreadMgr::StartThinking(position_t* pos) {
+    m_StartThinking = true;
+    m_pPos= pos;
+    ThreadFromIdx(0).TriggerCondition();
+}
+
 void ThreadMgr::IdleLoop(const int thread_id) {
     SplitPoint *master_sp = m_Threads[thread_id]->activeSplitPoint;
-    while(!m_Threads[thread_id]->exit_flag) {
+    while (!m_Threads[thread_id]->exit_flag) {
         if (master_sp == NULL && m_Threads[thread_id]->doSleep) {
             m_Threads[thread_id]->SleepAndWaitForCondition();
         }
-        GetWork(thread_id, master_sp);
-        if(m_Threads[thread_id]->searching) {
+        if (m_StartThinking && thread_id == 0) {
+            m_StartThinking = false;
+            SearchMgr::Inst().getBestMove(m_pPos, ThreadFromIdx(thread_id));
+            m_Threads[thread_id]->searching = false;
+        }
+        if (!m_Threads[thread_id]->searching) {
+            GetWork(thread_id, master_sp);
+        }
+        if (m_Threads[thread_id]->searching) {
             ++m_Threads[thread_id]->started;
             SplitPoint* sp = m_Threads[thread_id]->activeSplitPoint; // this is correctly located, don't move this, else bug
             SearchMgr::Inst().searchFromIdleLoop(sp, *m_Threads[thread_id]);
@@ -34,7 +47,7 @@ void ThreadMgr::IdleLoop(const int thread_id) {
             sp->updatelock->unlock();
             ++m_Threads[thread_id]->ended;
         }
-        if(master_sp != NULL && !master_sp->workersBitMask) return;
+        if (master_sp != NULL && !master_sp->workersBitMask) return;
     }
 }
 
@@ -43,11 +56,9 @@ void ThreadMgr::GetWork(const int thread_id, SplitPoint *master_sp) {
     Thread* master_thread = NULL;
     SplitPoint *best_split_point = NULL;
 
-    if (m_Threads[thread_id]->searching) return;
-
     for (Thread* th: m_Threads) {
         if (th->thread_id == thread_id) continue;
-        if(!th->searching) continue; // idle thread or master waiting for other threads, no need to help
+        if (!th->searching) continue; // idle thread or master waiting for other threads, no need to help
         if (master_sp && !(master_sp->allWorkersBitMask & ((uint64)1<<th->thread_id))) continue; // helpful master: looking to help threads working for it
         for (int splitIdx = 0; splitIdx < th->num_sp; splitIdx++) {
             SplitPoint* sp = &th->sptable[splitIdx];

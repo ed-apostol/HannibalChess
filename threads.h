@@ -135,6 +135,11 @@ public:
 
 class ThreadMgr {
 public:
+    ThreadMgr() : m_StartThinking(false), m_pPos(NULL) { }
+    ~ThreadMgr() {
+        SetNumThreads(0);
+    }
+    void StartThinking(position_t* p);
     void IdleLoop(const int thread_id);
     void GetWork(const int thread_id, SplitPoint *master_sp);
     void SetAllThreadsToStop();
@@ -161,6 +166,8 @@ public:
     }
 private:
     std::vector<Thread*> m_Threads;
+    bool m_StartThinking;
+    position_t* m_pPos;
 };
 
 extern ThreadMgr ThreadsMgr;
