@@ -31,6 +31,7 @@ void quit(void) {
     closeLearn(&Glearn);
     closeBook(&GhannibalBook);
 #endif 
+    ThreadsMgr.SetNumThreads(0);
 }
 
 int main(void) {
@@ -124,7 +125,6 @@ int main(void) {
 #endif
         } else if (!memcmp(command, "stop", 4)) {
             /* no op */
-            Print(1, "Gone here yeah boy!!!!!\n");
         } else if (!memcmp(command, "quit", 4)) {
             break;
         } else if (!memcmp(command, "speedup", 7)) {

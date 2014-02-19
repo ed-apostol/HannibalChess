@@ -136,9 +136,6 @@ public:
 class ThreadMgr {
 public:
     ThreadMgr() : m_StartThinking(false), m_pPos(NULL) { }
-    ~ThreadMgr() {
-        SetNumThreads(0);
-    }
     void StartThinking(position_t* p);
     void IdleLoop(const int thread_id);
     void GetWork(const int thread_id, SplitPoint *master_sp);
@@ -146,7 +143,7 @@ public:
     void SetAllThreadsToSleep();
     void SetAllThreadsToWork();
     void InitVars();
-    void SetNumThreads(int num);
+    void SetNumThreads(int num); // SetNumThreads(0) must be called for program to exit
     uint64 ComputeNodes();
     void SearchSplitPoint(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread);
     Thread& ThreadFromIdx(int thread_id) { return *m_Threads[thread_id]; }
