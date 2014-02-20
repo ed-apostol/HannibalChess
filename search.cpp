@@ -89,7 +89,7 @@ void Search::initNode(position_t *pos, Thread& sthread) {
         return;
     }
 
-    sthread.nodes++;
+    ++sthread.nodes;
 #ifdef SELF_TUNE2
     if (sthread.nodes >= info.node_limit && info.node_is_limited) {
         SetAllThreadsToStop(thread_id);
@@ -920,6 +920,7 @@ void SearchMgr::checkSpeedUp(position_t* pos, char string[]) {
         int64 startTime = getTime();
         sprintf_s(command, "movedepth %d", depth);
         uciGo(pos, command);
+        while (ThreadsMgr.StillThinking()) std::this_thread::sleep_for(std::chrono::milliseconds(10));
         int64 spentTime1 = getTime() - startTime;
         uint64 nodes1 = ThreadsMgr.ComputeNodes() / spentTime1;
         double timeSpeedUp = (double)spentTime1/1000.0;
@@ -940,6 +941,7 @@ void SearchMgr::checkSpeedUp(position_t* pos, char string[]) {
             startTime = getTime();
             sprintf_s(command, "movedepth %d", depth);
             uciGo(pos, command);
+            while (ThreadsMgr.StillThinking()) std::this_thread::sleep_for(std::chrono::milliseconds(10));
             int64 spentTime = getTime() - startTime;
             uint64 nodes = 0;
             nodes = ThreadsMgr.ComputeNodes();
@@ -994,6 +996,7 @@ void SearchMgr::benchMinSplitDepth(position_t* pos, char string[]) {
             int64 startTime = getTime();
             sprintf_s(command, "movedepth %d", depth);
             uciGo(pos, command);
+            while (ThreadsMgr.StillThinking()) std::this_thread::sleep_for(std::chrono::milliseconds(10));
             int64 spentTime = getTime() - startTime;
             timeSum[i] += spentTime;
             uint64 nodes = 0;
@@ -1052,6 +1055,7 @@ void SearchMgr::benchThreadsperSplit(position_t* pos, char string[]) {
             int64 startTime = getTime();
             sprintf_s(command, "movedepth %d", depth);
             uciGo(pos, command);
+            while (ThreadsMgr.StillThinking()) std::this_thread::sleep_for(std::chrono::milliseconds(10));
             int64 spentTime = getTime() - startTime;
             timeSum[i] += spentTime;
             uint64 nodes = 0;
@@ -1110,6 +1114,7 @@ void SearchMgr::benchActiveSplits(position_t* pos, char string[]) {
             int64 startTime = getTime();
             sprintf_s(command, "movedepth %d", depth);
             uciGo(pos, command);
+            while (ThreadsMgr.StillThinking()) std::this_thread::sleep_for(std::chrono::milliseconds(10));
             int64 spentTime = getTime() - startTime;
             timeSum[i] += spentTime;
             uint64 nodes = 0;

@@ -30,9 +30,9 @@ void ThreadMgr::IdleLoop(const int thread_id) {
         if (master_sp == NULL && m_Threads[thread_id]->doSleep) {
             m_Threads[thread_id]->SleepAndWaitForCondition();
             if (m_StartThinking && thread_id == 0) { // this is located here since it's only checked at thread's waking up
-                m_StartThinking = false;
                 SearchManager.getBestMove(m_pPos, ThreadFromIdx(thread_id));
                 m_Threads[thread_id]->searching = false;
+                m_StartThinking = false;
                 continue; // to avoid getting into GetWork after the search has terminated
             }
         }

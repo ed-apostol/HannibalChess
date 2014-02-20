@@ -169,9 +169,10 @@ public:
                 th->started, th->ended, th->nodes, th->numsplits, th->joined);
         }
     }
+    bool StillThinking() { return m_StartThinking; }
 private:
     std::vector<Thread*> m_Threads;
-    bool m_StartThinking;
+    volatile bool m_StartThinking;
     position_t* m_pPos;
 };
 
