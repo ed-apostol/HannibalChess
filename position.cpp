@@ -1,11 +1,12 @@
 /**************************************************/
 /*  Name: Hannibal						          */
-/*  Copyright: 2013                               */
+/*  Copyright: 2009-2014                          */
 /*  Author: Sam Hamilton, Edsel Apostol           */
-/*  Contact: snhamilton@rocketmail.com    */
+/*  Contact: snhamilton@rocketmail.com            */
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
+
 #include "typedefs.h"
 #include "data.h"
 #include "constants.h"

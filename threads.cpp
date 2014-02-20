@@ -1,11 +1,12 @@
 /**************************************************/
 /*  Name: Hannibal						          */
-/*  Copyright: 2013                               */
+/*  Copyright: 2009-2014                          */
 /*  Author: Sam Hamilton, Edsel Apostol           */
-/*  Contact: snhamilton@rocketmail.com    */
+/*  Contact: snhamilton@rocketmail.com            */
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
+
 #include "typedefs.h"
 #include "data.h"
 #include "constants.h"
@@ -105,8 +106,8 @@ void ThreadMgr::SetAllThreadsToSleep() {
 }
 
 void ThreadMgr::SetAllThreadsToWork() {
-    for (Thread* th: m_Threads) { // TODO: implement GetBestMove to use Thread(0), move blocking input to main thread
-        if (th->thread_id != 0) th->TriggerCondition();
+    for (Thread* th: m_Threads) {
+        if (th->thread_id != 0) th->TriggerCondition(); // thread_id == 0 is triggered separately
     }
 }
 
