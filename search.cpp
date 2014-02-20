@@ -758,6 +758,8 @@ void SearchMgr::sendBestMove() {
         }
         origScore = info.last_value; // just to be safe
     }
+    ThreadsMgr.SetAllThreadsToSleep();
+    ThreadsMgr.PrintDebugData();
 }
 
 void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
@@ -786,7 +788,7 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
                 if (info.rootPV.length > 1) info.pondermove = info.rootPV.moves[1];
                 else info.pondermove = 0;
                 search->displayPV(pos, &info.rootPV, entry->pvDepth(), -INF, INF, info.best_value);
-                ThreadsMgr.SetAllThreadsToStop();
+                //ThreadsMgr.SetAllThreadsToStop();
                 sendBestMove();
                 return;
         }
@@ -878,9 +880,6 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
             Print(2, "info string Aborting search: end of waiting for stop/quit/ponderhit\n");
         }
     }
-
-    ThreadsMgr.SetAllThreadsToSleep();
-    ThreadsMgr.PrintDebugData();
 
     sendBestMove();
 }
