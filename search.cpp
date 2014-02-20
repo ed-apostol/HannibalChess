@@ -53,14 +53,13 @@ inline bool inCutNode(NodeType nt) { return (nt==CutNode);}
 inline bool inAllNode(NodeType nt) { return (nt==AllNode);}
 inline NodeType invertNode(NodeType nt) { return ((nt==PVNode) ? PVNode : ((nt==CutNode) ? AllNode : CutNode));}
 
+SearchMgr SearchManager;
 
 class Search {
 public:
     Search(SearchInfo& _info) :
         info(_info)
     {}
-    void ponderHit();
-    void check4Input(position_t *pos);
     void initNode(position_t *pos, Thread& sthread) ;
     int simpleStalemate(const position_t *pos);
     void displayPV(const position_t *pos, continuation_t *pv, int depth, int alpha, int beta, int score);
@@ -81,41 +80,6 @@ private:
     SearchInfo& info;
 };
 
-void Search::ponderHit() { //no pondering in tuning
-    int64 time = getTime() - info.start_time;
-
-    if ((info.iteration >= 8 && (info.legalmoves == 1 || info.mate_found >= 3)) ||
-        (time > info.time_limit_abs)) {
-            ThreadsMgr.SetAllThreadsToStop();
-            Print(3, "info string Has searched enough the ponder move: aborting\n");
-    } else {
-        info.thinking_status = THINKING;
-        Print(2, "info string Switch from pondering to thinking\n");
-    }
-}
-
-void Search::check4Input(position_t *pos) { // TODO: move this inside main loop
-    static char input[256];
-
-    if (biosKey()) {
-        if (fgets(input, 256, stdin) == NULL)
-            strcpy_s(input, "quit");
-
-        Print(2, "%s\n", input);
-        if (!memcmp(input, "quit", 4)) {
-            quit();
-        } else if (!memcmp(input, "stop", 4)) {
-            ThreadsMgr.SetAllThreadsToStop();
-            Print(2, "info string Aborting search: stop\n");
-            return;
-        } else if (!memcmp(input, "ponderhit", 9)) {
-            ponderHit();
-        } else if (!memcmp(input, "isready", 7)) {
-            needReplyReady = true;
-        }
-    }
-}
-
 void Search::initNode(position_t *pos, Thread& sthread) {
     int64 time2;
 
@@ -132,7 +96,6 @@ void Search::initNode(position_t *pos, Thread& sthread) {
 #endif
     if (sthread.thread_id == 0 && ++sthread.nodes_since_poll >= sthread.nodes_between_polls) {
         sthread.nodes_since_poll = 0;
-        if (SHOW_SEARCH) check4Input(pos);
         time2 = getTime();
         if (time2 - info.last_time > 1000) {
             int64 time = time2 - info.start_time;
@@ -766,9 +729,35 @@ void Search::timeManagement(int depth, Thread& sthread) {
 SearchMgr::SearchMgr() { search = new Search(info); }
 SearchMgr::~SearchMgr() { delete search; }
 
+void SearchMgr::ponderHit() { //no pondering in tuning
+    int64 time = getTime() - info.start_time;
+
+    if ((info.iteration >= 8 && (info.legalmoves == 1 || info.mate_found >= 3)) || (time > info.time_limit_abs)) {
+            ThreadsMgr.SetAllThreadsToStop();
+            Print(3, "info string Has searched enough the ponder move: aborting\n");
+    } else {
+        info.thinking_status = THINKING;
+        Print(2, "info string Switch from pondering to thinking\n");
+    }
+}
+
 void SearchMgr::searchFromIdleLoop(SplitPoint* sp, Thread& sthread) {
     if (sp->inRoot) search->searchNode<true, true, false>(&sp->pos[sthread.thread_id], sp->alpha, sp->beta, sp->depth, *sp->ssprev, sthread, sp->nodeType);
     else search->searchNode<false, true, false>(&sp->pos[sthread.thread_id], sp->alpha, sp->beta, sp->depth, *sp->ssprev, sthread, sp->nodeType);
+}
+
+void SearchMgr::sendBestMove() {
+    if (!info.bestmove) {
+        if (RETURN_MOVE)
+            Print(3, "info string No legal move found. Start a new game.\n\n");
+    } else {
+        if (RETURN_MOVE) {
+            Print(3, "bestmove %s", move2Str(info.bestmove));
+            if (info.pondermove) Print(3, " ponder %s", move2Str(info.pondermove));
+            Print(3, "\n\n");
+        }
+        origScore = info.last_value; // just to be safe
+    }
 }
 
 void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
@@ -798,6 +787,7 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
                 else info.pondermove = 0;
                 search->displayPV(pos, &info.rootPV, entry->pvDepth(), -INF, INF, info.best_value);
                 ThreadsMgr.SetAllThreadsToStop();
+                sendBestMove();
                 return;
         }
         ss.hashMove = entry->pvMove();
@@ -883,9 +873,7 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
                 id, info.best_value, pos->sp, pos->ply);
         } else {
             Print(3, "info string Waiting for stop, quit, or ponderhit\n");
-            do {
-                search->check4Input(pos);
-            } while (info.thinking_status != STOPPED);
+            while (info.thinking_status != STOPPED);
             ThreadsMgr.SetAllThreadsToStop();
             Print(2, "info string Aborting search: end of waiting for stop/quit/ponderhit\n");
         }
@@ -894,17 +882,7 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
     ThreadsMgr.SetAllThreadsToSleep();
     ThreadsMgr.PrintDebugData();
 
-    if (!info.bestmove) {
-        if (RETURN_MOVE)
-            Print(3, "info string No legal move found. Start a new game.\n\n");
-    } else {
-        if (RETURN_MOVE) {
-            Print(3, "bestmove %s", move2Str(info.bestmove));
-            if (info.pondermove) Print(3, " ponder %s", move2Str(info.pondermove));
-            Print(3, "\n\n");
-        }
-        origScore = info.last_value; // just to be safe
-    }
+    sendBestMove();
 }
 
 void SearchMgr::checkSpeedUp(position_t* pos, char string[]) {

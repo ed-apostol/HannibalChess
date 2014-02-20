@@ -30,7 +30,8 @@ void ThreadMgr::IdleLoop(const int thread_id) {
             m_Threads[thread_id]->SleepAndWaitForCondition();
             if (m_StartThinking && thread_id == 0) { // this is located here since it's only checked at thread's waking up
                 m_StartThinking = false;
-                SearchMgr::Inst().getBestMove(m_pPos, ThreadFromIdx(thread_id));
+                SearchManager.getBestMove(m_pPos, ThreadFromIdx(thread_id));
+                m_Threads[thread_id]->searching = false;
                 continue; // to avoid getting into GetWork after the search has terminated
             }
         }
@@ -40,7 +41,7 @@ void ThreadMgr::IdleLoop(const int thread_id) {
         if (m_Threads[thread_id]->searching) {
             ++m_Threads[thread_id]->started;
             SplitPoint* sp = m_Threads[thread_id]->activeSplitPoint; // this is correctly located, don't move this, else bug
-            SearchMgr::Inst().searchFromIdleLoop(sp, *m_Threads[thread_id]);
+            SearchManager.searchFromIdleLoop(sp, *m_Threads[thread_id]);
             sp->updatelock->lock();
             sp->workersBitMask &= ~(1 << thread_id);
             m_Threads[thread_id]->searching = false;
@@ -91,7 +92,7 @@ void ThreadMgr::GetWork(const int thread_id, SplitPoint *master_sp) {
 }
 
 void ThreadMgr::SetAllThreadsToStop() {
-    SearchMgr::Inst().Info().thinking_status = STOPPED;
+    SearchManager.info.thinking_status = STOPPED;
     for (Thread* th: m_Threads) {
         th->stop = true;
     }
@@ -171,7 +172,7 @@ void ThreadMgr::SearchSplitPoint(const position_t* p, movelist_t* mvlist, Search
     ss->playedMoves = active_sp->played;
     sthread.activeSplitPoint = active_sp->parent;
     sthread.numsplits++;
-    if (SearchMgr::Inst().Info().thinking_status != STOPPED) {
+    if (SearchManager.info.thinking_status != STOPPED) {
         sthread.stop = false; 
         sthread.searching = true;
     }

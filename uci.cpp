@@ -180,7 +180,7 @@ void uciGo(position_t *pos, char *options) {
     int64 mytime = 0, t_inc = 0;
     int wtime=0, btime=0, winc=0, binc=0, movestogo=0, upperdepth=0, nodes=0, mate=0, movetime=0;
     movelist_t ml;
-    SearchInfo& info = SearchMgr::Inst().Info();
+    SearchInfo& info = SearchManager.info;
 
     ASSERT(pos != NULL);
     ASSERT(options != NULL);

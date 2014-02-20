@@ -52,7 +52,7 @@ move_t* getMove(movelist_t *mvlist) {
     return start;
 }
 inline int scoreNonTactical(uint32 side, uint32 move) {
-    int score = SearchMgr::Inst().Info().history[historyIndex(side,move)];
+    int score = SearchManager.info.history[historyIndex(side,move)];
     return score;
 }
 bool moveIsPassedPawn(const position_t * pos, uint32 move) {
@@ -246,18 +246,18 @@ move_t* sortNext(SplitPoint* sp, position_t *pos, movelist_t *mvlist, int& phase
 
         switch (MoveGenPhase[mvlist->phase]) {
         case PH_ROOT:
-            if (SearchMgr::Inst().Info().mvlist_initialized) break;
-            if (SearchMgr::Inst().Info().moves_is_limited == true) {
-                for (mvlist->size = 0; SearchMgr::Inst().Info().moves[mvlist->size] != EMPTY; mvlist->size++) {
-                    mvlist->list[mvlist->size].m = SearchMgr::Inst().Info().moves[mvlist->size];
+            if (SearchManager.info.mvlist_initialized) break;
+            if (SearchManager.info.moves_is_limited == true) {
+                for (mvlist->size = 0; SearchManager.info.moves[mvlist->size] != EMPTY; mvlist->size++) {
+                    mvlist->list[mvlist->size].m = SearchManager.info.moves[mvlist->size];
                 }
             } else {
                 // generate all legal moves at least in the root
                 genLegal(pos, mvlist, true); 
             }
             scoreRoot(mvlist);
-            SearchMgr::Inst().Info().mvlist_initialized = true;
-            SearchMgr::Inst().Info().legalmoves = mvlist->size;
+            SearchManager.info.mvlist_initialized = true;
+            SearchManager.info.legalmoves = mvlist->size;
             break;
         case PH_EVASION:
             genEvasions(pos, mvlist);

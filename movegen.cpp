@@ -153,22 +153,22 @@ void genGainingMoves(const position_t *pos, movelist_t *mvlist, int delta, int t
     mvlist->size = mvlist->pos;
 
     if (pos->side == BLACK) { //TODO consider writing so we don't need this expensive branch
-        if (SearchMgr::Inst().Info().evalgains[historyIndex(pos->side, GenBlackOO())] >= delta && (pos->posStore.castle&BCKS) && (!(occupied&(F8|G8)))) {
+        if (SearchManager.info.evalgains[historyIndex(pos->side, GenBlackOO())] >= delta && (pos->posStore.castle&BCKS) && (!(occupied&(F8|G8)))) {
             if (!isAtt(pos, pos->side^1, E8|F8|G8))
                 mvlist->list[mvlist->size++].m = GenBlackOO();
         }
-        if (SearchMgr::Inst().Info().evalgains[historyIndex(pos->side, GenBlackOOO())] >= delta && (pos->posStore.castle&BCQS) && (!(occupied&(B8|C8|D8)))) {
+        if (SearchManager.info.evalgains[historyIndex(pos->side, GenBlackOOO())] >= delta && (pos->posStore.castle&BCQS) && (!(occupied&(B8|C8|D8)))) {
             if (!isAtt(pos, pos->side^1, E8|D8|C8))
                 mvlist->list[mvlist->size++].m = GenBlackOOO();
         }
         pc_bits_p1 = (pos->pawns & allies & ~Rank2BB) & ((~occupied)<<8);
         pc_bits_p2 = (pos->pawns & allies & Rank7BB) & ((~occupied)<<8) & ((~occupied)<<16);
     } else {
-        if (SearchMgr::Inst().Info().evalgains[historyIndex(pos->side, GenWhiteOO())] >= delta && (pos->posStore.castle&WCKS) && (!(occupied&(F1|G1)))) {
+        if (SearchManager.info.evalgains[historyIndex(pos->side, GenWhiteOO())] >= delta && (pos->posStore.castle&WCKS) && (!(occupied&(F1|G1)))) {
             if (!isAtt(pos, pos->side^1, E1|F1|G1))
                 mvlist->list[mvlist->size++].m = GenWhiteOO();
         }
-        if (SearchMgr::Inst().Info().evalgains[historyIndex(pos->side, GenWhiteOOO())] >= delta && (pos->posStore.castle&WCQS) && (!(occupied&(B1|C1|D1)))) {
+        if (SearchManager.info.evalgains[historyIndex(pos->side, GenWhiteOOO())] >= delta && (pos->posStore.castle&WCQS) && (!(occupied&(B1|C1|D1)))) {
             if (!isAtt(pos, pos->side^1, E1|D1|C1))
                 mvlist->list[mvlist->size++].m = GenWhiteOOO();
         }
@@ -181,7 +181,7 @@ void genGainingMoves(const position_t *pos, movelist_t *mvlist, int delta, int t
         mv_bits = PawnMoves[from][pos->side];
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            if (SearchMgr::Inst().Info().evalgains[historyIndex(pos->side, GenOneForward(from, to))] >= delta)
+            if (SearchManager.info.evalgains[historyIndex(pos->side, GenOneForward(from, to))] >= delta)
                 mvlist->list[mvlist->size++].m = GenOneForward(from, to);
         }
     }
@@ -191,7 +191,7 @@ void genGainingMoves(const position_t *pos, movelist_t *mvlist, int delta, int t
         mv_bits = PawnMoves2[from][pos->side];
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            if (SearchMgr::Inst().Info().evalgains[historyIndex(pos->side, GenTwoForward(from, to))] >= delta)
+            if (SearchManager.info.evalgains[historyIndex(pos->side, GenTwoForward(from, to))] >= delta)
                 mvlist->list[mvlist->size++].m = GenTwoForward(from, to);
         }
     }
@@ -201,7 +201,7 @@ void genGainingMoves(const position_t *pos, movelist_t *mvlist, int delta, int t
         mv_bits = KnightMoves[from] & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            if (SearchMgr::Inst().Info().evalgains[historyIndex(pos->side, GenKnightMove(from, to, EMPTY))] >= delta)
+            if (SearchManager.info.evalgains[historyIndex(pos->side, GenKnightMove(from, to, EMPTY))] >= delta)
                 mvlist->list[mvlist->size++].m = GenKnightMove(from, to, EMPTY);
         }
     }
@@ -211,7 +211,7 @@ void genGainingMoves(const position_t *pos, movelist_t *mvlist, int delta, int t
         mv_bits = bishopAttacksBB(from, occupied) & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            if (SearchMgr::Inst().Info().evalgains[historyIndex(pos->side, GenBishopMove(from, to, EMPTY))] >= delta)
+            if (SearchManager.info.evalgains[historyIndex(pos->side, GenBishopMove(from, to, EMPTY))] >= delta)
                 mvlist->list[mvlist->size++].m = GenBishopMove(from, to, EMPTY);
         }
     }
@@ -221,7 +221,7 @@ void genGainingMoves(const position_t *pos, movelist_t *mvlist, int delta, int t
         mv_bits = rookAttacksBB(from, occupied) & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            if (SearchMgr::Inst().Info().evalgains[historyIndex(pos->side, GenRookMove(from, to, EMPTY))] >= delta)
+            if (SearchManager.info.evalgains[historyIndex(pos->side, GenRookMove(from, to, EMPTY))] >= delta)
                 mvlist->list[mvlist->size++].m = GenRookMove(from, to, EMPTY);
         }
     }
@@ -231,7 +231,7 @@ void genGainingMoves(const position_t *pos, movelist_t *mvlist, int delta, int t
         mv_bits = queenAttacksBB(from, occupied) & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            if (SearchMgr::Inst().Info().evalgains[historyIndex(pos->side, GenQueenMove(from, to, EMPTY))] >= delta)
+            if (SearchManager.info.evalgains[historyIndex(pos->side, GenQueenMove(from, to, EMPTY))] >= delta)
                 mvlist->list[mvlist->size++].m = GenQueenMove(from, to, EMPTY);
         }
     }
@@ -241,7 +241,7 @@ void genGainingMoves(const position_t *pos, movelist_t *mvlist, int delta, int t
         mv_bits = KingMoves[from] & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            if (SearchMgr::Inst().Info().evalgains[historyIndex(pos->side, GenKingMove(from, to, EMPTY))] >= delta)
+            if (SearchManager.info.evalgains[historyIndex(pos->side, GenKingMove(from, to, EMPTY))] >= delta)
                 mvlist->list[mvlist->size++].m = GenKingMove(from, to, EMPTY);
         }
     }

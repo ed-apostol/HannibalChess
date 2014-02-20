@@ -90,17 +90,19 @@ class SearchMgr {
 public:
     SearchMgr();
     ~SearchMgr();
-    static SearchMgr& Inst() { static SearchMgr inst; return inst; }
+    void ponderHit();
+    void sendBestMove();
     void searchFromIdleLoop(SplitPoint* sp, Thread& sthread);
     void getBestMove(position_t *pos, Thread& sthread);
     void checkSpeedUp(position_t* pos, char string[]);
     void benchMinSplitDepth(position_t* pos, char string[]);
     void benchThreadsperSplit(position_t* pos, char string[]);
     void benchActiveSplits(position_t* pos, char string[]);
-    SearchInfo& Info() { return info; }
-private:
-    SearchInfo info;
+
     Search* search;
+    SearchInfo info;
 };
+
+extern SearchMgr SearchManager;
 
 extern void quit(void);

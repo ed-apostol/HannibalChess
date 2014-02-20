@@ -65,7 +65,7 @@ int main(void) {
     initBook(DEFAULT_POLYGLOT_BOOK, &GpolyglotBook, POLYGLOT_BOOK);
     initBook(DEFAULT_HANNIBAL_BOOK, &GhannibalBook, PUCK_BOOK);
     initLearn("HannibalLearn.lrn", &Glearn);
-    SearchMgr::Inst().Info().outOfBook = 0;
+    SearchManager.info.outOfBook = 0;
 #endif
     TransTable.Init(INIT_HASH, HASH_ASSOC);
     PVHashTable.Init(INIT_PVHASH, PV_ASSOC);
@@ -101,12 +101,12 @@ int main(void) {
             TransTable.Clear();
             PVHashTable.Clear();
 #ifndef TCEC
-            SearchMgr::Inst().Info().outOfBook = 0;
+            SearchManager.info.outOfBook = 0;
             movesSoFar.length = 0;
 #endif
             ThreadsMgr.ClearPawnHash();
             ThreadsMgr.ClearEvalHash();
-            SearchMgr::Inst().Info().lastDepthSearched = MAXPLY;
+            SearchManager.info.lastDepthSearched = MAXPLY;
         } else if (!memcmp(command, "uci", 3)) {
             uciStart();
         } else if (!memcmp(command, "debug", 5)) {
@@ -124,17 +124,20 @@ int main(void) {
             nonUCI(&pos);
 #endif
         } else if (!memcmp(command, "stop", 4)) {
-            /* no op */
+            ThreadsMgr.SetAllThreadsToStop();
+            Print(2, "info string Aborting search: stop\n");
+        } else if (!memcmp(command, "ponderhit", 9)) {
+            SearchManager.ponderHit();
         } else if (!memcmp(command, "quit", 4)) {
             break;
         } else if (!memcmp(command, "speedup", 7)) {
-            SearchMgr::Inst().checkSpeedUp(&pos, command+8);
+            SearchManager.checkSpeedUp(&pos, command+8);
         } else if (!memcmp(command, "split", 5)) {
-            SearchMgr::Inst().benchMinSplitDepth(&pos, command+6);
+            SearchManager.benchMinSplitDepth(&pos, command+6);
         } else if (!memcmp(command, "sthreads", 8)) {
-            SearchMgr::Inst().benchThreadsperSplit(&pos, command+9);
+            SearchManager.benchThreadsperSplit(&pos, command+9);
         } else if (!memcmp(command, "active", 6)) {
-            SearchMgr::Inst().benchActiveSplits(&pos, command+7);
+            SearchManager.benchActiveSplits(&pos, command+7);
         }
 #ifdef OPTIMIZE
         else if (!memcmp(command, "optimize1",9)) optimize(&pos, 1);
