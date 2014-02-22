@@ -13,11 +13,11 @@
 #include <atomic>
 
 #define OPT_EASY true
-#define VERSION            "20140212"
+#define VERSION            "20140222"
 #define NUM_THREADS			    6
 #define MIN_SPLIT_DEPTH			4 // best is 4
-#define MAX_THREADS_PER_SPLIT   4 // best is 4
-#define MAX_ACTIVE_SPLITS		4
+#define MAX_THREADS_PER_SPLIT   8 // TODO: to be tuned
+#define MAX_ACTIVE_SPLITS		4 // TODO: to be tuned
 #define TCEC true
 
 //#define SPEED_TEST

@@ -168,6 +168,7 @@ public:
                 th->num_sp, th->searching, th->stop, 
                 th->started, th->ended, th->nodes, th->numsplits, th->joined);
         }
+        Print(2, "================================================================\n");
     }
     bool StillThinking() { return m_StartThinking; }
 private:

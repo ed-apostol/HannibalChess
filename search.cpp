@@ -89,7 +89,7 @@ void Search::initNode(position_t *pos, Thread& sthread) {
         return;
     }
 
-    ++sthread.nodes;
+    //++sthread.nodes;
 #ifdef SELF_TUNE2
     if (sthread.nodes >= info.node_limit && info.node_is_limited) {
         SetAllThreadsToStop(thread_id);
@@ -296,6 +296,7 @@ int Search::qSearch(position_t *pos, int alpha, int beta, const int depth, Searc
             }
             int newdepth = depth - !ss.moveGivesCheck;
             makeMove(pos, &undo, move->m);
+            ++sthread.nodes;
             score = -qSearch<inPv>(pos, -beta, -alpha, newdepth, ss, sthread);
             unmakeMove(pos, &undo);
         }
@@ -513,6 +514,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
             if (ss.bestvalue == -INF) {
                 newdepth = depth - !ss.firstExtend;
                 makeMove(pos, &undo, move->m);
+                ++sthread.nodes;
                 score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, sthread, invertNode(nt));
             } else {
                 newdepth = depth -1;
@@ -544,6 +546,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                 newdepth -= fullReduction;
                 int newdepthclone = newdepth - partialReduction;
                 makeMove(pos, &undo, move->m);
+                ++sthread.nodes;
                 if (inSplitPoint) alpha = sp->alpha;
                 ss.reducedMove = (newdepthclone < newdepth);
 
@@ -596,8 +599,11 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
         }
         if (inSplitPoint) sp->updatelock->unlock();
         if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < Guci_options.max_activesplits_per_thread
-            && ThreadsMgr.ThreadNum() > 1 && depth >= Guci_options.min_split_depth) {
+            && ThreadsMgr.ThreadNum() > 1 && depth >= Guci_options.min_split_depth
+            && (!inCutNode(nt) || MoveGenPhase[ss.mvlist_phase] != PH_GOOD_CAPTURES) // TODO: to be tested
+            ) {
                 ThreadsMgr.SearchSplitPoint(pos, ss.mvlist, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, sthread);
+                if (sthread.stop) return 0;
                 break;
         }
     }
@@ -734,8 +740,8 @@ void SearchMgr::ponderHit() { //no pondering in tuning
     int64 time = getTime() - info.start_time;
 
     if ((info.iteration >= 8 && (info.legalmoves == 1 || info.mate_found >= 3)) || (time > info.time_limit_abs)) {
-            ThreadsMgr.SetAllThreadsToStop();
-            Print(3, "info string Has searched enough the ponder move: aborting\n");
+        ThreadsMgr.SetAllThreadsToStop();
+        Print(3, "info string Has searched enough the ponder move: aborting\n");
     } else {
         info.thinking_status = THINKING;
         Print(2, "info string Switch from pondering to thinking\n");
@@ -760,7 +766,7 @@ void SearchMgr::sendBestMove() {
         origScore = info.last_value; // just to be safe
     }
     ThreadsMgr.SetAllThreadsToSleep();
-    ThreadsMgr.PrintDebugData();
+    //ThreadsMgr.PrintDebugData();
 }
 
 void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
@@ -789,7 +795,7 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
                 if (info.rootPV.length > 1) info.pondermove = info.rootPV.moves[1];
                 else info.pondermove = 0;
                 search->displayPV(pos, &info.rootPV, entry->pvDepth(), -INF, INF, info.best_value);
-                //ThreadsMgr.SetAllThreadsToStop();
+                ThreadsMgr.SetAllThreadsToStop();
                 sendBestMove();
                 return;
         }
@@ -929,35 +935,31 @@ void SearchMgr::checkSpeedUp(position_t* pos, char string[]) {
         nodesSpeedupSum[0] += nodesSpeedup;
         Print(5, "Base: %0.2fs %dknps\n", timeSpeedUp, nodes1);
 
-        for (int j = 2; j <= threads; ++j) {
-            sprintf_s(tempStr, "name Threads value %d\n", j);
-            uciSetOption(tempStr);
-            TransTable.Clear();
-            PVHashTable.Clear();
-            ThreadsMgr.ClearPawnHash();
-            ThreadsMgr.ClearEvalHash();
-            ThreadsMgr.InitVars();
-            uciSetPosition(pos, fenPos[i]);
-            startTime = getTime();
-            sprintf_s(command, "movedepth %d", depth);
-            uciGo(pos, command);
-            while (ThreadsMgr.StillThinking()) std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            int64 spentTime = getTime() - startTime;
-            uint64 nodes = 0;
-            nodes = ThreadsMgr.ComputeNodes();
-            nodes /= spentTime;
-            timeSpeedUp = (double)spentTime1 / (double)spentTime;
-            timeSpeedupSum[j] += timeSpeedUp;
-            nodesSpeedup = (double)nodes / (double)nodes1;
-            nodesSpeedupSum[j] += nodesSpeedup;
-            Print(5, "Thread: %d SpeedUp: %0.2f %0.2f\n", j, timeSpeedUp, nodesSpeedup);
-        }
+        sprintf_s(tempStr, "name Threads value %d\n", threads);
+        uciSetOption(tempStr);
+        TransTable.Clear();
+        PVHashTable.Clear();
+        ThreadsMgr.ClearPawnHash();
+        ThreadsMgr.ClearEvalHash();
+        ThreadsMgr.InitVars();
+        uciSetPosition(pos, fenPos[i]);
+        startTime = getTime();
+        sprintf_s(command, "movedepth %d", depth);
+        uciGo(pos, command);
+        while (ThreadsMgr.StillThinking()) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        int64 spentTime = getTime() - startTime;
+        uint64 nodes = 0;
+        nodes = ThreadsMgr.ComputeNodes();
+        nodes /= spentTime;
+        timeSpeedUp = (double)spentTime1 / (double)spentTime;
+        timeSpeedupSum[threads] += timeSpeedUp;
+        nodesSpeedup = (double)nodes / (double)nodes1;
+        nodesSpeedupSum[threads] += nodesSpeedup;
+        Print(5, "Thread: %d SpeedUp: %0.2f %0.2f\n", threads, timeSpeedUp, nodesSpeedup);
     }
     Print(5, "\n\n");
     Print(5, "\n\nAvg Base: %0.2fs %dknps\n", timeSpeedupSum[0]/NUMPOS, (int)nodesSpeedupSum[0]/NUMPOS);
-    for (int j = 2; j <= threads; ++j) {
-        Print(5, "Thread: %d Avg SpeedUp: %0.2f %0.2f\n", j, timeSpeedupSum[j]/NUMPOS, nodesSpeedupSum[j]/NUMPOS);
-    }
+    Print(5, "Thread: %d Avg SpeedUp: %0.2f %0.2f\n", threads, timeSpeedupSum[threads]/NUMPOS, nodesSpeedupSum[threads]/NUMPOS);
     Print(5, "\n\n");
 }
 
