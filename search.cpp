@@ -424,6 +424,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                 pos_store_t undo;
                 int nullDepth = depth - (4 + depth/5 + (ss.evalvalue - beta > PawnValue)); // TODO: test (eval-beta)/PawnVal here
                 makeNullMove(pos, &undo);
+                ++sthread.nodes;
                 int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, sthread, AllNode);
                 ss.threatMove = ss.counterMove;
                 unmakeNullMove(pos, &undo);
