@@ -374,7 +374,23 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                     if (inCheck) return -INF + pos->ply;
                     else return DrawValue[pos->side];
                 }
-                if (!inPvNode(nt)) {
+                if (inPvNode(nt)) { 
+                    PvHashEntry* pventry = PVHashTable.pvEntry(pos->posStore.hash);
+                    if (pventry != NULL) {
+                        if (pventry->pvDepth() >= depth && pventry->pvMove() != EMPTY) {
+                            ssprev.counterMove = pventry->pvMove();
+                            return scoreFromTrans(pventry->pvScore(), pos->ply);
+                        }
+                        if (pventry->pvDepth() >= ss.hashDepth && pventry->pvMove() != EMPTY) {
+                            ss.hashMove = pventry->pvMove();
+                            ss.hashDepth = pventry->pvDepth();
+                        }
+                        if (pventry->pvDepth() > evalDepth) {
+                            evalDepth = pventry->pvDepth();
+                            ss.evalvalue = scoreFromTrans(pventry->pvScore(), pos->ply);
+                        }
+                    }
+                } else {
                     if ((!inCutNode(nt) || !(entry->Mask() & MAllLower)) && entry->LowerDepth() >= depth && (entry->Move() != EMPTY || pos->posStore.lastmove == EMPTY)) {
                         int score = scoreFromTrans(entry->LowerValue(), pos->ply);
                         ASSERT(valueIsOk(score));
@@ -449,7 +465,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
 
         if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt)?6:8)) { // IID
             int newdepth = inPvNode(nt) ? depth - 2 : depth / 2;
-            if (ss.hashMove == EMPTY || ss.hashDepth < newdepth) {
+            if (ss.hashMove == EMPTY || ss.hashDepth < newdepth) { // TODO: try ss.evalvalue < alpha
                 int score = searchNode<false, false, false>(pos, alpha, beta, newdepth, ssprev, sthread, nt);
                 if (sthread.stop) return 0;
                 ss.evalvalue = score;

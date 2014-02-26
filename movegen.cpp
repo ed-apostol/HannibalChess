@@ -89,57 +89,6 @@ void genLegal(const position_t *pos, movelist_t *mvlist, int promoteAll) {
     }
 }
 
-/* this generates non tactical non checking passed pawn moves only */
-/*
-void genPassedPawnMoves(const position_t *pos, movelist_t *mvlist) {
-static const int Shift[] = {9, 7};
-uint64 pc_bits, mv_bits, pawns, xpawns, mask, dcc;
-int from, to;
-int mover = pos->side;
-int nonMover = mover ^ 1;
-ASSERT(pos != NULL);
-ASSERT(mvlist != NULL);
-
-mvlist->size = 0;
-pawns = pos->pawns & pos->color[mover];
-xpawns = pos->pawns & pos->color[nonMover];
-dcc = discoveredCheckCandidates(pos, mover);
-mask = ~Rank8ByColorBB[mover] & ~((*FillPtr2[nonMover])((*ShiftPtr[nonMover])(pos->pawns, 8)))
-& ~(*FillPtr2[nonMover])(((*ShiftPtr[nonMover])(xpawns, Shift[nonMover]) & ~FileABB)
-| ((*ShiftPtr[nonMover])(xpawns, Shift[mover]) & ~FileHBB))
-& ~PawnCaps[pos->kpos[nonMover]][nonMover];
-// SAM I know this is inneficient, come back and do better if it works
-#ifdef RAZOR_PAWN_THREATS
-{
-uint64 targets = (pos->rooks | pos->queens | pos->knights);
-uint64 pawnAttacks = (((*ShiftPtr[nonMover])(targets, Shift[nonMover]) & ~FileABB) | ((*ShiftPtr[nonMover])(targets, Shift[mover]) & ~FileHBB));
-mask |= pawnAttacks;
-}
-#endif
-mv_bits = mask & (*ShiftPtr[pos->side])(pawns, 8) & ~pos->occupied;
-while (mv_bits) {
-to = popFirstBit(&mv_bits);
-pc_bits = (PawnMoves[to][nonMover] & pawns) & ~dcc;
-ASSERT(bitCnt(pc_bits) <= 1);
-while (pc_bits) {
-from = popFirstBit(&pc_bits);
-mvlist->list[mvlist->size++].m = GenOneForward(from, to);
-}
-}
-mv_bits = mask & Rank4ByColorBB[mover] & (*ShiftPtr[mover])(pawns, 16)
-& (*ShiftPtr[mover])(~pos->occupied, 8) & ~pos->occupied;
-while (mv_bits) {
-to = popFirstBit(&mv_bits);
-pc_bits = pawns & Rank2ByColorBB[mover] & FileMask[to] & ~dcc;
-ASSERT(bitCnt(pc_bits) <= 1);
-while (pc_bits) {
-from = popFirstBit(&pc_bits);
-mvlist->list[mvlist->size++].m = GenTwoForward(from, to);
-}
-}
-
-}
-*/
 void genGainingMoves(const position_t *pos, movelist_t *mvlist, int delta, int thread_id) {
     int from, to;
     uint64 pc_bits,pc_bits_p1,pc_bits_p2, mv_bits;
