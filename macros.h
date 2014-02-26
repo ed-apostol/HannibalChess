@@ -156,15 +156,6 @@ const int MaxNumSplitPointsPerThread = 8;
 #define MaxOneBit(x) (((x) & ((x)-1))==0) 
 #define MinTwoBits(x) ((x) & ((x)-1)) 
 
-#define MoveGenPhaseEvasion 0
-#define MoveGenPhaseStandard (MoveGenPhaseEvasion+3)
-#define MoveGenPhaseQuiescenceAndChecksPV (MoveGenPhaseStandard+7)
-#define MoveGenPhaseQuiescence (MoveGenPhaseQuiescenceAndChecksPV+6)
-#define MoveGenPhaseQuiescenceAndChecks (MoveGenPhaseQuiescence+4)
-#define MoveGenPhaseQuiescencePV (MoveGenPhaseQuiescenceAndChecks+5)
-#define MoveGenPhaseRoot (MoveGenPhaseQuiescencePV+4)
-
-
 #define PV_ASSOC 8
 #define EVAL_ASSOC 1
 #define HASH_ASSOC 4

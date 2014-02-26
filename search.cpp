@@ -465,7 +465,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
 
         if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt)?6:8)) { // IID
             int newdepth = inPvNode(nt) ? depth - 2 : depth / 2;
-            if (ss.hashMove == EMPTY || ss.hashDepth < newdepth) { // TODO: try ss.evalvalue < alpha
+            if (ss.hashMove == EMPTY || ss.hashDepth < newdepth) {
                 int score = searchNode<false, false, false>(pos, alpha, beta, newdepth, ssprev, sthread, nt);
                 if (sthread.stop) return 0;
                 ss.evalvalue = score;
@@ -544,7 +544,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                         if (ss.playedMoves > lateMove && !goodMove) continue;
                         int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(ss.playedMoves,63)]);
                         int scoreAprox = ss.evalvalue + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(ss.playedMoves,63)]
-                        + info.evalgains[historyIndex(pos->side, move->m)];
+                        /*+ info.evalgains[historyIndex(pos->side, move->m)]*/;
 
                         if (scoreAprox < beta) {
                             if (predictedDepth < 8 && !goodMove) continue;
