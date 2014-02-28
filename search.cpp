@@ -276,10 +276,10 @@ int Search::qSearch(position_t *pos, int alpha, int beta, const int depth, Searc
 
     ss.dcc = discoveredCheckCandidates(pos, pos->side);
     if (ssprev.moveGivesCheck) {
-        sortInit(pos, ss.mvlist, pinnedPieces(pos, pos->side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseEvasion, sthread);
+        sortInit(pos, ss, pinnedPieces(pos, pos->side), alpha, depth, MoveGenPhaseEvasion, sthread);
     } else {
-        if (inPv) sortInit(pos, ss.mvlist, pinnedPieces(pos, pos->side), ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_PVCHECK) ? MoveGenPhaseQuiescenceAndChecksPV : MoveGenPhaseQuiescencePV, sthread);
-        else sortInit(pos, ss.mvlist, pinnedPieces(pos, pos->side), ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_CHECK) ? MoveGenPhaseQuiescenceAndChecks : MoveGenPhaseQuiescence, sthread);
+        if (inPv) sortInit(pos, ss, pinnedPieces(pos, pos->side), alpha, depth, (depth > -Q_PVCHECK) ? MoveGenPhaseQuiescenceAndChecksPV : MoveGenPhaseQuiescencePV, sthread);
+        else sortInit(pos, ss, pinnedPieces(pos, pos->side), alpha, depth, (depth > -Q_CHECK) ? MoveGenPhaseQuiescenceAndChecks : MoveGenPhaseQuiescence, sthread);
     }
     bool prunable = !ssprev.moveGivesCheck && !inPv && MinTwoBits(pos->color[pos->side^1] & pos->pawns) && MinTwoBits(pos->color[pos->side^1] & ~(pos->pawns | pos->kings));
     move_t* move;
@@ -496,14 +496,14 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
         if (inRoot) {
             ss = ssprev; // this is correct, ss.mvlist points to the ssprev.mvlist, at the same time, ssprev resets other member vars
             if (!info.mvlist_initialized) {
-                sortInit(pos, ss.mvlist, pinnedPieces(pos, pos->side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseRoot, sthread);
+                sortInit(pos, ss, pinnedPieces(pos, pos->side), alpha, depth, MoveGenPhaseRoot, sthread);
             } else {
                 ss.mvlist->pos = 0;
                 ss.mvlist->phase = MoveGenPhaseRoot + 1;
             }
         } else {
             ss.dcc = discoveredCheckCandidates(pos, pos->side);
-            sortInit(pos, ss.mvlist, pinnedPieces(pos, pos->side), ss.hashMove, alpha, ss.evalvalue, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), sthread);
+            sortInit(pos, ss, pinnedPieces(pos, pos->side), alpha, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), sthread);
             ss.firstExtend = ss.firstExtend || (inCheck && ss.mvlist->size==1);
         }
     }

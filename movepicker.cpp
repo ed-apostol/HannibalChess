@@ -17,23 +17,23 @@
 #include "movepicker.h"
 #include "search.h"
 
-void sortInit(const position_t *pos, movelist_t *mvlist, uint64 pinned, uint32 hashmove, int scout, int eval, int depth, int type, Thread& sthread) {
-    mvlist->transmove =  hashmove;
-    mvlist->killer1 = sthread.ts[pos->ply].killer1;
-    mvlist->killer2 = sthread.ts[pos->ply].killer2;
-    mvlist->evalvalue = eval;
-    mvlist->pos = 0;
-    mvlist->size = 0;
-    mvlist->pinned = pinned;
-    mvlist->scout = scout;
-    mvlist->ply = pos->ply;
-    mvlist->side = pos->side;
-    mvlist->depth = depth;
-    mvlist->phase = type;
-    mvlist->startBad = MAXMOVES;
+void sortInit (const position_t *pos, SearchStack& ss, uint64 pinned, int scout, int depth, int type, Thread& sthread) {
+    ss.mvlist->transmove =  ss.hashMove;
+    ss.mvlist->killer1 = sthread.ts[pos->ply].killer1;
+    ss.mvlist->killer2 = sthread.ts[pos->ply].killer2;
+    ss.mvlist->evalvalue = ss.evalvalue;
+    ss.mvlist->pos = 0;
+    ss.mvlist->size = 0;
+    ss.mvlist->pinned = pinned;
+    ss.mvlist->scout = scout;
+    ss.mvlist->ply = pos->ply;
+    ss.mvlist->side = pos->side;
+    ss.mvlist->depth = depth;
+    ss.mvlist->phase = type;
+    ss.mvlist->startBad = MAXMOVES;
 }
 
-move_t* getMove(movelist_t *mvlist) {
+move_t* getMove (movelist_t *mvlist) {
     move_t *best, *temp, *start, *end;
 
     ASSERT(mvlist != NULL);
@@ -51,18 +51,18 @@ move_t* getMove(movelist_t *mvlist) {
     *best = *temp;
     return start;
 }
-inline int scoreNonTactical(uint32 side, uint32 move) {
+inline int scoreNonTactical (uint32 side, uint32 move) {
     int score = SearchManager.info.history[historyIndex(side,move)];
     return score;
 }
-bool moveIsPassedPawn(const position_t * pos, uint32 move) {
+bool moveIsPassedPawn (const position_t * pos, uint32 move) {
     if (movePiece(move) == PAWN && !((*FillPtr[pos->side])(BitMask[moveTo(move)]) & pos->pawns)) {
         if (!(pos->pawns & pos->color[pos->side^1] & PassedMask[pos->side][moveTo(move)])) return true;
     }
     return false;
 }
 
-uint32 captureIsGood(const position_t *pos, const basic_move_t m) {
+uint32 captureIsGood (const position_t *pos, const basic_move_t m) {
     uint32 prom = movePromote(m);
     uint32 capt = moveCapture(m);
     uint32 pc = movePiece(m);
@@ -83,7 +83,7 @@ uint32 captureIsGood(const position_t *pos, const basic_move_t m) {
 }
 
 
-void scoreCapturesPure(movelist_t *mvlist) {
+void scoreCapturesPure (movelist_t *mvlist) {
     move_t *m;
 
     ASSERT(mvlist != NULL);
@@ -93,7 +93,7 @@ void scoreCapturesPure(movelist_t *mvlist) {
     }
 }
 
-void scoreCaptures(movelist_t *mvlist) {
+void scoreCaptures (movelist_t *mvlist) {
     move_t *m;
 
     ASSERT(mvlist != NULL);
@@ -104,7 +104,7 @@ void scoreCaptures(movelist_t *mvlist) {
     }
 }
 
-void scoreNonCaptures(const position_t *pos, movelist_t *mvlist) {
+void scoreNonCaptures (const position_t *pos, movelist_t *mvlist) {
     move_t *m;
 
     ASSERT(mvlist != NULL);
@@ -114,7 +114,7 @@ void scoreNonCaptures(const position_t *pos, movelist_t *mvlist) {
     }
 }
 
-void scoreAll(const position_t *pos, movelist_t *mvlist) {
+void scoreAll (const position_t *pos, movelist_t *mvlist) {
     move_t *m;
 
     ASSERT(pos != NULL);
@@ -135,7 +135,7 @@ void scoreAll(const position_t *pos, movelist_t *mvlist) {
     }
 }
 
-void scoreAllQ(movelist_t *mvlist) {
+void scoreAllQ (movelist_t *mvlist) {
     move_t *m;
 
     ASSERT(mvlist != NULL);
@@ -146,7 +146,7 @@ void scoreAllQ(movelist_t *mvlist) {
     }
 }
 
-void scoreRoot(movelist_t *mvlist) {
+void scoreRoot (movelist_t *mvlist) {
     move_t *m;
 
     ASSERT(mvlist != NULL);
@@ -158,7 +158,7 @@ void scoreRoot(movelist_t *mvlist) {
     }
 }
 
-move_t* sortNext(SplitPoint* sp, position_t *pos, SearchStack& ss, int thread_id) {
+move_t* sortNext (SplitPoint* sp, position_t *pos, SearchStack& ss, int thread_id) {
     move_t* move;
     if (sp != NULL) sp->movelistlock->lock();
     ss.mvlist_phase = ss.mvlist->phase;
@@ -220,7 +220,7 @@ move_t* sortNext(SplitPoint* sp, position_t *pos, SearchStack& ss, int thread_id
                 break;
             case PH_GAINING:
                 if (move->m == ss.mvlist->transmove) continue;
-                if (moveIsCheck(pos, move->m, discoveredCheckCandidates(pos, pos->side))) continue;
+                if (moveIsCheck(pos, move->m, ss.dcc)) continue;
                 if (!moveIsLegal(pos, move->m, ss.mvlist->pinned, false)) continue;
                 break;
             default:
