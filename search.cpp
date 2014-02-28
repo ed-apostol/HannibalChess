@@ -283,7 +283,7 @@ int Search::qSearch(position_t *pos, int alpha, int beta, const int depth, Searc
     }
     bool prunable = !ssprev.moveGivesCheck && !inPv && MinTwoBits(pos->color[pos->side^1] & pos->pawns) && MinTwoBits(pos->color[pos->side^1] & ~(pos->pawns | pos->kings));
     move_t* move;
-    while ((move = sortNext(NULL, pos, ss.mvlist, ss.mvlist_phase, sthread.thread_id)) != NULL) {
+    while ((move = sortNext(NULL, pos, ss, sthread.thread_id)) != NULL) {
         int score;
         if (anyRepNoMove(pos, move->m)) { 
             score = DrawValue[pos->side];
@@ -510,7 +510,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
 
     int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 4) : (depth * depth));
     move_t* move;
-    while ((move = sortNext(sp, pos, ss.mvlist, ss.mvlist_phase, sthread.thread_id)) != NULL) {
+    while ((move = sortNext(sp, pos, ss, sthread.thread_id)) != NULL) {
         int score = -INF;
         if (inSingular && move->m == ssprev.bannedMove) continue;
         if (inSplitPoint) {
