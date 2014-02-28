@@ -186,9 +186,6 @@ move_t* sortNext(SplitPoint* sp, position_t *pos, movelist_t *mvlist, int& phase
                 break;
             case PH_ALL_CAPTURES:
                 if (move->m == mvlist->transmove) continue;
-            case PH_ALL_CAPTURES_PURE:
-                if (!moveIsLegal(pos, move->m, mvlist->pinned, false)) continue;
-                break;
             case PH_GOOD_CAPTURES:
                 if (move->m == mvlist->transmove) continue;
                 if (!captureIsGood(pos, move->m)) {
@@ -210,12 +207,6 @@ move_t* sortNext(SplitPoint* sp, position_t *pos, movelist_t *mvlist, int& phase
                 if (!genMoveIfLegal(pos, move->m, mvlist->pinned)) continue;
                 break;
             case PH_QUIET_MOVES:
-                if (move->m == mvlist->transmove) continue;
-                if (move->m == mvlist->killer1) continue;
-                if (move->m == mvlist->killer2) continue;
-                if (!moveIsLegal(pos, move->m, mvlist->pinned, false)) continue;
-                break;
-            case PH_NONTACTICAL_CHECKS:
                 if (move->m == mvlist->transmove) continue;
                 if (move->m == mvlist->killer1) continue;
                 if (move->m == mvlist->killer2) continue;
@@ -270,7 +261,6 @@ move_t* sortNext(SplitPoint* sp, position_t *pos, movelist_t *mvlist, int& phase
             }
             break;
         case PH_ALL_CAPTURES:
-        case PH_ALL_CAPTURES_PURE:
             genCaptures(pos, mvlist);
             scoreCapturesPure(mvlist);
             break;
@@ -301,7 +291,6 @@ move_t* sortNext(SplitPoint* sp, position_t *pos, movelist_t *mvlist, int& phase
             genNonCaptures(pos, mvlist);
             scoreNonCaptures(pos, mvlist);
             break;
-        case PH_NONTACTICAL_CHECKS:
         case PH_NONTACTICAL_CHECKS_WIN:
         case PH_NONTACTICAL_CHECKS_PURE:
             genQChecks(pos, mvlist);
