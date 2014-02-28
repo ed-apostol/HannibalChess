@@ -27,6 +27,7 @@ void initOption(uci_option_t* opt) {
     //TODO add hash size option
     opt->contempt = 0;
     opt->time_buffer = 1000;
+    opt->multipv = 1;
     opt->min_split_depth = MIN_SPLIT_DEPTH;
     opt->max_threads_per_split = MAX_THREADS_PER_SPLIT;
     opt->max_activesplits_per_thread = MAX_ACTIVE_SPLITS;
@@ -45,9 +46,10 @@ void initOption(uci_option_t* opt) {
 void uciStart(void) {
     Print(3, "id name Hannibal %s\n", VERSION);
     Print(3, "id author Sam Hamilton & Edsel Apostol\n");
-    Print(3, "option name Hash type spin min 1 max 16384 default %d\n", INIT_HASH);
-    Print(3, "option name Pawn Hash type spin min 1 max 128 default %d\n", INIT_PAWN);
+    Print(3, "option name Hash type spin min 1 max 65536 default %d\n", INIT_HASH);
+    Print(3, "option name Pawn Hash type spin min 1 max 1024 default %d\n", INIT_PAWN);
     Print(3, "option name Eval Cache type spin min 1 max 1024 default %d\n", INIT_EVAL);
+    Print(3, "option name MultiPV type spin min 1 max 100 default 1\n");
     Print(3, "option name Clear Hash type button\n");
     Print(3, "option name Ponder type check default false\n");
 #ifndef TCEC
@@ -145,6 +147,8 @@ void uciSetOption(char string[]) {
         Guci_options.max_threads_per_split = atoi(value);
     } else if (!memcmp(name,"Max Active Splits/Thread",24)) {
         Guci_options.max_activesplits_per_thread = atoi(value);
+    } else if (!memcmp(name,"MultiPV",7)) {
+        Guci_options.multipv = atoi(value);
     }
 }
 

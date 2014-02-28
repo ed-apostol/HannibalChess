@@ -74,7 +74,6 @@ public:
     template<bool inRoot, bool inSplitPoint, bool inCheck, bool inSingular>
     int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt);
     void extractPvMovesFromHash(position_t *pos, continuation_t* pv, basic_move_t move, bool execMove);
-    void repopulateHash(position_t *pos, continuation_t *rootPV);
     void timeManagement(int depth, Thread& sthread);
 private:
     Search();
@@ -588,7 +587,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
             ss.bestvalue = inSplitPoint ? sp->bestvalue = score : score;
             if (inRoot) {
                 info.best_value = ss.bestvalue;
-                extractPvMovesFromHash(pos, &info.rootPV, move->m, true);
+                ssprev.counterMove = move->m;
                 if (info.iteration > 1 && info.bestmove != move->m) info.change = 1;
             }
             if (ss.bestvalue > (inSplitPoint ? sp->alpha : alpha)) {
@@ -688,22 +687,6 @@ void Search::extractPvMovesFromHash(position_t *pos, continuation_t* pv, basic_m
     }
     for (ply = ply-1; ply >= 0; --ply) {
         unmakeMove(pos, &(undo[ply]));
-    }
-}
-
-void Search::repopulateHash(position_t *pos, continuation_t *rootPV) {
-    int moveOn;
-    pos_store_t undo[MAXPLY];
-    for (moveOn=0; moveOn+1 <= rootPV->length; moveOn++) {
-        basic_move_t move = rootPV->moves[moveOn];
-        if (!move) break;
-        PvHashEntry* entry = PVHashTable.pvEntryFromMove(pos->posStore.hash, move);
-        if (NULL == entry) break;
-        TransTable.StoreExact(pos->posStore.hash, entry->pvMove(), entry->pvDepth(), entry->pvScore());
-        makeMove(pos, &(undo[moveOn]), move);
-    }
-    for (moveOn = moveOn-1; moveOn >= 0; moveOn--) {
-        unmakeMove(pos, &(undo[moveOn]));
     }
 }
 
@@ -866,10 +849,10 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
             search->searchNode<true, false, false>(pos, alpha, beta, id, ss, sthread, PVNode);
 
             if (!sthread.stop || info.best_value != -INF) {
-                if (SHOW_SEARCH && id >= 8)
+                if (SHOW_SEARCH && id >= 8) {
+                    search->extractPvMovesFromHash(pos, &info.rootPV, ss.counterMove, true);
                     search->displayPV(pos, &info.rootPV, id, alpha, beta, info.best_value);
-                if (info.best_value > alpha && info.best_value < beta)
-                    search->repopulateHash(pos, &info.rootPV);
+                }
             }
             if (info.thinking_status == STOPPED) break;
             if (info.best_value <= alpha) {

@@ -208,6 +208,7 @@ struct book_t {
 struct uci_option_t{ // TODO: move this to uci file
     int time_buffer;
     int contempt;
+    int multipv;
 #ifndef TCEC
     int try_book;
     int book_limit;
