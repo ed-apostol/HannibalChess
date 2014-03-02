@@ -367,6 +367,18 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
         beta = MIN(INF - pos->ply - 1, beta);
         if (alpha >= beta) return alpha;
 
+        PvHashEntry* pventry;
+        if (inPvNode(nt) && (pventry = PVHashTable.pvEntry(pos->posStore.hash)) != NULL) {
+            if (pventry->pvDepth() > ss.hashDepth && pventry->pvMove() != EMPTY) {
+                ss.hashMove = pventry->pvMove();
+                ss.hashDepth = pventry->pvDepth();
+            }
+            if (pventry->pvDepth() > evalDepth) {
+                evalDepth = pventry->pvDepth();
+                ss.evalvalue = scoreFromTrans(pventry->pvScore(), pos->ply);
+            }
+        }
+
         for (TransEntry * entry = TransTable.Entry(pos->posStore.hash); t < HASH_ASSOC; t++, entry++) {
             if (entry->HashLock() == LOCK(pos->posStore.hash)) {
                 entry->SetAge(TransTable.Date());
@@ -374,23 +386,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                     if (inCheck) return -INF + pos->ply;
                     else return DrawValue[pos->side];
                 }
-                if (inPvNode(nt)) { 
-                    PvHashEntry* pventry = PVHashTable.pvEntry(pos->posStore.hash);
-                    if (pventry != NULL) {
-                        if (pventry->pvDepth() >= depth && pventry->pvMove() != EMPTY) {
-                            ssprev.counterMove = pventry->pvMove();
-                            //return scoreFromTrans(pventry->pvScore(), pos->ply);
-                        }
-                        if (pventry->pvDepth() >= ss.hashDepth && pventry->pvMove() != EMPTY) {
-                            ss.hashMove = pventry->pvMove();
-                            ss.hashDepth = pventry->pvDepth();
-                        }
-                        if (pventry->pvDepth() > evalDepth) {
-                            evalDepth = pventry->pvDepth();
-                            ss.evalvalue = scoreFromTrans(pventry->pvScore(), pos->ply);
-                        }
-                    }
-                } else {
+                if (!inPvNode(nt)) {
                     if ((!inCutNode(nt) || !(entry->Mask() & MAllLower)) && entry->LowerDepth() >= depth && (entry->Move() != EMPTY || pos->posStore.lastmove == EMPTY)) {
                         int score = scoreFromTrans(entry->LowerValue(), pos->ply);
                         ASSERT(valueIsOk(score));
