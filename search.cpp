@@ -379,7 +379,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                     if (pventry != NULL) {
                         if (pventry->pvDepth() >= depth && pventry->pvMove() != EMPTY) {
                             ssprev.counterMove = pventry->pvMove();
-                            return scoreFromTrans(pventry->pvScore(), pos->ply);
+                            //return scoreFromTrans(pventry->pvScore(), pos->ply);
                         }
                         if (pventry->pvDepth() >= ss.hashDepth && pventry->pvMove() != EMPTY) {
                             ss.hashMove = pventry->pvMove();
@@ -419,14 +419,14 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                 }
             }
         }
-        if (ss.evalvalue == -INF) ss.evalvalue = eval(pos, sthread.thread_id, &pes);
+        if (ss.evalvalue == -INF) ss.evalvalue = eval(pos, sthread.thread_id, &pes);// TODO: add eval depth = 0 here
 
         if (pos->ply >= MAXPLY-1) return ss.evalvalue;
         updateEvalgains(pos, pos->posStore.lastmove, ssprev.evalvalue, ss.evalvalue, sthread);
 
         if (!inPvNode(nt) && !inCheck) {
             const int MaxRazorDepth = 10;
-            int rvalue;
+            int rvalue; // TODO: use eval depth to reduce depth to index FutMarTab
             if (depth < MaxRazorDepth && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) 
                 && ss.evalvalue > (rvalue = beta + FutilityMarginTable[MIN(depth, MaxRazorDepth)][MIN(ssprev.playedMoves,63)])) {
                     return rvalue; 
@@ -545,18 +545,18 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                     bool goodMove = (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsPassedPawn(pos, move->m); // add countermove here
                     if (!inRoot && !inPvNode(nt)) {
                         if (ss.playedMoves > lateMove && !goodMove) continue;
-                        int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(ss.playedMoves,63)]);
-                        int scoreAprox = ss.evalvalue + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(ss.playedMoves,63)]
-                        /*+ info.evalgains[historyIndex(pos->side, move->m)]*/;
+                        //int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(ss.playedMoves,63)]);
+                        //int scoreAprox = ss.evalvalue + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(ss.playedMoves,63)]
+                        ///*+ info.evalgains[historyIndex(pos->side, move->m)]*/;
 
-                        if (scoreAprox < beta) {
-                            if (predictedDepth < 8 && !goodMove) continue;
-                            fullReduction++;
-                        }
-                        if (swap(pos, move->m) < 0) {
-                            if (predictedDepth < 2) continue;
-                            fullReduction++; 
-                        }
+                        //if (scoreAprox < beta) {
+                        //    if (predictedDepth < 8 && !goodMove) continue;
+                        //    fullReduction++;
+                        //}
+                        //if (swap(pos, move->m) < 0) {
+                        //    if (predictedDepth < 2) continue;
+                        //    fullReduction++; 
+                        //}
                     }
                     if (depth >= MIN_REDUCTION_DEPTH) { 
                         int reduction = ReductionTable[(inPvNode(nt)?0:1)][MIN(depth,63)][MIN(ss.playedMoves,63)];
