@@ -36,6 +36,7 @@ struct SearchInfo{
         bestmove = 0;
         pondermove = 0;
         mate_found = 0;
+        multipvIdx = 0;
 
         memset(history, 0, sizeof(history)); //TODO this is bad to share with learning
         memset(evalgains, 0, sizeof(evalgains)); //TODO this is bad to share with learning
@@ -67,6 +68,7 @@ struct SearchInfo{
     int iteration;
 
     int lastDepthSearched;
+    int multipvIdx;
 
     int legalmoves;
     basic_move_t bestmove;

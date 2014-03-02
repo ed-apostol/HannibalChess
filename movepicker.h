@@ -13,3 +13,4 @@
 extern void sortInit (const position_t *pos, SearchStack& ss, uint64 pinned, int scout, int depth, int type, Thread& sthread);
 extern move_t* sortNext (SplitPoint* sp, position_t *pos, SearchStack& ss, int thread_id);
 extern bool moveIsPassedPawn (const position_t * pos, uint32 move);
+extern move_t* getMove (movelist_t *mvlist);

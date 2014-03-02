@@ -44,6 +44,7 @@
 #define INIT_PAWN 4
 #define INIT_HASH 64
 #define INIT_PVHASH 1
+#define INIT_MULTIPV 1
 
 #else
 #define INIT_EVAL 64

@@ -63,7 +63,7 @@ public:
     {}
     void initNode(position_t *pos, Thread& sthread) ;
     int simpleStalemate(const position_t *pos);
-    void displayPV(const position_t *pos, continuation_t *pv, int depth, int alpha, int beta, int score);
+    void displayPV(const position_t *pos, continuation_t *pv, int multipvIdx, int depth, int alpha, int beta, int score);
     bool prevMoveAllowsThreat(const position_t* pos, basic_move_t first, basic_move_t second);
     bool moveRefutesThreat(const position_t* pos, basic_move_t first, basic_move_t second);
     void updateEvalgains(const position_t *pos, uint32 move, int before, int after, Thread& sthread);
@@ -144,7 +144,7 @@ int Search::simpleStalemate(const position_t *pos) {
     return true;
 }
 
-void Search::displayPV(const position_t *pos, continuation_t *pv, int depth, int alpha, int beta, int score) {
+void Search::displayPV(const position_t *pos, continuation_t *pv, int multipvIdx, int depth, int alpha, int beta, int score) {
     uint64 time;
     uint64 sum_nodes = 0;
 
@@ -171,6 +171,7 @@ void Search::displayPV(const position_t *pos, continuation_t *pv, int depth, int
     Print(1, "nodes %llu ", sum_nodes);
     Print(1, "hashfull %d ", (TransTable.Used()*1000)/TransTable.HashSize());
     if (time > 10) Print(1, "nps %llu ", (sum_nodes*1000)/(time));
+    if (multipvIdx > 0) Print(1, "multipv %d ", multipvIdx+1);
     Print(1, "pv ");
     for (int i = 0; i < pv->length; i++) printf("%s ", move2Str(pv->moves[i]));
     Print(1, "\n");
@@ -497,7 +498,10 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
             if (!info.mvlist_initialized) {
                 sortInit(pos, ss, pinnedPieces(pos, pos->side), alpha, depth, MoveGenPhaseRoot, sthread);
             } else {
-                ss.mvlist->pos = 0;
+                if (info.multipvIdx > 0) {
+                    ss.mvlist->pos = info.multipvIdx - 1;
+                    move_t* dummy = getMove (ss.mvlist);
+                } else ss.mvlist->pos = 0;
                 ss.mvlist->phase = MoveGenPhaseRoot + 1;
             }
         } else {
@@ -794,7 +798,7 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
                 search->extractPvMovesFromHash(pos, &info.rootPV, entry->pvMove(), true);
                 if (info.rootPV.length > 1) info.pondermove = info.rootPV.moves[1];
                 else info.pondermove = 0;
-                search->displayPV(pos, &info.rootPV, entry->pvDepth(), -INF, INF, info.best_value);
+                search->displayPV(pos, &info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
                 ThreadsMgr.SetAllThreadsToStop();
                 sendBestMove();
                 return;
@@ -835,39 +839,42 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
         info.best_value = -INF;
         info.change = 0;
         info.research = 0;
-        if (id < 6) {
-            alpha = -INF;
-            beta = INF;
-        } else {
-            alpha = info.last_value-AspirationWindow;
-            beta = info.last_value+AspirationWindow;
-            if (alpha < -RookValue) alpha = -INF;
-            if (beta > RookValue) beta = INF;
-        }
-        while (true) {
-
-            search->searchNode<true, false, false>(pos, alpha, beta, id, ss, sthread, PVNode);
-
-            if (!sthread.stop || info.best_value != -INF) {
-                if (SHOW_SEARCH && id >= 8) {
-                    search->extractPvMovesFromHash(pos, &info.rootPV, ss.counterMove, true);
-                    search->displayPV(pos, &info.rootPV, id, alpha, beta, info.best_value);
-                }
-            }
-            if (info.thinking_status == STOPPED) break;
-            if (info.best_value <= alpha) {
-                if (info.best_value <= alpha) alpha = info.best_value-(AspirationWindow<<++faillow);
+        for (info.multipvIdx = 0; info.multipvIdx < Guci_options.multipv; ++info.multipvIdx) {
+            if (id < 6) {
+                alpha = -INF;
+                beta = INF;
+            } else {
+                alpha = info.last_value-AspirationWindow;
+                beta = info.last_value+AspirationWindow;
                 if (alpha < -RookValue) alpha = -INF;
-                info.research = 1;
-            } else if(info.best_value >= beta) {
-                if (info.best_value >= beta)  beta = info.best_value+(AspirationWindow<<++failhigh);
                 if (beta > RookValue) beta = INF;
-                info.research = 1;
-            } else break;
+            }
+            while (true) {
+
+                search->searchNode<true, false, false>(pos, alpha, beta, id, ss, sthread, PVNode);
+
+                if (!sthread.stop || info.best_value != -INF) {
+                    if (SHOW_SEARCH && id >= 8) {
+                        search->extractPvMovesFromHash(pos, &info.rootPV, ss.counterMove, true);
+                        search->displayPV(pos, &info.rootPV, info.multipvIdx, id, alpha, beta, info.best_value);
+                    }
+                }
+                if (info.thinking_status == STOPPED) break;
+                if (info.best_value <= alpha) {
+                    if (info.best_value <= alpha) alpha = info.best_value-(AspirationWindow<<++faillow);
+                    if (alpha < -RookValue) alpha = -INF;
+                    info.research = 1;
+                } else if(info.best_value >= beta) {
+                    if (info.best_value >= beta)  beta = info.best_value+(AspirationWindow<<++failhigh);
+                    if (beta > RookValue) beta = INF;
+                    info.research = 1;
+                } else break;
+            }
+            if (info.thinking_status == STOPPED) break; // TODO: refactor this
         }
-        if (info.thinking_status == STOPPED) break;
+        if (info.thinking_status == STOPPED) break; // TODO: refactor this
         search->timeManagement(id, sthread);
-        if (info.thinking_status == STOPPED) break;
+        if (info.thinking_status == STOPPED) break; // TODO: refactor this
         if (info.best_value != -INF) {
             info.last_last_value = info.last_value;
             info.last_value = info.best_value;
