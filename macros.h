@@ -174,13 +174,13 @@ const int MaxNumSplitPointsPerThread = 8;
 
 //#define REDUCE_MIN 1.57
 //#define REDUCE_SCALE 3.87 
-#define REDUCE_MIN 0.33
-#define REDUCE_SCALE 2.25 
+#define REDUCE_MIN 1.5
+#define REDUCE_SCALE 2.5 
 
 //#define PV_REDUCE_MIN 0.57 
 //#define PV_REDUCE_SCALE 7.58 
-#define PV_REDUCE_MIN 0.0
-#define PV_REDUCE_SCALE 3.0
+#define PV_REDUCE_MIN 0.5
+#define PV_REDUCE_SCALE 7.5
 
 //      double    pvRed = log(double(hd)) * log(double(mc)) / 3.0;
 //      double nonPVRed = 0.33 + log(double(hd)) * log(double(mc)) / 2.25;

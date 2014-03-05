@@ -13,7 +13,6 @@
 #include "macros.h"
 #include "init.h"
 #include "bitutils.h"
-#include "utils.h"
 
 
 int mpawn(int sq) {
@@ -494,8 +493,8 @@ void initArr(void) {
             n = (int) (REDUCE_MIN + log((double)j) * log((double)k) / REDUCE_SCALE);
             ReductionTable[0][j][k] = ((m >= 1) ? m : 0);
             ReductionTable[1][j][k] = ((n >= 1) ? n : 0);
-            //Print(2, "ReductionTable[PV][%d][%d] = %d\n", j, k, ReductionTable[0][j][k]);
-            //Print(2, "ReductionTable[NonPV][%d][%d] = %d\n", j, k, ReductionTable[1][j][k]);
+            // Print(2, "ReductionTable[PV][%d][%d] = %d\n", j, k, ReductionTable[0][j][k]);
+            // Print(2, "ReductionTable[NonPV][%d][%d] = %d\n", j, k, ReductionTable[1][j][k]);
         }
     }
     /*

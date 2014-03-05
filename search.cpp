@@ -32,7 +32,7 @@
 #define EXTEND_ONLY 0 // 3 means quiesc, pv and non-pv, 2 means both pv and non-pv, 1 means only pv (0-3)
 #define Q_CHECK 1 // implies 1 check 
 #define Q_PVCHECK 2 // implies 2 checks
-#define MIN_REDUCTION_DEPTH 3 // default is false
+#define MIN_REDUCTION_DEPTH 4 // default is false
 
 #define WORSE_TIME_BONUS 20 //how many points more than 20 it takes to increase time by alloc to a maximum of 2*alloc
 #define CHANGE_TIME_BONUS 50 //what percentage of alloc to increase if the last move is a change move
@@ -421,13 +421,13 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
         updateEvalgains(pos, pos->posStore.lastmove, ssprev.evalvalue, ss.evalvalue, sthread);
 
         if (!inPvNode(nt) && !inCheck) {
-            const int MaxRazorDepth = 9;
+            const int MaxRazorDepth = 10;
             int rvalue; // TODO: use eval depth to reduce depth to index FutMarTab
-            if (depth <= MaxRazorDepth && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) 
+            if (depth < MaxRazorDepth && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) 
                 && ss.evalvalue > (rvalue = beta + FutilityMarginTable[MIN(depth, MaxRazorDepth)][MIN(ssprev.playedMoves,63)])) {
                     return rvalue; 
             }
-            if (depth <= MaxRazorDepth && pos->posStore.lastmove != EMPTY
+            if (depth < MaxRazorDepth && pos->posStore.lastmove != EMPTY 
                 && ss.evalvalue < (rvalue = beta - FutilityMarginTable[MIN(depth, MaxRazorDepth)][MIN(ssprev.playedMoves,63)])) { 
                     int score = searchNode<false, false, false>(pos, rvalue-1, rvalue, 0, ssprev, sthread, nt);
                     if (score < rvalue) return score; 
@@ -437,7 +437,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                 int nullDepth = depth - (4 + depth/5 + (ss.evalvalue - beta > PawnValue)); // TODO: test (eval-beta)/PawnVal here
                 makeNullMove(pos, &undo);
                 ++sthread.nodes;
-                int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, sthread, invertNode(nt));
+                int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, sthread, AllNode);
                 ss.threatMove = ss.counterMove;
                 unmakeNullMove(pos, &undo);
                 if (sthread.stop) return 0;
@@ -507,7 +507,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
         }
     }
 
-    int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 3) : (depth * depth) / 3);
+    int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 4) : (depth * depth));
     move_t* move;
     while ((move = sortNext(sp, pos, ss, sthread.thread_id)) != NULL) {
         int score = -INF;
@@ -541,6 +541,18 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                     bool goodMove = (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsPassedPawn(pos, move->m); // add countermove here
                     if (!inRoot && !inPvNode(nt)) {
                         if (ss.playedMoves > lateMove && !goodMove) continue;
+                        //int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(ss.playedMoves,63)]);
+                        //int scoreAprox = ss.evalvalue + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(ss.playedMoves,63)]
+                        ///*+ info.evalgains[historyIndex(pos->side, move->m)]*/;
+
+                        //if (scoreAprox < beta) {
+                        //    if (predictedDepth < 8 && !goodMove) continue;
+                        //    fullReduction++;
+                        //}
+                        //if (swap(pos, move->m) < 0) {
+                        //    if (predictedDepth < 2) continue;
+                        //    fullReduction++; 
+                        //}
                     }
                     if (depth >= MIN_REDUCTION_DEPTH) { 
                         int reduction = ReductionTable[(inPvNode(nt)?0:1)][MIN(depth,63)][MIN(ss.playedMoves,63)];
@@ -554,10 +566,10 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                 if (inSplitPoint) alpha = sp->alpha;
                 ss.reducedMove = (newdepthclone < newdepth);
 
-                score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepthclone, ss, sthread, inCutNode(nt)?AllNode:CutNode);
+                score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepthclone, ss, sthread, CutNode);
                 if (ss.reducedMove && score > alpha) {
                     ss.reducedMove = false;
-                    score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepth, ss, sthread, inCutNode(nt)?AllNode:CutNode);
+                    score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepth, ss, sthread, AllNode);
                 }
                 if (inPvNode(nt) && score > alpha) {
                     if (inRoot) info.research = 1;
