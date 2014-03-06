@@ -236,7 +236,7 @@ int Search::qSearch(position_t *pos, int alpha, int beta, const int depth, Searc
     if (sthread.stop) return 0;
 
     int t = 0;
-    for (TransEntry* entry = TransTable.Entry(pos->posStore.hash); t < HASH_ASSOC; t++, entry++) {
+    for (TransEntry* entry = TransTable.Entry(pos->posStore.hash); t < TransTable.BucketSize(); t++, entry++) {
         if (entry->HashLock() == LOCK(pos->posStore.hash)) {
             entry->SetAge(TransTable.Date());
             if (!inPv) { // TODO: re-use values from here to evalvalue?
@@ -379,7 +379,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
             }
         }
 
-        for (TransEntry * entry = TransTable.Entry(pos->posStore.hash); t < HASH_ASSOC; t++, entry++) {
+        for (TransEntry * entry = TransTable.Entry(pos->posStore.hash); t < TransTable.BucketSize(); t++, entry++) {
             if (entry->HashLock() == LOCK(pos->posStore.hash)) {
                 entry->SetAge(TransTable.Date());
                 if (entry->Mask() & MNoMoves) {
@@ -389,7 +389,6 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                 if (!inPvNode(nt)) {
                     if ((!inCutNode(nt) || !(entry->Mask() & MAllLower)) && entry->LowerDepth() >= depth && (entry->Move() != EMPTY || pos->posStore.lastmove == EMPTY)) {
                         int score = scoreFromTrans(entry->LowerValue(), pos->ply);
-                        ASSERT(valueIsOk(score));
                         if (score > alpha) {
                             ssprev.counterMove = entry->Move();
                             return score;
@@ -421,13 +420,13 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
         updateEvalgains(pos, pos->posStore.lastmove, ssprev.evalvalue, ss.evalvalue, sthread);
 
         if (!inPvNode(nt) && !inCheck) {
-            const int MaxRazorDepth = 10;
+            const int MaxRazorDepth = 9;
             int rvalue; // TODO: use eval depth to reduce depth to index FutMarTab
-            if (depth < MaxRazorDepth && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) 
+            if (depth <= MaxRazorDepth && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) 
                 && ss.evalvalue > (rvalue = beta + FutilityMarginTable[MIN(depth, MaxRazorDepth)][MIN(ssprev.playedMoves,63)])) {
                     return rvalue; 
             }
-            if (depth < MaxRazorDepth && pos->posStore.lastmove != EMPTY 
+            if (depth <= MaxRazorDepth && pos->posStore.lastmove != EMPTY 
                 && ss.evalvalue < (rvalue = beta - FutilityMarginTable[MIN(depth, MaxRazorDepth)][MIN(ssprev.playedMoves,63)])) { 
                     int score = searchNode<false, false, false>(pos, rvalue-1, rvalue, 0, ssprev, sthread, nt);
                     if (score < rvalue) return score; 

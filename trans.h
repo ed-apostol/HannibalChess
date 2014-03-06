@@ -38,6 +38,7 @@ public:
         }
     }
     uint64 HashSize() const { return m_Size; }
+    uint64 BucketSize() const { return m_BucketSize; }
 protected:
     Entity* m_pTable;
     uint64 m_Size;
