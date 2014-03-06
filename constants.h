@@ -706,8 +706,8 @@ const int ROffset[64] = {
 #define MoveGenPhaseEvasion 0
 #define MoveGenPhaseStandard (MoveGenPhaseEvasion+3)
 #define MoveGenPhaseQuiescenceAndChecksPV (MoveGenPhaseStandard+7)
-//#define MoveGenPhaseQuiescence (MoveGenPhaseQuiescenceAndChecksPV+6)
-#define MoveGenPhaseQuiescence (MoveGenPhaseQuiescenceAndChecksPV+5)
+#define MoveGenPhaseQuiescence (MoveGenPhaseQuiescenceAndChecksPV+6)
+//#define MoveGenPhaseQuiescence (MoveGenPhaseQuiescenceAndChecksPV+5)
 #define MoveGenPhaseQuiescenceAndChecks (MoveGenPhaseQuiescence+4)
 #define MoveGenPhaseQuiescencePV (MoveGenPhaseQuiescenceAndChecks+5)
 #define MoveGenPhaseRoot (MoveGenPhaseQuiescencePV+4)
@@ -715,7 +715,7 @@ const int ROffset[64] = {
 const int MoveGenPhase[] = {
     PH_NONE, PH_EVASION, PH_END, //MoveGenPhaseEvasion
     PH_NONE, PH_TRANS, PH_GOOD_CAPTURES, PH_KILLER_MOVES, PH_QUIET_MOVES, PH_BAD_CAPTURES, PH_END, //MoveGenPhaseStandard
-    PH_NONE, PH_TRANS, PH_ALL_CAPTURES, PH_NONTACTICAL_CHECKS_PURE, /*PH_GAINING,*/ PH_END, //MoveGenPhaseQuiescenceAndChecksPV
+    PH_NONE, PH_TRANS, PH_ALL_CAPTURES, PH_NONTACTICAL_CHECKS_PURE, PH_GAINING, PH_END, //MoveGenPhaseQuiescenceAndChecksPV
     PH_NONE, PH_TRANS, PH_GOOD_CAPTURES_PURE, PH_END, //MoveGenPhaseQuiescence
     PH_NONE, PH_TRANS, PH_GOOD_CAPTURES_PURE, PH_NONTACTICAL_CHECKS_WIN, PH_END, //MoveGenPhaseQuiescenceAndChecks
     PH_NONE, PH_TRANS, PH_GOOD_CAPTURES_PURE, PH_END, //MoveGenPhaseQuiescencePV

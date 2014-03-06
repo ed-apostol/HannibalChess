@@ -437,7 +437,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                 int nullDepth = depth - (4 + depth/5 + (ss.evalvalue - beta > PawnValue)); // TODO: test (eval-beta)/PawnVal here
                 makeNullMove(pos, &undo);
                 ++sthread.nodes;
-                int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, sthread, AllNode);
+                int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, sthread, invertNode(nt));
                 ss.threatMove = ss.counterMove;
                 unmakeNullMove(pos, &undo);
                 if (sthread.stop) return 0;
@@ -537,28 +537,29 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                 //only reduce or prune some types of moves
                 int partialReduction = 0;
                 int fullReduction = 0;
-                if (MoveGenPhase[ss.mvlist_phase] == PH_QUIET_MOVES && !ss.moveGivesCheck) { //never happens when in check
-                    bool goodMove = (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsPassedPawn(pos, move->m); // add countermove here
+                if (MoveGenPhase[ss.mvlist_phase] == PH_QUIET_MOVES && !ss.moveGivesCheck) {
+                    bool goodMove = (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsPassedPawn(pos, move->m);
                     if (!inRoot && !inPvNode(nt)) {
                         if (ss.playedMoves > lateMove && !goodMove) continue;
-                        //int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(ss.playedMoves,63)]);
-                        //int scoreAprox = ss.evalvalue + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(ss.playedMoves,63)]
-                        ///*+ info.evalgains[historyIndex(pos->side, move->m)]*/;
+                        int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(ss.playedMoves,63)]);
+                        int scoreAprox = ss.evalvalue + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(ss.playedMoves,63)];
 
-                        //if (scoreAprox < beta) {
-                        //    if (predictedDepth < 8 && !goodMove) continue;
-                        //    fullReduction++;
-                        //}
-                        //if (swap(pos, move->m) < 0) {
-                        //    if (predictedDepth < 2) continue;
-                        //    fullReduction++; 
-                        //}
+                        if (scoreAprox < beta) {
+                            if (predictedDepth < 8 && !goodMove) continue;
+                            fullReduction++;
+                        }
+                        if (swap(pos, move->m) < 0) {
+                            if (predictedDepth < 2) continue;
+                            fullReduction++; 
+                        }
                     }
                     if (depth >= MIN_REDUCTION_DEPTH) { 
                         int reduction = ReductionTable[(inPvNode(nt)?0:1)][MIN(depth,63)][MIN(ss.playedMoves,63)];
                         partialReduction += goodMove ? (reduction+1)/2 : reduction; 
                     }
                 }
+                if (!inRoot && !inPvNode(nt) && MoveGenPhase[ss.mvlist_phase] == PH_BAD_CAPTURES && !ss.moveGivesCheck) fullReduction++;
+
                 newdepth -= fullReduction;
                 int newdepthclone = newdepth - partialReduction;
                 makeMove(pos, &undo, move->m);
@@ -566,10 +567,10 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                 if (inSplitPoint) alpha = sp->alpha;
                 ss.reducedMove = (newdepthclone < newdepth);
 
-                score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepthclone, ss, sthread, CutNode);
+                score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepthclone, ss, sthread, inCutNode(nt) ? AllNode : CutNode);
                 if (ss.reducedMove && score > alpha) {
                     ss.reducedMove = false;
-                    score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepth, ss, sthread, AllNode);
+                    score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepth, ss, sthread, inCutNode(nt) ? AllNode : CutNode);
                 }
                 if (inPvNode(nt) && score > alpha) {
                     if (inRoot) info.research = 1;
