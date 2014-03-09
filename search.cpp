@@ -214,10 +214,10 @@ void Search::updateEvalgains(const position_t *pos, uint32 move, int before, int
         && before != -INF
         && after != -INF
         && !moveIsTactical(move)) {
-            if (-(before + after) >= info.evalgains[historyIndex(pos->side^1, move)])
-                info.evalgains[historyIndex(pos->side^1, move)] = -(before + after);
+            if (-(before + after) >= sthread.evalgains[historyIndex(pos->side^1, move)])
+                sthread.evalgains[historyIndex(pos->side^1, move)] = -(before + after);
             else
-                info.evalgains[historyIndex(pos->side^1, move)]--;
+                sthread.evalgains[historyIndex(pos->side^1, move)]--;
     }
 }
 
@@ -283,7 +283,7 @@ int Search::qSearch(position_t *pos, int alpha, int beta, const int depth, Searc
     }
     bool prunable = !ssprev.moveGivesCheck && !inPv && MinTwoBits(pos->color[pos->side^1] & pos->pawns) && MinTwoBits(pos->color[pos->side^1] & ~(pos->pawns | pos->kings));
     move_t* move;
-    while ((move = sortNext(NULL, pos, ss, sthread.thread_id)) != NULL) {
+    while ((move = sortNext(NULL, pos, ss, sthread)) != NULL) {
         int score;
         if (anyRepNoMove(pos, move->m)) { 
             score = DrawValue[pos->side];
@@ -509,7 +509,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
     int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 4) : (depth * depth));
     move_t* move;
 
-    while ((move = sortNext(sp, pos, ss, sthread.thread_id)) != NULL) {
+    while ((move = sortNext(sp, pos, ss, sthread)) != NULL) {
         int score = -INF;
         if (inSingular && move->m == ssprev.bannedMove) continue;
         if (inSplitPoint) {
@@ -636,11 +636,11 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
         if (ss.bestmove != EMPTY && !moveIsTactical(ss.bestmove) && ss.bestvalue >= beta) { //> alpha account for pv better maybe? Sam
             int index = historyIndex(pos->side, ss.bestmove);
             int hisDepth = MIN(depth,MAX_HDEPTH);
-            info.history[index] += hisDepth * hisDepth;
+            sthread.history[index] += hisDepth * hisDepth;
             for (int i=0; i < ss.hisCnt; ++i) {
                 if (ss.hisMoves[i] == ss.bestmove) continue;
                 index = historyIndex(pos->side, ss.hisMoves[i]);
-                info.history[index] -= info.history[index]/(NEW_HISTORY-hisDepth);
+                sthread.history[index] -= sthread.history[index]/(NEW_HISTORY-hisDepth);
             }
             if (sthread.ts[pos->ply].killer1 != ss.bestmove) {
                 sthread.ts[pos->ply].killer2 = sthread.ts[pos->ply].killer1;

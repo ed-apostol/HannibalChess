@@ -17,7 +17,6 @@
 /* the search data structure */
 struct SearchInfo{
     void Init() {
-        /* initialization */
         depth_is_limited = false;
         depth_limit = MAXPLY;
         moves_is_limited = false;
@@ -37,9 +36,6 @@ struct SearchInfo{
         pondermove = 0;
         mate_found = 0;
         multipvIdx = 0;
-
-        memset(history, 0, sizeof(history)); //TODO this is bad to share with learning
-        memset(evalgains, 0, sizeof(evalgains)); //TODO this is bad to share with learning
         memset(moves, 0, sizeof(moves));
     }
     int thinking_status;
@@ -77,8 +73,6 @@ struct SearchInfo{
     basic_move_t moves[MAXMOVES];
     bool mvlist_initialized;
     continuation_t rootPV;
-    int32 evalgains[1024];
-    int32 history[1024];
 };
 
 

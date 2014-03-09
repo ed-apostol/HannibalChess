@@ -51,8 +51,8 @@ move_t* getMove (movelist_t *mvlist) {
     *best = *temp;
     return start;
 }
-inline int scoreNonTactical (uint32 side, uint32 move) {
-    int score = SearchManager.info.history[historyIndex(side,move)];
+inline int scoreNonTactical (uint32 side, uint32 move, Thread& sthread) {
+    int score = sthread.history[historyIndex(side,move)];
     return score;
 }
 bool moveIsPassedPawn (const position_t * pos, uint32 move) {
@@ -104,17 +104,17 @@ void scoreCaptures (movelist_t *mvlist) {
     }
 }
 
-void scoreNonCaptures (const position_t *pos, movelist_t *mvlist) {
+void scoreNonCaptures (const position_t *pos, movelist_t *mvlist, Thread& sthread) {
     move_t *m;
 
     ASSERT(mvlist != NULL);
 
     for (m = &mvlist->list[mvlist->pos]; m < &mvlist->list[mvlist->size]; m++) {
-        m->s = scoreNonTactical(mvlist->side, m->m);
+        m->s = scoreNonTactical(mvlist->side, m->m, sthread);
     }
 }
 
-void scoreAll (const position_t *pos, movelist_t *mvlist) {
+void scoreAll (const position_t *pos, movelist_t *mvlist, Thread& sthread) {
     move_t *m;
 
     ASSERT(pos != NULL);
@@ -130,19 +130,19 @@ void scoreAll (const position_t *pos, movelist_t *mvlist) {
         else if (m->m == mvlist->killer1) m->s = MAXHIST + 4;
         else if (m->m == mvlist->killer2) m->s = MAXHIST + 2;
         else {
-            m->s = scoreNonTactical(mvlist->side, m->m);
+            m->s = scoreNonTactical(mvlist->side, m->m, sthread);
         }
     }
 }
 
-void scoreAllQ (movelist_t *mvlist) {
+void scoreAllQ (movelist_t *mvlist, Thread& sthread) {
     move_t *m;
 
     ASSERT(mvlist != NULL);
 
     for (m = &mvlist->list[mvlist->pos]; m < &mvlist->list[mvlist->size]; m++) {
         if (moveIsTactical(m->m))  m->s = MAXHIST + (moveCapture(m->m) * 6) + movePromote(m->m) - movePiece(m->m);
-        else m->s = scoreNonTactical(mvlist->side, m->m);
+        else m->s = scoreNonTactical(mvlist->side, m->m, sthread);
     }
 }
 
@@ -158,7 +158,7 @@ void scoreRoot (movelist_t *mvlist) {
     }
 }
 
-move_t* sortNext (SplitPoint* sp, position_t *pos, SearchStack& ss, int thread_id) {
+move_t* sortNext (SplitPoint* sp, position_t *pos, SearchStack& ss, Thread& sthread) {
     move_t* move;
     if (sp != NULL) sp->movelistlock->lock();
     ss.mvlist_phase = ss.mvlist->phase;
@@ -252,8 +252,8 @@ move_t* sortNext (SplitPoint* sp, position_t *pos, SearchStack& ss, int thread_i
             break;
         case PH_EVASION:
             genEvasions(pos, ss.mvlist);
-            if (ss.mvlist->depth <= 0) scoreAllQ(ss.mvlist);
-            else scoreAll(pos, ss.mvlist);
+            if (ss.mvlist->depth <= 0) scoreAllQ(ss.mvlist, sthread);
+            else scoreAll(pos, ss.mvlist, sthread);
             break;
         case PH_TRANS:
             if (ss.mvlist->transmove != EMPTY) {
@@ -289,18 +289,18 @@ move_t* sortNext (SplitPoint* sp, position_t *pos, SearchStack& ss, int thread_i
             break;
         case PH_QUIET_MOVES:
             genNonCaptures(pos, ss.mvlist);
-            scoreNonCaptures(pos, ss.mvlist);
+            scoreNonCaptures(pos, ss.mvlist, sthread);
             break;
         case PH_NONTACTICAL_CHECKS_WIN:
         case PH_NONTACTICAL_CHECKS_PURE:
             genQChecks(pos, ss.mvlist);
-            scoreNonCaptures(pos, ss.mvlist);
+            scoreNonCaptures(pos, ss.mvlist, sthread);
             break;
         case PH_GAINING:
             if (ss.mvlist->scout - ss.mvlist->evalvalue > 150) continue; // TODO: test other values
-            genGainingMoves(pos, ss.mvlist, ss.mvlist->scout - ss.mvlist->evalvalue, thread_id);
+            genGainingMoves(pos, ss.mvlist, ss.mvlist->scout - ss.mvlist->evalvalue, sthread);
             // Print(3, "delta = %d, ss.mvlist->size = %d\n", ss.mvlist->scout - SearchInfo.evalvalue[pos->ply], ss.mvlist->size);
-            scoreNonCaptures(pos, ss.mvlist);
+            scoreNonCaptures(pos, ss.mvlist, sthread);
             break;
         default:
             ASSERT(MoveGenPhase[ss.mvlist->phase] == PH_END);
