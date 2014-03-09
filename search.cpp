@@ -414,14 +414,14 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                 }
             }
         }
-        if (ss.evalvalue == -INF) ss.evalvalue = eval(pos, sthread.thread_id, &pes);// TODO: add eval depth = 0 here
+        if (ss.evalvalue == -INF) ss.evalvalue = eval(pos, sthread.thread_id, &pes);
 
         if (pos->ply >= MAXPLY-1) return ss.evalvalue;
         updateEvalgains(pos, pos->posStore.lastmove, ssprev.evalvalue, ss.evalvalue, sthread);
 
         if (!inPvNode(nt) && !inCheck) {
             const int MaxRazorDepth = 9;
-            int rvalue; // TODO: use eval depth to reduce depth to index FutMarTab
+            int rvalue;
             if (depth <= MaxRazorDepth && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) 
                 && ss.evalvalue > (rvalue = beta + FutilityMarginTable[MIN(depth, MaxRazorDepth)][MIN(ssprev.playedMoves,63)])) {
                     return rvalue; 
@@ -433,7 +433,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
             }
             if (depth >= 2 && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) && ss.evalvalue >= beta) {
                 pos_store_t undo;
-                int nullDepth = depth - (4 + depth/5 + (ss.evalvalue - beta > PawnValue)); // TODO: test (eval-beta)/PawnVal here
+                int nullDepth = depth - (4 + depth/5 + (ss.evalvalue - beta > PawnValue));
                 makeNullMove(pos, &undo);
                 ++sthread.nodes;
                 int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, sthread, invertNode(nt));
@@ -508,6 +508,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
 
     int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 4) : (depth * depth));
     move_t* move;
+
     while ((move = sortNext(sp, pos, ss, sthread.thread_id)) != NULL) {
         int score = -INF;
         if (inSingular && move->m == ssprev.bannedMove) continue;
@@ -532,8 +533,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                 ++sthread.nodes;
                 score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, sthread, invertNode(nt));
             } else {
-                newdepth = depth -1;
-                //only reduce or prune some types of moves
+                newdepth = depth - 1;
                 int partialReduction = 0;
                 int fullReduction = 0;
                 if (MoveGenPhase[ss.mvlist_phase] == PH_QUIET_MOVES && !ss.moveGivesCheck) {
@@ -616,8 +616,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
         if (inSplitPoint) sp->updatelock->unlock();
         if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < Guci_options.max_activesplits_per_thread
             && ThreadsMgr.ThreadNum() > 1 && depth >= Guci_options.min_split_depth
-            && (!inCutNode(nt) || MoveGenPhase[ss.mvlist_phase] != PH_GOOD_CAPTURES) // TODO: to be tested
-            ) {
+            && (!inCutNode(nt) || MoveGenPhase[ss.mvlist_phase] != PH_KILLER_MOVES)) {
                 ThreadsMgr.SearchSplitPoint(pos, ss.mvlist, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, sthread);
                 if (sthread.stop) return 0;
                 break;
