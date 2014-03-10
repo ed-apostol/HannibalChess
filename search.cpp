@@ -897,10 +897,10 @@ void SearchMgr::checkSpeedUp(position_t* pos, char string[]) {
     const int NUMPOS = 4;
     const int MAXTHREADS = 32;
     char* fenPos[NUMPOS] = {
-        "rn1qk1nr/pp3pp1/2pbp1bp/8/2BP3P/6N1/PPP1NPP1/R1BQK2R w KQkq - 0 9",
-        "r2qk2r/1p1n1pbb/2p1pnpp/p7/2BP3P/3N1QN1/PPPB1PP1/2KR3R w kq - 2 16",
-        "r4rk1/4qpbb/4p1pp/ppN5/3P3P/2Q5/1PPB1PP1/2KR3R w - - 0 24",
-        "r4rk1/4qp1b/4p1pQ/2N5/1p1P3P/p7/1PP2PP1/2KR3R w - - 0 28",
+        "fen rn1qk1nr/pp3pp1/2pbp1bp/8/2BP3P/6N1/PPP1NPP1/R1BQK2R w KQkq - 0 9",
+        "fen r2qk2r/1p1n1pbb/2p1pnpp/p7/2BP3P/3N1QN1/PPPB1PP1/2KR3R w kq - 2 16",
+        "fen r4rk1/4qpbb/4p1pp/ppN5/3P3P/2Q5/1PPB1PP1/2KR3R w - - 0 24",
+        "fen r4rk1/4qp1b/4p1pQ/2N5/1p1P3P/p7/1PP2PP1/2KR3R w - - 0 28",
     };
     double timeSpeedupSum[MAXTHREADS];
     double nodesSpeedupSum[MAXTHREADS];
@@ -969,10 +969,10 @@ void SearchMgr::benchMinSplitDepth(position_t* pos, char string[]) {
     const int NUMPOS = 4;
     const int MAXSPLIT = 11;
     char* fenPos[NUMPOS] = {
-        "rn1qk1nr/pp3pp1/2pbp1bp/8/2BP3P/6N1/PPP1NPP1/R1BQK2R w KQkq - 0 9",
-        "r2qk2r/1p1n1pbb/2p1pnpp/p7/2BP3P/3N1QN1/PPPB1PP1/2KR3R w kq - 2 16",
-        "r4rk1/4qpbb/4p1pp/ppN5/3P3P/2Q5/1PPB1PP1/2KR3R w - - 0 24",
-        "r4rk1/4qp1b/4p1pQ/2N5/1p1P3P/p7/1PP2PP1/2KR3R w - - 0 28",
+        "fen rn1qk1nr/pp3pp1/2pbp1bp/8/2BP3P/6N1/PPP1NPP1/R1BQK2R w KQkq - 0 9",
+        "fen r2qk2r/1p1n1pbb/2p1pnpp/p7/2BP3P/3N1QN1/PPPB1PP1/2KR3R w kq - 2 16",
+        "fen r4rk1/4qpbb/4p1pp/ppN5/3P3P/2Q5/1PPB1PP1/2KR3R w - - 0 24",
+        "fen r4rk1/4qp1b/4p1pQ/2N5/1p1P3P/p7/1PP2PP1/2KR3R w - - 0 28",
     };
     char command[1024] = {0};
     uint64 timeSum[MAXSPLIT];
@@ -1028,10 +1028,10 @@ void SearchMgr::benchThreadsperSplit(position_t* pos, char string[]) {
     const int NUMPOS = 4;
     const int MAXSPLIT = 9;
     char* fenPos[NUMPOS] = {
-        "rn1qk1nr/pp3pp1/2pbp1bp/8/2BP3P/6N1/PPP1NPP1/R1BQK2R w KQkq - 0 9",
-        "r2qk2r/1p1n1pbb/2p1pnpp/p7/2BP3P/3N1QN1/PPPB1PP1/2KR3R w kq - 2 16",
-        "r4rk1/4qpbb/4p1pp/ppN5/3P3P/2Q5/1PPB1PP1/2KR3R w - - 0 24",
-        "r4rk1/4qp1b/4p1pQ/2N5/1p1P3P/p7/1PP2PP1/2KR3R w - - 0 28",
+        "fen rn1qk1nr/pp3pp1/2pbp1bp/8/2BP3P/6N1/PPP1NPP1/R1BQK2R w KQkq - 0 9",
+        "fen r2qk2r/1p1n1pbb/2p1pnpp/p7/2BP3P/3N1QN1/PPPB1PP1/2KR3R w kq - 2 16",
+        "fen r4rk1/4qpbb/4p1pp/ppN5/3P3P/2Q5/1PPB1PP1/2KR3R w - - 0 24",
+        "fen r4rk1/4qp1b/4p1pQ/2N5/1p1P3P/p7/1PP2PP1/2KR3R w - - 0 28",
     };
     char command[1024] = {0};
     uint64 timeSum[MAXSPLIT];
@@ -1087,10 +1087,10 @@ void SearchMgr::benchActiveSplits(position_t* pos, char string[]) {
     const int NUMPOS = 4;
     const int MAXSPLIT = MaxNumSplitPointsPerThread+1;
     char* fenPos[NUMPOS] = {
-        "rn1qk1nr/pp3pp1/2pbp1bp/8/2BP3P/6N1/PPP1NPP1/R1BQK2R w KQkq - 0 9",
-        "r2qk2r/1p1n1pbb/2p1pnpp/p7/2BP3P/3N1QN1/PPPB1PP1/2KR3R w kq - 2 16",
-        "r4rk1/4qpbb/4p1pp/ppN5/3P3P/2Q5/1PPB1PP1/2KR3R w - - 0 24",
-        "r4rk1/4qp1b/4p1pQ/2N5/1p1P3P/p7/1PP2PP1/2KR3R w - - 0 28",
+        "fen rn1qk1nr/pp3pp1/2pbp1bp/8/2BP3P/6N1/PPP1NPP1/R1BQK2R w KQkq - 0 9",
+        "fen r2qk2r/1p1n1pbb/2p1pnpp/p7/2BP3P/3N1QN1/PPPB1PP1/2KR3R w kq - 2 16",
+        "fen r4rk1/4qpbb/4p1pp/ppN5/3P3P/2Q5/1PPB1PP1/2KR3R w - - 0 24",
+        "fen r4rk1/4qp1b/4p1pQ/2N5/1p1P3P/p7/1PP2PP1/2KR3R w - - 0 28",
     };
     char command[1024] = {0};
     uint64 timeSum[MAXSPLIT];

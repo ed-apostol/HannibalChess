@@ -38,7 +38,8 @@ struct SearchInfo{
         multipvIdx = 0;
         memset(moves, 0, sizeof(moves));
     }
-    int thinking_status;
+    volatile int thinking_status;
+    
     bool depth_is_limited;
     int depth_limit;
     bool moves_is_limited;
