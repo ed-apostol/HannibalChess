@@ -75,6 +75,7 @@ public:
     int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt);
     void extractPvMovesFromHash(position_t *pos, continuation_t* pv, basic_move_t move, bool execMove);
     void timeManagement(int depth, Thread& sthread);
+    void stopSearch();
 private:
     Search();
     SearchInfo& info;
@@ -91,7 +92,7 @@ void Search::initNode(position_t *pos, Thread& sthread) {
     //++sthread.nodes;
 #ifdef SELF_TUNE2
     if (sthread.nodes >= info.node_limit && info.node_is_limited) {
-        SetAllThreadsToStop(thread_id);
+        SearchManager.stopSearch();
     }
 #endif
     if (sthread.thread_id == 0 && ++sthread.nodes_since_poll >= sthread.nodes_between_polls) {
@@ -117,12 +118,12 @@ void Search::initNode(position_t *pos, Thread& sthread) {
                     if (!info.research && !info.change) {
                         bool gettingWorse = info.best_value != -INF && info.best_value + WORSE_SCORE_CUTOFF <= info.last_value;
                         if (!gettingWorse) { 
-                            ThreadsMgr.SetAllThreadsToStop();
+                            SearchManager.stopSearch();
                             Print(2, "info string Aborting search: time limit 2: %d\n", time2 - info.start_time);
                         }
                     }
                 } else {
-                    ThreadsMgr.SetAllThreadsToStop();
+                    SearchManager.stopSearch();
                     Print(2, "info string Aborting search: time limit 1: %d\n", time2 - info.start_time);
                 }
             }
@@ -698,7 +699,7 @@ void Search::timeManagement(int depth, Thread& sthread) {
 
             if (info.legalmoves == 1 || info.mate_found >= 3) { 
                 if (depth >= 8) {
-                    ThreadsMgr.SetAllThreadsToStop();
+                    stopSearch();
                     Print(2, "info string Aborting search: legalmove/mate found depth >= 8\n");
                     return;
                 }
@@ -718,7 +719,7 @@ void Search::timeManagement(int depth, Thread& sthread) {
                     if (info.time_limit_max > info.time_limit_abs) 
                         info.time_limit_max = info.time_limit_abs;
                 } else { // if we are unlikely to get deeper, save our time
-                    ThreadsMgr.SetAllThreadsToStop();
+                    stopSearch();
                     Print(2, "info string Aborting search: root time limit 1: %d\n", time - info.start_time);
                     return;
                 }
@@ -726,20 +727,29 @@ void Search::timeManagement(int depth, Thread& sthread) {
         }
     } 
     if (info.depth_is_limited && depth >= info.depth_limit) {
-        ThreadsMgr.SetAllThreadsToStop();
+        stopSearch();
         Print(2, "info string Aborting search: depth limit 1\n");
         return;
     }
 }
 
+void Search::stopSearch() {
+    info.stop_search = true;
+    ThreadsMgr.SetAllThreadsToStop();
+}
+
 SearchMgr::SearchMgr() { search = new Search(info); }
 SearchMgr::~SearchMgr() { delete search; }
+
+void SearchMgr::stopSearch() {
+    search->stopSearch();
+}
 
 void SearchMgr::ponderHit() { //no pondering in tuning
     int64 time = getTime() - info.start_time;
 
     if ((info.iteration >= 8 && (info.legalmoves == 1 || info.mate_found >= 3)) || (time > info.time_limit_abs)) {
-        ThreadsMgr.SetAllThreadsToStop();
+        stopSearch();
         Print(3, "info string Has searched enough the ponder move: aborting\n");
     } else {
         info.thinking_status = THINKING;
@@ -794,7 +804,7 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
                 if (info.rootPV.length > 1) info.pondermove = info.rootPV.moves[1];
                 else info.pondermove = 0;
                 search->displayPV(pos, &info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
-                ThreadsMgr.SetAllThreadsToStop();
+                stopSearch();
                 sendBestMove();
                 return;
         }
@@ -854,7 +864,7 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
                         search->displayPV(pos, &info.rootPV, info.multipvIdx, id, alpha, beta, info.best_value);
                     }
                 }
-                if (info.thinking_status == STOPPED) break;
+                if (info.stop_search) break;
                 if (info.best_value <= alpha) {
                     if (info.best_value <= alpha) alpha = info.best_value-(AspirationWindow<<++faillow);
                     if (alpha < -RookValue) alpha = -INF;
@@ -865,27 +875,27 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
                     info.research = 1;
                 } else break;
             }
-            if (info.thinking_status == STOPPED) break; // TODO: refactor this
+            if (info.stop_search) break; // TODO: refactor this
         }
-        if (info.thinking_status == STOPPED) break; // TODO: refactor this
+        if (info.stop_search) break; // TODO: refactor this
         search->timeManagement(id, sthread);
-        if (info.thinking_status == STOPPED) break; // TODO: refactor this
+        if (info.stop_search) break; // TODO: refactor this
         if (info.best_value != -INF) {
             info.last_last_value = info.last_value;
             info.last_value = info.best_value;
         }
     }
     info.lastDepthSearched = id;
-    if (info.thinking_status != STOPPED) {
+    if (!info.stop_search) {
         if ((info.depth_is_limited || info.time_is_limited) && info.thinking_status == THINKING) {
-            info.thinking_status = STOPPED;
-            ThreadsMgr.SetAllThreadsToStop();
+            info.stop_search = true;;
+            stopSearch();
             Print(2, "info string Aborting search: end of getBestMove: id=%d, best_value = %d sp = %d, ply = %d\n", 
                 id, info.best_value, pos->sp, pos->ply);
         } else {
             Print(3, "info string Waiting for stop, quit, or ponderhit\n");
-            while (info.thinking_status != STOPPED);
-            ThreadsMgr.SetAllThreadsToStop();
+            while (!info.stop_search);
+            stopSearch();
             Print(2, "info string Aborting search: end of waiting for stop/quit/ponderhit\n");
         }
     }

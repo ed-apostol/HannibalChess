@@ -94,8 +94,7 @@ enum PieceTypes {
 #define ENDGAME 1
 
 enum ThinkingStatus {
-    STOPPED = 0,
-    THINKING,
+    THINKING = 0,
     PONDERING,
     ANALYSING
 };

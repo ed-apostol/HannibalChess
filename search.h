@@ -17,6 +17,7 @@
 /* the search data structure */
 struct SearchInfo{
     void Init() {
+        stop_search = false;
         depth_is_limited = false;
         depth_limit = MAXPLY;
         moves_is_limited = false;
@@ -38,8 +39,9 @@ struct SearchInfo{
         multipvIdx = 0;
         memset(moves, 0, sizeof(moves));
     }
-    volatile int thinking_status;
-    
+    int thinking_status;
+    volatile bool stop_search;
+
     bool depth_is_limited;
     int depth_limit;
     bool moves_is_limited;
@@ -95,6 +97,7 @@ public:
     void benchMinSplitDepth(position_t* pos, char string[]);
     void benchThreadsperSplit(position_t* pos, char string[]);
     void benchActiveSplits(position_t* pos, char string[]);
+    void stopSearch();
 
     Search* search;
     SearchInfo info;

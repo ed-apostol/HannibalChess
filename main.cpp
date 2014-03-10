@@ -125,7 +125,7 @@ int main(void) {
             nonUCI(&pos);
 #endif
         } else if (!memcmp(command, "stop", 4)) {
-            ThreadsMgr.SetAllThreadsToStop();
+            SearchManager.stopSearch();
             Print(2, "info string Aborting search: stop\n");
         } else if (!memcmp(command, "ponderhit", 9)) {
             SearchManager.ponderHit();

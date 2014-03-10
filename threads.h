@@ -179,6 +179,7 @@ private:
     std::vector<Thread*> m_Threads;
     volatile bool m_StartThinking;
     position_t* m_pPos;
+    volatile bool m_StopThreads;
 };
 
 extern ThreadMgr ThreadsMgr;

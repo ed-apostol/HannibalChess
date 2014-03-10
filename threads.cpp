@@ -36,7 +36,7 @@ void ThreadMgr::IdleLoop(const int thread_id) {
                 continue; // to avoid getting into GetWork after the search has terminated
             }
         }
-        if (!m_Threads[thread_id]->searching) {
+        if (!m_StopThreads && !m_Threads[thread_id]->searching) {
             GetWork(thread_id, master_sp);
         }
         if (m_Threads[thread_id]->searching) {
@@ -49,7 +49,7 @@ void ThreadMgr::IdleLoop(const int thread_id) {
             sp->updatelock->unlock();
             ++m_Threads[thread_id]->ended;
         }
-        if (master_sp != NULL && !master_sp->workersBitMask) return;
+        if (master_sp != NULL && (!master_sp->workersBitMask || m_StopThreads)) return;
     }
 }
 
@@ -93,7 +93,7 @@ void ThreadMgr::GetWork(const int thread_id, SplitPoint *master_sp) {
 }
 
 void ThreadMgr::SetAllThreadsToStop() {
-    SearchManager.info.thinking_status = STOPPED;
+    m_StopThreads = true;
     for (Thread* th: m_Threads) {
         th->stop = true;
     }
@@ -118,6 +118,7 @@ uint64 ThreadMgr::ComputeNodes() {
 }
 
 void ThreadMgr::InitVars() {
+    m_StopThreads = false;
     for (Thread* th: m_Threads) {
         th->Init();
     }
@@ -173,7 +174,7 @@ void ThreadMgr::SearchSplitPoint(const position_t* p, movelist_t* mvlist, Search
     ss->playedMoves = active_sp->played;
     sthread.activeSplitPoint = active_sp->parent;
     sthread.numsplits++;
-    if (SearchManager.info.thinking_status != STOPPED) {
+    if (!m_StopThreads) {
         sthread.stop = false; 
         sthread.searching = true;
     }
