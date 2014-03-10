@@ -118,12 +118,12 @@ void Search::initNode(position_t *pos, Thread& sthread) {
                     if (!info.research && !info.change) {
                         bool gettingWorse = info.best_value != -INF && info.best_value + WORSE_SCORE_CUTOFF <= info.last_value;
                         if (!gettingWorse) { 
-                            SearchManager.stopSearch();
+                            stopSearch();
                             Print(2, "info string Aborting search: time limit 2: %d\n", time2 - info.start_time);
                         }
                     }
                 } else {
-                    SearchManager.stopSearch();
+                    stopSearch();
                     Print(2, "info string Aborting search: time limit 1: %d\n", time2 - info.start_time);
                 }
             }
