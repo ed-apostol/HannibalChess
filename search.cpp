@@ -775,7 +775,7 @@ void SearchMgr::sendBestMove() {
         origScore = info.last_value; // just to be safe
     }
     ThreadsMgr.SetAllThreadsToSleep();
-    //ThreadsMgr.PrintDebugData();
+    ThreadsMgr.PrintDebugData();
 }
 
 void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {

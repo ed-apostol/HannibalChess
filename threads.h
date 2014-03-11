@@ -113,9 +113,9 @@ public:
         nodes = 0;
         nodes_since_poll = 0;
         nodes_between_polls = 8192;
-        started = 0;
-        ended = 0;
         numsplits = 0;
+        numsplits2 = 0;
+        workers2 = 0;
         joined = 0;
         num_sp = 0;
         activeSplitPoint = NULL;
@@ -131,10 +131,10 @@ public:
     uint64 nodes;
     uint64 nodes_since_poll;
     uint64 nodes_between_polls;
-    uint64 started; // DEBUG
-    uint64 ended; // DEBUG
     uint64 numsplits; // DEBUG
     uint64 joined; // DEBUG
+    uint64 numsplits2; // DEBUG
+    uint64 workers2; // DEBUG
     int num_sp;
     SplitPoint *activeSplitPoint;
     SplitPoint sptable[MaxNumSplitPointsPerThread]; // TODO: convert to vector?
@@ -167,10 +167,9 @@ public:
     void PrintDebugData() {
         Print(2, "================================================================\n");
         for (Thread* th: m_Threads) {
-            Print(2, "%s: thread_id:%d, num_sp:%d searching:%d stop:%d started:%d ended:%d nodes:%d numsplits:%d joined:%d\n", 
-                __FUNCTION__, th->thread_id, 
-                th->num_sp, th->searching, th->stop, 
-                th->started, th->ended, th->nodes, th->numsplits, th->joined);
+            Print(2, "%s: thread_id: %d, nodes: %d joined_split: %0.2f%% threads_per_split: %0.2f\n", 
+                __FUNCTION__, th->thread_id, th->nodes, 
+                double(th->joined * 100.0)/double(th->numsplits), double(th->workers2)/double(th->numsplits2));
         }
         Print(2, "================================================================\n");
     }

@@ -20,7 +20,7 @@ ThreadMgr ThreadsMgr;
 
 void ThreadMgr::StartThinking(position_t* pos) {
     m_StartThinking = true;
-    m_pPos= pos;
+    m_pPos = pos;
     ThreadFromIdx(0).TriggerCondition();
 }
 
@@ -40,14 +40,12 @@ void ThreadMgr::IdleLoop(const int thread_id) {
             GetWork(thread_id, master_sp);
         }
         if (!m_StopThreads && m_Threads[thread_id]->searching) {
-            ++m_Threads[thread_id]->started;
             SplitPoint* sp = m_Threads[thread_id]->activeSplitPoint; // this is correctly located, don't move this, else bug
             SearchManager.searchFromIdleLoop(sp, *m_Threads[thread_id]);
             sp->updatelock->lock();
             sp->workersBitMask &= ~(1 << thread_id);
             m_Threads[thread_id]->searching = false;
             sp->updatelock->unlock();
-            ++m_Threads[thread_id]->ended;
         }
         if (master_sp != NULL && (!master_sp->workersBitMask || m_StopThreads)) return;
     }
@@ -86,7 +84,7 @@ void ThreadMgr::GetWork(const int thread_id, SplitPoint *master_sp) {
                 m_Threads[thread_id]->activeSplitPoint = best_split_point;
                 m_Threads[thread_id]->searching = true;
                 m_Threads[thread_id]->stop = false;
-                ++master_thread->joined;
+                master_thread->joined++;
         }
         best_split_point->updatelock->unlock();
     }
@@ -163,6 +161,7 @@ void ThreadMgr::SearchSplitPoint(const position_t* p, movelist_t* mvlist, Search
     sthread.searching = true;
     sthread.stop = false;
     sthread.num_sp++;
+    sthread.numsplits++;
     active_sp->updatelock->unlock();
 
     IdleLoop(sthread.thread_id);
@@ -173,10 +172,15 @@ void ThreadMgr::SearchSplitPoint(const position_t* p, movelist_t* mvlist, Search
     ss->bestmove = active_sp->bestmove;
     ss->playedMoves = active_sp->played;
     sthread.activeSplitPoint = active_sp->parent;
-    sthread.numsplits++;
     if (!m_StopThreads) {
         sthread.stop = false; 
         sthread.searching = true;
+    }
+
+    int cnt = bitCnt(active_sp->allWorkersBitMask);
+    if (cnt > 1) {
+        sthread.numsplits2++;
+        sthread.workers2 += cnt;
     }
     active_sp->updatelock->unlock();
 }
