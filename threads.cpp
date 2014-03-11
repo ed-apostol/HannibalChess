@@ -39,7 +39,7 @@ void ThreadMgr::IdleLoop(const int thread_id) {
         if (!m_StopThreads && !m_Threads[thread_id]->searching) {
             GetWork(thread_id, master_sp);
         }
-        if (m_Threads[thread_id]->searching) {
+        if (!m_StopThreads && m_Threads[thread_id]->searching) {
             ++m_Threads[thread_id]->started;
             SplitPoint* sp = m_Threads[thread_id]->activeSplitPoint; // this is correctly located, don't move this, else bug
             SearchManager.searchFromIdleLoop(sp, *m_Threads[thread_id]);
@@ -74,7 +74,7 @@ void ThreadMgr::GetWork(const int thread_id, SplitPoint *master_sp) {
             }
         }
     }
-    if (best_split_point != NULL) {
+    if (!m_StopThreads && best_split_point != NULL) {
         best_split_point->updatelock->lock();
         if (master_thread->searching && master_thread->num_sp > 0 && !best_split_point->cutoff
             && (best_split_point->workersBitMask == best_split_point->allWorkersBitMask)
