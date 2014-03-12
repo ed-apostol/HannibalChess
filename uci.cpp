@@ -288,6 +288,11 @@ void Engine::SetOption(std::istringstream& stream) {
 
 void Engine::NewGame() {
     std::cout<<"NewGame"<<std::endl;
+    PVHashTable.Clear();
+    TransTable.Clear();
+    ThreadsMgr.ClearPawnHash();
+    ThreadsMgr.ClearEvalHash();
+    SearchManager.info.lastDepthSearched = MAXPLY;
 }
 
 Engine::~Engine() {

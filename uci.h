@@ -10,7 +10,7 @@
 #pragma once
 #include <map>
 #include <sstream>
-#include "utils.h"
+#include "typedefs.h"
 
 struct Options {
     typedef void (*ActionFunc)(const Options&);
@@ -24,7 +24,6 @@ struct Options {
     Options& operator=(const std::string& val) {
         if (m_Type != "button") m_CurVal = val;
         if (OnChange) OnChange(*this);
-        Print(3, "Gone here\n");
     }
     std::string m_DefVal, m_CurVal, m_Type;
     int m_Min, m_Max;
