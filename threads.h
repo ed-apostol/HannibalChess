@@ -116,7 +116,6 @@ public:
         numsplits = 0;
         numsplits2 = 0;
         workers2 = 0;
-        joined = 0;
         num_sp = 0;
         activeSplitPoint = NULL;
         for (int j = 0; j < MaxNumSplitPointsPerThread; ++j) {
@@ -132,7 +131,6 @@ public:
     uint64 nodes_since_poll;
     uint64 nodes_between_polls;
     uint64 numsplits; // DEBUG
-    uint64 joined; // DEBUG
     uint64 numsplits2; // DEBUG
     uint64 workers2; // DEBUG
     int num_sp;
@@ -169,11 +167,17 @@ public:
         for (Thread* th: m_Threads) {
             Print(2, "%s: thread_id: %d, nodes: %d joined_split: %0.2f%% threads_per_split: %0.2f\n", 
                 __FUNCTION__, th->thread_id, th->nodes, 
-                double(th->joined * 100.0)/double(th->numsplits), double(th->workers2)/double(th->numsplits2));
+                double(th->numsplits2 * 100.0)/double(th->numsplits), double(th->workers2)/double(th->numsplits2));
         }
         Print(2, "================================================================\n");
     }
     bool StillThinking() { return m_StartThinking; }
+
+    int min_split_depth;
+    int max_threads_per_split;
+    int max_activesplits_per_thread;
+    int evalcachesize;
+    int pawnhashsize;
 private:
     std::vector<Thread*> m_Threads;
     volatile bool m_StartThinking;

@@ -52,31 +52,16 @@ int main(void) {
     Print(3, "Hannibal %s by Sam Hamilton & Edsel Apostol\n", VERSION);
     Print(3, "Use Universal Chess Interface(UCI) commands\n");
 
-    Print(1, "SplitPoint:%.2fkB\n", (float)sizeof(SplitPoint)/(float)1024);
-    Print(1, "position_t:%.2fkB\n", (float)sizeof(position_t)/(float)1024);
-    Print(1, "SearchStack:%.2fkB\n", (float)sizeof(SearchStack)/(float)1024);
-    
-#ifndef TCEC
-    for (int i=0; i < MaxNumOfThreads;i++) {	//the default is every thread is a normal search
-        SearchInfoMap[i] = &global_search_info;
-    }
-    GhannibalBook.bookFile = NULL;
-    GpolyglotBook.bookFile = NULL;
-    Glearn.learnFile = NULL;
-    initBook(DEFAULT_POLYGLOT_BOOK, &GpolyglotBook, POLYGLOT_BOOK);
-    initBook(DEFAULT_HANNIBAL_BOOK, &GhannibalBook, PUCK_BOOK);
-    initLearn("HannibalLearn.lrn", &Glearn);
-    SearchManager.info.outOfBook = 0;
-#endif
+    InitUCIOptions(UCIOptionsMap);
+
     TransTable.Init(INIT_HASH, HASH_ASSOC);
     PVHashTable.Init(INIT_PVHASH, PV_ASSOC);
-    
-    initOption(&Guci_options); // this should be initialized first
+
     initArr();
-    initPST(&Guci_options);
+    initPST();
     InitTrapped();
 
-    //InitVars();
+    ThreadsMgr.InitVars();
     ThreadsMgr.SetNumThreads(NUM_THREADS);
 
     initMaterial();
@@ -101,10 +86,6 @@ int main(void) {
             origScore = 0;
             TransTable.Clear();
             PVHashTable.Clear();
-#ifndef TCEC
-            SearchManager.info.outOfBook = 0;
-            movesSoFar.length = 0;
-#endif
             ThreadsMgr.ClearPawnHash();
             ThreadsMgr.ClearEvalHash();
             SearchManager.info.lastDepthSearched = MAXPLY;
@@ -145,26 +126,6 @@ int main(void) {
         else if (!memcmp(command, "optimize2",9)) optimize(&pos, 2);
         else if (!memcmp(command, "optimize4",9)) optimize(&pos, 4);
         else if (!memcmp(command, "optimize8",9)) optimize(&pos, 8);
-#endif
-#ifndef TCEC
-        else if (!memcmp(command,"ConsumeBook",11)) {
-            if (GpolyglotBook.bookFile != NULL && GpolyglotBook.type!=POLYGLOT_BOOK) { //CONSIDER UPDATING
-                book_t HannibalFormat;
-                HannibalFormat.bookFile = NULL;
-                open_write_book(DEFAULT_HANNIBAL_BOOK,&HannibalFormat,PUCK_BOOK);
-                if (Glearn.learnFile==NULL) initLearn(DEFAULT_HANNIBAL_LEARN,&Glearn);
-                continuation_t moves;
-                MutexLock(LearningLock);
-                MutexLock(BookLock);
-                long num = polyglot_to_puck(&GpolyglotBook, &HannibalFormat, &Glearn, &pos, &moves, 0);
-                cout << "info string wrote " << num << " positions to book, size is now " << HannibalFormat.size << endl;
-                closeBook(&HannibalFormat);  
-                MutexUnlock(LearningLock);
-                MutexUnlock(BookLock);
-
-            }
-            else cout << "info string no book to consume" << endl;
-        }
 #endif
         else Print(3, "info string Unknown UCI command.\n");
     }

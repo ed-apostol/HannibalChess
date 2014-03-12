@@ -83,10 +83,6 @@ mutex_t BookLock[1];
 continuation_t movesSoFar;
 #endif
 
-extern uci_option_t Guci_options;
-
-
-
 extern uint64 (*FillPtr[])(uint64);
 extern uint64 (*FillPtr2[])(uint64);
 extern uint64 (*ShiftPtr[])(uint64, uint32);

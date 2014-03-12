@@ -12,6 +12,7 @@
 #include "threads.h"
 #include "trans.h"
 #include "utils.h"
+#include "uci.h"
 
 
 /* the search data structure */
@@ -38,9 +39,16 @@ struct SearchInfo{
         mate_found = 0;
         multipvIdx = 0;
         memset(moves, 0, sizeof(moves));
+        time_buffer = UCIOptionsMap["Time Buffer"].GetInt();
+        contempt = UCIOptionsMap["Contempt"].GetInt();
+        multipv = UCIOptionsMap["MultiPV"].GetInt();
     }
     int thinking_status;
     volatile bool stop_search;
+
+    int time_buffer;
+    int contempt;
+    int multipv;
 
     bool depth_is_limited;
     int depth_limit;

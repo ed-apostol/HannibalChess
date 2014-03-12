@@ -20,56 +20,74 @@
 #include "utils.h"
 #include "uci.h"
 
+UCIOptions UCIOptionsMap;
+
+void on_hash(const Options& o) { TransTable.Init(o.GetInt(), HASH_ASSOC); }
+void on_pawn_hash(const Options& o) { ThreadsMgr.pawnhashsize = o.GetInt(); ThreadsMgr.InitPawnHash(ThreadsMgr.pawnhashsize);}
+void on_eval_hash(const Options& o) { ThreadsMgr.evalcachesize = o.GetInt(); ThreadsMgr.InitEvalHash(ThreadsMgr.evalcachesize); }
+void on_multi_pv(const Options& o) { SearchManager.info.multipv = o.GetInt(); }
+void on_clear_hash(const Options& o) { TransTable.Clear(); }
+void on_ponder(const Options& o) { }
+void on_time_buffer(const Options& o) { SearchManager.info.time_buffer = o.GetInt(); }
+void on_threads(const Options& o) { ThreadsMgr.SetNumThreads(o.GetInt());}
+void on_splits(const Options& o) { ThreadsMgr.min_split_depth = o.GetInt(); }
+void on_threads_split(const Options& o) { ThreadsMgr.max_threads_per_split = o.GetInt(); }
+void on_active_splits(const Options& o) { ThreadsMgr.max_activesplits_per_thread = o.GetInt(); }
+void on_contempt(const Options& o) { SearchManager.info.contempt = o.GetInt(); }
+
+void PrintUCIOptions(const UCIOptions& uci_opt) {
+    for (UCIOptions::const_iterator it = uci_opt.begin(); it != uci_opt.end(); ++it) {
+        const Options& opt = it->second;
+        std::cout << "option name " << it->first << " type " << opt.m_Type;
+        if (opt.m_Type != "button") std::cout << " default " << opt.m_DefVal;
+        if (opt.m_Type == "spin") std::cout << " min " << opt.m_Min << " max " << opt.m_Max;
+        std::cout << std::endl;
+    }
+}
+
+void InitUCIOptions(UCIOptions& uci_opt) {
+    uci_opt["Hash"] =  Options(INIT_HASH, 1, 65536, on_hash);
+    uci_opt["Pawn Hash"] = Options(INIT_PAWN, 1, 1024, on_pawn_hash);
+    uci_opt["Eval Cache"] = Options(INIT_EVAL, 1, 1024, on_eval_hash);
+    uci_opt["MultiPV"] = Options(INIT_MULTIPV, 1, 128, on_multi_pv);
+    uci_opt["Clear Hash"] = Options(on_clear_hash);
+    uci_opt["Ponder"] = Options(false, on_ponder);
+    uci_opt["Time Buffer"] = Options(1000, 0, 10000, on_time_buffer);
+    uci_opt["Threads"] = Options(NUM_THREADS, 1, MaxNumOfThreads, on_threads);
+    uci_opt["Min Split Depth"] = Options(MIN_SPLIT_DEPTH, 1, 12, on_splits);
+    uci_opt["Max Threads/Split"] = Options(MAX_THREADS_PER_SPLIT, 2, 16, on_threads_split);
+    uci_opt["Max Active Splits/Thread"] = Options(MAX_ACTIVE_SPLITS, 1, 8, on_active_splits);
+    uci_opt["Contempt"] = Options(0, -100, 100, on_contempt);
+}
+
+void setoption(istringstream& is) {
+    string token, name, value;
+    is >> token;
+    while (is >> token && token != "value") name += string(" ", !name.empty()) + token;
+    while (is >> token) value += string(" ", !value.empty()) + token;
+    if (UCIOptionsMap.count(name)) UCIOptionsMap[name] = value;
+    else std::cout << "No such option: " << name << std::endl;
+}
+
 #define MIN_TIME 2
 #define TIME_DIVIDER 20 //how many moves we divide remaining time into 
-
-void initOption(uci_option_t* opt) {
-    //TODO add hash size option
-    opt->contempt = 0;
-    opt->time_buffer = 1000;
-    opt->multipv = INIT_MULTIPV;
-    opt->min_split_depth = MIN_SPLIT_DEPTH;
-    opt->max_threads_per_split = MAX_THREADS_PER_SPLIT;
-    opt->max_activesplits_per_thread = MAX_ACTIVE_SPLITS;
-    opt->evalcachesize = INIT_EVAL;
-    opt->pawnhashsize = INIT_PAWN;
-#ifndef TCEC
-    opt->try_book = false;
-    opt->book_limit = 128;
-    opt->learnThreads = DEFAULT_LEARN_THREADS;
-    opt->usehannibalbook = true;//TODO fix
-    opt->learnTime = DEFAULT_LEARN_TIME;
-    opt->bookExplore = DEFAULT_BOOK_EXPLORE;
-#endif
-}
 
 void uciStart(void) {
     Print(3, "id name Hannibal %s\n", VERSION);
     Print(3, "id author Sam Hamilton & Edsel Apostol\n");
-    Print(3, "option name Hash type spin min 1 max 65536 default %d\n", INIT_HASH);
-    Print(3, "option name Pawn Hash type spin min 1 max 1024 default %d\n", INIT_PAWN);
-    Print(3, "option name Eval Cache type spin min 1 max 1024 default %d\n", INIT_EVAL);
-    Print(3, "option name MultiPV type spin min 1 max 100 default %d\n", INIT_MULTIPV);
-    Print(3, "option name Clear Hash type button\n");
-    Print(3, "option name Ponder type check default false\n");
-#ifndef TCEC
-    Print(3, "option name OwnBook type check default false\n");
-    Print(3, "option name Book File type string default %s\n",DEFAULT_POLYGLOT_BOOK);
-    Print(3, "option name HannibalBook File type string default %s\n",DEFAULT_HANNIBAL_BOOK);
-    Print(3, "option name UseHannibalBook type check default true\n"); //TODO fix
-    Print(3, "option name LearnTime type spin min 0 max 20 default %d\n",DEFAULT_LEARN_TIME);
-    Print(3, "option name BookExplore type spin min 0 max 4 default %d\n",DEFAULT_BOOK_EXPLORE);
-    Print(3, "option name Book Move Limit type spin min 0 max 256 default 128\n");
-#endif
-    Print(3, "option name Time Buffer type spin min 0 max 10000 default 1000\n");
-    Print(3, "option name Threads type spin min 1 max %d default %d\n", MaxNumOfThreads, NUM_THREADS);
-#ifndef TCEC
-    Print(3, "option name LearnThreads type spin min 0 max %d default %d\n", MaxNumOfThreads, DEFAULT_LEARN_THREADS);
-#endif
-    Print(3, "option name Min Split Depth type spin min 1 max 12 default %d\n", MIN_SPLIT_DEPTH);
-    Print(3, "option name Max Threads/Split type spin min 2 max 8 default %d\n", MAX_THREADS_PER_SPLIT);
-    Print(3, "option name Max Active Splits/Thread type spin min 1 max 8 default %d\n", MAX_ACTIVE_SPLITS);
-    Print(3, "option name Contempt type spin min -100 max 100 default 0\n");
+    //Print(3, "option name Hash type spin min 1 max 65536 default %d\n", INIT_HASH);
+    //Print(3, "option name Pawn Hash type spin min 1 max 1024 default %d\n", INIT_PAWN);
+    //Print(3, "option name Eval Cache type spin min 1 max 1024 default %d\n", INIT_EVAL);
+    //Print(3, "option name MultiPV type spin min 1 max 100 default %d\n", INIT_MULTIPV);
+    //Print(3, "option name Clear Hash type button\n");
+    //Print(3, "option name Ponder type check default false\n");
+    //Print(3, "option name Time Buffer type spin min 0 max 10000 default 1000\n");
+    //Print(3, "option name Threads type spin min 1 max %d default %d\n", MaxNumOfThreads, NUM_THREADS);
+    //Print(3, "option name Min Split Depth type spin min 1 max 12 default %d\n", MIN_SPLIT_DEPTH);
+    //Print(3, "option name Max Threads/Split type spin min 2 max 8 default %d\n", MAX_THREADS_PER_SPLIT);
+    //Print(3, "option name Max Active Splits/Thread type spin min 1 max 8 default %d\n", MAX_ACTIVE_SPLITS);
+    //Print(3, "option name Contempt type spin min -100 max 100 default 0\n");
+    PrintUCIOptions(UCIOptionsMap);
     Print(3, "uciok\n"); //this makes sure there are no issues I hope?
 }
 
@@ -82,74 +100,32 @@ void uciSetOption(char string[]) {
     name += 5;
     value += 6;
 
-    if (!memcmp(name,"Hash",4)) {
-        TransTable.Init(atoi(value), HASH_ASSOC);
-    } else if (!memcmp(name,"Pawn Hash",9)) {
-        Guci_options.pawnhashsize = atoi(value);
-        ThreadsMgr.InitPawnHash(Guci_options.pawnhashsize);
+    //if (!memcmp(name,"Hash",4)) {
+    //    TransTable.Init(atoi(value), HASH_ASSOC);
+    //} else if (!memcmp(name,"Pawn Hash",9)) {
+    //    Guci_options.pawnhashsize = atoi(value);
+    //    ThreadsMgr.InitPawnHash(Guci_options.pawnhashsize);
 
-    } else if (!memcmp(name,"Eval Cache",10)) {
-        Guci_options.evalcachesize = atoi(value);
-        ThreadsMgr.InitEvalHash(Guci_options.evalcachesize);
-    } else if (!memcmp(name,"Clear Hash",10)) {
-        TransTable.Clear();
-    } 
-#ifndef TCEC
-    else if (!memcmp(name,"OwnBook",7)) {
-        if (value[0] == 't') Guci_options.try_book = true;
-        else Guci_options.try_book = false;
-    } else if (!memcmp(name,"Book File",9)) {
-        initBook(value, &GpolyglotBook, POLYGLOT_BOOK);
-    } else if (!memcmp(name,"HannibalBook File",17)) {
-        initBook(value, &GhannibalBook, PUCK_BOOK);
-    } else if (!memcmp(name,"Book Move Limit",15)) {
-        Guci_options.book_limit = atoi(value);
-    }
-    else if (!memcmp(name,"LearnTime",9)) {
-        Guci_options.learnTime = atoi(value);
-    } 
-    else if (!memcmp(name,"BookExplore",11)) {
-        Guci_options.bookExplore = atoi(value);
-    } 
-    else if (!memcmp(name,"LearnThreads",12)) {
-        int oldValue = Guci_options.learnThreads;
-        int newValue  = atoi(value);
-        if (Guci_options.threads + newValue > MaxNumOfThreads) newValue = MaxNumOfThreads - Guci_options.threads;
-        if (newValue != oldValue) {
-            if (SHOW_LEARNING) Print(3,"info string changing learn threads from %d to %d\n",oldValue,newValue);
-            Guci_options.learnThreads = newValue;
-
-            if (newValue < oldValue) { // go kill all the learning threads
-                for (int i = MaxNumOfThreads - oldValue; i < MaxNumOfThreads - newValue; i++) {
-                    if (SHOW_LEARNING) Print(3,"info string about to stop thread %d\n",i);
-                    SearchInfo(i).thinking_status = STOPPED;
-                }
-            }
-            else if (newValue > oldValue) {
-                for (int i = MaxNumOfThreads-newValue; i < MaxNumOfThreads-oldValue; i++) { //wake up if it needs to
-                    if (SHOW_LEARNING) Print(3,"info string about to wakup thread %d\n",i);
-                    SetEvent(Threads[i]->sleepCondition);
-                    if (SHOW_LEARNING) Print(3,"info string wokeup thread %d\n",i);
-                }
-            }
-        }
-    }
-#endif
-    else if (!memcmp(name,"Time Buffer",11)) {
-        Guci_options.time_buffer = atoi(value);
-    } else if (!memcmp(name,"Contempt",8)) {
-        Guci_options.contempt = atoi(value);
-    } else if (!memcmp(name,"Threads",7)) {
-        ThreadsMgr.SetNumThreads(atoi(value));
-    } else if (!memcmp(name,"Min Split Depth",15)) {
-        Guci_options.min_split_depth = atoi(value);
-    } else if (!memcmp(name,"Max Threads/Split",17)) {
-        Guci_options.max_threads_per_split = atoi(value);
-    } else if (!memcmp(name,"Max Active Splits/Thread",24)) {
-        Guci_options.max_activesplits_per_thread = atoi(value);
-    } else if (!memcmp(name,"MultiPV",7)) {
-        Guci_options.multipv = atoi(value);
-    }
+    //} else if (!memcmp(name,"Eval Cache",10)) {
+    //    Guci_options.evalcachesize = atoi(value);
+    //    ThreadsMgr.InitEvalHash(Guci_options.evalcachesize);
+    //} else if (!memcmp(name,"Clear Hash",10)) {
+    //    TransTable.Clear();
+    //} else if (!memcmp(name,"Time Buffer",11)) {
+    //    Guci_options.time_buffer = atoi(value);
+    //} else if (!memcmp(name,"Contempt",8)) {
+    //    Guci_options.contempt = atoi(value);
+    //} else if (!memcmp(name,"Threads",7)) {
+    //    ThreadsMgr.SetNumThreads(atoi(value));
+    //} else if (!memcmp(name,"Min Split Depth",15)) {
+    //    Guci_options.min_split_depth = atoi(value);
+    //} else if (!memcmp(name,"Max Threads/Split",17)) {
+    //    Guci_options.max_threads_per_split = atoi(value);
+    //} else if (!memcmp(name,"Max Active Splits/Thread",24)) {
+    //    Guci_options.max_activesplits_per_thread = atoi(value);
+    //} else if (!memcmp(name,"MultiPV",7)) {
+    //    Guci_options.multipv = atoi(value);
+    //}
 }
 
 void uciParseSearchmoves(movelist_t *ml, char *str, uint32 moves[]) {
@@ -258,7 +234,7 @@ void uciGo(position_t *pos, char *options) {
     }
     if (mytime > 0) {
         info.time_is_limited = true;
-        mytime = ((mytime * 95) / 100) - Guci_options.time_buffer;
+        mytime = ((mytime * 95) / 100) - info.time_buffer;
         if (mytime  < 0) mytime = 0;
         if (movestogo <= 0 || movestogo > TIME_DIVIDER) movestogo = TIME_DIVIDER;
         info.time_limit_max = (mytime / movestogo) + ((t_inc * 4) / 5);
@@ -290,8 +266,8 @@ void uciGo(position_t *pos, char *options) {
         Print(2, "info string Search status is THINKING\n");
     }
     /* initialize UCI parameters to be used in search */
-    DrawValue[pos->side] = - Guci_options.contempt;
-    DrawValue[pos->side^1] = Guci_options.contempt;
+    DrawValue[pos->side] = - info.contempt;
+    DrawValue[pos->side^1] = info.contempt;
 
     ThreadsMgr.StartThinking(pos);
 }

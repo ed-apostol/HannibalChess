@@ -78,10 +78,6 @@ FILE *errfile;
 FILE *dumpfile;
 int origScore;
 
-
-
-
-
 #ifndef TCEC
 book_t GhannibalBook;
 book_t GpolyglotBook;
@@ -91,7 +87,6 @@ mutex_t BookLock[1];
 continuation_t movesSoFar;
 #endif
 
-uci_option_t Guci_options;
 
 
 

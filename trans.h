@@ -184,10 +184,10 @@ private:
     int32 m_Age[DATESIZE];
 };
 
-inline int scoreFromTrans (int score, int ply) {
+inline int scoreFromTrans (int score, int ply) { // TODO: make static inside TranspositionTable
     return (score > MAXEVAL) ? (score - ply) : ((score < -MAXEVAL) ? (score + ply) : score);
 }
-inline int scoreToTrans (int score, int ply) {
+inline int scoreToTrans (int score, int ply) { // TODO: make static inside TranspositionTable
     return (score > MAXEVAL) ? (score + ply) : ((score < -MAXEVAL) ? (score - ply) : score);
 }
 

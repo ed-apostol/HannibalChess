@@ -15,6 +15,7 @@
 #include "threads.h"
 #include "utils.h"
 #include "bitutils.h"
+#include "uci.h"
 
 ThreadMgr ThreadsMgr;
 
@@ -63,7 +64,7 @@ void ThreadMgr::GetWork(const int thread_id, SplitPoint *master_sp) {
         for (int splitIdx = 0; splitIdx < th->num_sp; splitIdx++) {
             SplitPoint* sp = &th->sptable[splitIdx];
             if (sp->workersBitMask != sp->allWorkersBitMask) continue; // only search those with all threads still searching
-            if (bitCnt(sp->allWorkersBitMask) >= Guci_options.max_threads_per_split) continue; // enough threads working, no need to help
+            if (bitCnt(sp->allWorkersBitMask) >= max_threads_per_split) continue; // enough threads working, no need to help
             if (sp->depth > best_depth) {
                 best_split_point = sp;
                 best_depth = sp->depth;
@@ -77,14 +78,13 @@ void ThreadMgr::GetWork(const int thread_id, SplitPoint *master_sp) {
         if (master_thread->searching && master_thread->num_sp > 0 && !best_split_point->cutoff
             && (best_split_point->workersBitMask == best_split_point->allWorkersBitMask)
             && (!master_sp || (best_split_point->allWorkersBitMask & ((uint64)1<<master_thread->thread_id)))
-            && bitCnt(best_split_point->allWorkersBitMask) < Guci_options.max_threads_per_split) { // redundant criteria, just to be sure
+            && bitCnt(best_split_point->allWorkersBitMask) < max_threads_per_split) { // redundant criteria, just to be sure
                 best_split_point->pos[thread_id] = best_split_point->origpos;
                 best_split_point->workersBitMask |= ((uint64)1<<thread_id);
                 best_split_point->allWorkersBitMask |= ((uint64)1<<thread_id);
                 m_Threads[thread_id]->activeSplitPoint = best_split_point;
                 m_Threads[thread_id]->searching = true;
                 m_Threads[thread_id]->stop = false;
-                master_thread->joined++;
         }
         best_split_point->updatelock->unlock();
     }
@@ -117,6 +117,11 @@ uint64 ThreadMgr::ComputeNodes() {
 
 void ThreadMgr::InitVars() {
     m_StopThreads = false;
+    min_split_depth = UCIOptionsMap["Min Split Depth"].GetInt();
+    max_threads_per_split = UCIOptionsMap["Max Threads/Split"].GetInt();
+    max_activesplits_per_thread = UCIOptionsMap["Max Active Splits/Thread"].GetInt();
+    evalcachesize = UCIOptionsMap["Eval Cache"].GetInt();
+    pawnhashsize = UCIOptionsMap["Pawn Hash"].GetInt();
     for (Thread* th: m_Threads) {
         th->Init();
     }
@@ -132,8 +137,8 @@ void ThreadMgr::SetNumThreads(int num) {
         delete m_Threads.back();
         m_Threads.pop_back();
     }
-    InitPawnHash(Guci_options.pawnhashsize);
-    InitEvalHash(Guci_options.evalcachesize);
+    InitPawnHash(pawnhashsize);
+    InitEvalHash(evalcachesize);
 }
 
 void ThreadMgr::SearchSplitPoint(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread) {

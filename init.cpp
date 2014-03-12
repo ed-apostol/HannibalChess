@@ -127,7 +127,7 @@ int eking(int sq) {
     return (central[abs(f-r)] + central[abs(f+r-7)] + file[f] + rank[r]);
 }
 
-void initPST(uci_option_t *opt) {
+void initPST() {
     const int KingFileMul[8] = {
         +3, +4, +2, +0, +0, +2, +4, +3,
     };

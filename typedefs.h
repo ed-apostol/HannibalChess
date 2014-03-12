@@ -206,25 +206,6 @@ struct book_t {
     string name;
 };
 
-struct uci_option_t{ // TODO: move this to uci file
-    int time_buffer;
-    int contempt;
-    int multipv;
-#ifndef TCEC
-    int try_book;
-    int book_limit;
-    int learnThreads;
-    int usehannibalbook;
-    int learnTime;
-    int bookExplore;
-#endif
-    int min_split_depth;
-    int max_threads_per_split;
-    int max_activesplits_per_thread;
-    int evalcachesize;
-    int pawnhashsize;
-};
-
 
 /* the undo structure */
 struct pos_store_t {

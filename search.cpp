@@ -615,8 +615,8 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
             }
         }
         if (inSplitPoint) sp->updatelock->unlock();
-        if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < Guci_options.max_activesplits_per_thread
-            && ThreadsMgr.ThreadNum() > 1 && depth >= Guci_options.min_split_depth
+        if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < ThreadsMgr.max_activesplits_per_thread
+            && ThreadsMgr.ThreadNum() > 1 && depth >= ThreadsMgr.min_split_depth
             && (!inCutNode(nt) || (MoveGenPhase[ss.mvlist_phase] != PH_GOOD_CAPTURES && MoveGenPhase[ss.mvlist_phase] != PH_KILLER_MOVES))) {
                 ThreadsMgr.SearchSplitPoint(pos, ss.mvlist, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, sthread);
                 if (sthread.stop) return 0;
@@ -818,20 +818,6 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
             info.time_limit_max = info.time_limit_abs;
     }
 
-#ifndef TCEC
-    if (info.thinking_status == THINKING && opt->try_book && pos->sp <= opt->book_limit && !anyRep(pos) && info.outOfBook < 8) {
-        if (DEBUG_BOOK) Print(3,"info string num moves %d\n",mvlist.size);
-        book_t *book = opt->usehannibalbook ? &GhannibalBook : &GpolyglotBook;
-        if ((info.bestmove = getBookMove(pos,book,&mvlist,true,Guci_options.bookExplore*5)) != 0) {
-            info.outOfBook = 0;
-            return;
-        }
-        if (opt->usehannibalbook /*&& Guci_options.try_book*/ && info.outOfBook < MAXLEARN_OUT_OF_BOOK && movesSoFar.length > 0) 
-            add_to_learn_begin(&Glearn,&movesSoFar);
-    }
-    if (info.thinking_status != PONDERING) info.outOfBook++;
-#endif
-
     // SMP 
     ThreadsMgr.InitVars();
     ThreadsMgr.SetAllThreadsToWork();
@@ -844,7 +830,7 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
         info.best_value = -INF;
         info.change = 0;
         info.research = 0;
-        for (info.multipvIdx = 0; info.multipvIdx < Guci_options.multipv; ++info.multipvIdx) {
+        for (info.multipvIdx = 0; info.multipvIdx < info.multipv; ++info.multipvIdx) {
             if (id < 6) {
                 alpha = -INF;
                 beta = INF;
@@ -867,11 +853,11 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
                 if (info.stop_search) break;
                 if (info.best_value <= alpha) {
                     if (info.best_value <= alpha) alpha = info.best_value-(AspirationWindow<<++faillow);
-                    if (alpha < -RookValue) alpha = -INF;
+                    if (alpha < -QueenValue) alpha = -INF;
                     info.research = 1;
                 } else if(info.best_value >= beta) {
                     if (info.best_value >= beta)  beta = info.best_value+(AspirationWindow<<++failhigh);
-                    if (beta > RookValue) beta = INF;
+                    if (beta > QueenValue) beta = INF;
                     info.research = 1;
                 } else break;
             }
