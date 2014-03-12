@@ -216,7 +216,7 @@ uint64 getTime(void) {
 /* parse the move from string and returns a move from the
 move list of generated moves if the move string matched
 one of them */
-uint32 parseMove(movelist_t *mvlist, char *s) {
+uint32 parseMove(movelist_t *mvlist, const char *s) {
     uint32 m;
     uint32 from, to, p;
 

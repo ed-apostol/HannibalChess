@@ -10,13 +10,7 @@
 #pragma once
 #include <map>
 #include <sstream>
-
-/* uci.c */
-extern void uciSetOption(char string[]);
-extern void uciParseSearchmoves(movelist_t *ml, char *str, uint32 moves[]);
-extern void uciGo(position_t *pos, char *options);
-extern void uciStart(void);
-extern void uciSetPosition(position_t *pos, char *str);
+#include "utils.h"
 
 struct Options {
     typedef void (*ActionFunc)(const Options&);
@@ -39,7 +33,34 @@ struct Options {
 
 typedef std::map<std::string, Options> UCIOptions;
 
-extern void PrintUCIOptions(const UCIOptions& uci_opt);
-extern void InitUCIOptions(UCIOptions& uci_opt);
-
 extern UCIOptions UCIOptionsMap;
+
+
+class Engine {
+public:
+    Engine();
+    ~Engine();
+    void Info();
+    void Run();
+
+private:
+    bool Input(std::istringstream& stream);
+    void Stop();
+    void Ponderhit();
+    void Go(std::istringstream& stream);
+    void Position(std::istringstream& stream);
+    void SetOption(std::istringstream& stream);
+    void NewGame();
+    void Id();
+    void Quit();
+    void PrintUCIOptions(const UCIOptions& uci_opt);
+    void InitUCIOptions(UCIOptions& uci_opt);
+
+    static const std::string name;
+    static const std::string author;
+    static const std::string year;
+    static const std::string version;
+    static const std::string arch;
+
+    position_t rootpos;
+};

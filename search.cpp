@@ -888,252 +888,252 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
 
     sendBestMove();
 }
-
-void SearchMgr::checkSpeedUp(position_t* pos, char string[]) {
-    const int NUMPOS = 4;
-    const int MAXTHREADS = 32;
-    char* fenPos[NUMPOS] = {
-        "fen rn1qk1nr/pp3pp1/2pbp1bp/8/2BP3P/6N1/PPP1NPP1/R1BQK2R w KQkq - 0 9",
-        "fen r2qk2r/1p1n1pbb/2p1pnpp/p7/2BP3P/3N1QN1/PPPB1PP1/2KR3R w kq - 2 16",
-        "fen r4rk1/4qpbb/4p1pp/ppN5/3P3P/2Q5/1PPB1PP1/2KR3R w - - 0 24",
-        "fen r4rk1/4qp1b/4p1pQ/2N5/1p1P3P/p7/1PP2PP1/2KR3R w - - 0 28",
-    };
-    double timeSpeedupSum[MAXTHREADS];
-    double nodesSpeedupSum[MAXTHREADS];
-    char tempStr[256] = {0};
-    int depth = 12;
-    int threads = 1;
-    char command[1024];
-
-    sscanf_s(string, "%d %d", &threads, &depth);
-
-    for (int j = 0; j < MAXTHREADS; ++j) {
-        timeSpeedupSum[j] = 0.0;
-        nodesSpeedupSum[j] = 0.0;
-    }
-
-    for (int i = 0; i < NUMPOS; ++i) {
-        uciSetOption("name Threads value 1");
-        TransTable.Clear();
-        PVHashTable.Clear();
-        ThreadsMgr.ClearPawnHash();
-        ThreadsMgr.ClearEvalHash();
-        ThreadsMgr.InitVars();
-        Print(5, "\n\nPos#%d: %s\n", i+1, fenPos[i]);
-        uciSetPosition(pos, fenPos[i]);
-        int64 startTime = getTime();
-        sprintf_s(command, "movedepth %d", depth);
-        uciGo(pos, command);
-        while (ThreadsMgr.StillThinking()) std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        int64 spentTime1 = getTime() - startTime;
-        uint64 nodes1 = ThreadsMgr.ComputeNodes() / spentTime1;
-        double timeSpeedUp = (double)spentTime1/1000.0;
-        timeSpeedupSum[0] += timeSpeedUp;
-        double nodesSpeedup = (double)nodes1;
-        nodesSpeedupSum[0] += nodesSpeedup;
-        Print(5, "Base: %0.2fs %dknps\n", timeSpeedUp, nodes1);
-
-        sprintf_s(tempStr, "name Threads value %d\n", threads);
-        uciSetOption(tempStr);
-        TransTable.Clear();
-        PVHashTable.Clear();
-        ThreadsMgr.ClearPawnHash();
-        ThreadsMgr.ClearEvalHash();
-        ThreadsMgr.InitVars();
-        uciSetPosition(pos, fenPos[i]);
-        startTime = getTime();
-        sprintf_s(command, "movedepth %d", depth);
-        uciGo(pos, command);
-        while (ThreadsMgr.StillThinking()) std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        int64 spentTime = getTime() - startTime;
-        uint64 nodes = 0;
-        nodes = ThreadsMgr.ComputeNodes();
-        nodes /= spentTime;
-        timeSpeedUp = (double)spentTime1 / (double)spentTime;
-        timeSpeedupSum[threads] += timeSpeedUp;
-        nodesSpeedup = (double)nodes / (double)nodes1;
-        nodesSpeedupSum[threads] += nodesSpeedup;
-        Print(5, "Thread: %d SpeedUp: %0.2f %0.2f\n", threads, timeSpeedUp, nodesSpeedup);
-    }
-    Print(5, "\n\n");
-    Print(5, "\n\nAvg Base: %0.2fs %dknps\n", timeSpeedupSum[0]/NUMPOS, (int)nodesSpeedupSum[0]/NUMPOS);
-    Print(5, "Thread: %d Avg SpeedUp: %0.2f %0.2f\n", threads, timeSpeedupSum[threads]/NUMPOS, nodesSpeedupSum[threads]/NUMPOS);
-    Print(5, "\n\n");
-}
-
-void SearchMgr::benchMinSplitDepth(position_t* pos, char string[]) {
-    const int NUMPOS = 4;
-    const int MAXSPLIT = 11;
-    char* fenPos[NUMPOS] = {
-        "fen rn1qk1nr/pp3pp1/2pbp1bp/8/2BP3P/6N1/PPP1NPP1/R1BQK2R w KQkq - 0 9",
-        "fen r2qk2r/1p1n1pbb/2p1pnpp/p7/2BP3P/3N1QN1/PPPB1PP1/2KR3R w kq - 2 16",
-        "fen r4rk1/4qpbb/4p1pp/ppN5/3P3P/2Q5/1PPB1PP1/2KR3R w - - 0 24",
-        "fen r4rk1/4qp1b/4p1pQ/2N5/1p1P3P/p7/1PP2PP1/2KR3R w - - 0 28",
-    };
-    char command[1024] = {0};
-    uint64 timeSum[MAXSPLIT];
-    uint64 nodesSum[MAXSPLIT];
-    int threads = 1, depth = 12;
-    for (int i = 1; i < MAXSPLIT; ++i) {
-        timeSum[i] = nodesSum[i] = 0;
-    }
-
-    sscanf_s(string, "%d %d", &threads, &depth);
-
-    sprintf_s(command, "name Threads value %d", threads);
-    uciSetOption(command);
-    for (int posIdx = 0; posIdx < NUMPOS; ++posIdx) {
-        Print(5, "\n\nPos#%d: %s\n", posIdx+1, fenPos[posIdx]);
-        for (int i = 1; i < MAXSPLIT; ++i) {
-            sprintf_s(command, "name Min Split Depth value %d", i);
-            uciSetOption(command);
-            TransTable.Clear();
-            PVHashTable.Clear();
-            ThreadsMgr.ClearPawnHash();
-            ThreadsMgr.ClearEvalHash();
-            ThreadsMgr.InitVars();
-            uciSetPosition(pos, fenPos[posIdx]);
-            int64 startTime = getTime();
-            sprintf_s(command, "movedepth %d", depth);
-            uciGo(pos, command);
-            while (ThreadsMgr.StillThinking()) std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            int64 spentTime = getTime() - startTime;
-            timeSum[i] += spentTime;
-            uint64 nodes = 0;
-            nodes = ThreadsMgr.ComputeNodes();
-            nodes = nodes*1000/spentTime;
-            nodesSum[i] += nodes;
-            Print(5, "Threads: %d Depth: %d SplitDepth: %d Time: %d Nps: %d\n", threads, depth, i, spentTime, nodes);
-        }
-    }
-    int bestIdx = 1;
-    double bestSplit = double(nodesSum[bestIdx])/double(timeSum[bestIdx]);
-    Print(5, "\n\nAverage Statistics (Threads: %d Depth: %d)\n\n", threads, depth);
-    for (int i = 1; i < MAXSPLIT; ++i) {
-        if (double(nodesSum[i])/double(timeSum[i]) > bestSplit) {
-            bestSplit = double(nodesSum[i])/double(timeSum[i]);
-            bestIdx = i;
-        }
-        Print(5, "SplitDepth: %d Time: %d Nps: %d Ratio: %0.2f\n", i, timeSum[i]/NUMPOS, nodesSum[i]/NUMPOS, double(nodesSum[i])/double(timeSum[i]));
-    }
-    Print(5, "\n\nThe best SplitDepth for Threads: %d Depth: %d is:\n\nSplitDepth: %d Time: %d Nps: %d Ratio: %0.2f\n\n\n",
-        threads, depth, bestIdx, timeSum[bestIdx]/NUMPOS, nodesSum[bestIdx]/NUMPOS, double(nodesSum[bestIdx])/double(timeSum[bestIdx]));
-}
-
-void SearchMgr::benchThreadsperSplit(position_t* pos, char string[]) {
-    const int NUMPOS = 4;
-    const int MAXSPLIT = 9;
-    char* fenPos[NUMPOS] = {
-        "fen rn1qk1nr/pp3pp1/2pbp1bp/8/2BP3P/6N1/PPP1NPP1/R1BQK2R w KQkq - 0 9",
-        "fen r2qk2r/1p1n1pbb/2p1pnpp/p7/2BP3P/3N1QN1/PPPB1PP1/2KR3R w kq - 2 16",
-        "fen r4rk1/4qpbb/4p1pp/ppN5/3P3P/2Q5/1PPB1PP1/2KR3R w - - 0 24",
-        "fen r4rk1/4qp1b/4p1pQ/2N5/1p1P3P/p7/1PP2PP1/2KR3R w - - 0 28",
-    };
-    char command[1024] = {0};
-    uint64 timeSum[MAXSPLIT];
-    uint64 nodesSum[MAXSPLIT];
-    int threads = 1, depth = 12;
-    for (int i = 1; i < MAXSPLIT; ++i) {
-        timeSum[i] = nodesSum[i] = 0;
-    }
-
-    sscanf_s(string, "%d %d", &threads, &depth);
-
-    sprintf_s(command, "name Threads value %d", threads);
-    uciSetOption(command);
-    for (int posIdx = 0; posIdx < NUMPOS; ++posIdx) {
-        Print(5, "\n\nPos#%d: %s\n", posIdx+1, fenPos[posIdx]);
-        for (int i = 2; i < MIN(MAXSPLIT, threads+1); ++i) {
-            sprintf_s(command, "name Max Threads/Split value %d", i);
-            uciSetOption(command);
-            TransTable.Clear();
-            PVHashTable.Clear();
-            ThreadsMgr.ClearPawnHash();
-            ThreadsMgr.ClearEvalHash();
-            ThreadsMgr.InitVars();
-            uciSetPosition(pos, fenPos[posIdx]);
-            int64 startTime = getTime();
-            sprintf_s(command, "movedepth %d", depth);
-            uciGo(pos, command);
-            while (ThreadsMgr.StillThinking()) std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            int64 spentTime = getTime() - startTime;
-            timeSum[i] += spentTime;
-            uint64 nodes = 0;
-            nodes = ThreadsMgr.ComputeNodes();
-            nodes = nodes*1000/spentTime;
-            nodesSum[i] += nodes;
-            Print(5, "Threads: %d Depth: %d Threads/Split: %d Time: %d Nps: %d\n", threads, depth, i, spentTime, nodes);
-        }
-    }
-    int bestIdx = 2;
-    double bestSplit = double(nodesSum[bestIdx])/double(timeSum[bestIdx]);
-    Print(5, "\n\nAverage Statistics (Threads: %d Depth: %d)\n\n", threads, depth);
-    for (int i = 2; i <  MIN(MAXSPLIT, threads+1); ++i) {
-        if (double(nodesSum[i])/double(timeSum[i]) > bestSplit) {
-            bestSplit = double(nodesSum[i])/double(timeSum[i]);
-            bestIdx = i;
-        }
-        Print(5, "Threads/Split: %d Time: %d Nps: %d Ratio: %0.2f\n", i, timeSum[i]/NUMPOS, nodesSum[i]/NUMPOS, double(nodesSum[i])/double(timeSum[i]));
-    }
-    Print(5, "\n\nThe best Threads/Split for Threads: %d Depth: %d is:\n\nThreads/Split: %d Time: %d Nps: %d Ratio: %0.2f\n\n\n",
-        threads, depth, bestIdx, timeSum[bestIdx]/NUMPOS, nodesSum[bestIdx]/NUMPOS, double(nodesSum[bestIdx])/double(timeSum[bestIdx]));
-}
-
-void SearchMgr::benchActiveSplits(position_t* pos, char string[]) {
-    const int NUMPOS = 4;
-    const int MAXSPLIT = MaxNumSplitPointsPerThread+1;
-    char* fenPos[NUMPOS] = {
-        "fen rn1qk1nr/pp3pp1/2pbp1bp/8/2BP3P/6N1/PPP1NPP1/R1BQK2R w KQkq - 0 9",
-        "fen r2qk2r/1p1n1pbb/2p1pnpp/p7/2BP3P/3N1QN1/PPPB1PP1/2KR3R w kq - 2 16",
-        "fen r4rk1/4qpbb/4p1pp/ppN5/3P3P/2Q5/1PPB1PP1/2KR3R w - - 0 24",
-        "fen r4rk1/4qp1b/4p1pQ/2N5/1p1P3P/p7/1PP2PP1/2KR3R w - - 0 28",
-    };
-    char command[1024] = {0};
-    uint64 timeSum[MAXSPLIT];
-    uint64 nodesSum[MAXSPLIT];
-    int threads = 1, depth = 12;
-    for (int i = 1; i < MAXSPLIT; ++i) {
-        timeSum[i] = nodesSum[i] = 0;
-    }
-
-    sscanf_s(string, "%d %d", &threads, &depth);
-
-    sprintf_s(command, "name Threads value %d", threads);
-    uciSetOption(command);
-    for (int posIdx = 0; posIdx < NUMPOS; ++posIdx) {
-        Print(5, "\n\nPos#%d: %s\n", posIdx+1, fenPos[posIdx]);
-        for (int i = 1; i <= MaxNumSplitPointsPerThread; ++i) {
-            sprintf_s(command, "name Max Active Splits/Thread value %d", i);
-            uciSetOption(command);
-            TransTable.Clear();
-            PVHashTable.Clear();
-            ThreadsMgr.ClearPawnHash();
-            ThreadsMgr.ClearEvalHash();
-            ThreadsMgr.InitVars();
-            uciSetPosition(pos, fenPos[posIdx]);
-            int64 startTime = getTime();
-            sprintf_s(command, "movedepth %d", depth);
-            uciGo(pos, command);
-            while (ThreadsMgr.StillThinking()) std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            int64 spentTime = getTime() - startTime;
-            timeSum[i] += spentTime;
-            uint64 nodes = 0;
-            nodes = ThreadsMgr.ComputeNodes();
-            nodes = nodes*1000/spentTime;
-            nodesSum[i] += nodes;
-            Print(5, "Threads: %d Depth: %d Active Splits: %d Time: %d Nps: %d\n", threads, depth, i, spentTime, nodes);
-        }
-    }
-    int bestIdx = 2;
-    double bestSplit = double(nodesSum[bestIdx])/double(timeSum[bestIdx]);
-    Print(5, "\n\nAverage Statistics (Threads: %d Depth: %d)\n\n", threads, depth);
-    for (int i = 1; i <= MaxNumSplitPointsPerThread; ++i) {
-        if (double(nodesSum[i])/double(timeSum[i]) > bestSplit) {
-            bestSplit = double(nodesSum[i])/double(timeSum[i]);
-            bestIdx = i;
-        }
-        Print(5, "Active Splits: %d Time: %d Nps: %d Ratio: %0.2f\n", i, timeSum[i]/NUMPOS, nodesSum[i]/NUMPOS, double(nodesSum[i])/double(timeSum[i]));
-    }
-    Print(5, "\n\nThe best Active Splits for Threads: %d Depth: %d is:\n\nActive Splits: %d Time: %d Nps: %d Ratio: %0.2f\n\n\n",
-        threads, depth, bestIdx, timeSum[bestIdx]/NUMPOS, nodesSum[bestIdx]/NUMPOS, double(nodesSum[bestIdx])/double(timeSum[bestIdx]));
-}
+//
+//void SearchMgr::checkSpeedUp(position_t* pos, char string[]) {
+//    const int NUMPOS = 4;
+//    const int MAXTHREADS = 32;
+//    char* fenPos[NUMPOS] = {
+//        "fen rn1qk1nr/pp3pp1/2pbp1bp/8/2BP3P/6N1/PPP1NPP1/R1BQK2R w KQkq - 0 9",
+//        "fen r2qk2r/1p1n1pbb/2p1pnpp/p7/2BP3P/3N1QN1/PPPB1PP1/2KR3R w kq - 2 16",
+//        "fen r4rk1/4qpbb/4p1pp/ppN5/3P3P/2Q5/1PPB1PP1/2KR3R w - - 0 24",
+//        "fen r4rk1/4qp1b/4p1pQ/2N5/1p1P3P/p7/1PP2PP1/2KR3R w - - 0 28",
+//    };
+//    double timeSpeedupSum[MAXTHREADS];
+//    double nodesSpeedupSum[MAXTHREADS];
+//    char tempStr[256] = {0};
+//    int depth = 12;
+//    int threads = 1;
+//    char command[1024];
+//
+//    sscanf_s(string, "%d %d", &threads, &depth);
+//
+//    for (int j = 0; j < MAXTHREADS; ++j) {
+//        timeSpeedupSum[j] = 0.0;
+//        nodesSpeedupSum[j] = 0.0;
+//    }
+//
+//    for (int i = 0; i < NUMPOS; ++i) {
+//        uciSetOption("name Threads value 1");
+//        TransTable.Clear();
+//        PVHashTable.Clear();
+//        ThreadsMgr.ClearPawnHash();
+//        ThreadsMgr.ClearEvalHash();
+//        ThreadsMgr.InitVars();
+//        Print(5, "\n\nPos#%d: %s\n", i+1, fenPos[i]);
+//        uciSetPosition(pos, fenPos[i]);
+//        int64 startTime = getTime();
+//        sprintf_s(command, "movedepth %d", depth);
+//        uciGo(pos, command);
+//        while (ThreadsMgr.StillThinking()) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+//        int64 spentTime1 = getTime() - startTime;
+//        uint64 nodes1 = ThreadsMgr.ComputeNodes() / spentTime1;
+//        double timeSpeedUp = (double)spentTime1/1000.0;
+//        timeSpeedupSum[0] += timeSpeedUp;
+//        double nodesSpeedup = (double)nodes1;
+//        nodesSpeedupSum[0] += nodesSpeedup;
+//        Print(5, "Base: %0.2fs %dknps\n", timeSpeedUp, nodes1);
+//
+//        sprintf_s(tempStr, "name Threads value %d\n", threads);
+//        uciSetOption(tempStr);
+//        TransTable.Clear();
+//        PVHashTable.Clear();
+//        ThreadsMgr.ClearPawnHash();
+//        ThreadsMgr.ClearEvalHash();
+//        ThreadsMgr.InitVars();
+//        uciSetPosition(pos, fenPos[i]);
+//        startTime = getTime();
+//        sprintf_s(command, "movedepth %d", depth);
+//        uciGo(pos, command);
+//        while (ThreadsMgr.StillThinking()) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+//        int64 spentTime = getTime() - startTime;
+//        uint64 nodes = 0;
+//        nodes = ThreadsMgr.ComputeNodes();
+//        nodes /= spentTime;
+//        timeSpeedUp = (double)spentTime1 / (double)spentTime;
+//        timeSpeedupSum[threads] += timeSpeedUp;
+//        nodesSpeedup = (double)nodes / (double)nodes1;
+//        nodesSpeedupSum[threads] += nodesSpeedup;
+//        Print(5, "Thread: %d SpeedUp: %0.2f %0.2f\n", threads, timeSpeedUp, nodesSpeedup);
+//    }
+//    Print(5, "\n\n");
+//    Print(5, "\n\nAvg Base: %0.2fs %dknps\n", timeSpeedupSum[0]/NUMPOS, (int)nodesSpeedupSum[0]/NUMPOS);
+//    Print(5, "Thread: %d Avg SpeedUp: %0.2f %0.2f\n", threads, timeSpeedupSum[threads]/NUMPOS, nodesSpeedupSum[threads]/NUMPOS);
+//    Print(5, "\n\n");
+//}
+//
+//void SearchMgr::benchMinSplitDepth(position_t* pos, char string[]) {
+//    const int NUMPOS = 4;
+//    const int MAXSPLIT = 11;
+//    char* fenPos[NUMPOS] = {
+//        "fen rn1qk1nr/pp3pp1/2pbp1bp/8/2BP3P/6N1/PPP1NPP1/R1BQK2R w KQkq - 0 9",
+//        "fen r2qk2r/1p1n1pbb/2p1pnpp/p7/2BP3P/3N1QN1/PPPB1PP1/2KR3R w kq - 2 16",
+//        "fen r4rk1/4qpbb/4p1pp/ppN5/3P3P/2Q5/1PPB1PP1/2KR3R w - - 0 24",
+//        "fen r4rk1/4qp1b/4p1pQ/2N5/1p1P3P/p7/1PP2PP1/2KR3R w - - 0 28",
+//    };
+//    char command[1024] = {0};
+//    uint64 timeSum[MAXSPLIT];
+//    uint64 nodesSum[MAXSPLIT];
+//    int threads = 1, depth = 12;
+//    for (int i = 1; i < MAXSPLIT; ++i) {
+//        timeSum[i] = nodesSum[i] = 0;
+//    }
+//
+//    sscanf_s(string, "%d %d", &threads, &depth);
+//
+//    sprintf_s(command, "name Threads value %d", threads);
+//    uciSetOption(command);
+//    for (int posIdx = 0; posIdx < NUMPOS; ++posIdx) {
+//        Print(5, "\n\nPos#%d: %s\n", posIdx+1, fenPos[posIdx]);
+//        for (int i = 1; i < MAXSPLIT; ++i) {
+//            sprintf_s(command, "name Min Split Depth value %d", i);
+//            uciSetOption(command);
+//            TransTable.Clear();
+//            PVHashTable.Clear();
+//            ThreadsMgr.ClearPawnHash();
+//            ThreadsMgr.ClearEvalHash();
+//            ThreadsMgr.InitVars();
+//            uciSetPosition(pos, fenPos[posIdx]);
+//            int64 startTime = getTime();
+//            sprintf_s(command, "movedepth %d", depth);
+//            uciGo(pos, command);
+//            while (ThreadsMgr.StillThinking()) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+//            int64 spentTime = getTime() - startTime;
+//            timeSum[i] += spentTime;
+//            uint64 nodes = 0;
+//            nodes = ThreadsMgr.ComputeNodes();
+//            nodes = nodes*1000/spentTime;
+//            nodesSum[i] += nodes;
+//            Print(5, "Threads: %d Depth: %d SplitDepth: %d Time: %d Nps: %d\n", threads, depth, i, spentTime, nodes);
+//        }
+//    }
+//    int bestIdx = 1;
+//    double bestSplit = double(nodesSum[bestIdx])/double(timeSum[bestIdx]);
+//    Print(5, "\n\nAverage Statistics (Threads: %d Depth: %d)\n\n", threads, depth);
+//    for (int i = 1; i < MAXSPLIT; ++i) {
+//        if (double(nodesSum[i])/double(timeSum[i]) > bestSplit) {
+//            bestSplit = double(nodesSum[i])/double(timeSum[i]);
+//            bestIdx = i;
+//        }
+//        Print(5, "SplitDepth: %d Time: %d Nps: %d Ratio: %0.2f\n", i, timeSum[i]/NUMPOS, nodesSum[i]/NUMPOS, double(nodesSum[i])/double(timeSum[i]));
+//    }
+//    Print(5, "\n\nThe best SplitDepth for Threads: %d Depth: %d is:\n\nSplitDepth: %d Time: %d Nps: %d Ratio: %0.2f\n\n\n",
+//        threads, depth, bestIdx, timeSum[bestIdx]/NUMPOS, nodesSum[bestIdx]/NUMPOS, double(nodesSum[bestIdx])/double(timeSum[bestIdx]));
+//}
+//
+//void SearchMgr::benchThreadsperSplit(position_t* pos, char string[]) {
+//    const int NUMPOS = 4;
+//    const int MAXSPLIT = 9;
+//    char* fenPos[NUMPOS] = {
+//        "fen rn1qk1nr/pp3pp1/2pbp1bp/8/2BP3P/6N1/PPP1NPP1/R1BQK2R w KQkq - 0 9",
+//        "fen r2qk2r/1p1n1pbb/2p1pnpp/p7/2BP3P/3N1QN1/PPPB1PP1/2KR3R w kq - 2 16",
+//        "fen r4rk1/4qpbb/4p1pp/ppN5/3P3P/2Q5/1PPB1PP1/2KR3R w - - 0 24",
+//        "fen r4rk1/4qp1b/4p1pQ/2N5/1p1P3P/p7/1PP2PP1/2KR3R w - - 0 28",
+//    };
+//    char command[1024] = {0};
+//    uint64 timeSum[MAXSPLIT];
+//    uint64 nodesSum[MAXSPLIT];
+//    int threads = 1, depth = 12;
+//    for (int i = 1; i < MAXSPLIT; ++i) {
+//        timeSum[i] = nodesSum[i] = 0;
+//    }
+//
+//    sscanf_s(string, "%d %d", &threads, &depth);
+//
+//    sprintf_s(command, "name Threads value %d", threads);
+//    uciSetOption(command);
+//    for (int posIdx = 0; posIdx < NUMPOS; ++posIdx) {
+//        Print(5, "\n\nPos#%d: %s\n", posIdx+1, fenPos[posIdx]);
+//        for (int i = 2; i < MIN(MAXSPLIT, threads+1); ++i) {
+//            sprintf_s(command, "name Max Threads/Split value %d", i);
+//            uciSetOption(command);
+//            TransTable.Clear();
+//            PVHashTable.Clear();
+//            ThreadsMgr.ClearPawnHash();
+//            ThreadsMgr.ClearEvalHash();
+//            ThreadsMgr.InitVars();
+//            uciSetPosition(pos, fenPos[posIdx]);
+//            int64 startTime = getTime();
+//            sprintf_s(command, "movedepth %d", depth);
+//            uciGo(pos, command);
+//            while (ThreadsMgr.StillThinking()) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+//            int64 spentTime = getTime() - startTime;
+//            timeSum[i] += spentTime;
+//            uint64 nodes = 0;
+//            nodes = ThreadsMgr.ComputeNodes();
+//            nodes = nodes*1000/spentTime;
+//            nodesSum[i] += nodes;
+//            Print(5, "Threads: %d Depth: %d Threads/Split: %d Time: %d Nps: %d\n", threads, depth, i, spentTime, nodes);
+//        }
+//    }
+//    int bestIdx = 2;
+//    double bestSplit = double(nodesSum[bestIdx])/double(timeSum[bestIdx]);
+//    Print(5, "\n\nAverage Statistics (Threads: %d Depth: %d)\n\n", threads, depth);
+//    for (int i = 2; i <  MIN(MAXSPLIT, threads+1); ++i) {
+//        if (double(nodesSum[i])/double(timeSum[i]) > bestSplit) {
+//            bestSplit = double(nodesSum[i])/double(timeSum[i]);
+//            bestIdx = i;
+//        }
+//        Print(5, "Threads/Split: %d Time: %d Nps: %d Ratio: %0.2f\n", i, timeSum[i]/NUMPOS, nodesSum[i]/NUMPOS, double(nodesSum[i])/double(timeSum[i]));
+//    }
+//    Print(5, "\n\nThe best Threads/Split for Threads: %d Depth: %d is:\n\nThreads/Split: %d Time: %d Nps: %d Ratio: %0.2f\n\n\n",
+//        threads, depth, bestIdx, timeSum[bestIdx]/NUMPOS, nodesSum[bestIdx]/NUMPOS, double(nodesSum[bestIdx])/double(timeSum[bestIdx]));
+//}
+//
+//void SearchMgr::benchActiveSplits(position_t* pos, char string[]) {
+//    const int NUMPOS = 4;
+//    const int MAXSPLIT = MaxNumSplitPointsPerThread+1;
+//    char* fenPos[NUMPOS] = {
+//        "fen rn1qk1nr/pp3pp1/2pbp1bp/8/2BP3P/6N1/PPP1NPP1/R1BQK2R w KQkq - 0 9",
+//        "fen r2qk2r/1p1n1pbb/2p1pnpp/p7/2BP3P/3N1QN1/PPPB1PP1/2KR3R w kq - 2 16",
+//        "fen r4rk1/4qpbb/4p1pp/ppN5/3P3P/2Q5/1PPB1PP1/2KR3R w - - 0 24",
+//        "fen r4rk1/4qp1b/4p1pQ/2N5/1p1P3P/p7/1PP2PP1/2KR3R w - - 0 28",
+//    };
+//    char command[1024] = {0};
+//    uint64 timeSum[MAXSPLIT];
+//    uint64 nodesSum[MAXSPLIT];
+//    int threads = 1, depth = 12;
+//    for (int i = 1; i < MAXSPLIT; ++i) {
+//        timeSum[i] = nodesSum[i] = 0;
+//    }
+//
+//    sscanf_s(string, "%d %d", &threads, &depth);
+//
+//    sprintf_s(command, "name Threads value %d", threads);
+//    uciSetOption(command);
+//    for (int posIdx = 0; posIdx < NUMPOS; ++posIdx) {
+//        Print(5, "\n\nPos#%d: %s\n", posIdx+1, fenPos[posIdx]);
+//        for (int i = 1; i <= MaxNumSplitPointsPerThread; ++i) {
+//            sprintf_s(command, "name Max Active Splits/Thread value %d", i);
+//            uciSetOption(command);
+//            TransTable.Clear();
+//            PVHashTable.Clear();
+//            ThreadsMgr.ClearPawnHash();
+//            ThreadsMgr.ClearEvalHash();
+//            ThreadsMgr.InitVars();
+//            uciSetPosition(pos, fenPos[posIdx]);
+//            int64 startTime = getTime();
+//            sprintf_s(command, "movedepth %d", depth);
+//            uciGo(pos, command);
+//            while (ThreadsMgr.StillThinking()) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+//            int64 spentTime = getTime() - startTime;
+//            timeSum[i] += spentTime;
+//            uint64 nodes = 0;
+//            nodes = ThreadsMgr.ComputeNodes();
+//            nodes = nodes*1000/spentTime;
+//            nodesSum[i] += nodes;
+//            Print(5, "Threads: %d Depth: %d Active Splits: %d Time: %d Nps: %d\n", threads, depth, i, spentTime, nodes);
+//        }
+//    }
+//    int bestIdx = 2;
+//    double bestSplit = double(nodesSum[bestIdx])/double(timeSum[bestIdx]);
+//    Print(5, "\n\nAverage Statistics (Threads: %d Depth: %d)\n\n", threads, depth);
+//    for (int i = 1; i <= MaxNumSplitPointsPerThread; ++i) {
+//        if (double(nodesSum[i])/double(timeSum[i]) > bestSplit) {
+//            bestSplit = double(nodesSum[i])/double(timeSum[i]);
+//            bestIdx = i;
+//        }
+//        Print(5, "Active Splits: %d Time: %d Nps: %d Ratio: %0.2f\n", i, timeSum[i]/NUMPOS, nodesSum[i]/NUMPOS, double(nodesSum[i])/double(timeSum[i]));
+//    }
+//    Print(5, "\n\nThe best Active Splits for Threads: %d Depth: %d is:\n\nActive Splits: %d Time: %d Nps: %d Ratio: %0.2f\n\n\n",
+//        threads, depth, bestIdx, timeSum[bestIdx]/NUMPOS, nodesSum[bestIdx]/NUMPOS, double(nodesSum[bestIdx])/double(timeSum[bestIdx]));
+//}
