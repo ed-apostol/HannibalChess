@@ -30,11 +30,10 @@ void ThreadMgr::IdleLoop(const int thread_id) {
     while (!m_Threads[thread_id]->exit_flag) {
         if (master_sp == NULL && m_Threads[thread_id]->doSleep) {
             m_Threads[thread_id]->SleepAndWaitForCondition();
-            if (m_StartThinking && thread_id == 0) { // this is located here since it's only checked at thread's waking up
+            if (m_StartThinking && thread_id == 0) {
+                m_StartThinking = false;
                 SearchManager.getBestMove(m_pPos, ThreadFromIdx(thread_id));
                 m_Threads[thread_id]->searching = false;
-                m_StartThinking = false;
-                continue; // to avoid getting into GetWork after the search has terminated
             }
         }
         if (!m_StopThreads && !m_Threads[thread_id]->searching) {
@@ -44,7 +43,7 @@ void ThreadMgr::IdleLoop(const int thread_id) {
             SplitPoint* sp = m_Threads[thread_id]->activeSplitPoint; // this is correctly located, don't move this, else bug
             SearchManager.searchFromIdleLoop(sp, *m_Threads[thread_id]);
             sp->updatelock->lock();
-            sp->workersBitMask &= ~(1 << thread_id);
+            sp->workersBitMask &= ~((uint64)1 << thread_id);
             m_Threads[thread_id]->searching = false;
             sp->updatelock->unlock();
         }
@@ -120,8 +119,6 @@ void ThreadMgr::InitVars() {
     min_split_depth = UCIOptionsMap["Min Split Depth"].GetInt();
     max_threads_per_split = UCIOptionsMap["Max Threads/Split"].GetInt();
     max_activesplits_per_thread = UCIOptionsMap["Max Active Splits/Thread"].GetInt();
-    evalcachesize = UCIOptionsMap["Eval Cache"].GetInt();
-    pawnhashsize = UCIOptionsMap["Pawn Hash"].GetInt();
     for (Thread* th: m_Threads) {
         th->Init();
     }
@@ -137,8 +134,8 @@ void ThreadMgr::SetNumThreads(int num) {
         delete m_Threads.back();
         m_Threads.pop_back();
     }
-    InitPawnHash(pawnhashsize);
-    InitEvalHash(evalcachesize);
+    InitPawnHash(UCIOptionsMap["Pawn Hash"].GetInt(), 1);
+    InitEvalHash(UCIOptionsMap["Eval Cache"].GetInt(), 1);
 }
 
 void ThreadMgr::SearchSplitPoint(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread) {

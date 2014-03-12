@@ -38,6 +38,7 @@ struct SearchInfo{
         pondermove = 0;
         mate_found = 0;
         multipvIdx = 0;
+        mvlist_initialized = false;
         memset(moves, 0, sizeof(moves));
         time_buffer = UCIOptionsMap["Time Buffer"].GetInt();
         contempt = UCIOptionsMap["Contempt"].GetInt();

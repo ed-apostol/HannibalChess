@@ -135,7 +135,7 @@ public:
     uint64 workers2; // DEBUG
     int num_sp;
     SplitPoint *activeSplitPoint;
-    SplitPoint sptable[MaxNumSplitPointsPerThread]; // TODO: convert to vector?
+    SplitPoint sptable[MaxNumSplitPointsPerThread];
     ThreadStack ts[MAXPLY];
     int32 evalgains[1024];
     int32 history[1024];
@@ -158,8 +158,8 @@ public:
     void SearchSplitPoint(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread);
     Thread& ThreadFromIdx(int thread_id) { return *m_Threads[thread_id]; }
     size_t ThreadNum() const { return m_Threads.size(); }
-    void InitPawnHash(int size) { for (Thread* th: m_Threads) th->pt.Init(size, PAWN_ASSOC); }
-    void InitEvalHash(int size) { for (Thread* th: m_Threads) th->et.Init(size, EVAL_ASSOC); }
+    void InitPawnHash(int size, int bucket) { for (Thread* th: m_Threads) th->pt.Init(size, bucket); }
+    void InitEvalHash(int size, int bucket) { for (Thread* th: m_Threads) th->et.Init(size, bucket); }
     void ClearPawnHash() { for (Thread* th: m_Threads) th->pt.Clear(); }
     void ClearEvalHash() { for (Thread* th: m_Threads) th->et.Clear(); }
     void PrintDebugData() {
@@ -176,8 +176,6 @@ public:
     int min_split_depth;
     int max_threads_per_split;
     int max_activesplits_per_thread;
-    int evalcachesize;
-    int pawnhashsize;
 private:
     std::vector<Thread*> m_Threads;
     volatile bool m_StartThinking;

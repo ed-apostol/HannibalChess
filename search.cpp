@@ -821,8 +821,7 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
     // SMP 
     ThreadsMgr.InitVars();
     ThreadsMgr.SetAllThreadsToWork();
-    info.mvlist_initialized = false;
-
+    
     for (id = 1; id < MAXPLY; id++) {
         const int AspirationWindow = 24;
         int faillow = 0, failhigh = 0;
@@ -837,8 +836,8 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
             } else {
                 alpha = info.last_value-AspirationWindow;
                 beta = info.last_value+AspirationWindow;
-                if (alpha < -RookValue) alpha = -INF;
-                if (beta > RookValue) beta = INF;
+                if (alpha < -QueenValue) alpha = -INF;
+                if (beta > QueenValue) beta = INF;
             }
             while (true) {
 

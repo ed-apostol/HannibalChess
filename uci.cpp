@@ -30,9 +30,9 @@ const std::string Engine::arch = "x64";
 
 UCIOptions UCIOptionsMap;
 
-void on_hash(const Options& o) { TransTable.Init(o.GetInt(), HASH_ASSOC); }
-void on_pawn_hash(const Options& o) { ThreadsMgr.pawnhashsize = o.GetInt(); ThreadsMgr.InitPawnHash(ThreadsMgr.pawnhashsize);}
-void on_eval_hash(const Options& o) { ThreadsMgr.evalcachesize = o.GetInt(); ThreadsMgr.InitEvalHash(ThreadsMgr.evalcachesize); }
+void on_hash(const Options& o) { TransTable.Init(o.GetInt(), 4); }
+void on_pawn_hash(const Options& o) { ThreadsMgr.InitPawnHash(o.GetInt(), 1);}
+void on_eval_hash(const Options& o) { ThreadsMgr.InitEvalHash(o.GetInt(), 1); }
 void on_multi_pv(const Options& o) { SearchManager.info.multipv = o.GetInt(); }
 void on_clear_hash(const Options& o) { TransTable.Clear(); }
 void on_ponder(const Options& o) { }
@@ -44,18 +44,18 @@ void on_active_splits(const Options& o) { ThreadsMgr.max_activesplits_per_thread
 void on_contempt(const Options& o) { SearchManager.info.contempt = o.GetInt(); }
 
 void Engine::InitUCIOptions(UCIOptions& uci_opt) {
-    uci_opt["Hash"] =  Options(INIT_HASH, 1, 65536, on_hash);
-    uci_opt["Pawn Hash"] = Options(INIT_PAWN, 1, 1024, on_pawn_hash);
-    uci_opt["Eval Cache"] = Options(INIT_EVAL, 1, 1024, on_eval_hash);
-    uci_opt["MultiPV"] = Options(INIT_MULTIPV, 1, 128, on_multi_pv);
-    uci_opt["Clear Hash"] = Options(on_clear_hash);
-    uci_opt["Ponder"] = Options(false, on_ponder);
-    uci_opt["Time Buffer"] = Options(1000, 0, 10000, on_time_buffer);
-    uci_opt["Threads"] = Options(NUM_THREADS, 1, MaxNumOfThreads, on_threads);
-    uci_opt["Min Split Depth"] = Options(MIN_SPLIT_DEPTH, 1, 12, on_splits);
-    uci_opt["Max Threads/Split"] = Options(MAX_THREADS_PER_SPLIT, 2, 16, on_threads_split);
-    uci_opt["Max Active Splits/Thread"] = Options(MAX_ACTIVE_SPLITS, 1, 8, on_active_splits);
-    uci_opt["Contempt"] = Options(0, -100, 100, on_contempt);
+    uci_opt["Hash"] =                       Options(64, 1, 65536, on_hash);
+    uci_opt["Pawn Hash"] =                  Options(4, 1, 1024, on_pawn_hash);
+    uci_opt["Eval Cache"] =                 Options(4, 1, 1024, on_eval_hash);
+    uci_opt["MultiPV"] =                    Options(1, 1, 128, on_multi_pv);
+    uci_opt["Clear Hash"] =                 Options(on_clear_hash);
+    uci_opt["Ponder"] =                     Options(false, on_ponder);
+    uci_opt["Time Buffer"] =                Options(1000, 0, 10000, on_time_buffer);
+    uci_opt["Threads"] =                    Options(6, 1, MaxNumOfThreads, on_threads);
+    uci_opt["Min Split Depth"] =            Options(4, 1, 12, on_splits);
+    uci_opt["Max Threads/Split"] =          Options(16, 2, MaxNumOfThreads, on_threads_split);
+    uci_opt["Max Active Splits/Thread"] =   Options(4, 1, 8, on_active_splits);
+    uci_opt["Contempt"] =                   Options(0, -100, 100, on_contempt);
 }
 
 void Engine::PrintUCIOptions(const UCIOptions& uci_opt) {
@@ -77,21 +77,18 @@ void Engine::Info() {
 
 Engine::Engine() {
     fopen_s(&logfile, "logfile.txt", "a+");
-    fopen_s(&errfile, ERROR_FILE, "a+");
+    fopen_s(&errfile, "errfile.txt", "a+");
     fopen_s(&dumpfile, "dumpfile.txt", "a+");
 
     InitUCIOptions(UCIOptionsMap);
-
-    TransTable.Init(INIT_HASH, HASH_ASSOC);
-    PVHashTable.Init(INIT_PVHASH, PV_ASSOC);
+    TransTable.Init(UCIOptionsMap["Hash"].GetInt(), 4);
+    PVHashTable.Init(1, 8);
+    ThreadsMgr.InitVars();
+    ThreadsMgr.SetNumThreads(UCIOptionsMap["Threads"].GetInt());
 
     initArr();
     initPST();
     InitTrapped();
-
-    ThreadsMgr.InitVars();
-    ThreadsMgr.SetNumThreads(NUM_THREADS);
-
     initMaterial();
     InitMateBoost();
 
@@ -245,8 +242,8 @@ void Engine::Go(std::istringstream& stream) {
         info.thinking_status = THINKING;
         Print(2, "info string Search status is THINKING\n");
     }
-    /* initialize UCI parameters to be used in search */
-    DrawValue[rootpos.side] = - info.contempt;
+
+    DrawValue[rootpos.side] = -info.contempt;
     DrawValue[rootpos.side^1] = info.contempt;
 
     ThreadsMgr.StartThinking(&rootpos);
@@ -287,7 +284,6 @@ void Engine::SetOption(std::istringstream& stream) {
 }
 
 void Engine::NewGame() {
-    std::cout<<"NewGame"<<std::endl;
     PVHashTable.Clear();
     TransTable.Clear();
     ThreadsMgr.ClearPawnHash();

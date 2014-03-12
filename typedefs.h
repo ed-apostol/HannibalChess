@@ -14,10 +14,6 @@
 
 #define OPT_EASY true
 #define VERSION            "20140310"
-#define NUM_THREADS			    6
-#define MIN_SPLIT_DEPTH			4 // best is 4
-#define MAX_THREADS_PER_SPLIT   8 // TODO: to be tuned
-#define MAX_ACTIVE_SPLITS		4 // TODO: to be tuned
 #define TCEC true
 
 //#define SPEED_TEST
@@ -39,14 +35,7 @@
 #define USE_PHASH true
 #define MIN_TRANS_SIZE 16
 
-#ifdef TCEC
-#define INIT_EVAL 4
-#define INIT_PAWN 4
-#define INIT_HASH 64
-#define INIT_PVHASH 1
-#define INIT_MULTIPV 1
-
-#else
+#ifndef TCEC
 #define INIT_EVAL 64
 #define INIT_PAWN 32
 #define INIT_HASH 128
@@ -72,8 +61,6 @@
 
 #define DEBUG_BOOK false
 #define DEBUG_LEARN false
-
-#define ERROR_FILE "errfile.txt"
 
 #ifdef SPEED_TEST
 #define SHOW_SEARCH false
