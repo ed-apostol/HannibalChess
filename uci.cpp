@@ -62,18 +62,18 @@ void Engine::InitUCIOptions(UCIOptions& uci_opt) {
 void Engine::PrintUCIOptions(const UCIOptions& uci_opt) {
     for (UCIOptions::const_iterator it = uci_opt.begin(); it != uci_opt.end(); ++it) {
         const Options& opt = it->second;
-        std::cout << "option name " << it->first << " type " << opt.m_Type;
-        if (opt.m_Type != "button") std::cout << " default " << opt.m_DefVal;
-        if (opt.m_Type == "spin") std::cout << " min " << opt.m_Min << " max " << opt.m_Max;
-        std::cout << std::endl;
+        Log<cOUT, true> log;
+        log << "option name " << it->first << " type " << opt.m_Type;
+        if (opt.m_Type != "button") log << " default " << opt.m_DefVal;
+        if (opt.m_Type == "spin") log << " min " << opt.m_Min << " max " << opt.m_Max;
     }
 }
 
 void Engine::Info() {
-    std::cout<<name<<" "<<version<<" "<<arch<<std::endl;
-    std::cout<<"Copyright (C) "<<year<<" "<<author<<std::endl;
-    std::cout<<"Use UCI commands"<<std::endl;
-    std::cout<<std::endl;
+    Log<cOUT, true>()<<name<<" "<<version<<" "<<arch;
+    Log<cOUT, true>()<<"Copyright (C) "<<year<<" "<<author;
+    Log<cOUT, true>()<<"Use UCI commands";
+    Log<cOUT, true>();
 }
 
 Engine::Engine() {
@@ -99,6 +99,7 @@ Engine::Engine() {
 void Engine::Run() {
     std::string line;
     while(getline(std::cin,line)) {
+        Log<cINFO, true>() << line;
         std::istringstream ss(line);
         if(!Input(ss)) break;
     }
@@ -114,10 +115,10 @@ bool Engine::Input(std::istringstream& stream) {
     else if(command == "position")  { Position(stream); }
     else if(command == "setoption") { SetOption(stream); }
     else if(command == "ucinewgame"){ NewGame(); }
-    else if(command == "isready")   { std::cout<<"readyok"<<std::endl; }
+    else if(command == "isready")   { Log<cOUT, true>()<<"readyok"; }
     else if(command == "quit")      { Quit(); return false; }
     else if(command == "uci")       { Id(); }
-    else std::cerr<<"Unknown uci command: "<<command<<std::endl;
+    else std::cerr<<"Unknown UCI command: "<<command<<std::endl;
 
     return true;
 }
@@ -127,18 +128,19 @@ void Engine::Quit() {
     if (errfile) fclose(errfile);
     if (dumpfile) fclose(dumpfile);
     ThreadsMgr.SetNumThreads(0);
+    Log<cINFO, true>() << "Engine quit";
 }
 
 void Engine::Id() {
-    std::cout<<"id name "<<name<<" "<<version<<" "<<arch<<std::endl;
-    std::cout<<"id author "<<author<<std::endl;
+    Log<cOUT, true>()<<"id name "<<name<<" "<<version<<" "<<arch;
+    Log<cOUT, true>()<<"id author "<<author;
     PrintUCIOptions(UCIOptionsMap);
-    std::cout<<"uciok"<<std::endl;
+    Log<cOUT, true>()<<"uciok";
 }
 
 void Engine::Stop() {
     SearchManager.stopSearch();
-    Print(2, "info string Aborting search: stop\n");
+    Log<cINFO, true>() <<"info string Aborting search: stop";
 }
 
 void Engine::Ponderhit() {
@@ -174,26 +176,26 @@ void Engine::Go(std::istringstream& stream) {
     if (infinite) {
         info.depth_is_limited = true;
         info.depth_limit = MAXPLY;
-        Print(2, "info string Infinite\n");
+        Log<cINFO, true>() <<"info string Infinite";
     }
     if (upperdepth > 0) {
         info.depth_is_limited = true;
         info.depth_limit = upperdepth;
-        Print(2, "info string Depth is limited to %d half moves\n", info.depth_limit);
+        Log<cINFO, true>() <<"info string Depth is limited to " << info.depth_limit << " half moves";
     }
     if (mate > 0) {
         info.depth_is_limited = true;
         info.depth_limit = mate * 2 - 1;
-        Print(2, "info string Mate in %d half moves\n", info.depth_limit);
+        Log<cINFO, true>() <<"info string Mate in " << info.depth_limit << " half moves";
     }
     if (nodes > 0) {
         info.node_is_limited = true;
         info.node_limit = nodes;
-        Print(2, "info string Nodes is limited to %d positions\n", info.node_limit);
+        Log<cINFO, true>() <<"info string Nodes is limited to " << info.node_limit << " positions";
     }
     if (info.moves[0]) {
         info.moves_is_limited = true;
-        Print(2, "info string Moves is limited\n");
+        Log<cINFO, true>() <<"info string Moves is limited";
     }
 
     if (movetime > 0) {
@@ -201,7 +203,7 @@ void Engine::Go(std::istringstream& stream) {
         info.alloc_time = movetime;
         info.time_limit_max = info.start_time + movetime;
         info.time_limit_abs = info.start_time + movetime;
-        Print(2, "info string Fixed time per move: %d ms\n", movetime);
+        Log<cINFO, true>() <<"info string Fixed time per move: " << movetime << " ms";
     }
     if (rootpos.side == WHITE) {
         mytime = wtime;
@@ -226,22 +228,22 @@ void Engine::Go(std::istringstream& stream) {
         if (info.time_limit_max < 2) info.time_limit_max = 2;
         if (info.time_limit_abs < 2) info.time_limit_abs = 2;
 
-        Print(2, "info string Time is limited: ");
-        Print(2, "max = %d, ", info.time_limit_max);
-        Print(2, "abs = %d\n", info.time_limit_abs);
+        Log<cINFO, true>() <<"info string Time is limited: ";
+        Log<cINFO, true>() <<"max = " << info.time_limit_max;
+        Log<cINFO, true>() <<"abs = " << info.time_limit_abs;
         info.alloc_time = info.time_limit_max;
         info.time_limit_max += info.start_time;
         info.time_limit_abs += info.start_time;
     }
     if (infinite) {
         info.thinking_status = ANALYSING;
-        Print(2, "info string Search status is ANALYSING\n");
+        Log<cINFO, true>() <<"info string Search status is ANALYSING";
     } else if (ponder) {
         info.thinking_status = PONDERING;
-        Print(2, "info string Search status is PONDERING\n");
+        Log<cINFO, true>() <<"info string Search status is PONDERING";
     } else {
         info.thinking_status = THINKING;
-        Print(2, "info string Search status is THINKING\n");
+        Log<cINFO, true>() <<"info string Search status is THINKING";
     }
 
     DrawValue[rootpos.side] = -info.contempt;
@@ -281,7 +283,7 @@ void Engine::SetOption(std::istringstream& stream) {
     while (stream >> token && token != "value") name += string(" ", !name.empty()) + token;
     while (stream >> token) value += string(" ", !value.empty()) + token;
     if (UCIOptionsMap.count(name)) UCIOptionsMap[name] = value;
-    else std::cout << "No such option: " << name << std::endl;
+    else Log<cOUT, true>() << "No such option: " << name;
 }
 
 void Engine::NewGame() {

@@ -50,7 +50,7 @@ public:
     ~Log() {
         if (level <= ClearanceLevel || logtofile) {
             _buffer << std::endl;
-            if (level <= ClearanceLevel) std::cout << _buffer.str();
+            if (level < cINFO) std::cout << _buffer.str();
             if (logtofile) {
                 static const std::string LevelText[6] = {"cNONE", "cOUT", "cERROR", "cWARNING", "cINFO", "cDEBUG"};
                 LogToFile() << LevelText[level] << ": " << _buffer.str();
