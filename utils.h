@@ -32,26 +32,32 @@ extern int anyRepNoMove(const position_t *pos, const int m);
 
 enum LogLevel { cNONE = 0, cOUT = 1, cERROR = 2, cWARNING = 3, cINFO = 4, cDEBUG = 5 };
 
-struct Logger : public std::ofstream {
-    Logger(const std::string& f = "log.txt") : std::ofstream(f.c_str(), std::ios::out | std::ios::app) {}
-    ~Logger() { if (is_open()) close(); }
+struct LogToFile : public std::ofstream {
+    LogToFile(const std::string& f = "log.txt") : std::ofstream(f.c_str(), std::ios::out | std::ios::app) {}
+    ~LogToFile() { if (is_open()) close(); }
 };
 
-template <LogLevel m_Level, bool logtofile = false>
+template <LogLevel level, bool logtofile = false>
 class Log {
 public:
     static const LogLevel ClearanceLevel = cINFO;
-    Log() {}
+    Log() { }
     template <typename T>
     Log& operator << (const T& object) {
-        _buffer << object;
+        if (level <= ClearanceLevel || logtofile) _buffer << object;
         return *this;
     }
     ~Log() {
-        _buffer << std::endl;
-        if (m_Level <= ClearanceLevel) std::cout << _buffer.str();
-        if (logtofile) Logger() << _buffer.str();
+        if (level <= ClearanceLevel || logtofile) {
+            _buffer << std::endl;
+            if (level <= ClearanceLevel) std::cout << _buffer.str();
+            if (logtofile) {
+                static const std::string LevelText[6] = {"cNONE", "cOUT", "cERROR", "cWARNING", "cINFO", "cDEBUG"};
+                LogToFile() << LevelText[level] << ": " << _buffer.str();
+            }
+        }
     }
 private:
     std::ostringstream _buffer;
 };
+
