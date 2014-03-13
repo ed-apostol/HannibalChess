@@ -16,8 +16,6 @@
 #include "utils.h"
 #include "eval.h"
 
-
-
 /* a utility to print output into different files:
 bit 0: stdout
 bit 1: logfile

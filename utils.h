@@ -9,6 +9,9 @@
 
 #pragma once
 #include "typedefs.h"
+#include <fstream>
+#include <iostream>
+#include <sstream>
 
 /* utils.c */
 extern void Print(int vb, char *fmt, ...);
@@ -26,3 +29,29 @@ extern int biosKey(void);
 extern int getDirIndex(int d);
 extern int anyRep(const position_t *pos);
 extern int anyRepNoMove(const position_t *pos, const int m);
+
+enum LogLevel { cNONE = 0, cOUT = 1, cERROR = 2, cWARNING = 3, cINFO = 4, cDEBUG = 5 };
+
+struct Logger : public std::ofstream {
+    Logger(const std::string& f = "log.txt") : std::ofstream(f.c_str(), std::ios::out | std::ios::app) {}
+    ~Logger() { if (is_open()) close(); }
+};
+
+template <LogLevel m_Level, bool logtofile = false>
+class Log {
+public:
+    static const LogLevel ClearanceLevel = cINFO;
+    Log() {}
+    template <typename T>
+    Log& operator << (const T& object) {
+        _buffer << object;
+        return *this;
+    }
+    ~Log() {
+        _buffer << std::endl;
+        if (m_Level <= ClearanceLevel) std::cout << _buffer.str();
+        if (logtofile) Logger() << _buffer.str();
+    }
+private:
+    std::ostringstream _buffer;
+};

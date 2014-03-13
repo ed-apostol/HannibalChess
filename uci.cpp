@@ -21,6 +21,7 @@
 #include "uci.h"
 #include "init.h"
 #include "material.h"
+#include "utils.h"
 
 const std::string Engine::name = "Hannibal";
 const std::string Engine::author = "Sam Hamilton & Edsel Apostol";
