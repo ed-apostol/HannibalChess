@@ -62,7 +62,7 @@ void Engine::InitUCIOptions(UCIOptions& uci_opt) {
 void Engine::PrintUCIOptions(const UCIOptions& uci_opt) {
     for (UCIOptions::const_iterator it = uci_opt.begin(); it != uci_opt.end(); ++it) {
         const Options& opt = it->second;
-        Log<cOUT, true> log;
+        LogAndPrintOutput log;
         log << "option name " << it->first << " type " << opt.m_Type;
         if (opt.m_Type != "button") log << " default " << opt.m_DefVal;
         if (opt.m_Type == "spin") log << " min " << opt.m_Min << " max " << opt.m_Max;
@@ -70,10 +70,10 @@ void Engine::PrintUCIOptions(const UCIOptions& uci_opt) {
 }
 
 void Engine::Info() {
-    Log<cOUT, true>()<<name<<" "<<version<<" "<<arch;
-    Log<cOUT, true>()<<"Copyright (C) "<<year<<" "<<author;
-    Log<cOUT, true>()<<"Use UCI commands";
-    Log<cOUT, true>();
+    LogAndPrintOutput()<<name<<" "<<version<<" "<<arch;
+    LogAndPrintOutput()<<"Copyright (C) "<<year<<" "<<author;
+    LogAndPrintOutput()<<"Use UCI commands";
+    LogAndPrintOutput();
 }
 
 Engine::Engine() {
@@ -99,7 +99,7 @@ Engine::Engine() {
 void Engine::Run() {
     std::string line;
     while(getline(std::cin,line)) {
-        Log<cINFO, true>() << line;
+        LogInfo() << line;
         std::istringstream ss(line);
         if(!Input(ss)) break;
     }
@@ -115,7 +115,7 @@ bool Engine::Input(std::istringstream& stream) {
     else if(command == "position")  { Position(stream); }
     else if(command == "setoption") { SetOption(stream); }
     else if(command == "ucinewgame"){ NewGame(); }
-    else if(command == "isready")   { Log<cOUT, true>()<<"readyok"; }
+    else if(command == "isready")   { LogAndPrintOutput()<<"readyok"; }
     else if(command == "quit")      { Quit(); return false; }
     else if(command == "uci")       { Id(); }
     else std::cerr<<"Unknown UCI command: "<<command<<std::endl;
@@ -128,19 +128,19 @@ void Engine::Quit() {
     if (errfile) fclose(errfile);
     if (dumpfile) fclose(dumpfile);
     ThreadsMgr.SetNumThreads(0);
-    Log<cINFO, true>() << "Engine quit";
+    LogInfo() << "Engine quit";
 }
 
 void Engine::Id() {
-    Log<cOUT, true>()<<"id name "<<name<<" "<<version<<" "<<arch;
-    Log<cOUT, true>()<<"id author "<<author;
+    LogAndPrintOutput()<<"id name "<<name<<" "<<version<<" "<<arch;
+    LogAndPrintOutput()<<"id author "<<author;
     PrintUCIOptions(UCIOptionsMap);
-    Log<cOUT, true>()<<"uciok";
+    LogAndPrintOutput()<<"uciok";
 }
 
 void Engine::Stop() {
     SearchManager.stopSearch();
-    Log<cINFO, true>() <<"info string Aborting search: stop";
+    LogInfo() <<"info string Aborting search: stop";
 }
 
 void Engine::Ponderhit() {
@@ -176,26 +176,26 @@ void Engine::Go(std::istringstream& stream) {
     if (infinite) {
         info.depth_is_limited = true;
         info.depth_limit = MAXPLY;
-        Log<cINFO, true>() <<"info string Infinite";
+        LogInfo() <<"info string Infinite";
     }
     if (upperdepth > 0) {
         info.depth_is_limited = true;
         info.depth_limit = upperdepth;
-        Log<cINFO, true>() <<"info string Depth is limited to " << info.depth_limit << " half moves";
+        LogInfo() <<"info string Depth is limited to " << info.depth_limit << " half moves";
     }
     if (mate > 0) {
         info.depth_is_limited = true;
         info.depth_limit = mate * 2 - 1;
-        Log<cINFO, true>() <<"info string Mate in " << info.depth_limit << " half moves";
+        LogInfo() <<"info string Mate in " << info.depth_limit << " half moves";
     }
     if (nodes > 0) {
         info.node_is_limited = true;
         info.node_limit = nodes;
-        Log<cINFO, true>() <<"info string Nodes is limited to " << info.node_limit << " positions";
+        LogInfo() <<"info string Nodes is limited to " << info.node_limit << " positions";
     }
     if (info.moves[0]) {
         info.moves_is_limited = true;
-        Log<cINFO, true>() <<"info string Moves is limited";
+        LogInfo() <<"info string Moves is limited";
     }
 
     if (movetime > 0) {
@@ -203,7 +203,7 @@ void Engine::Go(std::istringstream& stream) {
         info.alloc_time = movetime;
         info.time_limit_max = info.start_time + movetime;
         info.time_limit_abs = info.start_time + movetime;
-        Log<cINFO, true>() <<"info string Fixed time per move: " << movetime << " ms";
+        LogInfo() <<"info string Fixed time per move: " << movetime << " ms";
     }
     if (rootpos.side == WHITE) {
         mytime = wtime;
@@ -228,22 +228,22 @@ void Engine::Go(std::istringstream& stream) {
         if (info.time_limit_max < 2) info.time_limit_max = 2;
         if (info.time_limit_abs < 2) info.time_limit_abs = 2;
 
-        Log<cINFO, true>() <<"info string Time is limited: ";
-        Log<cINFO, true>() <<"max = " << info.time_limit_max;
-        Log<cINFO, true>() <<"abs = " << info.time_limit_abs;
+        LogInfo() <<"info string Time is limited: ";
+        LogInfo() <<"max = " << info.time_limit_max;
+        LogInfo() <<"abs = " << info.time_limit_abs;
         info.alloc_time = info.time_limit_max;
         info.time_limit_max += info.start_time;
         info.time_limit_abs += info.start_time;
     }
     if (infinite) {
         info.thinking_status = ANALYSING;
-        Log<cINFO, true>() <<"info string Search status is ANALYSING";
+        LogInfo() <<"info string Search status is ANALYSING";
     } else if (ponder) {
         info.thinking_status = PONDERING;
-        Log<cINFO, true>() <<"info string Search status is PONDERING";
+        LogInfo() <<"info string Search status is PONDERING";
     } else {
         info.thinking_status = THINKING;
-        Log<cINFO, true>() <<"info string Search status is THINKING";
+        LogInfo() <<"info string Search status is THINKING";
     }
 
     DrawValue[rootpos.side] = -info.contempt;
@@ -263,7 +263,10 @@ void Engine::Position(std::istringstream& stream) {
     } else if (token == "fen") {
         while (stream >> token && token != "moves")
             fen += token + " ";
-    } else return;
+    } else {
+        LogWarning() << "Invalid position!";
+        return;
+    }
 
     setPosition(&rootpos, fen.c_str());
     while (stream >> token) {
@@ -283,7 +286,7 @@ void Engine::SetOption(std::istringstream& stream) {
     while (stream >> token && token != "value") name += string(" ", !name.empty()) + token;
     while (stream >> token) value += string(" ", !value.empty()) + token;
     if (UCIOptionsMap.count(name)) UCIOptionsMap[name] = value;
-    else Log<cOUT, true>() << "No such option: " << name;
+    else LogAndPrintOutput() << "No such option: " << name;
 }
 
 void Engine::NewGame() {
