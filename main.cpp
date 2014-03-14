@@ -10,7 +10,7 @@
 #include "uci.h"
 
 int main(void) {
-    Engine eng;
+    Interface eng;
 
     eng.Info();
     eng.Run();

@@ -35,10 +35,10 @@ typedef std::map<std::string, Options> UCIOptions;
 extern UCIOptions UCIOptionsMap;
 
 
-class Engine {
+class Interface {
 public:
-    Engine();
-    ~Engine();
+    Interface();
+    ~Interface();
     void Info();
     void Run();
 

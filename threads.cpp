@@ -17,15 +17,15 @@
 #include "bitutils.h"
 #include "uci.h"
 
-ThreadMgr ThreadsMgr;
+Engine ThreadsMgr;
 
-void ThreadMgr::StartThinking(position_t* pos) {
+void Engine::StartThinking(position_t* pos) {
     m_StartThinking = true;
     m_pPos = pos;
     ThreadFromIdx(0).TriggerCondition();
 }
 
-void ThreadMgr::IdleLoop(const int thread_id) {
+void Engine::IdleLoop(const int thread_id) {
     SplitPoint *master_sp = m_Threads[thread_id]->activeSplitPoint;
     while (!m_Threads[thread_id]->exit_flag) {
         if (master_sp == NULL && m_Threads[thread_id]->doSleep) {
@@ -51,7 +51,7 @@ void ThreadMgr::IdleLoop(const int thread_id) {
     }
 }
 
-void ThreadMgr::GetWork(const int thread_id, SplitPoint *master_sp) {
+void Engine::GetWork(const int thread_id, SplitPoint *master_sp) {
     int best_depth = 0;
     Thread* master_thread = NULL;
     SplitPoint *best_split_point = NULL;
@@ -89,32 +89,32 @@ void ThreadMgr::GetWork(const int thread_id, SplitPoint *master_sp) {
     }
 }
 
-void ThreadMgr::SetAllThreadsToStop() {
+void Engine::SetAllThreadsToStop() {
     m_StopThreads = true;
     for (Thread* th: m_Threads) {
         th->stop = true;
     }
 }
 
-void ThreadMgr::SetAllThreadsToSleep() {
+void Engine::SetAllThreadsToSleep() {
     for (Thread* th: m_Threads) {
         th->doSleep = true;
     }
 }
 
-void ThreadMgr::SetAllThreadsToWork() {
+void Engine::SetAllThreadsToWork() {
     for (Thread* th: m_Threads) {
         if (th->thread_id != 0) th->TriggerCondition(); // thread_id == 0 is triggered separately
     }
 }
 
-uint64 ThreadMgr::ComputeNodes() {
+uint64 Engine::ComputeNodes() {
     uint64 nodes = 0;
     for (Thread* th: m_Threads) nodes += th->nodes;
     return nodes;
 }
 
-void ThreadMgr::InitVars() {
+void Engine::InitVars() {
     m_StopThreads = false;
     m_MinSplitDepth = UCIOptionsMap["Min Split Depth"].GetInt();
     m_MaxThreadsPerSplit = UCIOptionsMap["Max Threads/Split"].GetInt();
@@ -124,21 +124,23 @@ void ThreadMgr::InitVars() {
     }
 }
 
-void ThreadMgr::SetNumThreads(int num) {
+void Engine::SetNumThreads(int num) {
     while (m_Threads.size() < num) {
         int id = m_Threads.size();
         m_Threads.push_back(new Thread(id));
-        m_Threads[id]->NativeThread() = std::thread(&ThreadMgr::IdleLoop, this, id);
+        m_Threads[id]->NativeThread() = std::thread(&Engine::IdleLoop, this, id);
     }
     while (m_Threads.size() > num) {
         delete m_Threads.back();
         m_Threads.pop_back();
     }
+    InitTTHash(UCIOptionsMap["Hash"].GetInt(), 4);
+    InitPVTTHash(1, 8);
     InitPawnHash(UCIOptionsMap["Pawn Hash"].GetInt(), 1);
     InitEvalHash(UCIOptionsMap["Eval Cache"].GetInt(), 1);
 }
 
-void ThreadMgr::SearchSplitPoint(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread) {
+void Engine::SearchSplitPoint(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread) {
     SplitPoint *active_sp = &sthread.sptable[sthread.num_sp];    
 
     active_sp->updatelock->lock();

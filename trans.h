@@ -75,11 +75,13 @@ private:
     uint8 m_Age;
 };
 
+class TranspositionTable;
 class PvHashTable : public BaseHashTable<PvHashEntry> {
 public:
     void pvStore (uint64 hash, basic_move_t move, uint8 depth, int16 value);
     PvHashEntry *pvEntry (const uint64 hash) const;
     PvHashEntry *pvEntryFromMove (const uint64 hash, basic_move_t move) const;
+    TranspositionTable* m_pTT;
 };
 
 
@@ -178,6 +180,8 @@ public:
     int32 Date() const { return m_Date; }
     uint64 Used() const { return m_Used; }
     int32 Age (const int Idx) const { return m_Age[Idx]; }
+
+    PvHashTable* m_pPVTT;
 private:
     int32 m_Date;
     uint64 m_Used;
@@ -191,8 +195,7 @@ inline int scoreToTrans (int score, int ply) { // TODO: make static inside Trans
     return (score > MAXEVAL) ? (score + ply) : ((score < -MAXEVAL) ? (score - ply) : score);
 }
 
-extern TranspositionTable TransTable;
-extern PvHashTable PVHashTable;
+
 
 
 

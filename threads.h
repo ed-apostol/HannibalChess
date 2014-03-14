@@ -141,11 +141,13 @@ public:
     int32 history[1024];
     EvalHashTable et;
     PawnHashTable pt;
+    TranspositionTable* m_pTT;
+    PvHashTable* m_pPVTT;
 };
 
-class ThreadMgr {
+class Engine {
 public:
-    ThreadMgr() : m_StartThinking(false), m_pPos(NULL) { }
+    Engine() : m_StartThinking(false), m_pPos(NULL) { }
     void StartThinking(position_t* p);
     void IdleLoop(const int thread_id);
     void GetWork(const int thread_id, SplitPoint *master_sp);
@@ -156,13 +158,17 @@ public:
     void SetNumThreads(int num); // SetNumThreads(0) must be called for program to exit
     uint64 ComputeNodes();
     void SearchSplitPoint(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread);
-    
+
     Thread& ThreadFromIdx(int thread_id) { return *m_Threads[thread_id]; }
     size_t ThreadNum() const { return m_Threads.size(); }
     void InitPawnHash(int size, int bucket) { for (Thread* th: m_Threads) th->pt.Init(size, bucket); }
     void InitEvalHash(int size, int bucket) { for (Thread* th: m_Threads) th->et.Init(size, bucket); }
+    void InitTTHash(int size, int bucket) { m_TransTable.Init(size, bucket); m_TransTable.m_pPVTT = &m_PVHashTable; for (Thread* th: m_Threads) th->m_pTT = &m_TransTable; }
+    void InitPVTTHash(int size, int bucket) { m_PVHashTable.Init(size, bucket); m_PVHashTable.m_pTT = &m_TransTable; for (Thread* th: m_Threads) th->m_pPVTT = &m_PVHashTable; }
     void ClearPawnHash() { for (Thread* th: m_Threads) th->pt.Clear(); }
     void ClearEvalHash() { for (Thread* th: m_Threads) th->et.Clear(); }
+    void ClearTTHash() { m_TransTable.Clear(); }
+    void ClearPVTTHash() { m_PVHashTable.Clear(); }
     void PrintDebugData() {
         Print(2, "================================================================\n");
         for (Thread* th: m_Threads) {
@@ -182,7 +188,9 @@ private:
     volatile bool m_StartThinking;
     position_t* m_pPos;
     volatile bool m_StopThreads;
+    TranspositionTable m_TransTable;
+    PvHashTable m_PVHashTable;
 };
 
-extern ThreadMgr ThreadsMgr;
+extern Engine ThreadsMgr;
 

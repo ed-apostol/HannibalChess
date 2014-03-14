@@ -23,19 +23,24 @@
 #include "material.h"
 #include "utils.h"
 
-const std::string Engine::name = "Hannibal";
-const std::string Engine::author = "Sam Hamilton & Edsel Apostol";
-const std::string Engine::year = "2014";
-const std::string Engine::version = "TCEC";
-const std::string Engine::arch = "x64";
+const std::string Interface::name = "Hannibal";
+const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
+const std::string Interface::year = "2014";
+const std::string Interface::version = "TCEC";
+const std::string Interface::arch = "x64";
 
 UCIOptions UCIOptionsMap;
 
-void on_hash(const Options& o) { TransTable.Init(o.GetInt(), 4); }
+void on_clear_hash(const Options& o) { 
+    ThreadsMgr.ClearPawnHash();
+    ThreadsMgr.ClearEvalHash();
+    ThreadsMgr.ClearTTHash();
+    ThreadsMgr.ClearPVTTHash();
+}
+void on_hash(const Options& o) { ThreadsMgr.InitTTHash(o.GetInt(), 4); }
 void on_pawn_hash(const Options& o) { ThreadsMgr.InitPawnHash(o.GetInt(), 1);}
 void on_eval_hash(const Options& o) { ThreadsMgr.InitEvalHash(o.GetInt(), 1); }
 void on_multi_pv(const Options& o) { SearchManager.info.multipv = o.GetInt(); }
-void on_clear_hash(const Options& o) { TransTable.Clear(); }
 void on_ponder(const Options& o) { }
 void on_time_buffer(const Options& o) { SearchManager.info.time_buffer = o.GetInt(); }
 void on_threads(const Options& o) { ThreadsMgr.SetNumThreads(o.GetInt());}
@@ -44,7 +49,7 @@ void on_threads_split(const Options& o) { ThreadsMgr.m_MaxThreadsPerSplit = o.Ge
 void on_active_splits(const Options& o) { ThreadsMgr.m_MaxActiveSplitsPerThread = o.GetInt(); }
 void on_contempt(const Options& o) { SearchManager.info.contempt = o.GetInt(); }
 
-void Engine::InitUCIOptions(UCIOptions& uci_opt) {
+void Interface::InitUCIOptions(UCIOptions& uci_opt) {
     uci_opt["Hash"] =                       Options(64, 1, 65536, on_hash);
     uci_opt["Pawn Hash"] =                  Options(4, 1, 1024, on_pawn_hash);
     uci_opt["Eval Cache"] =                 Options(4, 1, 1024, on_eval_hash);
@@ -59,7 +64,7 @@ void Engine::InitUCIOptions(UCIOptions& uci_opt) {
     uci_opt["Contempt"] =                   Options(0, -100, 100, on_contempt);
 }
 
-void Engine::PrintUCIOptions(const UCIOptions& uci_opt) {
+void Interface::PrintUCIOptions(const UCIOptions& uci_opt) {
     for (UCIOptions::const_iterator it = uci_opt.begin(); it != uci_opt.end(); ++it) {
         const Options& opt = it->second;
         LogAndPrintOutput log;
@@ -69,21 +74,19 @@ void Engine::PrintUCIOptions(const UCIOptions& uci_opt) {
     }
 }
 
-void Engine::Info() {
+void Interface::Info() {
     LogAndPrintOutput() <<name<<" "<<version<<" "<<arch;
     LogAndPrintOutput() <<"Copyright (C) "<<year<<" "<<author;
     LogAndPrintOutput() <<"Use UCI commands";
     LogAndPrintOutput();
 }
 
-Engine::Engine() {
+Interface::Interface() {
     fopen_s(&logfile, "logfile.txt", "a+");
     fopen_s(&errfile, "errfile.txt", "a+");
     fopen_s(&dumpfile, "dumpfile.txt", "a+");
 
     InitUCIOptions(UCIOptionsMap);
-    TransTable.Init(UCIOptionsMap["Hash"].GetInt(), 4);
-    PVHashTable.Init(1, 8);
     ThreadsMgr.InitVars();
     ThreadsMgr.SetNumThreads(UCIOptionsMap["Threads"].GetInt());
 
@@ -96,7 +99,7 @@ Engine::Engine() {
     setPosition(&rootpos, STARTPOS);
 }
 
-void Engine::Run() {
+void Interface::Run() {
     std::string line;
     while(getline(std::cin,line)) {
         LogInfo() << line;
@@ -105,7 +108,7 @@ void Engine::Run() {
     }
 }
 
-bool Engine::Input(std::istringstream& stream) {
+bool Interface::Input(std::istringstream& stream) {
     std::string command;
     stream >> command;
 
@@ -123,31 +126,31 @@ bool Engine::Input(std::istringstream& stream) {
     return true;
 }
 
-void Engine::Quit() {
+void Interface::Quit() {
     if (logfile) fclose(logfile);
     if (errfile) fclose(errfile);
     if (dumpfile) fclose(dumpfile);
     ThreadsMgr.SetNumThreads(0);
-    LogInfo() << "Engine quit";
+    LogInfo() << "Interface quit";
 }
 
-void Engine::Id() {
+void Interface::Id() {
     LogAndPrintOutput()<<"id name "<<name<<" "<<version<<" "<<arch;
     LogAndPrintOutput()<<"id author "<<author;
     PrintUCIOptions(UCIOptionsMap);
     LogAndPrintOutput()<<"uciok";
 }
 
-void Engine::Stop() {
+void Interface::Stop() {
     SearchManager.stopSearch();
     LogInfo() <<"info string Aborting search: stop";
 }
 
-void Engine::Ponderhit() {
+void Interface::Ponderhit() {
     SearchManager.ponderHit();
 }
 
-void Engine::Go(std::istringstream& stream) {
+void Interface::Go(std::istringstream& stream) {
     std::string command;
     int64 mytime = 0, t_inc = 0;
     int wtime=0, btime=0, winc=0, binc=0, movestogo=0, upperdepth=0, nodes=0, mate=0, movetime=0;
@@ -252,7 +255,7 @@ void Engine::Go(std::istringstream& stream) {
     ThreadsMgr.StartThinking(&rootpos);
 }
 
-void Engine::Position(std::istringstream& stream) {
+void Interface::Position(std::istringstream& stream) {
     basic_move_t m;
     string token, fen;
 
@@ -280,7 +283,7 @@ void Engine::Position(std::istringstream& stream) {
     rootpos.ply = 0;
 }
 
-void Engine::SetOption(std::istringstream& stream) {
+void Interface::SetOption(std::istringstream& stream) {
     string token, name, value;
     stream >> token;
     while (stream >> token && token != "value") name += string(" ", !name.empty()) + token;
@@ -289,14 +292,14 @@ void Engine::SetOption(std::istringstream& stream) {
     else LogAndPrintOutput() << "No such option: " << name;
 }
 
-void Engine::NewGame() {
-    PVHashTable.Clear();
-    TransTable.Clear();
+void Interface::NewGame() {
     ThreadsMgr.ClearPawnHash();
     ThreadsMgr.ClearEvalHash();
+    ThreadsMgr.ClearTTHash();
+    ThreadsMgr.ClearPVTTHash();
     SearchManager.info.lastDepthSearched = MAXPLY;
 }
 
-Engine::~Engine() {
+Interface::~Interface() {
 
 }

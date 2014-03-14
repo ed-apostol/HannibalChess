@@ -14,9 +14,6 @@
 #include "trans.h"
 #include "utils.h"
 
-TranspositionTable TransTable;
-PvHashTable PVHashTable;
-
 void TranspositionTable::StoreLower(const uint64 hash, basic_move_t move, const int depth, const int value) {
     int worst = -INF, t, score;
     TransEntry *replace, *entry;
@@ -176,7 +173,7 @@ void TranspositionTable::StoreExact(const uint64 hash, basic_move_t move, const 
     for (t = 0; t < m_BucketSize; t++, entry++) {
         if (entry->HashLock() == LOCK(hash)) {
             if (depth >= MAX(entry->UpperDepth(), entry->LowerDepth())) {
-                PVHashTable.pvStore(hash, move, depth, value);
+                m_pPVTT->pvStore(hash, move, depth, value);
                 entry->SetMove(move);
                 entry->SetAge(m_Date);
                 entry->SetUpperDepth(depth);
@@ -204,7 +201,7 @@ void TranspositionTable::StoreExact(const uint64 hash, basic_move_t move, const 
 
     replace->SetHashLock(LOCK(hash));
     replace->SetAge(m_Date);
-    PVHashTable.pvStore(hash, move, depth, value);
+    m_pPVTT->pvStore(hash, move, depth, value);
     replace->SetMove(move);
     replace->SetUpperDepth(depth);
     replace->SetUpperValue(value);
@@ -289,20 +286,20 @@ void PvHashTable::pvStore(const uint64 hash, const basic_move_t move, const uint
     replace = entry = &m_pTable[(KEY(hash) & m_Mask)];
     for (t = 0; t < m_BucketSize; t++, entry++) {
         if (entry->pvHashLock() == LOCK(hash)) {
-            entry->pvSetAge(TransTable.Date());
+            entry->pvSetAge(m_pTT->Date());
             entry->pvSetMove(move);
             entry->pvSetDepth(depth);
             entry->pvSetValue(value);
             return;
         }
-        score = (TransTable.Age(entry->pvAge()) * 256) - entry->pvDepth();
+        score = (m_pTT->Age(entry->pvAge()) * 256) - entry->pvDepth();
         if (score > worst) {
             worst = score;
             replace = entry;
         }
     }
     replace->pvSetHashLock(LOCK(hash));
-    replace->pvSetAge(TransTable.Date());
+    replace->pvSetAge(m_pTT->Date());
     replace->pvSetMove(move);
     replace->pvSetDepth(depth);
     replace->pvSetValue(value);
