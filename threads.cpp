@@ -41,7 +41,7 @@ void ThreadMgr::IdleLoop(const int thread_id) {
         }
         if (!m_StopThreads && m_Threads[thread_id]->searching) {
             SplitPoint* sp = m_Threads[thread_id]->activeSplitPoint; // this is correctly located, don't move this, else bug
-            SearchManager.searchFromIdleLoop(sp, *m_Threads[thread_id]);
+            SearchManager.searchFromIdleLoop(sp, ThreadFromIdx(thread_id));
             sp->updatelock->lock();
             sp->workersBitMask &= ~((uint64)1 << thread_id);
             m_Threads[thread_id]->searching = false;
@@ -63,7 +63,7 @@ void ThreadMgr::GetWork(const int thread_id, SplitPoint *master_sp) {
         for (int splitIdx = 0; splitIdx < th->num_sp; splitIdx++) {
             SplitPoint* sp = &th->sptable[splitIdx];
             if (sp->workersBitMask != sp->allWorkersBitMask) continue; // only search those with all threads still searching
-            if (bitCnt(sp->allWorkersBitMask) >= max_threads_per_split) continue; // enough threads working, no need to help
+            if (bitCnt(sp->allWorkersBitMask) >= m_MaxThreadsPerSplit) continue; // enough threads working, no need to help
             if (sp->depth > best_depth) {
                 best_split_point = sp;
                 best_depth = sp->depth;
@@ -77,7 +77,7 @@ void ThreadMgr::GetWork(const int thread_id, SplitPoint *master_sp) {
         if (master_thread->searching && master_thread->num_sp > 0 && !best_split_point->cutoff
             && (best_split_point->workersBitMask == best_split_point->allWorkersBitMask)
             && (!master_sp || (best_split_point->allWorkersBitMask & ((uint64)1<<master_thread->thread_id)))
-            && bitCnt(best_split_point->allWorkersBitMask) < max_threads_per_split) { // redundant criteria, just to be sure
+            && bitCnt(best_split_point->allWorkersBitMask) < m_MaxThreadsPerSplit) { // redundant criteria, just to be sure
                 best_split_point->pos[thread_id] = best_split_point->origpos;
                 best_split_point->workersBitMask |= ((uint64)1<<thread_id);
                 best_split_point->allWorkersBitMask |= ((uint64)1<<thread_id);
@@ -116,9 +116,9 @@ uint64 ThreadMgr::ComputeNodes() {
 
 void ThreadMgr::InitVars() {
     m_StopThreads = false;
-    min_split_depth = UCIOptionsMap["Min Split Depth"].GetInt();
-    max_threads_per_split = UCIOptionsMap["Max Threads/Split"].GetInt();
-    max_activesplits_per_thread = UCIOptionsMap["Max Active Splits/Thread"].GetInt();
+    m_MinSplitDepth = UCIOptionsMap["Min Split Depth"].GetInt();
+    m_MaxThreadsPerSplit = UCIOptionsMap["Max Threads/Split"].GetInt();
+    m_MaxActiveSplitsPerThread = UCIOptionsMap["Max Active Splits/Thread"].GetInt();
     for (Thread* th: m_Threads) {
         th->Init();
     }

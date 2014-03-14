@@ -39,9 +39,9 @@ void on_clear_hash(const Options& o) { TransTable.Clear(); }
 void on_ponder(const Options& o) { }
 void on_time_buffer(const Options& o) { SearchManager.info.time_buffer = o.GetInt(); }
 void on_threads(const Options& o) { ThreadsMgr.SetNumThreads(o.GetInt());}
-void on_splits(const Options& o) { ThreadsMgr.min_split_depth = o.GetInt(); }
-void on_threads_split(const Options& o) { ThreadsMgr.max_threads_per_split = o.GetInt(); }
-void on_active_splits(const Options& o) { ThreadsMgr.max_activesplits_per_thread = o.GetInt(); }
+void on_splits(const Options& o) { ThreadsMgr.m_MinSplitDepth = o.GetInt(); }
+void on_threads_split(const Options& o) { ThreadsMgr.m_MaxThreadsPerSplit = o.GetInt(); }
+void on_active_splits(const Options& o) { ThreadsMgr.m_MaxActiveSplitsPerThread = o.GetInt(); }
 void on_contempt(const Options& o) { SearchManager.info.contempt = o.GetInt(); }
 
 void Engine::InitUCIOptions(UCIOptions& uci_opt) {
@@ -70,9 +70,9 @@ void Engine::PrintUCIOptions(const UCIOptions& uci_opt) {
 }
 
 void Engine::Info() {
-    LogAndPrintOutput()<<name<<" "<<version<<" "<<arch;
-    LogAndPrintOutput()<<"Copyright (C) "<<year<<" "<<author;
-    LogAndPrintOutput()<<"Use UCI commands";
+    LogAndPrintOutput() <<name<<" "<<version<<" "<<arch;
+    LogAndPrintOutput() <<"Copyright (C) "<<year<<" "<<author;
+    LogAndPrintOutput() <<"Use UCI commands";
     LogAndPrintOutput();
 }
 

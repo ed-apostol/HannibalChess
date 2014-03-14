@@ -156,6 +156,7 @@ public:
     void SetNumThreads(int num); // SetNumThreads(0) must be called for program to exit
     uint64 ComputeNodes();
     void SearchSplitPoint(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread);
+    
     Thread& ThreadFromIdx(int thread_id) { return *m_Threads[thread_id]; }
     size_t ThreadNum() const { return m_Threads.size(); }
     void InitPawnHash(int size, int bucket) { for (Thread* th: m_Threads) th->pt.Init(size, bucket); }
@@ -173,9 +174,9 @@ public:
     }
     bool StillThinking() { return m_StartThinking; }
 
-    int min_split_depth;
-    int max_threads_per_split;
-    int max_activesplits_per_thread;
+    int m_MinSplitDepth;
+    int m_MaxThreadsPerSplit;
+    int m_MaxActiveSplitsPerThread;
 private:
     std::vector<Thread*> m_Threads;
     volatile bool m_StartThinking;

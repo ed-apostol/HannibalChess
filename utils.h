@@ -53,7 +53,7 @@ public:
             _buffer << std::endl;
             if (level == logOUT) std::cout << _buffer.str();
             if (logtofile) LogToFile() << LevelText[level] << ": " << _buffer.str();
-            else if (level > logOUT)std::cout << LevelText[level] << ": " << _buffer.str();
+            else if (level > logOUT) std::cout << LevelText[level] << ": " << _buffer.str();
         }
     }
 private:
