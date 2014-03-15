@@ -259,7 +259,7 @@ void TranspositionTable::NewDate(int date) {
 
 void TranspositionTable::Clear() {
     BaseHashTable<TransEntry>::Clear();
-    m_Date = -1;
+    m_Date = 0;
 }
 
 void PvHashTable::NewDate(int date) {
@@ -271,7 +271,7 @@ void PvHashTable::NewDate(int date) {
 
 void PvHashTable::Clear() {
     BaseHashTable<PvHashEntry>::Clear();
-    m_Date = -1;
+    m_Date = 0;
 }
 
 PvHashEntry* PvHashTable::pvEntry(const uint64 hash) const {
