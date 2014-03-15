@@ -119,6 +119,6 @@ public:
     PvHashTable pvhashtable;
 };
 
-extern Engine SearchManager;
+extern Engine CEngine;
 
 extern void quit(void);

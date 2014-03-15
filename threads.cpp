@@ -32,7 +32,7 @@ void ThreadsManager::IdleLoop(const int thread_id) {
             m_Threads[thread_id]->SleepAndWaitForCondition();
             if (m_StartThinking && thread_id == 0) {
                 m_StartThinking = false;
-                SearchManager.getBestMove(m_pPos, ThreadFromIdx(thread_id));
+                CEngine.getBestMove(m_pPos, ThreadFromIdx(thread_id));
                 m_Threads[thread_id]->searching = false;
             }
         }
@@ -41,7 +41,7 @@ void ThreadsManager::IdleLoop(const int thread_id) {
         }
         if (!m_StopThreads && m_Threads[thread_id]->searching) {
             SplitPoint* sp = m_Threads[thread_id]->activeSplitPoint; // this is correctly located, don't move this, else bug
-            SearchManager.searchFromIdleLoop(sp, ThreadFromIdx(thread_id));
+            CEngine.searchFromIdleLoop(sp, ThreadFromIdx(thread_id));
             sp->updatelock->lock();
             sp->workersBitMask &= ~((uint64)1 << thread_id);
             m_Threads[thread_id]->searching = false;

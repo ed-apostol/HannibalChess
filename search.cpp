@@ -54,7 +54,7 @@ inline bool inCutNode(NodeType nt) { return (nt==CutNode);}
 inline bool inAllNode(NodeType nt) { return (nt==AllNode);}
 inline NodeType invertNode(NodeType nt) { return ((nt==PVNode) ? PVNode : ((nt==CutNode) ? AllNode : CutNode));}
 
-Engine SearchManager;
+Engine CEngine;
 
 class Search {
 public:
@@ -96,7 +96,7 @@ void Search::initNode(position_t *pos, Thread& sthread) {
     //++sthread.nodes;
 #ifdef SELF_TUNE2
     if (sthread.nodes >= m_Info.node_limit && m_Info.node_is_limited) {
-        SearchManager.stopSearch();
+        CEngine.stopSearch();
     }
 #endif
     if (sthread.thread_id == 0 && ++sthread.nodes_since_poll >= sthread.nodes_between_polls) {

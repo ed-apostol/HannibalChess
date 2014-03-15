@@ -237,18 +237,18 @@ move_t* sortNext (SplitPoint* sp, position_t *pos, SearchStack& ss, Thread& sthr
 
         switch (MoveGenPhase[ss.mvlist->phase]) {
         case PH_ROOT:
-            if (SearchManager.info.mvlist_initialized) break;
-            if (SearchManager.info.moves_is_limited == true) {
-                for (ss.mvlist->size = 0; SearchManager.info.moves[ss.mvlist->size] != EMPTY; ss.mvlist->size++) {
-                    ss.mvlist->list[ss.mvlist->size].m = SearchManager.info.moves[ss.mvlist->size];
+            if (CEngine.info.mvlist_initialized) break;
+            if (CEngine.info.moves_is_limited == true) {
+                for (ss.mvlist->size = 0; CEngine.info.moves[ss.mvlist->size] != EMPTY; ss.mvlist->size++) {
+                    ss.mvlist->list[ss.mvlist->size].m = CEngine.info.moves[ss.mvlist->size];
                 }
             } else {
                 // generate all legal moves at least in the root
                 genLegal(pos, ss.mvlist, true); 
             }
             scoreRoot(ss.mvlist);
-            SearchManager.info.mvlist_initialized = true;
-            SearchManager.info.legalmoves = ss.mvlist->size;
+            CEngine.info.mvlist_initialized = true;
+            CEngine.info.legalmoves = ss.mvlist->size;
             break;
         case PH_EVASION:
             genEvasions(pos, ss.mvlist);

@@ -34,19 +34,19 @@ UCIOptions UCIOptionsMap;
 void on_clear_hash(const Options& o) { 
     ThreadsMgr.ClearPawnHash();
     ThreadsMgr.ClearEvalHash();
-    SearchManager.ClearTTHash();
-    SearchManager.ClearPVTTHash();
+    CEngine.ClearTTHash();
+    CEngine.ClearPVTTHash();
 }
-void on_hash(const Options& o) { SearchManager.InitTTHash(o.GetInt(), 4); }
+void on_hash(const Options& o) { CEngine.InitTTHash(o.GetInt(), 4); }
 void on_pawn_hash(const Options& o) { ThreadsMgr.InitPawnHash(o.GetInt(), 1);}
 void on_eval_hash(const Options& o) { ThreadsMgr.InitEvalHash(o.GetInt(), 1); }
-void on_multi_pv(const Options& o) { SearchManager.info.multipv = o.GetInt(); }
+void on_multi_pv(const Options& o) { CEngine.info.multipv = o.GetInt(); }
 void on_ponder(const Options& o) { }
-void on_time_buffer(const Options& o) { SearchManager.info.time_buffer = o.GetInt(); }
+void on_time_buffer(const Options& o) { CEngine.info.time_buffer = o.GetInt(); }
 void on_threads(const Options& o) { ThreadsMgr.SetNumThreads(o.GetInt());}
 void on_splits(const Options& o) { ThreadsMgr.m_MinSplitDepth = o.GetInt(); }
 void on_active_splits(const Options& o) { ThreadsMgr.m_MaxActiveSplitsPerThread = o.GetInt(); }
-void on_contempt(const Options& o) { SearchManager.info.contempt = o.GetInt(); }
+void on_contempt(const Options& o) { CEngine.info.contempt = o.GetInt(); }
 
 void Interface::InitUCIOptions(UCIOptions& uci_opt) {
     uci_opt["Hash"] =                       Options(64, 1, 65536, on_hash);
@@ -87,8 +87,8 @@ Interface::Interface() {
     InitUCIOptions(UCIOptionsMap);
     ThreadsMgr.InitVars();
     ThreadsMgr.SetNumThreads(UCIOptionsMap["Threads"].GetInt());
-    SearchManager.InitTTHash(UCIOptionsMap["Hash"].GetInt(), 4);
-    SearchManager.InitPVTTHash(1, 8);
+    CEngine.InitTTHash(UCIOptionsMap["Hash"].GetInt(), 4);
+    CEngine.InitPVTTHash(1, 8);
 
     initArr();
     initPST();
@@ -142,12 +142,12 @@ void Interface::Id() {
 }
 
 void Interface::Stop() {
-    SearchManager.stopSearch();
+    CEngine.stopSearch();
     LogInfo() <<"info string Aborting search: stop";
 }
 
 void Interface::Ponderhit() {
-    SearchManager.ponderHit();
+    CEngine.ponderHit();
 }
 
 void Interface::Go(std::istringstream& stream) {
@@ -155,7 +155,7 @@ void Interface::Go(std::istringstream& stream) {
     int64 mytime = 0, t_inc = 0;
     int wtime=0, btime=0, winc=0, binc=0, movestogo=0, upperdepth=0, nodes=0, mate=0, movetime=0;
     bool infinite = false, ponder = false;
-    SearchInfo& info = SearchManager.info;
+    SearchInfo& info = CEngine.info;
 
     info.Init();
 
@@ -295,9 +295,9 @@ void Interface::SetOption(std::istringstream& stream) {
 void Interface::NewGame() {
     ThreadsMgr.ClearPawnHash();
     ThreadsMgr.ClearEvalHash();
-    SearchManager.ClearTTHash();
-    SearchManager.ClearPVTTHash();
-    SearchManager.info.lastDepthSearched = MAXPLY;
+    CEngine.ClearTTHash();
+    CEngine.ClearPVTTHash();
+    CEngine.info.lastDepthSearched = MAXPLY;
 }
 
 Interface::~Interface() {
