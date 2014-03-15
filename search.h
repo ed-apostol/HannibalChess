@@ -94,10 +94,10 @@ extern inline int historyIndex(uint32 side, uint32 move);
 
 class Search;
 
-class SearchMgr {
+class Engine {
 public:
-    SearchMgr();
-    ~SearchMgr();
+    Engine();
+    ~Engine();
     void ponderHit();
     void sendBestMove();
     void searchFromIdleLoop(SplitPoint* sp, Thread& sthread);
@@ -108,10 +108,17 @@ public:
     void benchActiveSplits(position_t* pos, char string[]);
     void stopSearch();
 
+    void InitTTHash(int size, int bucket) { transtable.Init(size, bucket); }
+    void InitPVTTHash(int size, int bucket) { pvhashtable.Init(size, bucket); }
+    void ClearTTHash() { transtable.Clear(); }
+    void ClearPVTTHash() { pvhashtable.Clear(); }
+
     Search* search;
     SearchInfo info;
+    TranspositionTable transtable;
+    PvHashTable pvhashtable;
 };
 
-extern SearchMgr SearchManager;
+extern Engine SearchManager;
 
 extern void quit(void);

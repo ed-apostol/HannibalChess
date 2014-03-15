@@ -34,10 +34,10 @@ UCIOptions UCIOptionsMap;
 void on_clear_hash(const Options& o) { 
     ThreadsMgr.ClearPawnHash();
     ThreadsMgr.ClearEvalHash();
-    ThreadsMgr.ClearTTHash();
-    ThreadsMgr.ClearPVTTHash();
+    SearchManager.ClearTTHash();
+    SearchManager.ClearPVTTHash();
 }
-void on_hash(const Options& o) { ThreadsMgr.InitTTHash(o.GetInt(), 4); }
+void on_hash(const Options& o) { SearchManager.InitTTHash(o.GetInt(), 4); }
 void on_pawn_hash(const Options& o) { ThreadsMgr.InitPawnHash(o.GetInt(), 1);}
 void on_eval_hash(const Options& o) { ThreadsMgr.InitEvalHash(o.GetInt(), 1); }
 void on_multi_pv(const Options& o) { SearchManager.info.multipv = o.GetInt(); }
@@ -87,6 +87,8 @@ Interface::Interface() {
     InitUCIOptions(UCIOptionsMap);
     ThreadsMgr.InitVars();
     ThreadsMgr.SetNumThreads(UCIOptionsMap["Threads"].GetInt());
+    SearchManager.InitTTHash(UCIOptionsMap["Hash"].GetInt(), 4);
+    SearchManager.InitPVTTHash(1, 8);
 
     initArr();
     initPST();
@@ -293,8 +295,8 @@ void Interface::SetOption(std::istringstream& stream) {
 void Interface::NewGame() {
     ThreadsMgr.ClearPawnHash();
     ThreadsMgr.ClearEvalHash();
-    ThreadsMgr.ClearTTHash();
-    ThreadsMgr.ClearPVTTHash();
+    SearchManager.ClearTTHash();
+    SearchManager.ClearPVTTHash();
     SearchManager.info.lastDepthSearched = MAXPLY;
 }
 

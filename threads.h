@@ -141,13 +141,11 @@ public:
     int32 history[1024];
     EvalHashTable et;
     PawnHashTable pt;
-    TranspositionTable* m_pTT;
-    PvHashTable* m_pPVTT;
 };
 
-class Engine {
+class ThreadsManager {
 public:
-    Engine() : m_StartThinking(false), m_pPos(NULL) { }
+    ThreadsManager() : m_StartThinking(false), m_pPos(NULL) { }
     void StartThinking(position_t* p);
     void IdleLoop(const int thread_id);
     void GetWork(const int thread_id, SplitPoint *master_sp);
@@ -164,12 +162,9 @@ public:
 
     void InitPawnHash(int size, int bucket) { for (Thread* th: m_Threads) th->pt.Init(size, bucket); }
     void InitEvalHash(int size, int bucket) { for (Thread* th: m_Threads) th->et.Init(size, bucket); }
-    void InitTTHash(int size, int bucket) { m_TransTable.Init(size, bucket); for (Thread* th: m_Threads) th->m_pTT = &m_TransTable; }
-    void InitPVTTHash(int size, int bucket) { m_PVHashTable.Init(size, bucket); for (Thread* th: m_Threads) th->m_pPVTT = &m_PVHashTable; }
     void ClearPawnHash() { for (Thread* th: m_Threads) th->pt.Clear(); }
     void ClearEvalHash() { for (Thread* th: m_Threads) th->et.Clear(); }
-    void ClearTTHash() { m_TransTable.Clear(); }
-    void ClearPVTTHash() { m_PVHashTable.Clear(); }
+
 
     void PrintDebugData() {
         Print(2, "================================================================\n");
@@ -189,9 +184,7 @@ private:
     volatile bool m_StartThinking;
     position_t* m_pPos;
     volatile bool m_StopThreads;
-    TranspositionTable m_TransTable;
-    PvHashTable m_PVHashTable;
 };
 
-extern Engine ThreadsMgr;
+extern ThreadsManager ThreadsMgr;
 
