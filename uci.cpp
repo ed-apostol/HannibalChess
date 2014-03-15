@@ -45,7 +45,6 @@ void on_ponder(const Options& o) { }
 void on_time_buffer(const Options& o) { SearchManager.info.time_buffer = o.GetInt(); }
 void on_threads(const Options& o) { ThreadsMgr.SetNumThreads(o.GetInt());}
 void on_splits(const Options& o) { ThreadsMgr.m_MinSplitDepth = o.GetInt(); }
-void on_threads_split(const Options& o) { ThreadsMgr.m_MaxThreadsPerSplit = o.GetInt(); }
 void on_active_splits(const Options& o) { ThreadsMgr.m_MaxActiveSplitsPerThread = o.GetInt(); }
 void on_contempt(const Options& o) { SearchManager.info.contempt = o.GetInt(); }
 
@@ -59,7 +58,6 @@ void Interface::InitUCIOptions(UCIOptions& uci_opt) {
     uci_opt["Time Buffer"] =                Options(1000, 0, 10000, on_time_buffer);
     uci_opt["Threads"] =                    Options(6, 1, MaxNumOfThreads, on_threads);
     uci_opt["Min Split Depth"] =            Options(4, 1, 12, on_splits);
-    uci_opt["Max Threads/Split"] =          Options(16, 2, MaxNumOfThreads, on_threads_split);
     uci_opt["Max Active Splits/Thread"] =   Options(4, 1, 8, on_active_splits);
     uci_opt["Contempt"] =                   Options(0, -100, 100, on_contempt);
 }

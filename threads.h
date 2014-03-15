@@ -161,6 +161,7 @@ public:
 
     Thread& ThreadFromIdx(int thread_id) { return *m_Threads[thread_id]; }
     size_t ThreadNum() const { return m_Threads.size(); }
+
     void InitPawnHash(int size, int bucket) { for (Thread* th: m_Threads) th->pt.Init(size, bucket); }
     void InitEvalHash(int size, int bucket) { for (Thread* th: m_Threads) th->et.Init(size, bucket); }
     void InitTTHash(int size, int bucket) { m_TransTable.Init(size, bucket); for (Thread* th: m_Threads) th->m_pTT = &m_TransTable; }
@@ -169,6 +170,7 @@ public:
     void ClearEvalHash() { for (Thread* th: m_Threads) th->et.Clear(); }
     void ClearTTHash() { m_TransTable.Clear(); }
     void ClearPVTTHash() { m_PVHashTable.Clear(); }
+
     void PrintDebugData() {
         Print(2, "================================================================\n");
         for (Thread* th: m_Threads) {
@@ -181,7 +183,6 @@ public:
     bool StillThinking() { return m_StartThinking; }
 
     int m_MinSplitDepth;
-    int m_MaxThreadsPerSplit;
     int m_MaxActiveSplitsPerThread;
 private:
     std::vector<Thread*> m_Threads;
