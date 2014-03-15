@@ -79,7 +79,6 @@ public:
     void timeManagement(int depth, Thread& sthread);
     void stopSearch();
 private:
-    Search();
     SearchInfo& m_Info;
     TranspositionTable& m_TransTable;
     PvHashTable& m_PVHashTable;
