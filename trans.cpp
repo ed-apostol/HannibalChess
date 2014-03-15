@@ -173,7 +173,6 @@ void TranspositionTable::StoreExact(const uint64 hash, basic_move_t move, const 
     for (t = 0; t < m_BucketSize; t++, entry++) {
         if (entry->HashLock() == LOCK(hash)) {
             if (depth >= MAX(entry->UpperDepth(), entry->LowerDepth())) {
-                m_pPVTT->pvStore(hash, move, depth, value);
                 entry->SetMove(move);
                 entry->SetAge(m_Date);
                 entry->SetUpperDepth(depth);
@@ -201,7 +200,6 @@ void TranspositionTable::StoreExact(const uint64 hash, basic_move_t move, const 
 
     replace->SetHashLock(LOCK(hash));
     replace->SetAge(m_Date);
-    m_pPVTT->pvStore(hash, move, depth, value);
     replace->SetMove(move);
     replace->SetUpperDepth(depth);
     replace->SetUpperValue(value);
@@ -259,6 +257,23 @@ void TranspositionTable::NewDate(int date) {
     m_Used = 1;
 }
 
+void TranspositionTable::Clear() {
+    BaseHashTable<TransEntry>::Clear();
+    m_Date = -1;
+}
+
+void PvHashTable::NewDate(int date) {
+    m_Date = (date+1)%DATESIZE;
+    for (date = 0; date < DATESIZE; date++) {
+        m_Age[date] = m_Date - date + ((m_Date < date) ? DATESIZE:0);
+    }
+}
+
+void PvHashTable::Clear() {
+    BaseHashTable<PvHashEntry>::Clear();
+    m_Date = -1;
+}
+
 PvHashEntry* PvHashTable::pvEntry(const uint64 hash) const {
     PvHashEntry *entry = &m_pTable[(KEY(hash) & m_Mask)];
     for (int t = 0; t < m_BucketSize; t++, entry++) {
@@ -286,22 +301,23 @@ void PvHashTable::pvStore(const uint64 hash, const basic_move_t move, const uint
     replace = entry = &m_pTable[(KEY(hash) & m_Mask)];
     for (t = 0; t < m_BucketSize; t++, entry++) {
         if (entry->pvHashLock() == LOCK(hash)) {
-            entry->pvSetAge(m_pTT->Date());
+            entry->pvSetAge(Date());
             entry->pvSetMove(move);
             entry->pvSetDepth(depth);
             entry->pvSetValue(value);
             return;
         }
-        score = (m_pTT->Age(entry->pvAge()) * 256) - entry->pvDepth();
+        score = (Age(entry->pvAge()) * 256) - entry->pvDepth();
         if (score > worst) {
             worst = score;
             replace = entry;
         }
     }
     replace->pvSetHashLock(LOCK(hash));
-    replace->pvSetAge(m_pTT->Date());
+    replace->pvSetAge(Date());
     replace->pvSetMove(move);
     replace->pvSetDepth(depth);
     replace->pvSetValue(value);
 }
+
 

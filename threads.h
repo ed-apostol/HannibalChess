@@ -163,8 +163,8 @@ public:
     size_t ThreadNum() const { return m_Threads.size(); }
     void InitPawnHash(int size, int bucket) { for (Thread* th: m_Threads) th->pt.Init(size, bucket); }
     void InitEvalHash(int size, int bucket) { for (Thread* th: m_Threads) th->et.Init(size, bucket); }
-    void InitTTHash(int size, int bucket) { m_TransTable.Init(size, bucket); m_TransTable.m_pPVTT = &m_PVHashTable; for (Thread* th: m_Threads) th->m_pTT = &m_TransTable; }
-    void InitPVTTHash(int size, int bucket) { m_PVHashTable.Init(size, bucket); m_PVHashTable.m_pTT = &m_TransTable; for (Thread* th: m_Threads) th->m_pPVTT = &m_PVHashTable; }
+    void InitTTHash(int size, int bucket) { m_TransTable.Init(size, bucket); for (Thread* th: m_Threads) th->m_pTT = &m_TransTable; }
+    void InitPVTTHash(int size, int bucket) { m_PVHashTable.Init(size, bucket); for (Thread* th: m_Threads) th->m_pPVTT = &m_PVHashTable; }
     void ClearPawnHash() { for (Thread* th: m_Threads) th->pt.Clear(); }
     void ClearEvalHash() { for (Thread* th: m_Threads) th->et.Clear(); }
     void ClearTTHash() { m_TransTable.Clear(); }

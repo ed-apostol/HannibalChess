@@ -19,7 +19,7 @@ public:
         m_BucketSize (0)
     {}
     ~BaseHashTable() { delete[] m_pTable; }
-    void Clear() { memset (m_pTable, 0, m_Size * sizeof (Entity)); }
+    virtual void Clear() { memset (m_pTable, 0, m_Size * sizeof (Entity)); }
     Entity* Entry (const uint64 hash) const { return &m_pTable[KEY (hash) & m_Mask]; }
     void Init (uint64 target, const int bucket_size) {
         uint64 size = 2;
@@ -78,10 +78,19 @@ private:
 class TranspositionTable;
 class PvHashTable : public BaseHashTable<PvHashEntry> {
 public:
+    enum {
+        DATESIZE = 16
+    };
+    virtual void Clear();
+    void NewDate (int date);
     void pvStore (uint64 hash, basic_move_t move, uint8 depth, int16 value);
     PvHashEntry *pvEntry (const uint64 hash) const;
     PvHashEntry *pvEntryFromMove (const uint64 hash, basic_move_t move) const;
-    TranspositionTable* m_pTT;
+    int32 Date() const { return m_Date; }
+    int32 Age (const int Idx) const { return m_Age[Idx]; }
+private:
+    int32 m_Date;
+    int32 m_Age[DATESIZE];
 };
 
 
@@ -168,6 +177,7 @@ public:
     enum {
         DATESIZE = 16
     };
+    virtual void Clear();
     void NewDate (int date);
     void StoreLower (uint64 hash, basic_move_t move, int depth, int value);
     void StoreUpper (uint64 hash, basic_move_t move, int depth, int value);
@@ -176,12 +186,10 @@ public:
     void StoreExact (uint64 hash, basic_move_t move, int depth, int value);
     void StoreNoMoves (uint64 hash, basic_move_t move, int depth, int value);
 
-    basic_move_t TranspositionTable::TransMove (uint64 hash);
+    basic_move_t TransMove (uint64 hash);
     int32 Date() const { return m_Date; }
     uint64 Used() const { return m_Used; }
     int32 Age (const int Idx) const { return m_Age[Idx]; }
-
-    PvHashTable* m_pPVTT;
 private:
     int32 m_Date;
     uint64 m_Used;

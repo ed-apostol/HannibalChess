@@ -327,6 +327,7 @@ int Search::qSearch(position_t *pos, int alpha, int beta, const int depth, Searc
     if (inPv && ss.bestmove != EMPTY) {
         ssprev.counterMove = ss.bestmove;
         sthread.m_pTT->StoreExact(pos->posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos->ply));
+        sthread.m_pPVTT->pvStore(pos->posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos->ply));
     } else sthread.m_pTT->StoreUpper(pos->posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos->ply));
 
     ASSERT(valueIsOk(ss.bestvalue));
@@ -659,6 +660,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
             if (inPvNode(nt) && ss.bestmove != EMPTY) {
                 ssprev.counterMove = ss.bestmove;
                 sthread.m_pTT->StoreExact(pos->posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos->ply));
+                sthread.m_pPVTT->pvStore(pos->posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos->ply));
             }
             else if (inCutNode(nt)) sthread.m_pTT->StoreCutUpper(pos->posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos->ply));
             else sthread.m_pTT->StoreUpper(pos->posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos->ply));
@@ -775,7 +777,7 @@ void SearchMgr::sendBestMove() {
         origScore = info.last_value; // just to be safe
     }
     ThreadsMgr.SetAllThreadsToSleep();
-    ThreadsMgr.PrintDebugData();
+    //ThreadsMgr.PrintDebugData();
 }
 
 void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
@@ -788,6 +790,7 @@ void SearchMgr::getBestMove(position_t *pos, Thread& sthread) {
     ASSERT(pos != NULL);
 
     sthread.m_pTT->NewDate(sthread.m_pTT->Date());
+    sthread.m_pPVTT->NewDate(sthread.m_pPVTT->Date());
 
     do {
         PvHashEntry *entry = sthread.m_pPVTT->pvEntry(pos->posStore.hash);
