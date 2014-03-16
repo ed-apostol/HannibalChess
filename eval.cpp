@@ -1196,7 +1196,7 @@ int eval(const position_t& pos, int thread_id, int *pessimism) {
         if (ei.flags & ATTACK_KING[BLACK]) {
             evalKingAttacks(pos, &ei, BLACK,&upside[WHITE]);
         }
-        //judgeTrapped(pos,&ei,WHITE,thread_id/*,&upside[WHITE],&upside[BLACK]*/);
+        judgeTrapped(pos,&ei,WHITE,thread_id/*,&upside[WHITE],&upside[BLACK]*/);
     }
     else {
         if (blackPassed) evalPassedvsKing(pos,&ei,BLACK,blackPassed);
@@ -1208,7 +1208,7 @@ int eval(const position_t& pos, int thread_id, int *pessimism) {
         if (ei.flags & ATTACK_KING[WHITE]) { // attacking the white king
             evalKingAttacks(pos, &ei, WHITE,&upside[BLACK]);
         }
-        //judgeTrapped(pos,&ei,BLACK,thread_id/*,&upside[WHITE],&upside[BLACK]*/);
+        judgeTrapped(pos,&ei,BLACK,thread_id/*,&upside[WHITE],&upside[BLACK]*/);
     }
     else {
         if (whitePassed) evalPassedvsKing(pos,&ei,WHITE,whitePassed);

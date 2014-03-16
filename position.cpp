@@ -16,29 +16,29 @@
 #include "bitutils.h"
 
 /* this undos the null move done */
-void unmakeNullMove(position_t& pos, pos_store_t *undo) {
+void unmakeNullMove(position_t& pos, pos_store_t& undo) {
     ASSERT(pos != NULL);
 
     --pos.ply;
     --pos.sp;
     pos.side ^= 1;
 
-    pos.posStore = *undo;
+    pos.posStore = undo;
 }
 
 /* this updates the position structure from the null move being played */
-void makeNullMove(position_t& pos, pos_store_t *undo) {
+void makeNullMove(position_t& pos, pos_store_t& undo) {
     ASSERT(pos != NULL);
 
-    *undo = pos.posStore;
+    undo = pos.posStore;
 
-    pos.posStore.previous = undo;
+    pos.posStore.previous = &undo;
     pos.posStore.lastmove = EMPTY;
     pos.posStore.epsq = -1;
     pos.posStore.fifty += 1;
     pos.posStore.pliesFromNull = 0;
 
-    if (undo->epsq != -1) pos.posStore.hash ^= ZobEpsq[SQFILE(undo->epsq)];
+    if (undo.epsq != -1) pos.posStore.hash ^= ZobEpsq[SQFILE(undo.epsq)];
 
     pos.posStore.hash ^= ZobColor;
     ++pos.ply;
@@ -47,7 +47,7 @@ void makeNullMove(position_t& pos, pos_store_t *undo) {
 }
 
 /* this undos the move done */
-void unmakeMove(position_t& pos, pos_store_t *undo) {
+void unmakeMove(position_t& pos, pos_store_t& undo) {
     unsigned int side, xside, m, rook_from=0, rook_to=0, epsq=0, from, to;
 
     ASSERT(pos != NULL);
@@ -60,7 +60,7 @@ void unmakeMove(position_t& pos, pos_store_t *undo) {
     side = xside ^ 1;
     pos.side = side;
 
-    pos.posStore = *undo;
+    pos.posStore = undo;
 
     from = moveFrom(m);
     to = moveTo(m);
@@ -192,7 +192,7 @@ void unmakeMove(position_t& pos, pos_store_t *undo) {
 }
 
 /* this updates the position structure from the move being played */
-void makeMove(position_t& pos, pos_store_t *undo, basic_move_t m) {
+void makeMove(position_t& pos, pos_store_t& undo, basic_move_t m) {
     unsigned int rook_from=0, rook_to=0, epsq=0, prom, from, to, side, xside;
 
     ASSERT(pos != NULL);
@@ -203,22 +203,22 @@ void makeMove(position_t& pos, pos_store_t *undo, basic_move_t m) {
     side = pos.side;
     xside = side^1;
 
-    *undo = pos.posStore;
+    undo = pos.posStore;
 
 #ifdef LAZY
     pos.posStore.sinceLazy++;
 #endif
 
-    pos.posStore.previous = undo;
+    pos.posStore.previous = &undo;
     pos.posStore.lastmove = m;
     pos.posStore.epsq = -1;
-    pos.posStore.castle = undo->castle & CastleMask[from] & CastleMask[to];
+    pos.posStore.castle = undo.castle & CastleMask[from] & CastleMask[to];
     pos.posStore.fifty += 1;
     pos.posStore.pliesFromNull += 1;
 
-    if (undo->epsq != -1) pos.posStore.hash ^= ZobEpsq[SQFILE(undo->epsq)];
-    pos.posStore.hash ^= ZobCastle[pos.posStore.castle ^ undo->castle];
-    pos.posStore.phash ^= ZobCastle[pos.posStore.castle ^ undo->castle];
+    if (undo.epsq != -1) pos.posStore.hash ^= ZobEpsq[SQFILE(undo.epsq)];
+    pos.posStore.hash ^= ZobCastle[pos.posStore.castle ^ undo.castle];
+    pos.posStore.phash ^= ZobCastle[pos.posStore.castle ^ undo.castle];
 
     pos.posStore.hash ^= ZobColor;
 

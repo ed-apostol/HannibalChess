@@ -406,10 +406,6 @@ void genEvasions(const position_t& pos, movelist_t& mvlist) {
     int sqchecker, from, to, ksq, side, xside;
     uint64  pc_bits, mv_bits, enemies, friends, temp, checkers, pinned;
 
-    ASSERT(pos != NULL);
-    ASSERT(mvlist != NULL);
-
-    //mvlist.size = 0;
     mvlist.size = mvlist.pos;
 
     side = pos.side;

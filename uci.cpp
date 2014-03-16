@@ -278,7 +278,7 @@ void Interface::Position(std::istringstream& stream) {
         movelist_t ml;
         genLegal(CEngine.rootpos, ml, true);
         m = parseMove(&ml, token.c_str());
-        if (m) makeMove(CEngine.rootpos, &UndoStack[CEngine.rootpos.sp], m);
+        if (m) makeMove(CEngine.rootpos, UndoStack[CEngine.rootpos.sp], m);
         else break;
         if (CEngine.rootpos.posStore.fifty==0) CEngine.rootpos.sp = 0;
     }
