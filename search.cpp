@@ -75,7 +75,7 @@ public:
     int searchNode(SplitPoint& sp, position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt);
     template<bool inRoot, bool inSplitPoint, bool inCheck, bool inSingular>
     int searchGeneric(SplitPoint& sp, position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt);
-    void extractPvMovesFromHash(position_t pos, continuation_t& pv);
+    void extractPvMovesFromHash(position_t& pos, continuation_t& pv);
     void timeManagement(int depth);
     void stopSearch();
 private:
@@ -675,7 +675,7 @@ int Search::searchGeneric(SplitPoint& sp, position_t& pos, int alpha, int beta, 
     return ss.bestvalue;
 }
 
-void Search::extractPvMovesFromHash(position_t pos, continuation_t& pv) { // pass a copy of pos
+void Search::extractPvMovesFromHash(position_t& pos, continuation_t& pv) {
     PvHashEntry *entry;
     pos_store_t undo[MAXPLY];
     int ply = 0;
@@ -790,8 +790,6 @@ void Engine::getBestMove(Thread& sthread) {
     SplitPoint rootsp;
     ss.moveGivesCheck = kingIsInCheck(rootpos);
     ss.dcc = discoveredCheckCandidates(rootpos, rootpos.side);
-
-    ASSERT(rootpos != NULL);
 
     transtable.NewDate(transtable.Date());
     pvhashtable.NewDate(pvhashtable.Date());
