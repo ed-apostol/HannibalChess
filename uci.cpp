@@ -276,7 +276,7 @@ void Interface::Position(std::istringstream& stream) {
     setPosition(CEngine.rootpos, fen.c_str());
     while (stream >> token) {
         movelist_t ml;
-        genLegal(CEngine.rootpos, &ml, true);
+        genLegal(CEngine.rootpos, ml, true);
         m = parseMove(&ml, token.c_str());
         if (m) makeMove(CEngine.rootpos, &UndoStack[CEngine.rootpos.sp], m);
         else break;

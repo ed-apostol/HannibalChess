@@ -70,7 +70,7 @@ public:
     bool moveRefutesThreat(const position_t& pos, basic_move_t first, basic_move_t second);
     void updateEvalgains(const position_t& pos, uint32 move, int before, int after, Thread& sthread);
     template<bool inPv>
-    int qSearch(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread);
+    int qSearch(SplitPoint& sp, position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread);
     template <bool inRoot, bool inSplitPoint, bool inSingular>
     int searchNode(SplitPoint& sp, position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt);
     template<bool inRoot, bool inSplitPoint, bool inCheck, bool inSingular>
@@ -226,9 +226,8 @@ void Search::updateEvalgains(const position_t& pos, uint32 move, int before, int
 }
 
 template<bool inPv>
-int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread) {
+int Search::qSearch(SplitPoint& sp, position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread) {
     int pes = 0;
-    SplitPoint dummysp;
     SearchStack ss;
 
     ASSERT(pos != NULL);
@@ -288,7 +287,7 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     }
     bool prunable = !ssprev.moveGivesCheck && !inPv && MinTwoBits(pos.color[pos.side^1] & pos.pawns) && MinTwoBits(pos.color[pos.side^1] & ~(pos.pawns | pos.kings));
     move_t* move;
-    while ((move = sortNext(false, dummysp, pos, ss, sthread)) != NULL) {
+    while ((move = sortNext(false, sp, pos, ss, sthread)) != NULL) {
         int score;
         if (anyRepNoMove(pos, move->m)) { 
             score = DrawValue[pos.side];
@@ -302,7 +301,7 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
             int newdepth = depth - !ss.moveGivesCheck;
             makeMove(pos, &undo, move->m);
             ++sthread.nodes;
-            score = -qSearch<inPv>(pos, -beta, -alpha, newdepth, ss, sthread);
+            score = -qSearch<inPv>(sp, pos, -beta, -alpha, newdepth, ss, sthread);
             unmakeMove(pos, &undo);
         }
         if (sthread.stop) return ss.bestvalue;
@@ -342,8 +341,8 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
 template <bool inRoot, bool inSplitPoint, bool inSingular>
 int Search::searchNode(SplitPoint& sp, position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt) {
     if (depth <= 0) {
-        if (inPvNode(nt)) return qSearch<true>(pos, alpha, beta, 0, ssprev, sthread);
-        else return qSearch<false>(pos, alpha, beta, 0, ssprev, sthread);
+        if (inPvNode(nt)) return qSearch<true>(sp, pos, alpha, beta, 0, ssprev, sthread);
+        else return qSearch<false>(sp, pos, alpha, beta, 0, ssprev, sthread);
     } else {
         if (ssprev.moveGivesCheck) return searchGeneric<inRoot, inSplitPoint, true, inSingular>(sp, pos, alpha, beta, depth, ssprev, sthread, nt);
         else return searchGeneric<inRoot, inSplitPoint, false, inSingular>(sp, pos, alpha, beta, depth, ssprev, sthread, nt);

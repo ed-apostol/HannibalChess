@@ -11,13 +11,13 @@
 #include "threads.h"
 
 /* movegen.c */
-extern void genLegal(const position_t& pos, movelist_t *mvlist,int promoteAll);
-extern void genNonCaptures(const position_t& pos, movelist_t *mvlist);
-extern void genCaptures(const position_t& pos, movelist_t *mvlist);
-extern void genEvasions(const position_t& pos, movelist_t *mvlist);
-extern void genQChecks(const position_t& pos, movelist_t *mvlist);
+extern void genLegal(const position_t& pos, movelist_t& mvlist,int promoteAll);
+extern void genNonCaptures(const position_t& pos, movelist_t& mvlist);
+extern void genCaptures(const position_t& pos, movelist_t& mvlist);
+extern void genEvasions(const position_t& pos, movelist_t& mvlist);
+extern void genQChecks(const position_t& pos, movelist_t& mvlist);
 extern uint32 genMoveIfLegal(const position_t& pos, uint32 move, uint64 pinned);
-extern void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, Thread& sthread);
+extern void genGainingMoves(const position_t& pos, movelist_t& mvlist, int delta, Thread& sthread);
 
 /* utilities for move generation */
 inline basic_move_t GenOneForward(uint f, uint t) {return ((f) | ((t)<<6) | (PAWN<<12));}

@@ -244,14 +244,14 @@ move_t* sortNext (bool inSplitPoint, SplitPoint& sp, position_t& pos, SearchStac
                 }
             } else {
                 // generate all legal moves at least in the root
-                genLegal(pos, ss.mvlist, true); 
+                genLegal(pos, *ss.mvlist, true); 
             }
             scoreRoot(ss.mvlist);
             CEngine.info.mvlist_initialized = true;
             CEngine.info.legalmoves = ss.mvlist->size;
             break;
         case PH_EVASION:
-            genEvasions(pos, ss.mvlist);
+            genEvasions(pos, *ss.mvlist);
             if (ss.mvlist->depth <= 0) scoreAllQ(ss.mvlist, sthread);
             else scoreAll(pos, ss.mvlist, sthread);
             break;
@@ -261,12 +261,12 @@ move_t* sortNext (bool inSplitPoint, SplitPoint& sp, position_t& pos, SearchStac
             }
             break;
         case PH_ALL_CAPTURES:
-            genCaptures(pos, ss.mvlist);
+            genCaptures(pos, *ss.mvlist);
             scoreCapturesPure(ss.mvlist);
             break;
         case PH_GOOD_CAPTURES:
         case PH_GOOD_CAPTURES_PURE:
-            genCaptures(pos, ss.mvlist);
+            genCaptures(pos, *ss.mvlist);
             scoreCapturesPure(ss.mvlist);
             break;
         case PH_BAD_CAPTURES:
@@ -288,17 +288,17 @@ move_t* sortNext (bool inSplitPoint, SplitPoint& sp, position_t& pos, SearchStac
             }
             break;
         case PH_QUIET_MOVES:
-            genNonCaptures(pos, ss.mvlist);
+            genNonCaptures(pos, *ss.mvlist);
             scoreNonCaptures(pos, ss.mvlist, sthread);
             break;
         case PH_NONTACTICAL_CHECKS_WIN:
         case PH_NONTACTICAL_CHECKS_PURE:
-            genQChecks(pos, ss.mvlist);
+            genQChecks(pos, *ss.mvlist);
             scoreNonCaptures(pos, ss.mvlist, sthread);
             break;
         case PH_GAINING:
             if (ss.mvlist->scout - ss.mvlist->evalvalue > 150) continue; // TODO: test other values
-            genGainingMoves(pos, ss.mvlist, ss.mvlist->scout - ss.mvlist->evalvalue, sthread);
+            genGainingMoves(pos, *ss.mvlist, ss.mvlist->scout - ss.mvlist->evalvalue, sthread);
             // Print(3, "delta = %d, ss.mvlist->size = %d\n", ss.mvlist->scout - SearchInfo.evalvalue[pos.ply], ss.mvlist->size);
             scoreNonCaptures(pos, ss.mvlist, sthread);
             break;
