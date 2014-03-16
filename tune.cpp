@@ -566,7 +566,7 @@ const char *FenStartString[NUM_START_POS] = {
     "r1bqk2r/3nbppp/2p1p3/p2nP3/PpBP4/5N2/NP1B1PPP/R2Q1RK1 w kq - 2 12"
 
 };
-void SetStartingPosition(position_t *pos,int position) {
+void SetStartingPosition(position_t& pos,int position) {
     setPosition(pos, FenStartString[position]);
 }
 #endif
@@ -577,7 +577,7 @@ void SetNewGame() {
     transClear(0);
     //TODO consider clearing pawn and eval hash
 }
-int PlayOptimizeGame(position_t *pos, int startPos, int time) {
+int PlayOptimizeGame(position_t& pos, int startPos, int time) {
     pos_store_t undo;
     int zeros = 0;
     int wScore;
@@ -596,8 +596,8 @@ int PlayOptimizeGame(position_t *pos, int startPos, int time) {
         uciGo(pos,s);
         if (SearchInfo(0).last_value != -10000) value = SearchInfo(0).last_value;
         else value = SearchInfo(0).last_last_value;
-        if (pos->side == WHITE && value != -10000) wScore = value;
-        if (pos->side == BLACK && value != -10000) bScore = value;
+        if (pos.side == WHITE && value != -10000) wScore = value;
+        if (pos.side == BLACK && value != -10000) bScore = value;
         if (wScore > 400 && bScore < -400) {
             return 1;
         }
@@ -615,7 +615,7 @@ int PlayOptimizeGame(position_t *pos, int startPos, int time) {
         else if (value != -10000) zeros = 0;
         if (!SearchInfo(0).bestmove) {
             if (kingIsInCheck(pos)) {
-                if (pos->side == WHITE) return 2;
+                if (pos.side == WHITE) return 2;
                 else return 1;
             }
             return 0; //stalemate
@@ -623,11 +623,11 @@ int PlayOptimizeGame(position_t *pos, int startPos, int time) {
             origScore = value; // just to be safe
         }
         Print(3,"%d %s ",moves,move2Str(SearchInfo(0).bestmove));
-        if (moves%10==9 && pos->side == BLACK) Print(3,"\n");
+        if (moves%10==9 && pos.side == BLACK) Print(3,"\n");
         makeMove(pos, &undo, SearchInfo(0).bestmove);
-        if (pos->posStore.fifty==0) {
-            pos->stack[0] = pos->posStore.hash;
-            pos->sp = 0;
+        if (pos.posStore.fifty==0) {
+            pos.stack[0] = pos.posStore.hash;
+            pos.sp = 0;
         }
         if (anyRep(pos)) {
             return 0;
@@ -637,7 +637,7 @@ int PlayOptimizeGame(position_t *pos, int startPos, int time) {
     Print(3,"info string why here??\n");
     return -1;
 }
-void optimize(position_t *pos, int threads) {
+void optimize(position_t& pos, int threads) {
     Guci_options.threads = threads;
 
     for (int gameOn=0; gameOn < 21; gameOn++) {
@@ -797,7 +797,7 @@ void SetNewGame() { //this should be changed when we do one thread per personali
         evalTableClear(&Threads[i]->et);
     }
 }
-void tuneGo(position_t *pos, int player, int64 nodes) {
+void tuneGo(position_t& pos, int player, int64 nodes) {
 
     ASSERT(pos != NULL);
     ASSERT(options != NULL);
@@ -1337,10 +1337,10 @@ int GetChallenger() {
 }
 
 
-void SetStartingPosition(position_t *pos,int position) {
+void SetStartingPosition(position_t& pos,int position) {
     setPosition(pos, FenStartString[position]);
 }
-int PlayGame(position_t *pos, int player1, int player2, int startPos) {
+int PlayGame(position_t& pos, int player1, int player2, int startPos) {
     pos_store_t undo;
     int zeros = 0;
     int wScore;
@@ -1355,7 +1355,7 @@ int PlayGame(position_t *pos, int player1, int player2, int startPos) {
     Print(3,"%d:%s(%.1f)\t vs. ",player1+1,PlayerString(player1),GetScore(player1));
     Print(3,"%d:%s(%.1f)\t",player2+1,PlayerString(player2),GetScore(player2));
     while (true) {
-        if (pos->side==WHITE) {
+        if (pos.side==WHITE) {
             SetPlayer(player1,0);
         }
         else {
@@ -1368,7 +1368,7 @@ int PlayGame(position_t *pos, int player1, int player2, int startPos) {
 #endif
         if (USE_PHASH) pawnTableClear();
         {
-            uint64 pieces = pos->occupied & ~(pos->pawns | pos->kings);
+            uint64 pieces = pos.occupied & ~(pos.pawns | pos.kings);
             char s[255];
 
             if (NODE_BASED) {
@@ -1386,8 +1386,8 @@ int PlayGame(position_t *pos, int player1, int player2, int startPos) {
         }
         if (SearchInfo.last_value != -10000) value = SearchInfo.last_value;
         else value = SearchInfo.last_last_value;
-        if (pos->side == WHITE && value != -10000) wScore = value;
-        if (pos->side == BLACK && value != -10000) bScore = value;
+        if (pos.side == WHITE && value != -10000) wScore = value;
+        if (pos.side == BLACK && value != -10000) bScore = value;
         if (wScore > 400 && bScore < -400) {
             return 1;
         }
@@ -1405,7 +1405,7 @@ int PlayGame(position_t *pos, int player1, int player2, int startPos) {
         else if (value != -10000) zeros = 0;
         if (!SearchInfo.bestmove) {
             if (kingIsInCheck(pos)) {
-                if (pos->side == WHITE) return 2;
+                if (pos.side == WHITE) return 2;
                 else return 1;
             }
             return 0; //stalemate
@@ -1413,11 +1413,11 @@ int PlayGame(position_t *pos, int player1, int player2, int startPos) {
             origScore = value; // just to be safe
         }
         makeMove(pos, &undo, SearchInfo.bestmove);
-        if (pos->posStore.fifty==0) {
-            pos->stack[0] = pos->posStore.hash;
-            pos->sp = 0;
+        if (pos.posStore.fifty==0) {
+            pos.stack[0] = pos.posStore.hash;
+            pos.sp = 0;
         }
-        //		if (pos->posStore.fifty >= 100) return 0;
+        //		if (pos.posStore.fifty >= 100) return 0;
 
         if (anyRep(pos)) {
             return 0;
@@ -1523,7 +1523,7 @@ void RateWin(int winner, int loser) {
     playerList[loser].games +=2;
     playerList[winner].points +=2;
 }
-void  PlayRatedGame(position_t *pos, int player1, int player2,int gameOn,int position) {
+void  PlayRatedGame(position_t& pos, int player1, int player2,int gameOn,int position) {
     int result = PlayGame(pos,player1,player2,position);
     if (result==0) {
         RateDraw(player1,player2);
@@ -1540,7 +1540,7 @@ void  PlayRatedGame(position_t *pos, int player1, int player2,int gameOn,int pos
     else Print(3,"odd result %d \n",result);
     FilePrintHeader(gameOn,player1,player2,result);
 }
-int FirstMatch(int player,int gameOn,position_t *pos) {
+int FirstMatch(int player,int gameOn,position_t& pos) {
     int game=1;
     int matchOn=1;
     double startingRating;
@@ -1566,7 +1566,7 @@ int FirstMatch(int player,int gameOn,position_t *pos) {
 
     return gameOn+matchOn*MATCH_SIZE;
 }
-void SortAndTest(position_t *pos) {
+void SortAndTest(position_t& pos) {
     player_t oldBest;
     int opponent;
 
@@ -1601,7 +1601,7 @@ void SortAndTest(position_t *pos) {
     }
     ShowBest(10);
 }
-void ChampionWar(position_t *pos) {
+void ChampionWar(position_t& pos) {
     int player1, player2, position;
     double start1, start2;
     for (player1=0;player1 < numPlayers-1;player1++) {
@@ -1621,7 +1621,7 @@ void ChampionWar(position_t *pos) {
         }
     }
 }
-void selfTune(position_t *pos) {
+void selfTune(position_t& pos) {
     // initialize
     int gameOn = 1;
     int player1,player2,firstMatch;
@@ -2067,7 +2067,7 @@ public:
     void Swap(Personality *p) {
         Personality temp;
         temp.Copy(*p);
-        p->Copy(*this);
+        p.Copy(*this);
         Copy(temp);
     }
     /*

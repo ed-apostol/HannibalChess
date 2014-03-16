@@ -63,20 +63,20 @@ public:
         m_TransTable(_tt),
         m_PVHashTable(_pvt)
     {}
-    void initNode(position_t *pos, Thread& sthread) ;
-    int simpleStalemate(const position_t *pos);
-    void displayPV(const position_t *pos, continuation_t *pv, int multipvIdx, int depth, int alpha, int beta, int score, Thread& sthread);
-    bool prevMoveAllowsThreat(const position_t* pos, basic_move_t first, basic_move_t second);
-    bool moveRefutesThreat(const position_t* pos, basic_move_t first, basic_move_t second);
-    void updateEvalgains(const position_t *pos, uint32 move, int before, int after, Thread& sthread);
+    void initNode(Thread& sthread) ;
+    int simpleStalemate(const position_t& pos);
+    void displayPV(continuation_t *pv, int multipvIdx, int depth, int alpha, int beta, int score);
+    bool prevMoveAllowsThreat(const position_t& pos, basic_move_t first, basic_move_t second);
+    bool moveRefutesThreat(const position_t& pos, basic_move_t first, basic_move_t second);
+    void updateEvalgains(const position_t& pos, uint32 move, int before, int after, Thread& sthread);
     template<bool inPv>
-    int qSearch(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread);
+    int qSearch(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread);
     template <bool inRoot, bool inSplitPoint, bool inSingular>
-    int searchNode(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt);
+    int searchNode(SplitPoint& sp, position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt);
     template<bool inRoot, bool inSplitPoint, bool inCheck, bool inSingular>
-    int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt);
-    void extractPvMovesFromHash(position_t *pos, continuation_t* pv, basic_move_t move, bool execMove, Thread& sthread);
-    void timeManagement(int depth, Thread& sthread);
+    int searchGeneric(SplitPoint& sp, position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt);
+    void extractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_move_t move, bool execMove);
+    void timeManagement(int depth);
     void stopSearch();
 private:
     SearchInfo& m_Info;
@@ -84,7 +84,7 @@ private:
     PvHashTable& m_PVHashTable;
 };
 
-void Search::initNode(position_t *pos, Thread& sthread) {
+void Search::initNode(Thread& sthread) {
     int64 time2;
 
     if (sthread.activeSplitPoint && sthread.activeSplitPoint->cutoffOccurred()) {
@@ -134,21 +134,21 @@ void Search::initNode(position_t *pos, Thread& sthread) {
     }
 }
 
-int Search::simpleStalemate(const position_t *pos) {
+int Search::simpleStalemate(const position_t& pos) {
     uint32 kpos, to;
     uint64 mv_bits;
-    if (MinTwoBits(pos->color[pos->side] & ~pos->pawns)) return false; 
-    kpos = pos->kpos[pos->side];
+    if (MinTwoBits(pos.color[pos.side] & ~pos.pawns)) return false; 
+    kpos = pos.kpos[pos.side];
     if (kpos != a1 && kpos != a8 && kpos != h1 && kpos != h8) return false;
     mv_bits = KingMoves[kpos];
     while (mv_bits) {
         to = popFirstBit(&mv_bits);
-        if (!isSqAtt(pos,pos->occupied,to,pos->side^1)) return false;
+        if (!isSqAtt(pos,pos.occupied,to,pos.side^1)) return false;
     }
     return true;
 }
 
-void Search::displayPV(const position_t *pos, continuation_t *pv, int multipvIdx, int depth, int alpha, int beta, int score, Thread& sthread) {
+void Search::displayPV(continuation_t *pv, int multipvIdx, int depth, int alpha, int beta, int score) {
     uint64 time;
     uint64 sum_nodes = 0;
 
@@ -181,7 +181,7 @@ void Search::displayPV(const position_t *pos, continuation_t *pv, int multipvIdx
     Print(1, "\n");
 }
 
-bool Search::prevMoveAllowsThreat(const position_t* pos, basic_move_t first, basic_move_t second) {
+bool Search::prevMoveAllowsThreat(const position_t& pos, basic_move_t first, basic_move_t second) {
     int m1from = moveFrom(first);
     int m2from = moveFrom(second);
     int m1to = moveTo(first);
@@ -189,13 +189,13 @@ bool Search::prevMoveAllowsThreat(const position_t* pos, basic_move_t first, bas
 
     if (m1to == m2from || m2to == m1from) return true;
     if (InBetween[m2from][m2to] & BitMask[m1from]) return true;
-    uint64 m1att = pieceAttacksFromBB(pos, movePiece(first), m1to, pos->occupied ^ BitMask[m2from]);
+    uint64 m1att = pieceAttacksFromBB(pos, movePiece(first), m1to, pos.occupied ^ BitMask[m2from]);
     if (m1att & BitMask[m2to]) return true;
-    if (m1att & BitMask[pos->kpos[pos->side]]) return true;
+    if (m1att & BitMask[pos.kpos[pos.side]]) return true;
     return false;
 }
 
-bool Search::moveRefutesThreat(const position_t* pos, basic_move_t first, basic_move_t second) {
+bool Search::moveRefutesThreat(const position_t& pos, basic_move_t first, basic_move_t second) {
     int m1from = moveFrom(first);
     int m2from = moveFrom(second);
     int m1to = moveTo(first);
@@ -203,56 +203,57 @@ bool Search::moveRefutesThreat(const position_t* pos, basic_move_t first, basic_
 
     if (m1from == m2to) return true;
     if (moveCapture(second) && (PcValSEE[movePiece(second)] >= PcValSEE[moveCapture(second)] || movePiece(second) == KING)) {
-        uint64 occ = pos->occupied ^ BitMask[m1from] ^ BitMask[m1to] ^ BitMask[m2from];
+        uint64 occ = pos.occupied ^ BitMask[m1from] ^ BitMask[m1to] ^ BitMask[m2from];
         if (pieceAttacksFromBB(pos, movePiece(first), m1to, occ) & BitMask[m2to]) return true;
-        uint64 xray = rookAttacksBBX(m2to, occ) & (pos->queens | pos->rooks) & pos->color[pos->side];
-        xray |= bishopAttacksBBX(m2to, occ) & (pos->queens | pos->bishops) & pos->color[pos->side];
-        if (xray && (xray & ~queenAttacksBB(m2to, pos->occupied))) return true;
+        uint64 xray = rookAttacksBBX(m2to, occ) & (pos.queens | pos.rooks) & pos.color[pos.side];
+        xray |= bishopAttacksBBX(m2to, occ) & (pos.queens | pos.bishops) & pos.color[pos.side];
+        if (xray && (xray & ~queenAttacksBB(m2to, pos.occupied))) return true;
     }
     if (InBetween[m2from][m2to] & BitMask[m1to] && swap(pos, first) >= 0) return true;
     return false;
 }
 
-void Search::updateEvalgains(const position_t *pos, uint32 move, int before, int after, Thread& sthread) {
+void Search::updateEvalgains(const position_t& pos, uint32 move, int before, int after, Thread& sthread) {
     if (move != EMPTY
         && before != -INF
         && after != -INF
         && !moveIsTactical(move)) {
-            if (-(before + after) >= sthread.evalgains[historyIndex(pos->side^1, move)])
-                sthread.evalgains[historyIndex(pos->side^1, move)] = -(before + after);
+            if (-(before + after) >= sthread.evalgains[historyIndex(pos.side^1, move)])
+                sthread.evalgains[historyIndex(pos.side^1, move)] = -(before + after);
             else
-                sthread.evalgains[historyIndex(pos->side^1, move)]--;
+                sthread.evalgains[historyIndex(pos.side^1, move)]--;
     }
 }
 
 template<bool inPv>
-int Search::qSearch(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread) {
+int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread) {
     int pes = 0;
+    SplitPoint dummysp;
     SearchStack ss;
 
     ASSERT(pos != NULL);
     ASSERT(valueIsOk(alpha));
     ASSERT(valueIsOk(beta));
     ASSERT(alpha < beta);
-    ASSERT(pos->ply > 0);
+    ASSERT(pos.ply > 0);
 
-    initNode(pos, sthread);
+    initNode(sthread);
     if (sthread.stop) return 0;
 
     int t = 0;
-    for (TransEntry* entry = m_TransTable.Entry(pos->posStore.hash); t < m_TransTable.BucketSize(); t++, entry++) {
-        if (entry->HashLock() == LOCK(pos->posStore.hash)) {
+    for (TransEntry* entry = m_TransTable.Entry(pos.posStore.hash); t < m_TransTable.BucketSize(); t++, entry++) {
+        if (entry->HashLock() == LOCK(pos.posStore.hash)) {
             entry->SetAge(m_TransTable.Date());
             if (!inPv) { // TODO: re-use values from here to evalvalue?
                 if (entry->Move() != EMPTY && entry->LowerDepth() > 0) {
-                    int score = scoreFromTrans(entry->LowerValue(), pos->ply);
+                    int score = scoreFromTrans(entry->LowerValue(), pos.ply);
                     if (score > alpha) {
                         ssprev.counterMove= entry->Move();
                         return score;
                     }
                 }
                 if (entry->UpperDepth() > 0) {
-                    int score = scoreFromTrans(entry->UpperValue(), pos->ply);
+                    int score = scoreFromTrans(entry->UpperValue(), pos.ply);
                     if (score < beta) return score;
                 }
             }
@@ -262,13 +263,13 @@ int Search::qSearch(position_t *pos, int alpha, int beta, const int depth, Searc
             }
         }
     }
-    if (pos->ply >= MAXPLY-1) return eval(pos, sthread.thread_id, &pes);
+    if (pos.ply >= MAXPLY-1) return eval(pos, sthread.thread_id, &pes);
     if (!ssprev.moveGivesCheck) {
         if (simpleStalemate(pos)) {
-            return DrawValue[pos->side];
+            return DrawValue[pos.side];
         }
         ss.evalvalue = ss.bestvalue = eval(pos, sthread.thread_id, &pes);
-        updateEvalgains(pos, pos->posStore.lastmove, ssprev.evalvalue, ss.evalvalue, sthread);
+        updateEvalgains(pos, pos.posStore.lastmove, ssprev.evalvalue, ss.evalvalue, sthread);
         if (ss.bestvalue > alpha) {
             if (ss.bestvalue >= beta) {
                 ASSERT(valueIsOk(ss.bestvalue));
@@ -278,19 +279,19 @@ int Search::qSearch(position_t *pos, int alpha, int beta, const int depth, Searc
         }
     }
 
-    ss.dcc = discoveredCheckCandidates(pos, pos->side);
+    ss.dcc = discoveredCheckCandidates(pos, pos.side);
     if (ssprev.moveGivesCheck) {
-        sortInit(pos, ss, pinnedPieces(pos, pos->side), alpha, depth, MoveGenPhaseEvasion, sthread);
+        sortInit(pos, ss, pinnedPieces(pos, pos.side), alpha, depth, MoveGenPhaseEvasion, sthread);
     } else {
-        if (inPv) sortInit(pos, ss, pinnedPieces(pos, pos->side), alpha, depth, (depth > -Q_PVCHECK) ? MoveGenPhaseQuiescenceAndChecksPV : MoveGenPhaseQuiescencePV, sthread);
-        else sortInit(pos, ss, pinnedPieces(pos, pos->side), alpha, depth, (depth > -Q_CHECK) ? MoveGenPhaseQuiescenceAndChecks : MoveGenPhaseQuiescence, sthread);
+        if (inPv) sortInit(pos, ss, pinnedPieces(pos, pos.side), alpha, depth, (depth > -Q_PVCHECK) ? MoveGenPhaseQuiescenceAndChecksPV : MoveGenPhaseQuiescencePV, sthread);
+        else sortInit(pos, ss, pinnedPieces(pos, pos.side), alpha, depth, (depth > -Q_CHECK) ? MoveGenPhaseQuiescenceAndChecks : MoveGenPhaseQuiescence, sthread);
     }
-    bool prunable = !ssprev.moveGivesCheck && !inPv && MinTwoBits(pos->color[pos->side^1] & pos->pawns) && MinTwoBits(pos->color[pos->side^1] & ~(pos->pawns | pos->kings));
+    bool prunable = !ssprev.moveGivesCheck && !inPv && MinTwoBits(pos.color[pos.side^1] & pos.pawns) && MinTwoBits(pos.color[pos.side^1] & ~(pos.pawns | pos.kings));
     move_t* move;
-    while ((move = sortNext(NULL, pos, ss, sthread)) != NULL) {
+    while ((move = sortNext(false, dummysp, pos, ss, sthread)) != NULL) {
         int score;
         if (anyRepNoMove(pos, move->m)) { 
-            score = DrawValue[pos->side];
+            score = DrawValue[pos.side];
         } else {
             pos_store_t undo;
             ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
@@ -310,7 +311,7 @@ int Search::qSearch(position_t *pos, int alpha, int beta, const int depth, Searc
             if (score > alpha) {
                 ss.bestmove = move->m;
                 if (score >= beta) {
-                    m_TransTable.StoreLower(pos->posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos->ply));
+                    m_TransTable.StoreLower(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
                     ASSERT(valueIsOk(ss.bestvalue));
                     ssprev.counterMove = ss.bestmove;
                     return ss.bestvalue;
@@ -320,8 +321,8 @@ int Search::qSearch(position_t *pos, int alpha, int beta, const int depth, Searc
         }
     }
     if (ssprev.moveGivesCheck && ss.bestvalue == -INF) {
-        ss.bestvalue = (-INF + pos->ply); 
-        m_TransTable.StoreNoMoves(pos->posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos->ply));
+        ss.bestvalue = (-INF + pos.ply); 
+        m_TransTable.StoreNoMoves(pos.posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos.ply));
         return ss.bestvalue;
     }
 
@@ -329,9 +330,9 @@ int Search::qSearch(position_t *pos, int alpha, int beta, const int depth, Searc
 
     if (inPv && ss.bestmove != EMPTY) {
         ssprev.counterMove = ss.bestmove;
-        m_TransTable.StoreExact(pos->posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos->ply));
-        m_PVHashTable.pvStore(pos->posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos->ply));
-    } else m_TransTable.StoreUpper(pos->posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos->ply));
+        m_TransTable.StoreExact(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
+        m_PVHashTable.pvStore(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
+    } else m_TransTable.StoreUpper(pos.posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos.ply));
 
     ASSERT(valueIsOk(ss.bestvalue));
 
@@ -339,20 +340,19 @@ int Search::qSearch(position_t *pos, int alpha, int beta, const int depth, Searc
 }
 
 template <bool inRoot, bool inSplitPoint, bool inSingular>
-int Search::searchNode(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt) {
+int Search::searchNode(SplitPoint& sp, position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt) {
     if (depth <= 0) {
         if (inPvNode(nt)) return qSearch<true>(pos, alpha, beta, 0, ssprev, sthread);
         else return qSearch<false>(pos, alpha, beta, 0, ssprev, sthread);
     } else {
-        if (ssprev.moveGivesCheck) return searchGeneric<inRoot, inSplitPoint, true, inSingular>(pos, alpha, beta, depth, ssprev, sthread, nt);
-        else return searchGeneric<inRoot, inSplitPoint, false, inSingular>(pos, alpha, beta, depth, ssprev, sthread, nt);
+        if (ssprev.moveGivesCheck) return searchGeneric<inRoot, inSplitPoint, true, inSingular>(sp, pos, alpha, beta, depth, ssprev, sthread, nt);
+        else return searchGeneric<inRoot, inSplitPoint, false, inSingular>(sp, pos, alpha, beta, depth, ssprev, sthread, nt);
     }
 }
 
 template<bool inRoot, bool inSplitPoint, bool inCheck, bool inSingular>
-int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt) {
+int Search::searchGeneric(SplitPoint& sp, position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt) {
     int pes = 0;
-    SplitPoint* sp = NULL;
     SearchStack ss;
 
     ASSERT(pos != NULL);
@@ -361,46 +361,46 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
     ASSERT(alpha < beta);
     ASSERT(depth >= 1);
 
-    initNode(pos, sthread);
+    initNode(sthread);
     if (sthread.stop) return 0;
 
     if (!inRoot && !inSingular && !inSplitPoint) {
         int t = 0;
         int evalDepth = 0;
 
-        alpha = MAX(-INF + pos->ply, alpha);
-        beta = MIN(INF - pos->ply - 1, beta);
+        alpha = MAX(-INF + pos.ply, alpha);
+        beta = MIN(INF - pos.ply - 1, beta);
         if (alpha >= beta) return alpha;
 
         PvHashEntry* pventry;
-        if (inPvNode(nt) && (pventry = m_PVHashTable.pvEntry(pos->posStore.hash)) != NULL) {
+        if (inPvNode(nt) && (pventry = m_PVHashTable.pvEntry(pos.posStore.hash)) != NULL) {
             if (pventry->pvDepth() > ss.hashDepth && pventry->pvMove() != EMPTY) {
                 ss.hashMove = pventry->pvMove();
                 ss.hashDepth = pventry->pvDepth();
             }
             if (pventry->pvDepth() > evalDepth) {
                 evalDepth = pventry->pvDepth();
-                ss.evalvalue = scoreFromTrans(pventry->pvScore(), pos->ply);
+                ss.evalvalue = scoreFromTrans(pventry->pvScore(), pos.ply);
             }
         }
 
-        for (TransEntry * entry = m_TransTable.Entry(pos->posStore.hash); t < m_TransTable.BucketSize(); t++, entry++) {
-            if (entry->HashLock() == LOCK(pos->posStore.hash)) {
+        for (TransEntry * entry = m_TransTable.Entry(pos.posStore.hash); t < m_TransTable.BucketSize(); t++, entry++) {
+            if (entry->HashLock() == LOCK(pos.posStore.hash)) {
                 entry->SetAge(m_TransTable.Date());
                 if (entry->Mask() & MNoMoves) {
-                    if (inCheck) return -INF + pos->ply;
-                    else return DrawValue[pos->side];
+                    if (inCheck) return -INF + pos.ply;
+                    else return DrawValue[pos.side];
                 }
                 if (!inPvNode(nt)) {
-                    if ((!inCutNode(nt) || !(entry->Mask() & MAllLower)) && entry->LowerDepth() >= depth && (entry->Move() != EMPTY || pos->posStore.lastmove == EMPTY)) {
-                        int score = scoreFromTrans(entry->LowerValue(), pos->ply);
+                    if ((!inCutNode(nt) || !(entry->Mask() & MAllLower)) && entry->LowerDepth() >= depth && (entry->Move() != EMPTY || pos.posStore.lastmove == EMPTY)) {
+                        int score = scoreFromTrans(entry->LowerValue(), pos.ply);
                         if (score > alpha) {
                             ssprev.counterMove = entry->Move();
                             return score;
                         }
                     }
                     if ((!inAllNode(nt) || !(entry->Mask() & MCutUpper)) && entry->UpperDepth() >= depth) {
-                        int score = scoreFromTrans(entry->UpperValue(), pos->ply);
+                        int score = scoreFromTrans(entry->UpperValue(), pos.ply);
                         ASSERT(valueIsOk(score));
                         if (score < beta) return score;
                     }
@@ -411,53 +411,53 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                 }
                 if (entry->LowerDepth() > evalDepth) {
                     evalDepth = entry->LowerDepth();
-                    ss.evalvalue = scoreFromTrans(entry->LowerValue(), pos->ply);
+                    ss.evalvalue = scoreFromTrans(entry->LowerValue(), pos.ply);
                 }
                 if (entry->UpperDepth() > evalDepth) {
                     evalDepth = entry->UpperDepth();
-                    ss.evalvalue = scoreFromTrans(entry->UpperValue(), pos->ply);
+                    ss.evalvalue = scoreFromTrans(entry->UpperValue(), pos.ply);
                 }
             }
         }
         if (ss.evalvalue == -INF) ss.evalvalue = eval(pos, sthread.thread_id, &pes);
 
-        if (pos->ply >= MAXPLY-1) return ss.evalvalue;
-        updateEvalgains(pos, pos->posStore.lastmove, ssprev.evalvalue, ss.evalvalue, sthread);
+        if (pos.ply >= MAXPLY-1) return ss.evalvalue;
+        updateEvalgains(pos, pos.posStore.lastmove, ssprev.evalvalue, ss.evalvalue, sthread);
 
         if (!inPvNode(nt) && !inCheck) {
             const int MaxRazorDepth = 9;
             int rvalue;
-            if (depth <= MaxRazorDepth && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) 
+            if (depth <= MaxRazorDepth && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) 
                 && ss.evalvalue > (rvalue = beta + FutilityMarginTable[MIN(depth, MaxRazorDepth)][MIN(ssprev.playedMoves,63)])) {
                     return rvalue; 
             }
-            if (depth <= MaxRazorDepth && pos->posStore.lastmove != EMPTY 
+            if (depth <= MaxRazorDepth && pos.posStore.lastmove != EMPTY 
                 && ss.evalvalue < (rvalue = beta - FutilityMarginTable[MIN(depth, MaxRazorDepth)][MIN(ssprev.playedMoves,63)])) { 
-                    int score = searchNode<false, false, false>(pos, rvalue-1, rvalue, 0, ssprev, sthread, nt);
+                    int score = searchNode<false, false, false>(sp, pos, rvalue-1, rvalue, 0, ssprev, sthread, nt);
                     if (score < rvalue) return score; 
             }
-            if (depth >= 2 && (pos->color[pos->side] & ~(pos->pawns | pos->kings)) && ss.evalvalue >= beta) {
+            if (depth >= 2 && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && ss.evalvalue >= beta) {
                 pos_store_t undo;
                 int nullDepth = depth - (4 + depth/5 + (ss.evalvalue - beta > PawnValue));
                 makeNullMove(pos, &undo);
                 ++sthread.nodes;
-                int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, sthread, invertNode(nt));
+                int score = -searchNode<false, false, false>(sp, pos, -beta, -alpha, nullDepth, ss, sthread, invertNode(nt));
                 ss.threatMove = ss.counterMove;
                 unmakeNullMove(pos, &undo);
                 if (sthread.stop) return 0;
                 if (score >= beta) {
                     if (depth >= 12) {
-                        score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, ssprev, sthread, nt);
+                        score = searchNode<false, false, false>(sp, pos, alpha, beta, nullDepth, ssprev, sthread, nt);
                         if (sthread.stop) return 0;
                     }
                     if (score >= beta) {
                         if (ss.hashMove == EMPTY) {
-                            if (inCutNode(nt)) m_TransTable.StoreLower(pos->posStore.hash, EMPTY, depth, scoreToTrans(score, pos->ply));
-                            else m_TransTable.StoreAllLower(pos->posStore.hash, EMPTY, depth, scoreToTrans(score, pos->ply));
+                            if (inCutNode(nt)) m_TransTable.StoreLower(pos.posStore.hash, EMPTY, depth, scoreToTrans(score, pos.ply));
+                            else m_TransTable.StoreAllLower(pos.posStore.hash, EMPTY, depth, scoreToTrans(score, pos.ply));
                         }
                         return score;
                     }
-                } else if (depth < 5 && ssprev.reducedMove && ss.threatMove != EMPTY && prevMoveAllowsThreat(pos, pos->posStore.lastmove, ss.threatMove)) {
+                } else if (depth < 5 && ssprev.reducedMove && ss.threatMove != EMPTY && prevMoveAllowsThreat(pos, pos.posStore.lastmove, ss.threatMove)) {
                     return alpha;
                 }
             }
@@ -466,7 +466,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
         if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt)?6:8)) { // IID
             int newdepth = inPvNode(nt) ? depth - 2 : depth / 2;
             if (ss.hashMove == EMPTY || ss.hashDepth < newdepth) {
-                int score = searchNode<false, false, false>(pos, alpha, beta, newdepth, ssprev, sthread, nt);
+                int score = searchNode<false, false, false>(sp, pos, alpha, beta, newdepth, ssprev, sthread, nt);
                 if (sthread.stop) return 0;
                 ss.evalvalue = score;
                 if (score > alpha) {
@@ -481,7 +481,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
             if (ss.hashMove != EMPTY && ss.hashDepth >= newdepth) { 
                 int targetScore = ss.evalvalue - EXPLORE_CUTOFF;
                 ssprev.bannedMove = ss.hashMove;
-                int score = searchNode<false, false, true>(pos, targetScore, targetScore+1, newdepth, ssprev, sthread, nt);
+                int score = searchNode<false, false, true>(sp, pos, targetScore, targetScore+1, newdepth, ssprev, sthread, nt);
                 if (sthread.stop) return 0;
                 ssprev.bannedMove = EMPTY;
                 if (score <= targetScore) ss.firstExtend = true;
@@ -490,23 +490,22 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
     }
 
     if (inSplitPoint) {
-        sp = sthread.activeSplitPoint;
-        ss = *sp->sscurr; // ss.mvlist points to master ss.mvlist, copied the entire searchstack also
+        ss = *sp.sscurr; // ss.mvlist points to master ss.mvlist, copied the entire searchstack also
     } else {
         if (inRoot) {
             ss = ssprev; // this is correct, ss.mvlist points to the ssprev.mvlist, at the same time, ssprev resets other member vars
             if (!m_Info.mvlist_initialized) {
-                sortInit(pos, ss, pinnedPieces(pos, pos->side), alpha, depth, MoveGenPhaseRoot, sthread);
+                sortInit(pos, ss, pinnedPieces(pos, pos.side), alpha, depth, MoveGenPhaseRoot, sthread);
             } else {
                 if (m_Info.multipvIdx > 0) {
                     ss.mvlist->pos = m_Info.multipvIdx - 1;
-                    move_t* dummy = getMove (ss.mvlist);
+                    getMove (ss.mvlist);
                 } else ss.mvlist->pos = 0;
                 ss.mvlist->phase = MoveGenPhaseRoot + 1;
             }
         } else {
-            ss.dcc = discoveredCheckCandidates(pos, pos->side);
-            sortInit(pos, ss, pinnedPieces(pos, pos->side), alpha, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), sthread);
+            ss.dcc = discoveredCheckCandidates(pos, pos.side);
+            sortInit(pos, ss, pinnedPieces(pos, pos.side), alpha, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), sthread);
             ss.firstExtend = ss.firstExtend || (inCheck && ss.mvlist->size==1);
         }
     }
@@ -514,20 +513,20 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
     int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 4) : (depth * depth));
     move_t* move;
 
-    while ((move = sortNext(sp, pos, ss, sthread)) != NULL) {
+    while ((move = sortNext(inSplitPoint, sp, pos, ss, sthread)) != NULL) {
         int score = -INF;
         if (inSingular && move->m == ssprev.bannedMove) continue;
         if (inSplitPoint) {
-            sp->updatelock->lock();
-            ss.playedMoves = ++sp->played;
+            sp.updatelock->lock();
+            ss.playedMoves = ++sp.played;
         }
         else ++ss.playedMoves;
         if (ss.hisCnt < 64 && !moveIsTactical(move->m)) {
             ss.hisMoves[ss.hisCnt++] = move->m;
         }
-        if (inSplitPoint) sp->updatelock->unlock();
+        if (inSplitPoint) sp.updatelock->unlock();
         if (anyRepNoMove(pos, move->m)) { 
-            score = DrawValue[pos->side];
+            score = DrawValue[pos.side];
         } else {
             int newdepth;
             pos_store_t undo;
@@ -536,7 +535,7 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                 newdepth = depth - !ss.firstExtend;
                 makeMove(pos, &undo, move->m);
                 ++sthread.nodes;
-                score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, sthread, invertNode(nt));
+                score = -searchNode<false, false, false>(sp, pos, -beta, -alpha, newdepth, ss, sthread, invertNode(nt));
             } else {
                 newdepth = depth - 1;
                 int partialReduction = 0;
@@ -568,124 +567,124 @@ int Search::searchGeneric(position_t *pos, int alpha, int beta, const int depth,
                 int newdepthclone = newdepth - partialReduction;
                 makeMove(pos, &undo, move->m);
                 ++sthread.nodes;
-                if (inSplitPoint) alpha = sp->alpha;
+                if (inSplitPoint) alpha = sp.alpha;
                 ss.reducedMove = (newdepthclone < newdepth);
 
-                score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepthclone, ss, sthread, inCutNode(nt) ? AllNode : CutNode);
+                score = -searchNode<false, false, false>(sp, pos, -alpha-1, -alpha, newdepthclone, ss, sthread, inCutNode(nt) ? AllNode : CutNode);
                 if (ss.reducedMove && score > alpha) {
                     ss.reducedMove = false;
-                    score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepth, ss, sthread, inCutNode(nt) ? AllNode : CutNode);
+                    score = -searchNode<false, false, false>(sp, pos, -alpha-1, -alpha, newdepth, ss, sthread, inCutNode(nt) ? AllNode : CutNode);
                 }
                 if (inPvNode(nt) && score > alpha) {
                     if (inRoot) m_Info.research = 1;
-                    score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, sthread, PVNode);
+                    score = -searchNode<false, false, false>(sp, pos, -beta, -alpha, newdepth, ss, sthread, PVNode);
                 }
             }
             unmakeMove(pos, &undo);
         }
         if (sthread.stop) return 0;
-        if (inSplitPoint) sp->updatelock->lock();
+        if (inSplitPoint) sp.updatelock->lock();
         if (inRoot) {
             move->s = score;
         }
-        if (score > (inSplitPoint ? sp->bestvalue : ss.bestvalue)) {
-            ss.bestvalue = inSplitPoint ? sp->bestvalue = score : score;
+        if (score > (inSplitPoint ? sp.bestvalue : ss.bestvalue)) {
+            ss.bestvalue = inSplitPoint ? sp.bestvalue = score : score;
             if (inRoot) {
                 m_Info.best_value = ss.bestvalue;
                 ssprev.counterMove = move->m;
                 if (m_Info.iteration > 1 && m_Info.bestmove != move->m) m_Info.change = 1;
             }
-            if (ss.bestvalue > (inSplitPoint ? sp->alpha : alpha)) {
-                ss.bestmove = inSplitPoint ? sp->bestmove = move->m : move->m;
+            if (ss.bestvalue > (inSplitPoint ? sp.alpha : alpha)) {
+                ss.bestmove = inSplitPoint ? sp.bestmove = move->m : move->m;
                 if (inRoot) {
                     m_Info.bestmove = ss.bestmove;
                     if (m_Info.rootPV.length > 1) m_Info.pondermove = m_Info.rootPV.moves[1];
                     else m_Info.pondermove = 0;
                 }
                 if (inPvNode(nt) && ss.bestvalue < beta) {
-                    alpha = inSplitPoint ? sp->alpha = ss.bestvalue : ss.bestvalue;
+                    alpha = inSplitPoint ? sp.alpha = ss.bestvalue : ss.bestvalue;
                 } else {
                     if (inRoot) {
-                        if (inSplitPoint) sp->movelistlock->lock();
+                        if (inSplitPoint) sp.movelistlock->lock();
                         for (int i = ss.mvlist->pos; i < ss.mvlist->size; ++i) ss.mvlist->list[i].s = -INF;
-                        if (inSplitPoint) sp->movelistlock->unlock();
+                        if (inSplitPoint) sp.movelistlock->unlock();
                     }
                     if (inSplitPoint) {
-                        sp->cutoff = true;
-                        sp->updatelock->unlock();
+                        sp.cutoff = true;
+                        sp.updatelock->unlock();
                     }
                     break;
                 }
             }
         }
-        if (inSplitPoint) sp->updatelock->unlock();
+        if (inSplitPoint) sp.updatelock->unlock();
         if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < ThreadsMgr.m_MaxActiveSplitsPerThread
             && ThreadsMgr.ThreadNum() > 1 && depth >= ThreadsMgr.m_MinSplitDepth
             && (!inCutNode(nt) || (MoveGenPhase[ss.mvlist_phase] != PH_GOOD_CAPTURES && MoveGenPhase[ss.mvlist_phase] != PH_KILLER_MOVES))) {
-                ThreadsMgr.SearchSplitPoint(pos, ss.mvlist, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, sthread);
+                ThreadsMgr.SearchSplitPoint(pos, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, sthread);
                 if (sthread.stop) return 0;
                 break;
         }
     }
     if (inRoot && !inSplitPoint && ss.playedMoves == 0) {
         if (inCheck) return -INF;
-        else return DrawValue[pos->side];
+        else return DrawValue[pos.side];
     }
     if (!inRoot && !inSplitPoint && !inSingular) {
         if (ss.playedMoves == 0) {
-            if (inCheck) ss.bestvalue = -INF + pos->ply;
-            else ss.bestvalue = DrawValue[pos->side];
-            m_TransTable.StoreNoMoves(pos->posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos->ply));
+            if (inCheck) ss.bestvalue = -INF + pos.ply;
+            else ss.bestvalue = DrawValue[pos.side];
+            m_TransTable.StoreNoMoves(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
             return ss.bestvalue;
         }
         if (ss.bestmove != EMPTY && !moveIsTactical(ss.bestmove) && ss.bestvalue >= beta) { //> alpha account for pv better maybe? Sam
-            int index = historyIndex(pos->side, ss.bestmove);
+            int index = historyIndex(pos.side, ss.bestmove);
             int hisDepth = MIN(depth,MAX_HDEPTH);
             sthread.history[index] += hisDepth * hisDepth;
             for (int i=0; i < ss.hisCnt; ++i) {
                 if (ss.hisMoves[i] == ss.bestmove) continue;
-                index = historyIndex(pos->side, ss.hisMoves[i]);
+                index = historyIndex(pos.side, ss.hisMoves[i]);
                 sthread.history[index] -= sthread.history[index]/(NEW_HISTORY-hisDepth);
             }
-            if (sthread.ts[pos->ply].killer1 != ss.bestmove) {
-                sthread.ts[pos->ply].killer2 = sthread.ts[pos->ply].killer1;
-                sthread.ts[pos->ply].killer1 = ss.bestmove;
+            if (sthread.ts[pos.ply].killer1 != ss.bestmove) {
+                sthread.ts[pos.ply].killer2 = sthread.ts[pos.ply].killer1;
+                sthread.ts[pos.ply].killer1 = ss.bestmove;
             }
         }
 
         if (ss.bestvalue >= beta) {
             ASSERT(valueIsOk(ss.bestvalue));
             ssprev.counterMove = ss.bestmove;
-            if (inCutNode(nt)) m_TransTable.StoreLower(pos->posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos->ply));
-            else m_TransTable.StoreAllLower(pos->posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos->ply));
+            if (inCutNode(nt)) m_TransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
+            else m_TransTable.StoreAllLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
         } else {
             ASSERT(valueIsOk(bestvalue));
             if (inPvNode(nt) && ss.bestmove != EMPTY) {
                 ssprev.counterMove = ss.bestmove;
-                m_TransTable.StoreExact(pos->posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos->ply));
-                m_PVHashTable.pvStore(pos->posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos->ply));
+                m_TransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
+                m_PVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
             }
-            else if (inCutNode(nt)) m_TransTable.StoreCutUpper(pos->posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos->ply));
-            else m_TransTable.StoreUpper(pos->posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos->ply));
+            else if (inCutNode(nt)) m_TransTable.StoreCutUpper(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
+            else m_TransTable.StoreUpper(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
         }
     }
     ASSERT(valueIsOk(ss.bestvalue));
     return ss.bestvalue;
 }
 
-void Search::extractPvMovesFromHash(position_t *pos, continuation_t* pv, basic_move_t move, bool execMove, Thread& sthread) {
+void Search::extractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_move_t move, bool execMove) {
     PvHashEntry *entry;
     pos_store_t undo[MAXPLY];
     int ply = 0;
     basic_move_t hashMove;
-    pv->length = 0;
-    pv->moves[pv->length++] = move;
+    pv.length = 0;
+    pv.moves[pv.length++] = move;
     if (execMove) makeMove(pos, &(undo[ply++]), move);
-    while ((entry = m_PVHashTable.pvEntry(pos->posStore.hash)) != NULL) {
+    while ((entry = m_PVHashTable.pvEntry(pos.posStore.hash)) != NULL) {
         hashMove = entry->pvMove();
         if (hashMove == EMPTY) break;
-        if (!genMoveIfLegal(pos, hashMove, pinnedPieces(pos, pos->side))) break;
-        pv->moves[pv->length++] = hashMove;
+        if (!genMoveIfLegal(pos, hashMove, pinnedPieces(pos, pos.side))) break;
+        pv.moves[pv.length++] = hashMove;
         if (anyRep(pos)) break; // break on repetition to avoid long pv display
         makeMove(pos, &(undo[ply++]), hashMove);
         if (ply >= MAXPLY) break;
@@ -695,7 +694,7 @@ void Search::extractPvMovesFromHash(position_t *pos, continuation_t* pv, basic_m
     }
 }
 
-void Search::timeManagement(int depth, Thread& sthread) {
+void Search::timeManagement(int depth) {
     if (m_Info.best_value > INF - MAXPLY) m_Info.mate_found++;
     if (m_Info.thinking_status == THINKING) {
         if (m_Info.time_is_limited) {
@@ -762,9 +761,9 @@ void Engine::ponderHit() { //no pondering in tuning
     }
 }
 
-void Engine::searchFromIdleLoop(SplitPoint* sp, Thread& sthread) {
-    if (sp->inRoot) search->searchNode<true, true, false>(&sp->pos[sthread.thread_id], sp->alpha, sp->beta, sp->depth, *sp->ssprev, sthread, sp->nodeType);
-    else search->searchNode<false, true, false>(&sp->pos[sthread.thread_id], sp->alpha, sp->beta, sp->depth, *sp->ssprev, sthread, sp->nodeType);
+void Engine::searchFromIdleLoop(SplitPoint& sp, Thread& sthread) {
+    if (sp.inRoot) search->searchNode<true, true, false>(sp, sp.pos[sthread.thread_id], sp.alpha, sp.beta, sp.depth, *sp.ssprev, sthread, sp.nodeType);
+    else search->searchNode<false, true, false>(sp, sp.pos[sthread.thread_id], sp.alpha, sp.beta, sp.depth, *sp.ssprev, sthread, sp.nodeType);
 }
 
 void Engine::sendBestMove() {
@@ -783,33 +782,34 @@ void Engine::sendBestMove() {
     //ThreadsMgr.PrintDebugData();
 }
 
-void Engine::getBestMove(position_t *pos, Thread& sthread) {
+void Engine::getBestMove(Thread& sthread) {
     int id;
     int alpha, beta;
     SearchStack ss;
-    ss.moveGivesCheck = kingIsInCheck(pos);
-    ss.dcc = discoveredCheckCandidates(pos, pos->side);
+    SplitPoint rootsp;
+    ss.moveGivesCheck = kingIsInCheck(rootpos);
+    ss.dcc = discoveredCheckCandidates(rootpos, rootpos.side);
 
-    ASSERT(pos != NULL);
+    ASSERT(rootpos != NULL);
 
     transtable.NewDate(transtable.Date());
     pvhashtable.NewDate(pvhashtable.Date());
 
     do {
-        PvHashEntry *entry = pvhashtable.pvEntry(pos->posStore.hash);
+        PvHashEntry *entry = pvhashtable.pvEntry(rootpos.posStore.hash);
         if (NULL == entry) break;
         if (info.thinking_status == THINKING
             && entry->pvDepth() >= info.lastDepthSearched - 2 
-            && info.rootPV.moves[1] == pos->posStore.lastmove
+            && info.rootPV.moves[1] == rootpos.posStore.lastmove
             && info.rootPV.moves[2] == entry->pvMove()
-            && ((moveCapture(pos->posStore.lastmove) && (moveTo(pos->posStore.lastmove) == moveTo(entry->pvMove()))) 
+            && ((moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(entry->pvMove()))) 
             || (PcValSEE[moveCapture(entry->pvMove())] > PcValSEE[movePiece(entry->pvMove())]))) {
                 info.bestmove =  entry->pvMove();
                 info.best_value = entry->pvScore();
-                search->extractPvMovesFromHash(pos, &info.rootPV, entry->pvMove(), true, sthread);
+                search->extractPvMovesFromHash(rootpos, info.rootPV, entry->pvMove(), true);
                 if (info.rootPV.length > 1) info.pondermove = info.rootPV.moves[1];
                 else info.pondermove = 0;
-                search->displayPV(pos, &info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value, sthread);
+                search->displayPV(&info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
                 stopSearch();
                 sendBestMove();
                 return;
@@ -847,12 +847,12 @@ void Engine::getBestMove(position_t *pos, Thread& sthread) {
             }
             while (true) {
 
-                search->searchNode<true, false, false>(pos, alpha, beta, id, ss, sthread, PVNode);
+                search->searchNode<true, false, false>(rootsp, rootpos, alpha, beta, id, ss, sthread, PVNode);
 
                 if (!sthread.stop || info.best_value != -INF) {
                     if (SHOW_SEARCH && id >= 8) {
-                        search->extractPvMovesFromHash(pos, &info.rootPV, ss.counterMove, true, sthread);
-                        search->displayPV(pos, &info.rootPV, info.multipvIdx, id, alpha, beta, info.best_value, sthread);
+                        search->extractPvMovesFromHash(rootpos, info.rootPV, ss.counterMove, true);
+                        search->displayPV(&info.rootPV, info.multipvIdx, id, alpha, beta, info.best_value);
                     }
                 }
                 if (info.stop_search) break;
@@ -869,7 +869,7 @@ void Engine::getBestMove(position_t *pos, Thread& sthread) {
             if (info.stop_search) break; // TODO: refactor this
         }
         if (info.stop_search) break; // TODO: refactor this
-        search->timeManagement(id, sthread);
+        search->timeManagement(id);
         if (info.stop_search) break; // TODO: refactor this
         if (info.best_value != -INF) {
             info.last_last_value = info.last_value;
@@ -882,7 +882,7 @@ void Engine::getBestMove(position_t *pos, Thread& sthread) {
             info.stop_search = true;;
             stopSearch();
             Print(2, "info string Aborting search: end of getBestMove: id=%d, best_value = %d sp = %d, ply = %d\n", 
-                id, info.best_value, pos->sp, pos->ply);
+                id, info.best_value, rootpos.sp, rootpos.ply);
         } else {
             Print(3, "info string Waiting for stop, quit, or ponderhit\n");
             while (!info.stop_search);
@@ -894,7 +894,7 @@ void Engine::getBestMove(position_t *pos, Thread& sthread) {
     sendBestMove();
 }
 //
-//void Engine::checkSpeedUp(position_t* pos, char string[]) {
+//void Engine::checkSpeedUp(position_t& pos, char string[]) {
 //    const int NUMPOS = 4;
 //    const int MAXTHREADS = 32;
 //    char* fenPos[NUMPOS] = {
@@ -966,7 +966,7 @@ void Engine::getBestMove(position_t *pos, Thread& sthread) {
 //    Print(5, "\n\n");
 //}
 //
-//void Engine::benchMinSplitDepth(position_t* pos, char string[]) {
+//void Engine::benchMinSplitDepth(position_t& pos, char string[]) {
 //    const int NUMPOS = 4;
 //    const int MAXSPLIT = 11;
 //    char* fenPos[NUMPOS] = {
@@ -1025,7 +1025,7 @@ void Engine::getBestMove(position_t *pos, Thread& sthread) {
 //        threads, depth, bestIdx, timeSum[bestIdx]/NUMPOS, nodesSum[bestIdx]/NUMPOS, double(nodesSum[bestIdx])/double(timeSum[bestIdx]));
 //}
 //
-//void Engine::benchThreadsperSplit(position_t* pos, char string[]) {
+//void Engine::benchThreadsperSplit(position_t& pos, char string[]) {
 //    const int NUMPOS = 4;
 //    const int MAXSPLIT = 9;
 //    char* fenPos[NUMPOS] = {
@@ -1084,7 +1084,7 @@ void Engine::getBestMove(position_t *pos, Thread& sthread) {
 //        threads, depth, bestIdx, timeSum[bestIdx]/NUMPOS, nodesSum[bestIdx]/NUMPOS, double(nodesSum[bestIdx])/double(timeSum[bestIdx]));
 //}
 //
-//void Engine::benchActiveSplits(position_t* pos, char string[]) {
+//void Engine::benchActiveSplits(position_t& pos, char string[]) {
 //    const int NUMPOS = 4;
 //    const int MAXSPLIT = MaxNumSplitPointsPerThread+1;
 //    char* fenPos[NUMPOS] = {

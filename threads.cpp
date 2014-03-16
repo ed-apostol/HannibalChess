@@ -19,20 +19,19 @@
 
 ThreadsManager ThreadsMgr;
 
-void ThreadsManager::StartThinking(position_t* pos) {
+void ThreadsManager::StartThinking() {
     m_StartThinking = true;
-    m_pPos = pos;
     ThreadFromIdx(0).TriggerCondition();
 }
 
 void ThreadsManager::IdleLoop(const int thread_id) {
-    SplitPoint *master_sp = m_Threads[thread_id]->activeSplitPoint;
+    SplitPoint* master_sp = m_Threads[thread_id]->activeSplitPoint;
     while (!m_Threads[thread_id]->exit_flag) {
         if (master_sp == NULL && m_Threads[thread_id]->doSleep) {
             m_Threads[thread_id]->SleepAndWaitForCondition();
             if (m_StartThinking && thread_id == 0) {
                 m_StartThinking = false;
-                CEngine.getBestMove(m_pPos, ThreadFromIdx(thread_id));
+                CEngine.getBestMove(ThreadFromIdx(thread_id));
                 m_Threads[thread_id]->searching = false;
             }
         }
@@ -41,7 +40,7 @@ void ThreadsManager::IdleLoop(const int thread_id) {
         }
         if (!m_StopThreads && m_Threads[thread_id]->searching) {
             SplitPoint* sp = m_Threads[thread_id]->activeSplitPoint; // this is correctly located, don't move this, else bug
-            CEngine.searchFromIdleLoop(sp, ThreadFromIdx(thread_id));
+            CEngine.searchFromIdleLoop(*sp, ThreadFromIdx(thread_id));
             sp->updatelock->lock();
             sp->workersBitMask &= ~((uint64)1 << thread_id);
             m_Threads[thread_id]->searching = false;
@@ -51,7 +50,7 @@ void ThreadsManager::IdleLoop(const int thread_id) {
     }
 }
 
-void ThreadsManager::GetWork(const int thread_id, SplitPoint *master_sp) {
+void ThreadsManager::GetWork(const int thread_id, SplitPoint* master_sp) {
     int best_depth = 0;
     Thread* master_thread = NULL;
     SplitPoint *best_split_point = NULL;
@@ -138,7 +137,7 @@ void ThreadsManager::SetNumThreads(int num) {
     InitEvalHash(UCIOptionsMap["Eval Cache"].GetInt(), 1);
 }
 
-void ThreadsManager::SearchSplitPoint(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread) {
+void ThreadsManager::SearchSplitPoint(const position_t& pos, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread) {
     SplitPoint *active_sp = &sthread.sptable[sthread.num_sp];    
 
     active_sp->updatelock->lock();
@@ -155,8 +154,8 @@ void ThreadsManager::SearchSplitPoint(const position_t* p, movelist_t* mvlist, S
     active_sp->cutoff = false;
     active_sp->sscurr = ss;
     active_sp->ssprev = ssprev;
-    active_sp->pos[sthread.thread_id] = *p;
-    active_sp->origpos = *p;
+    active_sp->pos[sthread.thread_id] = pos;
+    active_sp->origpos = pos;
     active_sp->workersBitMask = ((uint64)1<<sthread.thread_id);
     active_sp->allWorkersBitMask = ((uint64)1<<sthread.thread_id);
     sthread.activeSplitPoint = active_sp;

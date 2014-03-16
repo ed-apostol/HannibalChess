@@ -128,7 +128,7 @@ char *sq2Str(int sq) {
 }
 
 /* a utility to print the position */
-void displayBoard(const position_t *pos, int x) {
+void displayBoard(const position_t& pos, int x) {
     static char pcstr[] = ".PNBRQK.pnbrqk";
     int i, j, c, p;
     int pes;
@@ -143,59 +143,59 @@ void displayBoard(const position_t *pos, int x) {
     Print(x, "\n\n");
     Print(x, "   a b c d e f g h \n\n");
     Print(x, "FEN %s\n", positionToFEN(pos));
-    Print(x, "%d.%s%s ", (pos->sp)/2
-        +(pos->side?1:0), pos->side?" ":" ..",
-        move2Str(pos->posStore.lastmove));
-    Print(x, "%s, ", pos->side == WHITE ? "WHITE" : "BLACK");
-    Print(x, "Castle = %d, ", pos->posStore.castle);
-    Print(x, "Ep = %d, ", pos->posStore.epsq);
-    Print(x, "Fifty = %d, ", pos->posStore.fifty);
+    Print(x, "%d.%s%s ", (pos.sp)/2
+        +(pos.side?1:0), pos.side?" ":" ..",
+        move2Str(pos.posStore.lastmove));
+    Print(x, "%s, ", pos.side == WHITE ? "WHITE" : "BLACK");
+    Print(x, "Castle = %d, ", pos.posStore.castle);
+    Print(x, "Ep = %d, ", pos.posStore.epsq);
+    Print(x, "Fifty = %d, ", pos.posStore.fifty);
     Print(x, "Ev = %d, ", eval(pos, 0, &pes));
     Print(x, "Ch = %s,\n",
-        isAtt(pos, pos->side^1, pos->kings&pos->color[pos->side])
+        isAtt(pos, pos.side^1, pos.kings&pos.color[pos.side])
         ? "T" : "F");
-    Print(x, "H = %s, ", bit2Str(pos->posStore.hash));
-    Print(x, "PH = %s\n", bit2Str(pos->posStore.phash));
+    Print(x, "H = %s, ", bit2Str(pos.posStore.hash));
+    Print(x, "PH = %s\n", bit2Str(pos.posStore.phash));
 }
 
 /* a utility to get a certain piece from a position given a square */
-int getPiece(const position_t *pos, uint32 sq) {
+int getPiece(const position_t& pos, uint32 sq) {
 
     ASSERT(pos != NULL);
     ASSERT(squareIsOk(sq));
 
     //uint64 mask = BitMask[sq];
-    //if (mask & pos->pawns) return PAWN;
-    //if (mask & pos->knights) return KNIGHT;
-    //if (mask & pos->bishops) return BISHOP;
-    //if (mask & pos->rooks) return ROOK;
-    //if (mask & pos->queens) return QUEEN;
-    //if (mask & pos->kings) return KING;
+    //if (mask & pos.pawns) return PAWN;
+    //if (mask & pos.knights) return KNIGHT;
+    //if (mask & pos.bishops) return BISHOP;
+    //if (mask & pos.rooks) return ROOK;
+    //if (mask & pos.queens) return QUEEN;
+    //if (mask & pos.kings) return KING;
     //return EMPTY;
-    return pos->pieces[sq];
+    return pos.pieces[sq];
 }
 
 /* a utility to get a certain color from a position given a square */
-int getColor(const position_t *pos, uint32 sq) {
+int getColor(const position_t& pos, uint32 sq) {
     uint64 mask = BitMask[sq];
 
     ASSERT(pos != NULL);
     ASSERT(squareIsOk(sq));
 
-    if (mask & pos->color[WHITE]) return WHITE;
-    else if (mask & pos->color[BLACK]) return BLACK;
+    if (mask & pos.color[WHITE]) return WHITE;
+    else if (mask & pos.color[BLACK]) return BLACK;
     else {
-        ASSERT(mask & ~pos->occupied);
+        ASSERT(mask & ~pos.occupied);
         return WHITE;
     }
 }
-int DiffColor(const position_t *pos, uint32 sq,int color) {
+int DiffColor(const position_t& pos, uint32 sq,int color) {
     //    uint64 mask = BitMask[sq];
 
     ASSERT(pos != NULL);
     ASSERT(squareIsOk(sq));
 
-    return ((BitMask[sq] & pos->color[color]) ==0);
+    return ((BitMask[sq] & pos.color[color]) ==0);
 }
 /* returns time in milli-seconds */
 uint64 getTime(void) {
@@ -289,36 +289,36 @@ int biosKey(void) {
 #endif
 }
 
-int anyRep(const position_t *pos) {//this is used for book repetition detection, but should not be used in search
-    if (pos->posStore.fifty >= 100) return true;
-    ASSERT (pos->sp >= pos->posStore.fifty);
-    int plyForRep = 4, pliesToCheck = MIN(pos->posStore.pliesFromNull, pos->posStore.fifty);
+int anyRep(const position_t& pos) {//this is used for book repetition detection, but should not be used in search
+    if (pos.posStore.fifty >= 100) return true;
+    ASSERT (pos.sp >= pos.posStore.fifty);
+    int plyForRep = 4, pliesToCheck = MIN(pos.posStore.pliesFromNull, pos.posStore.fifty);
     if (plyForRep <= pliesToCheck) {
-        pos_store_t* psp = pos->posStore.previous->previous;
+        pos_store_t* psp = pos.posStore.previous->previous;
         do {
             psp = psp->previous->previous;
-            if (psp->hash == pos->posStore.hash) return true;
+            if (psp->hash == pos.posStore.hash) return true;
             plyForRep += 2;
         } while (plyForRep <= pliesToCheck);
     }
     return false;
 }
 
-int anyRepNoMove(const position_t *pos, const int m) {//assumes no castle and no capture
+int anyRepNoMove(const position_t& pos, const int m) {//assumes no castle and no capture
     int moved, fromSq, toSq;
     uint64 compareTo;
 
-    if (moveCapture(m) || isCastle(m) || pos->posStore.fifty < 3) return false;
+    if (moveCapture(m) || isCastle(m) || pos.posStore.fifty < 3) return false;
     moved = movePiece(m);
     if (moved==PAWN) return false;
-    if (pos->posStore.fifty > 99) return true;
+    if (pos.posStore.fifty > 99) return true;
     //TODO consider  castle check in here
     fromSq = moveFrom(m);
     toSq = moveTo(m);
-    compareTo = pos->posStore.hash ^ ZobColor ^ ZobPiece[pos->side][moved][fromSq] ^ ZobPiece[pos->side][moved][toSq];
-    int plyForRep = 4, pliesToCheck = MIN(pos->posStore.pliesFromNull, pos->posStore.fifty);
+    compareTo = pos.posStore.hash ^ ZobColor ^ ZobPiece[pos.side][moved][fromSq] ^ ZobPiece[pos.side][moved][toSq];
+    int plyForRep = 4, pliesToCheck = MIN(pos.posStore.pliesFromNull, pos.posStore.fifty);
     if (plyForRep <= pliesToCheck) {
-        pos_store_t* psp = pos->posStore.previous;
+        pos_store_t* psp = pos.posStore.previous;
         do {
             psp = psp->previous->previous;
             if (psp->hash == compareTo) return true;

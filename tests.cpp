@@ -15,17 +15,17 @@
 
 #ifdef DEBUG
 /* the recursive perft routine */
-void perft(position_t *pos, int maxply, uint64 nodesx[]) {
+void perft(position_t& pos, int maxply, uint64 nodesx[]) {
     movelist_t movelist;
     pos_store_t undo;
 
     ASSERT(pos != NULL);
 
-    if (pos->ply  >= maxply) return;
+    if (pos.ply  >= maxply) return;
 
     genLegal(pos, &movelist,true);
-    /* if(pos->ply + 1 >= maxply){
-    nodesx[pos->ply+1] += movelist.size;
+    /* if(pos.ply + 1 >= maxply){
+    nodesx[pos.ply+1] += movelist.size;
     return;
     } */
     for (movelist.pos = 0; movelist.pos < movelist.size; movelist.pos++) {
@@ -33,11 +33,11 @@ void perft(position_t *pos, int maxply, uint64 nodesx[]) {
         perft(pos, maxply, nodesx);
         unmakeMove(pos, &undo);
     }
-    nodesx[pos->ply+1] += movelist.size;
+    nodesx[pos.ply+1] += movelist.size;
 }
 
 /* the recursive perft divide routine */
-int perftDivide(position_t *pos, uint32 depth, uint32 maxply) {
+int perftDivide(position_t& pos, uint32 depth, uint32 maxply) {
     int x = 0;
     movelist_t movelist;
     pos_store_t undo;
@@ -55,7 +55,7 @@ int perftDivide(position_t *pos, uint32 depth, uint32 maxply) {
 }
 
 /* this is the perft controller */
-void runPerft(position_t *pos, int maxply) {
+void runPerft(position_t& pos, int maxply) {
     int depth, i, x;
     uint64 nodes, time_start, nodesx[MAXPLY], duration;
 
@@ -84,7 +84,7 @@ void runPerft(position_t *pos, int maxply) {
 }
 
 /* this is the perft divide controller */
-void runPerftDivide(position_t *pos, uint32 maxply) {
+void runPerftDivide(position_t& pos, uint32 maxply) {
     int x = 0, legal = 1, y = 0;
     movelist_t movelist;
     pos_store_t undo;
@@ -112,7 +112,7 @@ void runPerftDivide(position_t *pos, uint32 maxply) {
 }
 
 /* this are the non-uci commands */
-void nonUCI(position_t *pos) {
+void nonUCI(position_t& pos) {
     movelist_t ml;
     pos_store_t undo;
     char command[256];
@@ -131,7 +131,7 @@ void nonUCI(position_t *pos) {
         if (!strcmp(temp, "new")) {
             setPosition(pos, STARTPOS);
         } else if (!strcmp(temp, "undo")) {
-            if (pos->sp > 0) unmakeMove(pos, &undo);
+            if (pos.sp > 0) unmakeMove(pos, &undo);
         } else if (!strcmp(temp, "moves")) {
             genLegal(pos, &ml,true);
             Print(3, "legal moves = %d:", ml.size);
@@ -141,7 +141,7 @@ void nonUCI(position_t *pos) {
             }
             Print(3, "\n\n");
         } else if (!strcmp(temp, "qmoves")) {
-            //ml.target = (pos->color[pos->side^1] & ~pos->kings);
+            //ml.target = (pos.color[pos.side^1] & ~pos.kings);
             genCaptures(pos, &ml);
             Print(3, "quiescent moves = %d:", ml.size);
             for (ml.pos = 0; ml.pos < ml.size; ml.pos++) {

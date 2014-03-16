@@ -56,7 +56,7 @@ int rankIsOk(int r) {
 
 /* this flips the entire position and save it into another position
 data structure */
-void flipPosition(const position_t *pos, position_t *clone) {
+void flipPosition(const position_t& pos, position_t *clone) {
     int sq, temp, c;
     uint64 pc_bits;
 
@@ -93,9 +93,9 @@ void flipPosition(const position_t *pos, position_t *clone) {
     clone->color[BLACK] = EmptyBoardBB;
     clone->occupied = EmptyBoardBB;
 
-    clone->side = pos->side^1;
-    clone->ply = pos->ply;
-    clone->posStore.fifty = pos->posStore.fifty;
+    clone->side = pos.side^1;
+    clone->ply = pos.ply;
+    clone->posStore.fifty = pos.posStore.fifty;
 
     for (sq = a1; sq <= h8; sq++) {
         clone->pieces[sq] = EMPTY;
@@ -110,33 +110,33 @@ void flipPosition(const position_t *pos, position_t *clone) {
     clone->posStore.phash = 0;
 
     clone->posStore.castle = 0;
-    if (pos->posStore.castle&WCKS) clone->posStore.castle |= BCKS;
-    if (pos->posStore.castle&WCQS) clone->posStore.castle |= BCQS;
-    if (pos->posStore.castle&BCKS) clone->posStore.castle |= WCKS;
-    if (pos->posStore.castle&BCQS) clone->posStore.castle |= WCQS;
+    if (pos.posStore.castle&WCKS) clone->posStore.castle |= BCKS;
+    if (pos.posStore.castle&WCQS) clone->posStore.castle |= BCQS;
+    if (pos.posStore.castle&BCKS) clone->posStore.castle |= WCKS;
+    if (pos.posStore.castle&BCQS) clone->posStore.castle |= WCQS;
 
     clone->posStore.epsq = -1;
-    if (pos->posStore.epsq != -1) {
-        sq = pos->posStore.epsq;
+    if (pos.posStore.epsq != -1) {
+        sq = pos.posStore.epsq;
         temp = ((7 - SQRANK(sq)) << 3) + SQFILE(sq);
         clone->posStore.epsq = temp;
     }
 
-    pc_bits = pos->color[WHITE];
+    pc_bits = pos.color[WHITE];
     while (pc_bits) {
         sq = popFirstBit(&pc_bits);
         temp = ((7 - SQRANK(sq)) << 3) + SQFILE(sq);
         clone->color[BLACK] |= BitMask[temp];
     }
 
-    pc_bits = pos->color[BLACK];
+    pc_bits = pos.color[BLACK];
     while (pc_bits) {
         sq = popFirstBit(&pc_bits);
         temp = ((7 - SQRANK(sq)) << 3) + SQFILE(sq);
         clone->color[WHITE] |= BitMask[temp];
     }
 
-    pc_bits = pos->pawns;
+    pc_bits = pos.pawns;
     while (pc_bits) {
         sq = popFirstBit(&pc_bits);
         temp = ((7 - SQRANK(sq)) << 3) + SQFILE(sq);
@@ -149,7 +149,7 @@ void flipPosition(const position_t *pos, position_t *clone) {
         clone->posStore.phash ^= ZobPiece[c][PAWN][temp];
     }
 
-    pc_bits = pos->knights;
+    pc_bits = pos.knights;
     while (pc_bits) {
         sq = popFirstBit(&pc_bits);
         temp = ((7 - SQRANK(sq)) << 3) + SQFILE(sq);
@@ -161,7 +161,7 @@ void flipPosition(const position_t *pos, position_t *clone) {
         clone->hash ^= ZobPiece[c][KNIGHT][temp];
     }
 
-    pc_bits = pos->bishops;
+    pc_bits = pos.bishops;
     while (pc_bits) {
         sq = popFirstBit(&pc_bits);
         temp = ((7 - SQRANK(sq)) << 3) + SQFILE(sq);
@@ -173,7 +173,7 @@ void flipPosition(const position_t *pos, position_t *clone) {
         clone->hash ^= ZobPiece[c][BISHOP][temp];
     }
 
-    pc_bits = pos->rooks;
+    pc_bits = pos.rooks;
     while (pc_bits) {
         sq = popFirstBit(&pc_bits);
         temp = ((7 - SQRANK(sq)) << 3) + SQFILE(sq);
@@ -185,7 +185,7 @@ void flipPosition(const position_t *pos, position_t *clone) {
         clone->hash ^= ZobPiece[c][ROOK][temp];
     }
 
-    pc_bits = pos->queens;
+    pc_bits = pos.queens;
     while (pc_bits) {
         sq = popFirstBit(&pc_bits);
         temp = ((7 - SQRANK(sq)) << 3) + SQFILE(sq);
@@ -197,7 +197,7 @@ void flipPosition(const position_t *pos, position_t *clone) {
         clone->hash ^= ZobPiece[c][QUEEN][temp];
     }
 
-    pc_bits = pos->kings;
+    pc_bits = pos.kings;
     while (pc_bits) {
         sq = popFirstBit(&pc_bits);
         temp = ((7 - SQRANK(sq)) << 3) + SQFILE(sq);
@@ -229,7 +229,7 @@ void flipPosition(const position_t *pos, position_t *clone) {
         bitCnt(clone->queens & clone->color[BLACK]) * 9*3*3*3;   // 243
 }
 
-int evalSymmetryIsOk(const position_t *pos) {
+int evalSymmetryIsOk(const position_t& pos) {
     int score1, score2;
     position_t clone;
     int opt, pes;
@@ -248,18 +248,18 @@ int evalSymmetryIsOk(const position_t *pos) {
     return true;
 }
 
-uint64 pawnHashRecalc(const position_t *pos) {
+uint64 pawnHashRecalc(const position_t& pos) {
     uint64 pc_bits, pawnhash;
     int from;
 
     pawnhash = 0;
-    pc_bits = pos->pawns & pos->color[WHITE];
+    pc_bits = pos.pawns & pos.color[WHITE];
     while (pc_bits) {
         from = popFirstBit(&pc_bits);
         pawnhash ^= ZobPiece[WHITE][PAWN][from];
     }
 
-    pc_bits = pos->pawns & pos->color[BLACK];
+    pc_bits = pos.pawns & pos.color[BLACK];
     while (pc_bits) {
         from = popFirstBit(&pc_bits);
         pawnhash ^= ZobPiece[BLACK][PAWN][from];
@@ -267,22 +267,22 @@ uint64 pawnHashRecalc(const position_t *pos) {
     return pawnhash;
 }
 
-void positionIsOk(const position_t *pos) {
+void positionIsOk(const position_t& pos) {
     uint64 pc_bits, whitebits, blackbits, hash, pawnhash;
     int open_score[2], end_score[2], mat_summ[2];
     int from;
 
     ASSERT(pos != NULL);
-    ASSERT(pos->kings & pos->color[pos->side]);
-    ASSERT(pos->kings & pos->color[pos->side^1]);
+    ASSERT(pos.kings & pos.color[pos.side]);
+    ASSERT(pos.kings & pos.color[pos.side^1]);
 
     open_score[WHITE] = open_score[BLACK] =
         end_score[WHITE] = end_score[BLACK] = 0;
     hash = pawnhash = 0;
-    whitebits = pos->color[WHITE];
-    blackbits = pos->color[BLACK];
+    whitebits = pos.color[WHITE];
+    blackbits = pos.color[BLACK];
 
-    pc_bits = pos->pawns & whitebits;
+    pc_bits = pos.pawns & whitebits;
     while (pc_bits) {
         from = popFirstBit(&pc_bits);
         open_score[WHITE] += PST(WHITE, PAWN, from, MIDGAME);
@@ -291,7 +291,7 @@ void positionIsOk(const position_t *pos) {
         pawnhash ^= ZobPiece[WHITE][PAWN][from];
     }
 
-    pc_bits = pos->pawns & blackbits;
+    pc_bits = pos.pawns & blackbits;
     while (pc_bits) {
         from = popFirstBit(&pc_bits);
         open_score[BLACK] += PST(BLACK, PAWN, from, MIDGAME);
@@ -300,7 +300,7 @@ void positionIsOk(const position_t *pos) {
         pawnhash ^= ZobPiece[BLACK][PAWN][from];
     }
 
-    pc_bits = pos->knights & whitebits;
+    pc_bits = pos.knights & whitebits;
     while (pc_bits) {
         from = popFirstBit(&pc_bits);
         open_score[WHITE] += PST(WHITE, KNIGHT, from, MIDGAME);
@@ -308,7 +308,7 @@ void positionIsOk(const position_t *pos) {
         hash ^= ZobPiece[WHITE][KNIGHT][from];
     }
 
-    pc_bits = pos->knights & blackbits;
+    pc_bits = pos.knights & blackbits;
     while (pc_bits) {
         from = popFirstBit(&pc_bits);
         open_score[BLACK] += PST(BLACK, KNIGHT, from, MIDGAME);
@@ -316,7 +316,7 @@ void positionIsOk(const position_t *pos) {
         hash ^= ZobPiece[BLACK][KNIGHT][from];
     }
 
-    pc_bits = pos->bishops & whitebits;
+    pc_bits = pos.bishops & whitebits;
     while (pc_bits) {
         from = popFirstBit(&pc_bits);
         open_score[WHITE] += PST(WHITE, BISHOP, from, MIDGAME);
@@ -324,7 +324,7 @@ void positionIsOk(const position_t *pos) {
         hash ^= ZobPiece[WHITE][BISHOP][from];
     }
 
-    pc_bits = pos->bishops & blackbits;
+    pc_bits = pos.bishops & blackbits;
     while (pc_bits) {
         from = popFirstBit(&pc_bits);
         open_score[BLACK] += PST(BLACK, BISHOP, from, MIDGAME);
@@ -332,7 +332,7 @@ void positionIsOk(const position_t *pos) {
         hash ^= ZobPiece[BLACK][BISHOP][from];
     }
 
-    pc_bits = pos->rooks & whitebits;
+    pc_bits = pos.rooks & whitebits;
     while (pc_bits) {
         from = popFirstBit(&pc_bits);
         open_score[WHITE] += PST(WHITE, ROOK, from, MIDGAME);
@@ -340,7 +340,7 @@ void positionIsOk(const position_t *pos) {
         hash ^= ZobPiece[WHITE][ROOK][from];
     }
 
-    pc_bits = pos->rooks & blackbits;
+    pc_bits = pos.rooks & blackbits;
     while (pc_bits) {
         from = popFirstBit(&pc_bits);
         open_score[BLACK] += PST(BLACK, ROOK, from, MIDGAME);
@@ -348,7 +348,7 @@ void positionIsOk(const position_t *pos) {
         hash ^= ZobPiece[BLACK][ROOK][from];
     }
 
-    pc_bits = pos->queens & whitebits;
+    pc_bits = pos.queens & whitebits;
     while (pc_bits) {
         from = popFirstBit(&pc_bits);
         open_score[WHITE] += PST(WHITE, QUEEN, from, MIDGAME);
@@ -356,7 +356,7 @@ void positionIsOk(const position_t *pos) {
         hash ^= ZobPiece[WHITE][QUEEN][from];
     }
 
-    pc_bits = pos->queens & blackbits;
+    pc_bits = pos.queens & blackbits;
     while (pc_bits) {
         from = popFirstBit(&pc_bits);
         open_score[BLACK] += PST(BLACK, QUEEN, from, MIDGAME);
@@ -364,64 +364,64 @@ void positionIsOk(const position_t *pos) {
         hash ^= ZobPiece[BLACK][QUEEN][from];
     }
 
-    pc_bits = pos->kings & whitebits;
+    pc_bits = pos.kings & whitebits;
     from = popFirstBit(&pc_bits);
-    ASSERT(from == pos->kpos[WHITE]);
+    ASSERT(from == pos.kpos[WHITE]);
     open_score[WHITE] += PST(WHITE, KING, from, MIDGAME);
     end_score[WHITE] += PST(WHITE, KING, from, ENDGAME);
     hash ^= ZobPiece[WHITE][KING][from];
     pawnhash ^= ZobPiece[WHITE][KING][from];
 
 
-    pc_bits = pos->kings & blackbits;
+    pc_bits = pos.kings & blackbits;
     from = popFirstBit(&pc_bits);
-    ASSERT(from == pos->kpos[BLACK]);
+    ASSERT(from == pos.kpos[BLACK]);
     open_score[BLACK] += PST(BLACK, KING, from, MIDGAME);
     end_score[BLACK] += PST(BLACK, KING, from, ENDGAME);
     hash ^= ZobPiece[BLACK][KING][from];
     pawnhash ^= ZobPiece[BLACK][KING][from];
 
 
-    hash ^= ZobCastle[pos->posStore.castle];
-    pawnhash ^= ZobCastle[pos->posStore.castle];
+    hash ^= ZobCastle[pos.posStore.castle];
+    pawnhash ^= ZobCastle[pos.posStore.castle];
 
-    if (pos->posStore.epsq != -1) hash ^= ZobEpsq[SQFILE(pos->posStore.epsq)];
-    if (pos->side == WHITE) hash ^= ZobColor;
+    if (pos.posStore.epsq != -1) hash ^= ZobEpsq[SQFILE(pos.posStore.epsq)];
+    if (pos.side == WHITE) hash ^= ZobColor;
 
     mat_summ[WHITE] =
-        bitCnt(pos->pawns & pos->color[WHITE]) * MatSummValue[PAWN] +
-        bitCnt(pos->knights & pos->color[WHITE]) * MatSummValue[KNIGHT] +
-        bitCnt(pos->bishops & pos->color[WHITE]) * MatSummValue[BISHOP] +
-        bitCnt(pos->rooks & pos->color[WHITE]) * MatSummValue[ROOK] +
-        bitCnt(pos->queens & pos->color[WHITE]) * MatSummValue[QUEEN];
+        bitCnt(pos.pawns & pos.color[WHITE]) * MatSummValue[PAWN] +
+        bitCnt(pos.knights & pos.color[WHITE]) * MatSummValue[KNIGHT] +
+        bitCnt(pos.bishops & pos.color[WHITE]) * MatSummValue[BISHOP] +
+        bitCnt(pos.rooks & pos.color[WHITE]) * MatSummValue[ROOK] +
+        bitCnt(pos.queens & pos.color[WHITE]) * MatSummValue[QUEEN];
     mat_summ[BLACK] =
-        bitCnt(pos->pawns & pos->color[BLACK]) * MatSummValue[PAWN] +
-        bitCnt(pos->knights & pos->color[BLACK]) * MatSummValue[KNIGHT] +
-        bitCnt(pos->bishops & pos->color[BLACK]) * MatSummValue[BISHOP] +
-        bitCnt(pos->rooks & pos->color[BLACK]) * MatSummValue[ROOK] +
-        bitCnt(pos->queens & pos->color[BLACK]) * MatSummValue[QUEEN];
+        bitCnt(pos.pawns & pos.color[BLACK]) * MatSummValue[PAWN] +
+        bitCnt(pos.knights & pos.color[BLACK]) * MatSummValue[KNIGHT] +
+        bitCnt(pos.bishops & pos.color[BLACK]) * MatSummValue[BISHOP] +
+        bitCnt(pos.rooks & pos.color[BLACK]) * MatSummValue[ROOK] +
+        bitCnt(pos.queens & pos.color[BLACK]) * MatSummValue[QUEEN];
 
-    ASSERT(pos->posStore.mat_summ[WHITE] == mat_summ[WHITE]);
-    ASSERT(pos->posStore.mat_summ[BLACK] == mat_summ[BLACK]);
-    ASSERT(pos->posStore.open[WHITE] == open_score[WHITE]);
-    ASSERT(pos->posStore.open[BLACK] == open_score[BLACK]);
-    ASSERT(pos->posStore.end[WHITE] == end_score[WHITE]);
-    ASSERT(pos->posStore.end[BLACK] == end_score[BLACK]);
-    ASSERT(pos->posStore.hash == hash);
-    ASSERT(pos->posStore.phash == pawnhash);
-    ASSERT(!(pos->color[BLACK] & pos->color[WHITE]));
-    ASSERT((pos->side == WHITE || pos->side == BLACK));
-    ASSERT(pos->posStore.castle <= 15);
-    ASSERT(bitCnt(pos->occupied) >= 2 && bitCnt(pos->occupied) <= 32);
-    ASSERT(bitCnt(pos->color[WHITE]) >= 1 && bitCnt(pos->color[WHITE]) <= 16);
-    ASSERT(bitCnt(pos->color[BLACK]) >= 1 && bitCnt(pos->color[BLACK]) <= 16);
-    ASSERT(bitCnt(pos->pawns) <= 16);
-    ASSERT(bitCnt(pos->kings) == 2);
-    ASSERT((pos->color[WHITE] & pos->color[BLACK]) == 0);
-    ASSERT(pos->kings & pos->color[WHITE]& BitMask[pos->kpos[WHITE]]);
-    ASSERT(pos->kings & pos->color[BLACK]& BitMask[pos->kpos[BLACK]]);
-    if (pos->posStore.epsq != -1)
-        ASSERT(pos->posStore.epsq >= a3 && pos->posStore.epsq <= h6);
+    ASSERT(pos.posStore.mat_summ[WHITE] == mat_summ[WHITE]);
+    ASSERT(pos.posStore.mat_summ[BLACK] == mat_summ[BLACK]);
+    ASSERT(pos.posStore.open[WHITE] == open_score[WHITE]);
+    ASSERT(pos.posStore.open[BLACK] == open_score[BLACK]);
+    ASSERT(pos.posStore.end[WHITE] == end_score[WHITE]);
+    ASSERT(pos.posStore.end[BLACK] == end_score[BLACK]);
+    ASSERT(pos.posStore.hash == hash);
+    ASSERT(pos.posStore.phash == pawnhash);
+    ASSERT(!(pos.color[BLACK] & pos.color[WHITE]));
+    ASSERT((pos.side == WHITE || pos.side == BLACK));
+    ASSERT(pos.posStore.castle <= 15);
+    ASSERT(bitCnt(pos.occupied) >= 2 && bitCnt(pos.occupied) <= 32);
+    ASSERT(bitCnt(pos.color[WHITE]) >= 1 && bitCnt(pos.color[WHITE]) <= 16);
+    ASSERT(bitCnt(pos.color[BLACK]) >= 1 && bitCnt(pos.color[BLACK]) <= 16);
+    ASSERT(bitCnt(pos.pawns) <= 16);
+    ASSERT(bitCnt(pos.kings) == 2);
+    ASSERT((pos.color[WHITE] & pos.color[BLACK]) == 0);
+    ASSERT(pos.kings & pos.color[WHITE]& BitMask[pos.kpos[WHITE]]);
+    ASSERT(pos.kings & pos.color[BLACK]& BitMask[pos.kpos[BLACK]]);
+    if (pos.posStore.epsq != -1)
+        ASSERT(pos.posStore.epsq >= a3 && pos.posStore.epsq <= h6);
 
 }
 #endif

@@ -17,17 +17,17 @@
 #include "movepicker.h"
 #include "search.h"
 
-void sortInit (const position_t *pos, SearchStack& ss, uint64 pinned, int scout, int depth, int type, Thread& sthread) {
+void sortInit (const position_t& pos, SearchStack& ss, uint64 pinned, int scout, int depth, int type, Thread& sthread) {
     ss.mvlist->transmove =  ss.hashMove;
-    ss.mvlist->killer1 = sthread.ts[pos->ply].killer1;
-    ss.mvlist->killer2 = sthread.ts[pos->ply].killer2;
+    ss.mvlist->killer1 = sthread.ts[pos.ply].killer1;
+    ss.mvlist->killer2 = sthread.ts[pos.ply].killer2;
     ss.mvlist->evalvalue = ss.evalvalue;
     ss.mvlist->pos = 0;
     ss.mvlist->size = 0;
     ss.mvlist->pinned = pinned;
     ss.mvlist->scout = scout;
-    ss.mvlist->ply = pos->ply;
-    ss.mvlist->side = pos->side;
+    ss.mvlist->ply = pos.ply;
+    ss.mvlist->side = pos.side;
     ss.mvlist->depth = depth;
     ss.mvlist->phase = type;
     ss.mvlist->startBad = MAXMOVES;
@@ -55,14 +55,14 @@ inline int scoreNonTactical (uint32 side, uint32 move, Thread& sthread) {
     int score = sthread.history[historyIndex(side,move)];
     return score;
 }
-bool moveIsPassedPawn (const position_t * pos, uint32 move) {
-    if (movePiece(move) == PAWN && !((*FillPtr[pos->side])(BitMask[moveTo(move)]) & pos->pawns)) {
-        if (!(pos->pawns & pos->color[pos->side^1] & PassedMask[pos->side][moveTo(move)])) return true;
+bool moveIsPassedPawn (const position_t& pos, uint32 move) {
+    if (movePiece(move) == PAWN && !((*FillPtr[pos.side])(BitMask[moveTo(move)]) & pos.pawns)) {
+        if (!(pos.pawns & pos.color[pos.side^1] & PassedMask[pos.side][moveTo(move)])) return true;
     }
     return false;
 }
 
-uint32 captureIsGood (const position_t *pos, const basic_move_t m) {
+uint32 captureIsGood (const position_t& pos, const basic_move_t m) {
     uint32 prom = movePromote(m);
     uint32 capt = moveCapture(m);
     uint32 pc = movePiece(m);
@@ -104,7 +104,7 @@ void scoreCaptures (movelist_t *mvlist) {
     }
 }
 
-void scoreNonCaptures (const position_t *pos, movelist_t *mvlist, Thread& sthread) {
+void scoreNonCaptures (const position_t& pos, movelist_t *mvlist, Thread& sthread) {
     move_t *m;
 
     ASSERT(mvlist != NULL);
@@ -114,7 +114,7 @@ void scoreNonCaptures (const position_t *pos, movelist_t *mvlist, Thread& sthrea
     }
 }
 
-void scoreAll (const position_t *pos, movelist_t *mvlist, Thread& sthread) {
+void scoreAll (const position_t& pos, movelist_t *mvlist, Thread& sthread) {
     move_t *m;
 
     ASSERT(pos != NULL);
@@ -158,12 +158,12 @@ void scoreRoot (movelist_t *mvlist) {
     }
 }
 
-move_t* sortNext (SplitPoint* sp, position_t *pos, SearchStack& ss, Thread& sthread) {
+move_t* sortNext (bool inSplitPoint, SplitPoint& sp, position_t& pos, SearchStack& ss, Thread& sthread) {
     move_t* move;
-    if (sp != NULL) sp->movelistlock->lock();
+    if (inSplitPoint) sp.movelistlock->lock();
     ss.mvlist_phase = ss.mvlist->phase;
     if (MoveGenPhase[ss.mvlist->phase] == PH_END) {  // SMP hack
-        if (sp != NULL) sp->movelistlock->unlock();
+        if (inSplitPoint) sp.movelistlock->unlock();
         return NULL;
     }
     while (true) {
@@ -225,10 +225,10 @@ move_t* sortNext (SplitPoint* sp, position_t *pos, SearchStack& ss, Thread& sthr
                 break;
             default:
                 // can't get here
-                if (sp != NULL) sp->movelistlock->unlock();
+                if (inSplitPoint) sp.movelistlock->unlock();
                 return NULL;
             }
-            if (sp != NULL) sp->movelistlock->unlock();
+            if (inSplitPoint) sp.movelistlock->unlock();
             return move;
         }
 
@@ -299,12 +299,12 @@ move_t* sortNext (SplitPoint* sp, position_t *pos, SearchStack& ss, Thread& sthr
         case PH_GAINING:
             if (ss.mvlist->scout - ss.mvlist->evalvalue > 150) continue; // TODO: test other values
             genGainingMoves(pos, ss.mvlist, ss.mvlist->scout - ss.mvlist->evalvalue, sthread);
-            // Print(3, "delta = %d, ss.mvlist->size = %d\n", ss.mvlist->scout - SearchInfo.evalvalue[pos->ply], ss.mvlist->size);
+            // Print(3, "delta = %d, ss.mvlist->size = %d\n", ss.mvlist->scout - SearchInfo.evalvalue[pos.ply], ss.mvlist->size);
             scoreNonCaptures(pos, ss.mvlist, sthread);
             break;
         default:
             ASSERT(MoveGenPhase[ss.mvlist->phase] == PH_END);
-            if (sp != NULL) sp->movelistlock->unlock();
+            if (inSplitPoint) sp.movelistlock->unlock();
             return NULL;
         }
     }

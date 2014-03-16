@@ -26,6 +26,23 @@ private:
 };
 
 struct SplitPoint {
+    SplitPoint() :
+        parent(NULL),
+        sscurr(NULL),
+        ssprev(NULL),
+        depth(0),
+        inCheck(false),
+        inRoot(false),
+        nodeType(PVNode),
+        alpha(0),
+        beta(0),
+        bestvalue(0),
+        played(0),
+        bestmove(EMPTY),
+        workersBitMask(0),
+        allWorkersBitMask(0),
+        cutoff(false)
+    { }
     bool cutoffOccurred() {
         if (cutoff) return true;
         if (parent && parent->cutoffOccurred()) {
@@ -113,8 +130,8 @@ public:
         nodes = 0;
         nodes_since_poll = 0;
         nodes_between_polls = 8192;
-        numsplits = 0;
-        numsplits2 = 0;
+        numsplits = 1;
+        numsplits2 = 1;
         workers2 = 0;
         num_sp = 0;
         activeSplitPoint = NULL;
@@ -145,17 +162,17 @@ public:
 
 class ThreadsManager {
 public:
-    ThreadsManager() : m_StartThinking(false), m_pPos(NULL) { }
-    void StartThinking(position_t* p);
+    ThreadsManager() : m_StartThinking(false) { }
+    void StartThinking();
     void IdleLoop(const int thread_id);
-    void GetWork(const int thread_id, SplitPoint *master_sp);
+    void GetWork(const int thread_id, SplitPoint* master_sp);
     void SetAllThreadsToStop();
     void SetAllThreadsToSleep();
     void SetAllThreadsToWork();
     void InitVars();
     void SetNumThreads(int num); // SetNumThreads(0) must be called for program to exit
     uint64 ComputeNodes();
-    void SearchSplitPoint(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread);
+    void SearchSplitPoint(const position_t& pos, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread);
 
     Thread& ThreadFromIdx(int thread_id) { return *m_Threads[thread_id]; }
     size_t ThreadNum() const { return m_Threads.size(); }
@@ -183,7 +200,6 @@ public:
 private:
     std::vector<Thread*> m_Threads;
     volatile bool m_StartThinking;
-    position_t* m_pPos;
     volatile bool m_StopThreads;
 };
 

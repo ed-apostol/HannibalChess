@@ -100,12 +100,8 @@ public:
     ~Engine();
     void ponderHit();
     void sendBestMove();
-    void searchFromIdleLoop(SplitPoint* sp, Thread& sthread);
-    void getBestMove(position_t *pos, Thread& sthread);
-    void checkSpeedUp(position_t* pos, char string[]);
-    void benchMinSplitDepth(position_t* pos, char string[]);
-    void benchThreadsperSplit(position_t* pos, char string[]);
-    void benchActiveSplits(position_t* pos, char string[]);
+    void searchFromIdleLoop(SplitPoint& sp, Thread& sthread);
+    void getBestMove(Thread& sthread);
     void stopSearch();
 
     void InitTTHash(int size, int bucket) { transtable.Init(size, bucket); }
@@ -117,6 +113,7 @@ public:
     SearchInfo info;
     TranspositionTable transtable;
     PvHashTable pvhashtable;
+    position_t rootpos;
 };
 
 extern Engine CEngine;

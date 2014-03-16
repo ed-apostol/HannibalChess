@@ -74,7 +74,7 @@ string pv2Str(continuation_t *c) { //TODO promote use of this function throughou
 #endif
 
 #ifndef TCEC
-bool learn_position(position_t *pos,int thread_id, continuation_t *variation) {
+bool learn_position(position_t& pos,int thread_id, continuation_t *variation) {
     movelist_t mvlist;
     int bestScore = -INF;
     basic_move_t bestMove = 0;
@@ -110,7 +110,7 @@ bool learn_position(position_t *pos,int thread_id, continuation_t *variation) {
     while (moveOn < mvlist.size) {
         basic_move_t move = mvlist.list[moveOn].m;
         if (anyRepNoMove(pos,move)) { 
-            int score = DrawValue[pos->side];
+            int score = DrawValue[pos.side];
             if (score > bestScore) {
                 bestScore = score;
                 bestMove = move;
@@ -168,7 +168,7 @@ bool learn_position(position_t *pos,int thread_id, continuation_t *variation) {
                 if (SHOW_LEARNING) Print(3, "info string learning %s discovered: %d (%llu)\n",pv2Str(variation).c_str(),bestScore,usedTime/1000);
                 if (LOG_LEARNING) Print(2, "learning: %s discovered: %d (%llu)\n",pv2Str(variation).c_str(),bestScore,usedTime/1000);
                 makeMove(pos, &undo, SearchInfo(thread_id).bestmove); //write the resulting position score if it is an unknown position (not repetition)
-                insert_score_to_puck_file(&GhannibalBook, pos->posStore.hash, -bestScore);//learn this position score, and after the desired move
+                insert_score_to_puck_file(&GhannibalBook, pos.posStore.hash, -bestScore);//learn this position score, and after the desired move
                 unmakeMove(pos, &undo);
             }
             else {
@@ -178,7 +178,7 @@ bool learn_position(position_t *pos,int thread_id, continuation_t *variation) {
             }
             variation->length--;
             if (bestMove) { //write the current position score
-                insert_score_to_puck_file(&GhannibalBook, pos->posStore.hash, bestScore);//learn this position score, and after the desired move
+                insert_score_to_puck_file(&GhannibalBook, pos.posStore.hash, bestScore);//learn this position score, and after the desired move
             }
     }
     SearchInfoMap[thread_id] = &global_search_info; //reset before local variable disappears
@@ -223,7 +223,7 @@ const PuckBookEntry PuckBookEntryNone = {
 const int MAX_MOVES = 256;
 
 
-basic_move_t polyglot_move_to_move(uint16 move, position_t *p) {
+basic_move_t polyglot_move_to_move(uint16 move, position_t& p) {
     int from, to;
     from= ((move>>6)&077);
     to = (move&077);
@@ -245,7 +245,7 @@ basic_move_t polyglot_move_to_move(uint16 move, position_t *p) {
         if (from==E8 && to==H8) return GenBlackOO();
         if (from==E8 && to==A8) return  GenBlackOOO();
     }
-    if (movedPiece == PAWN && to==p->posStore.epsq) return GenEnPassant(from, to);
+    if (movedPiece == PAWN && to==p.posStore.epsq) return GenEnPassant(from, to);
     return GenBasicMove(from, to, movedPiece, capturedPiece);
 }
 
@@ -282,7 +282,7 @@ void write_puck_entry(book_t *book, PuckBookEntry *entry){
     int_to_file(book->bookFile,4,entry->score);
 }
 
-int entry_from_polyglot_file(FILE *f, PolyglotBookEntry *entry, position_t *p) {
+int entry_from_polyglot_file(FILE *f, PolyglotBookEntry *entry, position_t& p) {
     uint64 r;
     if (int_from_file(f,8,&r)) return 1;
     entry->key=r;
@@ -395,7 +395,7 @@ void insert_score_to_puck_file(book_t *book, uint64 key, int score){
 
 }
 
-long find_polyglot_key(FILE *f, uint64 key, PolyglotBookEntry *entry, position_t *p) {
+long find_polyglot_key(FILE *f, uint64 key, PolyglotBookEntry *entry, position_t& p) {
     long first, last, middle;
     PolyglotBookEntry first_entry=PolyglotBookEntryNone, last_entry,middle_entry;
     if (f==NULL) {
@@ -679,7 +679,7 @@ void new_to_learn_end(learn_t *learn, continuation_t *soFar) {
     MutexUnlock(LearningLock);
 }
 
-long polyglot_to_puck(const book_t *polyBook, book_t *puckBook, learn_t *learn, position_t *p, continuation_t *soFar, const int depth) { //position is the start of the learning position
+long polyglot_to_puck(const book_t *polyBook, book_t *puckBook, learn_t *learn, position_t& p, continuation_t *soFar, const int depth) { //position is the start of the learning position
     if (polyBook == NULL || polyBook->type!= POLYGLOT_BOOK) {
         cout << "info string trying to learn non-existent polyglot book\n";
         return 0;
@@ -695,8 +695,8 @@ long polyglot_to_puck(const book_t *polyBook, book_t *puckBook, learn_t *learn, 
     int moveOn = 0;
     PolyglotBookEntry polyEntry[MAX_MOVES];
     PuckBookEntry puckEntry, tempPuckEntry;
-    find_polyglot_key(polyBook->bookFile,p->hash,&polyEntry[0],p); //getting first move entry at this key
-    if (p->hash==polyEntry[0].key) {
+    find_polyglot_key(polyBook->bookFile,p.hash,&polyEntry[0],p); //getting first move entry at this key
+    if (p.hash==polyEntry[0].key) {
         moveOn++;
         while (true) { //getting all the rest of the entries with this key
             if (moveOn>=MAX_MOVES-1){
@@ -707,7 +707,7 @@ long polyglot_to_puck(const book_t *polyBook, book_t *puckBook, learn_t *learn, 
                 if (DEBUG_BOOK) Print(3, "info string bad book entry?\n");
                 break;
             }
-            if (polyEntry[moveOn].key!=p->hash) {
+            if (polyEntry[moveOn].key!=p.hash) {
                 if (DEBUG_BOOK) Print(3, "info string last key entry\n");
                 break;
             }
@@ -723,12 +723,12 @@ long polyglot_to_puck(const book_t *polyBook, book_t *puckBook, learn_t *learn, 
             if (!anyRepNoMove(p,move)) { 
 
                 makeMove(p, &undo, move);
-                find_polyglot_key(polyBook->bookFile,p->hash,&polyEntry[moveOn],p); 
-                if (p->hash==polyEntry[moveOn].key) {
+                find_polyglot_key(polyBook->bookFile,p.hash,&polyEntry[moveOn],p); 
+                if (p.hash==polyEntry[moveOn].key) {
                     bool newMove = true;
                     polyEntry[moveOn].move = move;
                     for (int on= moveOn-1; on >= 0; on--) { //ok, lets add all these moves now
-                        if (p->hash==polyEntry[on].key) {
+                        if (p.hash==polyEntry[on].key) {
                             newMove=false;
                             break;
                         }
@@ -748,7 +748,7 @@ long polyglot_to_puck(const book_t *polyBook, book_t *puckBook, learn_t *learn, 
 
         //lets get all the moves
         long numAdded = 0;
-        uint64 pinned = pinnedPieces(p, p->side);
+        uint64 pinned = pinnedPieces(p, p.side);
         for (moveOn= moveOn-1; moveOn >= 0; moveOn--) { //ok, lets add all these moves now
             if (genMoveIfLegal(p, polyEntry[moveOn].move, pinned) && !anyRepNoMove(p, polyEntry[moveOn].move)) { //TODO do real move generation and ensure its a real move
                 if (DEBUG_BOOK) cout << "info string found poly " << polyEntry[moveOn].key << ": " << move2Str(polyEntry[moveOn].move) << endl;
@@ -756,7 +756,7 @@ long polyglot_to_puck(const book_t *polyBook, book_t *puckBook, learn_t *learn, 
                 pos_store_t undo;
                 makeMove(p, &undo, polyEntry[moveOn].move);
                 soFar->moves[depth] = polyEntry[moveOn].move;
-                puckEntry.key = p->hash;
+                puckEntry.key = p.hash;
                 puckOffset=find_puck_key(puckBook->bookFile,puckEntry.key,&tempPuckEntry); //Don't iterate if we already have this position (NOTE: this may mess with things if .pck already exists
                 if (tempPuckEntry.key != puckEntry.key) {
                     numAdded += polyglot_to_puck(polyBook,puckBook,learn, p, soFar, depth+1);
@@ -793,18 +793,18 @@ long polyglot_to_puck(const book_t *polyBook, book_t *puckBook, learn_t *learn, 
     return 0;
 
 }
-int current_puck_book_score(position_t *p, book_t *book) {
+int current_puck_book_score(position_t& p, book_t *book) {
     long offset;
     PuckBookEntry entry;
     if (book->bookFile==NULL || book->type!=PUCK_BOOK) {
         cout << "info string no hannibal book in puck_book_score?\n";
         return -DEFAULT_BOOK_SCORE;
     }
-    offset=find_puck_key(book->bookFile,p->hash,&entry);
-    if (p->hash==entry.key && entry.score != DEFAULT_BOOK_SCORE) return entry.score;
+    offset=find_puck_key(book->bookFile,p.hash,&entry);
+    if (p.hash==entry.key && entry.score != DEFAULT_BOOK_SCORE) return entry.score;
     return -DEFAULT_BOOK_SCORE;
 }
-int puck_book_score(position_t *p, book_t *book) {
+int puck_book_score(position_t& p, book_t *book) {
     PuckBookEntry entry;
     uint64 key;
     pos_store_t undo;
@@ -820,7 +820,7 @@ int puck_book_score(position_t *p, book_t *book) {
     int bestScore = -DEFAULT_BOOK_SCORE;
     for (int on = 0;on < ml.size;on++) {
         makeMove(p, &undo, ml.list[on].m);
-        key = p->hash;
+        key = p.hash;
         unmakeMove(p, &undo);
         offset=find_puck_key(book->bookFile,key,&entry);
         if (key==entry.key && entry.score != DEFAULT_BOOK_SCORE) {
@@ -848,7 +848,7 @@ void generateContinuation(continuation_t *variation) {
         makeMove(&pos, &undo, move);
     } while (true);
 }
-basic_move_t getBookMove(position_t *p, book_t *book, movelist_t *ml, bool verbose, int randomness) {
+basic_move_t getBookMove(position_t& p, book_t *book, movelist_t *ml, bool verbose, int randomness) {
     uint64 key; 
     int numMoves=0;
     uint64 totalWeight=0;
@@ -863,7 +863,7 @@ basic_move_t getBookMove(position_t *p, book_t *book, movelist_t *ml, bool verbo
         }
         PolyglotBookEntry entry;
         PolyglotBookEntry entries[MAX_MOVES];
-        key = p->hash;
+        key = p.hash;
         if (DEBUG_BOOK && verbose) cout << "info string looking in polyglot book\n";
         offset=find_polyglot_key(f,key,&entry,p);
         if (entry.key!=key) {
@@ -929,7 +929,7 @@ basic_move_t getBookMove(position_t *p, book_t *book, movelist_t *ml, bool verbo
         if (DEBUG_BOOK && verbose) Print(3,"info string looking in puck book %d\n",book->size);
         for (int on = 0;on < ml->size;on++) {
             makeMove(p, &undo, ml->list[on].m);
-            key = p->hash;
+            key = p.hash;
             unmakeMove(p, &undo);
             offset=find_puck_key(f,key,&entry);
             if (key==entry.key) {
@@ -939,7 +939,7 @@ basic_move_t getBookMove(position_t *p, book_t *book, movelist_t *ml, bool verbo
                 if (entries[numMoves].s == -DEFAULT_BOOK_SCORE && randomness>=10) //always try an untried book move if you are exploring
                     entries[numMoves].s = DEFAULT_BOOK_SCORE;
                 if (Guci_options.bookExplore) {
-                    int colorAdjustedScore = entries[numMoves].s - TEMPO_OPEN * sign[p->side];
+                    int colorAdjustedScore = entries[numMoves].s - TEMPO_OPEN * sign[p.side];
                     int random = rand()%randomness - rand()%randomness;
                     if (colorAdjustedScore > -randomness*2)
                         entries[numMoves].s += random; //random book move

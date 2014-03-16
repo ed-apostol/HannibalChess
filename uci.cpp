@@ -98,7 +98,7 @@ Interface::Interface() {
     initMaterial();
     InitMateBoost();
 
-    setPosition(&rootpos, STARTPOS);
+    setPosition(CEngine.rootpos, STARTPOS);
 }
 
 void Interface::Run() {
@@ -210,7 +210,7 @@ void Interface::Go(std::istringstream& stream) {
         info.time_limit_abs = info.start_time + movetime;
         LogInfo() <<"info string Fixed time per move: " << movetime << " ms";
     }
-    if (rootpos.side == WHITE) {
+    if (CEngine.rootpos.side == WHITE) {
         mytime = wtime;
         t_inc = winc;
     } else {
@@ -251,10 +251,10 @@ void Interface::Go(std::istringstream& stream) {
         LogInfo() <<"info string Search status is THINKING";
     }
 
-    DrawValue[rootpos.side] = -info.contempt;
-    DrawValue[rootpos.side^1] = info.contempt;
+    DrawValue[CEngine.rootpos.side] = -info.contempt;
+    DrawValue[CEngine.rootpos.side^1] = info.contempt;
 
-    ThreadsMgr.StartThinking(&rootpos);
+    ThreadsMgr.StartThinking();
 }
 
 void Interface::Position(std::istringstream& stream) {
@@ -273,16 +273,16 @@ void Interface::Position(std::istringstream& stream) {
         return;
     }
 
-    setPosition(&rootpos, fen.c_str());
+    setPosition(CEngine.rootpos, fen.c_str());
     while (stream >> token) {
         movelist_t ml;
-        genLegal(&rootpos, &ml, true);
+        genLegal(CEngine.rootpos, &ml, true);
         m = parseMove(&ml, token.c_str());
-        if (m) makeMove(&rootpos, &UndoStack[rootpos.sp], m);
+        if (m) makeMove(CEngine.rootpos, &UndoStack[CEngine.rootpos.sp], m);
         else break;
-        if (rootpos.posStore.fifty==0) rootpos.sp = 0;
+        if (CEngine.rootpos.posStore.fifty==0) CEngine.rootpos.sp = 0;
     }
-    rootpos.ply = 0;
+    CEngine.rootpos.ply = 0;
 }
 
 void Interface::SetOption(std::istringstream& stream) {

@@ -61,6 +61,4 @@ private:
     static const std::string year;
     static const std::string version;
     static const std::string arch;
-
-    position_t rootpos; // TODO: move to ThreadsManager class
 };
