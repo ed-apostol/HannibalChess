@@ -420,7 +420,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 pos_store_t undo;
                 int nullDepth = depth - (4 + depth / 5 + (ss.evalvalue - beta > PawnValue));
                 makeNullMove(pos, &undo);
-                int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, thread_id, AllNode);
+                int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, thread_id, invertNode(nt));
                 ss.threatMove = ss.counterMove;
                 unmakeNullMove(pos, &undo);
                 if (Threads[thread_id].stop) return 0;
