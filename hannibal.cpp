@@ -78,9 +78,9 @@ can knight catch pawns code from LL
 #define INIT_PVHASH 1
 
 #else
-#define INIT_EVAL 64
-#define INIT_PAWN 32
-#define INIT_HASH 128
+#define INIT_EVAL 4
+#define INIT_PAWN 4
+#define INIT_HASH 64
 #define INIT_PVHASH 1
 
 #define DEFAULT_POLYGLOT_BOOK "HannibalPoly.bin"

@@ -503,49 +503,49 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
         if (anyRepNoMove(pos, move->m)) { 
             score = DrawValue[pos->side];
         } else {
-			int newdepth;
+            int newdepth;
             pos_store_t undo;
             ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
-			if (ss.bestvalue == -INF) { //TODO remove this from loop and do it first
-				newdepth = depth - !ss.firstExtend;
+            if (ss.bestvalue == -INF) { //TODO remove this from loop and do it first
+                newdepth = depth - !ss.firstExtend;
                 makeMove(pos, &undo, move->m);
                 score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, thread_id, invertNode(nt));
             } 
             else {
-				newdepth = depth -1;
-				//only reduce or prune some types of moves
-				int partialReduction = 0;
-				int fullReduction = 0;
-				if (MoveGenPhase[ss.mvlist_phase] == PH_QUIET_MOVES && !ss.moveGivesCheck) { //never happens when in check
-					bool goodMove = (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsPassedPawn(pos, move->m);
-					if (!inRoot && !inPvNode(nt) /*&& pruneable*/) { //TODO consider adding something similar back in
-						if (ss.playedMoves > lateMove && !goodMove) continue;
-						int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(ss.playedMoves,63)]);
-						int scoreAprox = ss.evalvalue + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(ss.playedMoves,63)]
-							+ SearchInfo(thread_id).evalgains[historyIndex(pos->side, move->m)];
-						
-						if (scoreAprox < beta) {
-							if (predictedDepth < 8 && !goodMove) continue;
-							fullReduction++;
-						}
-						if (swap(pos, move->m) < 0) {
-							if (predictedDepth < 2) continue;
-							fullReduction++; 
-						}
-					}
-					if (depth >= MIN_REDUCTION_DEPTH) { 
-						int reduction = ReductionTable[(inPvNode(nt)?0:1)][MIN(depth,63)][MIN(ss.playedMoves,63)];
-						partialReduction += goodMove ? (reduction+1)/2 : reduction; 
-					}
-				}
-				else if ((MoveGenPhase[ss.mvlist_phase] == PH_BAD_CAPTURES || 
-					(MoveGenPhase[ss.mvlist_phase] == PH_QUIET_MOVES && swap(pos, move->m) < 0)) && !inRoot && !inPvNode(nt)) fullReduction++;  //never happens when in check
-				newdepth -= fullReduction;
-				int newdepthclone = newdepth - partialReduction;
+                newdepth = depth -1;
+                //only reduce or prune some types of moves
+                int partialReduction = 0;
+                int fullReduction = 0;
+                if (MoveGenPhase[ss.mvlist_phase] == PH_QUIET_MOVES && !ss.moveGivesCheck) { //never happens when in check
+                    bool goodMove = (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsPassedPawn(pos, move->m);
+                    if (!inRoot && !inPvNode(nt) /*&& pruneable*/) { //TODO consider adding something similar back in
+                        if (ss.playedMoves > lateMove && !goodMove) continue;
+                        int predictedDepth = MAX(0,newdepth - ReductionTable[1][MIN(depth,63)][MIN(ss.playedMoves,63)]);
+                        int scoreAprox = ss.evalvalue + FutilityMarginTable[MIN(predictedDepth,MAX_FUT_MARGIN)][MIN(ss.playedMoves,63)]
+                            + SearchInfo(thread_id).evalgains[historyIndex(pos->side, move->m)];
+                        
+                        if (scoreAprox < beta) {
+                            if (predictedDepth < 8 && !goodMove) continue;
+                            fullReduction++;
+                        }
+                        if (swap(pos, move->m) < 0) {
+                            if (predictedDepth < 2) continue;
+                            fullReduction++; 
+                        }
+                    }
+                    if (depth >= MIN_REDUCTION_DEPTH) { 
+                        int reduction = ReductionTable[(inPvNode(nt)?0:1)][MIN(depth,63)][MIN(ss.playedMoves,63)];
+                        partialReduction += goodMove ? (reduction+1)/2 : reduction; 
+                    }
+                }
+                else if ((MoveGenPhase[ss.mvlist_phase] == PH_BAD_CAPTURES || 
+                    (MoveGenPhase[ss.mvlist_phase] == PH_QUIET_MOVES && swap(pos, move->m) < 0)) && !inRoot && !inPvNode(nt)) fullReduction++;  //never happens when in check
+                newdepth -= fullReduction;
+                int newdepthclone = newdepth - partialReduction;
                 makeMove(pos, &undo, move->m);
                 if (inSplitPoint) alpha = sp->alpha;
                 ss.reducedMove = (newdepthclone < newdepth); //TODO consider taking into account full reductions
-				
+                
                 score = -searchNode<false, false, false>(pos, -alpha-1, -alpha, newdepthclone, ss, thread_id, CutNode);
                 if (ss.reducedMove && score > alpha) {
                     ss.reducedMove = false;
