@@ -544,7 +544,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 if (inSplitPoint) alpha = sp->alpha;
                 ss.reducedMove = (newdepthclone < newdepth); //TODO consider taking into account full reductions
 
-                score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepthclone, ss, thread_id, CutNode);
+                score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepthclone, ss, thread_id, inCutNode(nt) ? AllNode : CutNode);
                 if (ss.reducedMove && score > alpha) {
                     ss.reducedMove = false;
                     score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepth, ss, thread_id, AllNode);
