@@ -11,17 +11,17 @@
 using namespace std;
 #endif
 
-INLINE uint moveFrom(basic_move_t m) {return (63&(m));}
-INLINE uint moveTo(basic_move_t m) {return (63&((m)>>6));}
-INLINE uint movePiece(basic_move_t m) {return (7&((m)>>12));}
-INLINE uint moveAction(basic_move_t m) {return (63&((m)>>12));}
-INLINE uint moveCapture(basic_move_t m) {return (7&((m)>>18));}
-INLINE uint moveRemoval(basic_move_t m) {return (15&((m)>>18));}
-INLINE uint movePromote(basic_move_t m) {return (7&((m)>>22));}
-INLINE uint isCastle(basic_move_t m) {return (((m)>>15)&1);}
-INLINE uint isPawn2Forward(basic_move_t m) {return (((m)>>16)&1);}
-INLINE uint isPromote(basic_move_t m) {return (((m)>>17)&1);}
-INLINE uint isEnPassant(basic_move_t m) {return  (((m)>>21)&1);}
+INLINE uint moveFrom(basic_move_t m) { return (63 & (m)); }
+INLINE uint moveTo(basic_move_t m) { return (63 & ((m) >> 6)); }
+INLINE uint movePiece(basic_move_t m) { return (7 & ((m) >> 12)); }
+INLINE uint moveAction(basic_move_t m) { return (63 & ((m) >> 12)); }
+INLINE uint moveCapture(basic_move_t m) { return (7 & ((m) >> 18)); }
+INLINE uint moveRemoval(basic_move_t m) { return (15 & ((m) >> 18)); }
+INLINE uint movePromote(basic_move_t m) { return (7 & ((m) >> 22)); }
+INLINE uint isCastle(basic_move_t m) { return (((m) >> 15) & 1); }
+INLINE uint isPawn2Forward(basic_move_t m) { return (((m) >> 16) & 1); }
+INLINE uint isPromote(basic_move_t m) { return (((m) >> 17) & 1); }
+INLINE uint isEnPassant(basic_move_t m) { return  (((m) >> 21) & 1); }
 
 /* a utility to print output into different files:
 bit 0: stdout
@@ -32,25 +32,25 @@ bit 3: dumpfile
 void Print(int vb, char *fmt, ...) {
     va_list ap;
 
-    ASSERT( vb >= 1 && vb <= 15);
+    ASSERT(vb >= 1 && vb <= 15);
 
     va_start(ap, fmt);
-    if (vb&1) {
+    if (vb & 1) {
         vprintf(fmt, ap);
         fflush(stdout);
     }
     va_start(ap, fmt);
-    if (logfile&&((vb>>1)&1)) {
+    if (logfile && ((vb >> 1) & 1)) {
         vfprintf(logfile, fmt, ap);
         fflush(logfile);
     }
     va_start(ap, fmt);
-    if (errfile&&((vb>>2)&1)) {
+    if (errfile && ((vb >> 2) & 1)) {
         vfprintf(errfile, fmt, ap);
         fflush(errfile);
     }
     va_start(ap, fmt);
-    if (dumpfile&&((vb>>3)&1)) {
+    if (dumpfile && ((vb >> 3) & 1)) {
         vfprintf(dumpfile, fmt, ap);
         fflush(dumpfile);
     }
@@ -61,7 +61,7 @@ void Print(int vb, char *fmt, ...) {
 void displayBit(uint64 a, int x) {
     int i, j;
     for (i = 56; i >= 0; i -= 8) {
-        Print(x, "\n%d  ",(i / 8) + 1);
+        Print(x, "\n%d  ", (i / 8) + 1);
         for (j = 0; j < 8; ++j) {
             Print(x, "%c ", ((a & ((uint64)1 << (i + j))) ? '1' : '_'));
         }
@@ -73,18 +73,17 @@ int fr_square(int f, int r) {
     return ((r << 3) | f);
 }
 void showBitboard(uint64 b, int x) {
-    int i,j;
-    for (j = 7; j >= 0; j=j-1) {
-        for (i=0; i <= 7; i=i+1) {
+    int i, j;
+    for (j = 7; j >= 0; j = j - 1) {
+        for (i = 0; i <= 7; i = i + 1) {
             int sq = fr_square(i, j);
             uint64 sqBM = BitMask[sq];
             if (sqBM & b) {
-                Print(x,"X");
-            }
-            else Print(x,".");
-            Print(x," ");
+                Print(x, "X");
+            } else Print(x, ".");
+            Print(x, " ");
         }
-        Print(x,"\n");
+        Print(x, "\n");
     }
 }
 /* a utility to convert large int to hex string*/
@@ -104,19 +103,19 @@ char *bit2Str(uint64 n) {
 
 /* a utility to convert int move to string */
 char *move2Str(basic_move_t m) {
-    static char promstr[]="\0pnbrqk";
+    static char promstr[] = "\0pnbrqk";
     static char str[6];
 
     /* ASSERT(moveIsOk(m)); */
 
-    if (m == 0) sprintf(str, "%c%c%c%c%c", '0','0','0','0','\0');
+    if (m == 0) sprintf(str, "%c%c%c%c%c", '0', '0', '0', '0', '\0');
     else sprintf(str, "%c%c%c%c%c",
         SQFILE(moveFrom(m)) + 'a',
         '1' + SQRANK(moveFrom(m)),
         SQFILE(moveTo(m)) + 'a',
         '1' + SQRANK(moveTo(m)),
         promstr[movePromote(m)]
-    );
+        );
     return str;
 }
 
@@ -245,13 +244,13 @@ int getColor(const position_t *pos, uint32 sq) {
         return WHITE;
     }
 }
-int DiffColor(const position_t *pos, uint32 sq,int color) {
+int DiffColor(const position_t *pos, uint32 sq, int color) {
     //    uint64 mask = BitMask[sq];
 
     ASSERT(pos != NULL);
     ASSERT(squareIsOk(sq));
 
-    return ((BitMask[sq] & pos->color[color]) ==0);
+    return ((BitMask[sq] & pos->color[color]) == 0);
 }
 /* returns time in milli-seconds */
 uint64 getTime(void) {
@@ -351,14 +350,14 @@ int anyRep(const position_t *pos) //this is used for book repetition detection, 
     int lastCheck;
     if (pos->posStore.fifty >= 100) return TRUE;
 
-    ASSERT (pos->sp >= pos->posStore.fifty);
+    ASSERT(pos->sp >= pos->posStore.fifty);
 
     lastCheck = pos->sp - pos->posStore.fifty;
     //	ASSERT (pos->posStore.fifty <= 100);// might not be true, since checks in Qsearch and no
-    ASSERT (lastCheck < MAX_HASH_STORE);
+    ASSERT(lastCheck < MAX_HASH_STORE);
 
     //	if (lastCheck < 0) lastCheck = 0; // we need this because fen allows fifty to be greater than moves we can check
-    for (i = (int)pos->sp-4; i >= lastCheck; i -= 2)
+    for (i = (int)pos->sp - 4; i >= lastCheck; i -= 2)
     {
         //ASSERT(pos->stack[i] != 0); //hmmm, maybe this is needed?
         if (pos->stack[i] == pos->hash) return TRUE;
@@ -375,14 +374,14 @@ int anyRepNoMove(const position_t *pos, const int m) {//assumes no castle and no
 
     if (moveCapture(m) || isCastle(m) || pos->posStore.fifty < 3) return FALSE;
     moved = movePiece(m);
-    if (moved==PAWN) return FALSE;
+    if (moved == PAWN) return FALSE;
     if (pos->posStore.fifty >= 99) return TRUE;
     lastCheck = pos->sp - pos->posStore.fifty;
     //TODO consider  castle check in here
     fromSq = moveFrom(m);
     toSq = moveTo(m);
     compareTo = pos->hash ^ ZobColor ^ ZobPiece[pos->side][moved][fromSq] ^ ZobPiece[pos->side][moved][toSq];
-    i = (int)pos->sp-3;
+    i = (int)pos->sp - 3;
     do {
         if (pos->stack[i] == compareTo) return TRUE;
         i -= 2;

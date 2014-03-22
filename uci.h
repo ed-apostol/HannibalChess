@@ -40,7 +40,7 @@ void uciStart(void) {
     Print(3, "option name Ponder type check default false\n");
 #ifndef TCEC
     Print(3, "option name OwnBook type check default false\n");
-    Print(3, "option name Book File type string default %s\n",DEFAULT_POLYGLOT_BOOK);
+    Print(3, "option name Book File type string default %s\n", DEFAULT_POLYGLOT_BOOK);
 #ifdef LEARNING_ON
     Print(3, "option name HannibalBook File type string default %s\n",DEFAULT_HANNIBAL_BOOK);
     Print(3, "option name UseHannibalBook type check default true\n"); //TODO fix
@@ -62,32 +62,32 @@ void uciStart(void) {
 void uciSetOption(char string[]) {
     char *name, *value;
 
-    name = strstr(string,"name ");
-    value = strstr(string,"value ");
+    name = strstr(string, "name ");
+    value = strstr(string, "value ");
 
     name += 5;
     value += 6;
 
-    if (!memcmp(name,"Hash",4)) {
-        initTrans(atoi(value),0);
-    } else if (!memcmp(name,"Pawn Hash",9)) {
+    if (!memcmp(name, "Hash", 4)) {
+        initTrans(atoi(value), 0);
+    } else if (!memcmp(name, "Pawn Hash", 9)) {
         Guci_options.pawnhashsize = atoi(value);
         initPawnTab(&SearchInfo(0).pt, Guci_options.pawnhashsize);
 
-    } else if (!memcmp(name,"Eval Cache",10)) {
+    } else if (!memcmp(name, "Eval Cache", 10)) {
         Guci_options.evalcachesize = atoi(value);
         initEvalTab(&SearchInfo(0).et, Guci_options.evalcachesize);
-    } else if (!memcmp(name,"Clear Hash",10)) {
+    } else if (!memcmp(name, "Clear Hash", 10)) {
         transClear(0);
-    } 
+    }
 #ifndef TCEC
-    else if (!memcmp(name,"OwnBook",7)) {
+    else if (!memcmp(name, "OwnBook", 7)) {
         SearchInfo(thread_id).outOfBook = 0;
         if (value[0] == 't') Guci_options.try_book = TRUE;
         else Guci_options.try_book = FALSE;
-    } else if (!memcmp(name,"Book File",9)) {
+    } else if (!memcmp(name, "Book File", 9)) {
         initBook(value, &GpolyglotBook, POLYGLOT_BOOK);
-    } else if (!memcmp(name,"Book Move Limit",15)) {
+    } else if (!memcmp(name, "Book Move Limit", 15)) {
         SearchInfo(thread_id).outOfBook = 0;
         Guci_options.book_limit = atoi(value);
     }
@@ -126,13 +126,13 @@ void uciSetOption(char string[]) {
     }
 #endif
 #endif
-    else if (!memcmp(name,"Time Buffer",11)) {
+    else if (!memcmp(name, "Time Buffer", 11)) {
         Guci_options.time_buffer = atoi(value);
-    } else if (!memcmp(name,"Contempt",8)) {
+    } else if (!memcmp(name, "Contempt", 8)) {
         Guci_options.contempt = atoi(value);
-    } else if (!memcmp(name,"Threads",7)) {
+    } else if (!memcmp(name, "Threads", 7)) {
         int oldValue = Guci_options.threads;
-        int newValue  = atoi(value);
+        int newValue = atoi(value);
 #ifdef LEARNING_ON
         if (Guci_options.threads + Guci_options.learnThreads > MaxNumOfThreads) newValue = MaxNumOfThreads - Guci_options.learnThreads;
 #endif
@@ -142,9 +142,9 @@ void uciSetOption(char string[]) {
             }
         }
         Guci_options.threads = newValue;
-    } else if (!memcmp(name,"Min Split Depth",15)) {
+    } else if (!memcmp(name, "Min Split Depth", 15)) {
         Guci_options.min_split_depth = atoi(value);
-    } else if (!memcmp(name,"Max Split Threads",17)) {
+    } else if (!memcmp(name, "Max Split Threads", 17)) {
         Guci_options.max_split_threads = atoi(value);
     }
 }
@@ -167,8 +167,8 @@ void uciParseSearchmoves(movelist_t *ml, char *str, uint32 moves[]) {
             '1' <= movestr[1] && movestr[1] <= '8' &&
             'a' <= movestr[2] && movestr[2] <= 'h' &&
             '1' <= movestr[3] && movestr[3] <= '8') {
-                m = parseMove(ml, movestr);
-                if (m) *move++ = m;
+            m = parseMove(ml, movestr);
+            if (m) *move++ = m;
         } else break;
         while (isspace(*c)) c++;
     }
@@ -180,7 +180,7 @@ void uciGo(position_t *pos, char *options) {
     char *ponder, *infinite;
     char *c;
     int64 mytime = 0, t_inc = 0;
-    int wtime=0, btime=0, winc=0, binc=0, movestogo=0, upperdepth=0, nodes=0, mate=0, movetime=0;
+    int wtime = 0, btime = 0, winc = 0, binc = 0, movestogo = 0, upperdepth = 0, nodes = 0, mate = 0, movetime = 0;
     movelist_t ml;
 
     ASSERT(pos != NULL);
@@ -223,9 +223,9 @@ void uciGo(position_t *pos, char *options) {
     infinite = strstr(options, "infinite");
     ponder = strstr(options, "ponder");
     c = strstr(options, "wtime");
-    if (c != NULL) sscanf(c+6, "%d", &wtime);
+    if (c != NULL) sscanf(c + 6, "%d", &wtime);
     c = strstr(options, "btime");
-    if (c != NULL) sscanf(c+6, "%d", &btime);
+    if (c != NULL) sscanf(c + 6, "%d", &btime);
     c = strstr(options, "winc");
     if (c != NULL) sscanf(c + 5, "%d", &winc);
     c = strstr(options, "binc");
@@ -242,7 +242,7 @@ void uciGo(position_t *pos, char *options) {
     if (c != NULL) sscanf(c + 9, "%d", &movetime);
     c = strstr(options, "searchmoves");
     if (c != NULL) {
-        genLegal(pos, &ml,TRUE);
+        genLegal(pos, &ml, TRUE);
         uciParseSearchmoves(&ml, c + 12, &(SearchInfo(0).moves[0]));
     }
 
@@ -319,9 +319,9 @@ void uciGo(position_t *pos, char *options) {
         Print(2, "info string Search status is THINKING\n");
     }
     /* initialize UCI parameters to be used in search */
-    DrawValue[pos->side] = - Guci_options.contempt;
-    DrawValue[pos->side^1] = Guci_options.contempt;
-    getBestMove(pos,0);
+    DrawValue[pos->side] = -Guci_options.contempt;
+    DrawValue[pos->side ^ 1] = Guci_options.contempt;
+    getBestMove(pos, 0);
     if (!SearchInfo(0).bestmove) {
         if (RETURN_MOVE)
             Print(3, "info string No legal move found. Start a new game.\n\n");
@@ -369,7 +369,7 @@ void uciSetPosition(position_t *pos, char *str) {
             m = movestr;
             while (*c != '\0' && !isspace(*c)) *m++ = *c++;
             *m = '\0';
-            genLegal(pos, &ml,TRUE);
+            genLegal(pos, &ml, TRUE);
             move = parseMove(&ml, movestr);
             if (!move) {
                 Print(3, "info string Illegal move: %s\n", movestr);
@@ -382,7 +382,7 @@ void uciSetPosition(position_t *pos, char *str) {
             }
 #endif
             // this is to allow any number of moves in a game by only keeping the last relevant ones for rep detection
-            if (pos->posStore.fifty==0) {
+            if (pos->posStore.fifty == 0) {
                 pos->stack[0] = pos->hash;
                 pos->sp = 0;
             }

@@ -25,7 +25,7 @@ write situation specific transtores
 can knight catch pawns code from LL
 //68 at 3:29
 */
-#define VERSION            "1.4bx64"
+#define VERSION            "1.5beta1"
 #define NUM_THREADS			    1
 #define MIN_SPLIT_DEPTH			4 // best is 4
 #define MAX_SPLIT_THREADS		4 // best is 4

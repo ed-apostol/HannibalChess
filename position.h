@@ -62,7 +62,7 @@ void makeNullMove(position_t *pos, pos_store_t *undo) {
 
 /* this undos the move done */
 void unmakeMove(position_t *pos, pos_store_t *undo) {
-    unsigned int side, xside, m, rook_from=0, rook_to=0, epsq=0, from, to;
+    unsigned int side, xside, m, rook_from = 0, rook_to = 0, epsq = 0, from, to;
 
     ASSERT(pos != NULL);
 
@@ -73,7 +73,7 @@ void unmakeMove(position_t *pos, pos_store_t *undo) {
     xside = pos->side;
     side = xside ^ 1;
     pos->side = side;
-    memcpy(&pos->posStore,undo,sizeof(pos_store_t));
+    memcpy(&pos->posStore, undo, sizeof(pos_store_t));
 
     pos->hash = pos->stack[pos->sp];
 
@@ -208,7 +208,7 @@ void unmakeMove(position_t *pos, pos_store_t *undo) {
 
 /* this updates the position structure from the move being played */
 void makeMove(position_t *pos, pos_store_t *undo, basic_move_t m) {
-    unsigned int rook_from=0, rook_to=0, epsq=0, prom, from, to, side, xside;
+    unsigned int rook_from = 0, rook_to = 0, epsq = 0, prom, from, to, side, xside;
 
     ASSERT(pos != NULL);
     ASSERT(moveIsOk(m));
@@ -216,9 +216,9 @@ void makeMove(position_t *pos, pos_store_t *undo, basic_move_t m) {
     from = moveFrom(m);
     to = moveTo(m);
     side = pos->side;
-    xside = side^1;
+    xside = side ^ 1;
 
-    memcpy(undo,&pos->posStore,sizeof(pos_store_t));
+    memcpy(undo, &pos->posStore, sizeof(pos_store_t));
 #ifdef LAZY
     pos->posStore.sinceLazy++;
 #endif
@@ -242,8 +242,8 @@ void makeMove(position_t *pos, pos_store_t *undo, basic_move_t m) {
         pos->hash ^= ZobPiece[side][PAWN][to];
         pos->posStore.phash ^= ZobPiece[side][PAWN][from];
         pos->posStore.phash ^= ZobPiece[side][PAWN][to];
-        pos->posStore.open[side] += PST(side, PAWN, to, MIDGAME) -  PST(side, PAWN, from, MIDGAME);
-        pos->posStore.end[side] += PST(side, PAWN, to, ENDGAME) -  PST(side, PAWN, from, ENDGAME);
+        pos->posStore.open[side] += PST(side, PAWN, to, MIDGAME) - PST(side, PAWN, from, MIDGAME);
+        pos->posStore.end[side] += PST(side, PAWN, to, ENDGAME) - PST(side, PAWN, from, ENDGAME);
         pos->posStore.fifty = 0;
         break;
     case KNIGHT:
@@ -251,32 +251,32 @@ void makeMove(position_t *pos, pos_store_t *undo, basic_move_t m) {
         pos->knights ^= (BitMask[from] | BitMask[to]);
         pos->hash ^= ZobPiece[side][KNIGHT][from];
         pos->hash ^= ZobPiece[side][KNIGHT][to];
-        pos->posStore.open[side] += PST(side, KNIGHT, to, MIDGAME) -  PST(side, KNIGHT, from, MIDGAME);
-        pos->posStore.end[side] += PST(side, KNIGHT, to, ENDGAME) -  PST(side, KNIGHT, from, ENDGAME);
+        pos->posStore.open[side] += PST(side, KNIGHT, to, MIDGAME) - PST(side, KNIGHT, from, MIDGAME);
+        pos->posStore.end[side] += PST(side, KNIGHT, to, ENDGAME) - PST(side, KNIGHT, from, ENDGAME);
         break;
     case BISHOP:
         pos->pieces[to] = BISHOP;
         pos->bishops ^= (BitMask[from] | BitMask[to]);
         pos->hash ^= ZobPiece[side][BISHOP][from];
         pos->hash ^= ZobPiece[side][BISHOP][to];
-        pos->posStore.open[side] += PST(side, BISHOP, to, MIDGAME) -  PST(side, BISHOP, from, MIDGAME);
-        pos->posStore.end[side] += PST(side, BISHOP, to, ENDGAME) -  PST(side, BISHOP, from, ENDGAME);
+        pos->posStore.open[side] += PST(side, BISHOP, to, MIDGAME) - PST(side, BISHOP, from, MIDGAME);
+        pos->posStore.end[side] += PST(side, BISHOP, to, ENDGAME) - PST(side, BISHOP, from, ENDGAME);
         break;
     case ROOK:
         pos->pieces[to] = ROOK;
         pos->rooks ^= (BitMask[from] | BitMask[to]);
         pos->hash ^= ZobPiece[side][ROOK][from];
         pos->hash ^= ZobPiece[side][ROOK][to];
-        pos->posStore.open[side] += PST(side, ROOK, to, MIDGAME) -  PST(side, ROOK, from, MIDGAME);
-        pos->posStore.end[side] += PST(side, ROOK, to, ENDGAME) -  PST(side, ROOK, from, ENDGAME);
+        pos->posStore.open[side] += PST(side, ROOK, to, MIDGAME) - PST(side, ROOK, from, MIDGAME);
+        pos->posStore.end[side] += PST(side, ROOK, to, ENDGAME) - PST(side, ROOK, from, ENDGAME);
         break;
     case QUEEN:
         pos->pieces[to] = QUEEN;
         pos->queens ^= (BitMask[from] | BitMask[to]);
         pos->hash ^= ZobPiece[side][QUEEN][from];
         pos->hash ^= ZobPiece[side][QUEEN][to];
-        pos->posStore.open[side] += PST(side, QUEEN, to, MIDGAME) -  PST(side, QUEEN, from, MIDGAME);
-        pos->posStore.end[side] += PST(side, QUEEN, to, ENDGAME) -  PST(side, QUEEN, from, ENDGAME);
+        pos->posStore.open[side] += PST(side, QUEEN, to, MIDGAME) - PST(side, QUEEN, from, MIDGAME);
+        pos->posStore.end[side] += PST(side, QUEEN, to, ENDGAME) - PST(side, QUEEN, from, ENDGAME);
         break;
     case KING:
         pos->pieces[to] = KING;
@@ -284,8 +284,8 @@ void makeMove(position_t *pos, pos_store_t *undo, basic_move_t m) {
         pos->kings ^= (BitMask[from] | BitMask[to]);
         pos->hash ^= ZobPiece[side][KING][from];
         pos->hash ^= ZobPiece[side][KING][to];
-        pos->posStore.open[side] += PST(side, KING, to, MIDGAME) -  PST(side, KING, from, MIDGAME);
-        pos->posStore.end[side] += PST(side, KING, to, ENDGAME) -  PST(side, KING, from, ENDGAME);
+        pos->posStore.open[side] += PST(side, KING, to, MIDGAME) - PST(side, KING, from, MIDGAME);
+        pos->posStore.end[side] += PST(side, KING, to, ENDGAME) - PST(side, KING, from, ENDGAME);
         pos->posStore.phash ^= ZobPiece[side][KING][from];
         pos->posStore.phash ^= ZobPiece[side][KING][to];
         break;
@@ -300,8 +300,8 @@ void makeMove(position_t *pos, pos_store_t *undo, basic_move_t m) {
         pos->hash ^= ZobPiece[side][PAWN][to];
         pos->posStore.phash ^= ZobPiece[side][PAWN][from];
         pos->posStore.phash ^= ZobPiece[side][PAWN][to];
-        pos->posStore.open[side] += PST(side, PAWN, to, MIDGAME) -  PST(side, PAWN, from, MIDGAME);
-        pos->posStore.end[side] += PST(side, PAWN, to, ENDGAME) -  PST(side, PAWN, from, ENDGAME);
+        pos->posStore.open[side] += PST(side, PAWN, to, MIDGAME) - PST(side, PAWN, from, MIDGAME);
+        pos->posStore.end[side] += PST(side, PAWN, to, ENDGAME) - PST(side, PAWN, from, ENDGAME);
         pos->posStore.fifty = 0;
         break;
     case CASTLE:
@@ -339,17 +339,17 @@ void makeMove(position_t *pos, pos_store_t *undo, basic_move_t m) {
         pos->hash ^= ZobPiece[side][ROOK][rook_to];
         pos->posStore.phash ^= ZobPiece[side][KING][from];
         pos->posStore.phash ^= ZobPiece[side][KING][to];
-        pos->posStore.open[side] += PST(side, KING, to, MIDGAME) -  PST(side, KING, from, MIDGAME);
-        pos->posStore.end[side] += PST(side, KING, to, ENDGAME) -  PST(side, KING, from, ENDGAME);
-        pos->posStore.open[side] += PST(side, ROOK, rook_to, MIDGAME) -  PST(side, ROOK, rook_from, MIDGAME);
-        pos->posStore.end[side] += PST(side, ROOK, rook_to, ENDGAME) -  PST(side, ROOK, rook_from, ENDGAME);
+        pos->posStore.open[side] += PST(side, KING, to, MIDGAME) - PST(side, KING, from, MIDGAME);
+        pos->posStore.end[side] += PST(side, KING, to, ENDGAME) - PST(side, KING, from, ENDGAME);
+        pos->posStore.open[side] += PST(side, ROOK, rook_to, MIDGAME) - PST(side, ROOK, rook_from, MIDGAME);
+        pos->posStore.end[side] += PST(side, ROOK, rook_to, ENDGAME) - PST(side, ROOK, rook_from, ENDGAME);
         break;
     case PROMOTE:
         prom = movePromote(m);
         pos->pawns ^= BitMask[from];
         pos->posStore.fifty = 0;
-        pos->posStore.open[side] += PST(side, prom, to, MIDGAME) -  PST(side, PAWN, from, MIDGAME);
-        pos->posStore.end[side] += PST(side, prom, to, ENDGAME) -  PST(side, PAWN, from, ENDGAME);
+        pos->posStore.open[side] += PST(side, prom, to, MIDGAME) - PST(side, PAWN, from, MIDGAME);
+        pos->posStore.end[side] += PST(side, prom, to, ENDGAME) - PST(side, PAWN, from, ENDGAME);
         pos->posStore.mat_summ[side] -= MatSummValue[PAWN];
         pos->hash ^= ZobPiece[side][PAWN][from];
         pos->posStore.phash ^= ZobPiece[side][PAWN][from];
@@ -462,7 +462,7 @@ void makeMove(position_t *pos, pos_store_t *undo, basic_move_t m) {
     pos->color[side] ^= (BitMask[from] | BitMask[to]);
     pos->occupied = pos->color[side] | pos->color[xside];
     ++pos->ply;
-    ASSERT(pos->sp+1 <MAX_HASH_STORE);
+    ASSERT(pos->sp + 1 < MAX_HASH_STORE);
     pos->stack[++pos->sp] = pos->hash;
     pos->side = xside;
 #ifdef DEBUG
@@ -645,14 +645,15 @@ void setPosition(position_t *pos, const char *fen) {
         fen++;
     }
     while (isspace(*fen)) fen++;
-    if (*fen!='\0') {
-        if (*fen!='-') {
+    if (*fen != '\0') {
+        if (*fen != '-') {
             if (fen[0] >= 'a' && fen[0] <= 'h' && fen[1] >= '1' && fen[1] <= '8') {
                 pos->posStore.epsq = fen[0] - 'a' + (fen[1] - '1') * 8;
             }
             do {
                 fen++;
-            } while (!isspace(*fen));        }
+            } while (!isspace(*fen));
+        }
         do {
             fen++;
         } while (isspace(*fen));
@@ -660,11 +661,11 @@ void setPosition(position_t *pos, const char *fen) {
             int fiftyInt;
             sscanf(fen, "%d", &fiftyInt);
             if (fiftyInt >= 0 && fiftyInt <= 100) {
-                pos->posStore.fifty = (uint32) fiftyInt;
-                for(i=0;i<fiftyInt;i++) {
+                pos->posStore.fifty = (uint32)fiftyInt;
+                for (i = 0; i < fiftyInt; i++) {
                     pos->stack[i] = 0;
                 }
-                pos->sp=pos->posStore.fifty;
+                pos->sp = pos->posStore.fifty;
                 //pos->stack[pos->sp] = pos->hash; DONE BELOW
             }
         }
@@ -717,7 +718,7 @@ char *positionToFEN(const position_t *pos) {
         fen[c++] = (rank > Rank1) ? '/' : ' ';
     }
 
-    fen[c++] = (pos->side == WHITE)? 'w' : 'b';
+    fen[c++] = (pos->side == WHITE) ? 'w' : 'b';
     fen[c++] = ' ';
 
     if (pos->posStore.castle == 0) fen[c++] = '-';

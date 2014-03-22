@@ -49,7 +49,7 @@ extern int key045(uint64 b, int f);
 extern int key135(uint64 b, int f);
 extern uint64 getLowestBit(uint64 bb);
 extern uint64 _occ_free_board(int bc, int del, uint64 free);
-extern void _init_rays(uint64* rays, uint64 (*rayFunc) (int, uint64, int), int (*key)(uint64, int));
+extern void _init_rays(uint64* rays, uint64(*rayFunc) (int, uint64, int), int(*key)(uint64, int));
 extern void setBit(int f, uint64 *b);
 extern uint64 _rook0(int f, uint64 board, int t);
 extern uint64 _rook90(int f, uint64 board, int t);
@@ -83,7 +83,7 @@ extern int swap(const position_t *pos, uint32 m);
 extern  void initMaterial(void);
 
 /* movegen.c */
-extern void genLegal(const position_t *pos, movelist_t *mvlist,int promoteAll);
+extern void genLegal(const position_t *pos, movelist_t *mvlist, int promoteAll);
 extern void genNonCaptures(const position_t *pos, movelist_t *mvlist);
 extern void genCaptures(const position_t *pos, movelist_t *mvlist);
 extern void genEvasions(const position_t *pos, movelist_t *mvlist);
@@ -115,7 +115,7 @@ extern move_t* sortNext(SplitPoint* sp, position_t *pos, movelist_t *mvlist, int
 extern uint32 captureIsGood(const position_t *pos, uint32 m);
 extern void scoreCaptures(movelist_t *mvlist);
 extern void scoreCapturesPure(movelist_t *mvlist);
-extern void scoreNonCaptures(const position_t *pos,movelist_t *mvlist, int thread_id);
+extern void scoreNonCaptures(const position_t *pos, movelist_t *mvlist, int thread_id);
 extern void scoreAll(const position_t *pos, movelist_t *mvlist, int thread_id);
 extern void scoreAllQ(movelist_t *mvlist, int thread_id);
 extern void scoreRoot(movelist_t *mvlist);

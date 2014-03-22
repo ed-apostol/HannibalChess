@@ -49,7 +49,7 @@ int main(void) {
     initBook(DEFAULT_HANNIBAL_BOOK, &GhannibalBook, PUCK_BOOK);
     initLearn("HannibalLearn.lrn", &Glearn);
 #endif
-    initTrans(INIT_HASH,0);
+    initTrans(INIT_HASH, 0);
     initPVHashTab(&PVHashTable, INIT_PVHASH);
     initPawnTab(&SearchInfo(0).pt, INIT_PAWN);
     initEvalTab(&SearchInfo(0).et, INIT_EVAL);
@@ -65,7 +65,7 @@ int main(void) {
     initMaterial();
     InitMateBoost();
 
-    setPosition(&pos,STARTPOS);
+    setPosition(&pos, STARTPOS);
     needReplyReady = FALSE;
     while (TRUE) {
         if (needReplyReady) {
@@ -116,11 +116,11 @@ int main(void) {
         } else if (!memcmp(command, "quit", 4)) {
             break;
         } else if (!memcmp(command, "speedup", 7)) {
-            checkSpeedUp(&pos, command+8);
+            checkSpeedUp(&pos, command + 8);
         } else if (!memcmp(command, "split", 5)) {
-            benchSplitDepth(&pos, command+6);
+            benchSplitDepth(&pos, command + 6);
         } else if (!memcmp(command, "sthreads", 8)) {
-            benchSplitThreads(&pos, command+9);
+            benchSplitThreads(&pos, command + 9);
         }
 #ifdef OPTIMIZE
         else if (!memcmp(command, "optimize1",9)) optimize(&pos, 1);

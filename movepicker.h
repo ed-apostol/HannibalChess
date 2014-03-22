@@ -9,7 +9,7 @@
 
 
 void sortInit(const position_t *pos, movelist_t *mvlist, uint64 pinned, uint32 hashmove, int scout, int eval, int depth, int type, int thread_id) {
-    mvlist->transmove =  hashmove;
+    mvlist->transmove = hashmove;
     mvlist->killer1 = Threads[thread_id].ts[pos->ply].killer1;
     mvlist->killer2 = Threads[thread_id].ts[pos->ply].killer2;
     mvlist->evalvalue = eval;
@@ -33,7 +33,7 @@ move_t* getMove(movelist_t *mvlist) {
     start = &mvlist->list[mvlist->pos++];
     end = &mvlist->list[mvlist->size];
     best = start;
-    for (temp = start+1; temp < end; temp++) {
+    for (temp = start + 1; temp < end; temp++) {
         if (temp->s > best->s) best = temp;
     }
     if (best == start) return start;
@@ -43,12 +43,12 @@ move_t* getMove(movelist_t *mvlist) {
     return start;
 }
 inline int scoreNonTactical(uint32 side, uint32 move) {
-	int score = SearchInfo(0).history[historyIndex(side,move)] /* + SearchInfo(0).evalgains[historyIndex(side, move)]*/;
-	return score;
+    int score = SearchInfo(0).history[historyIndex(side, move)] /* + SearchInfo(0).evalgains[historyIndex(side, move)]*/;
+    return score;
 }
 BOOL moveIsPassedPawn(const position_t * pos, uint32 move) {
     if (movePiece(move) == PAWN && !((*FillPtr[pos->side])(BitMask[moveTo(move)]) & pos->pawns)) {
-        if (!(pos->pawns & pos->color[pos->side^1] & PassedMask[pos->side][moveTo(move)])) return TRUE;
+        if (!(pos->pawns & pos->color[pos->side ^ 1] & PassedMask[pos->side][moveTo(move)])) return TRUE;
     }
     return FALSE;
 }
@@ -101,7 +101,7 @@ void scoreNonCaptures(const position_t *pos, movelist_t *mvlist, int thread_id) 
     ASSERT(mvlist != NULL);
 
     for (m = &mvlist->list[mvlist->pos]; m < &mvlist->list[mvlist->size]; m++) {
-       m->s = scoreNonTactical(mvlist->side, m->m);
+        m->s = scoreNonTactical(mvlist->side, m->m);
     }
 }
 
@@ -117,8 +117,7 @@ void scoreAll(const position_t *pos, movelist_t *mvlist, int thread_id) {
             m->s = (moveCapture(m->m) * 6) + movePromote(m->m) - movePiece(m->m);
             if (captureIsGood(pos, m->m)) m->s += MAXHIST * 2;
             else m->s -= MAXHIST;
-        }
-        else if (m->m == mvlist->killer1) m->s = MAXHIST + 4;
+        } else if (m->m == mvlist->killer1) m->s = MAXHIST + 4;
         else if (m->m == mvlist->killer2) m->s = MAXHIST + 2;
         else {
             m->s = scoreNonTactical(mvlist->side, m->m);
@@ -145,7 +144,7 @@ void scoreRoot(movelist_t *mvlist) {
     for (m = &mvlist->list[mvlist->pos]; m < &mvlist->list[mvlist->size]; m++) {
         if (m->m == mvlist->transmove) m->s = MAXHIST * 3;
         else if (moveIsTactical(m->m))  m->s = MAXHIST + (moveCapture(m->m) * 6) + movePromote(m->m) - movePiece(m->m);
-        else m-> s = 0;
+        else m->s = 0;
     }
 }
 
@@ -244,7 +243,7 @@ move_t* sortNext(SplitPoint* sp, position_t *pos, movelist_t *mvlist, int& phase
                 }
             } else {
                 // generate all legal moves at least in the root
-                genLegal(pos, mvlist, true); 
+                genLegal(pos, mvlist, true);
             }
             scoreRoot(mvlist);
             SearchInfo(thread_id).mvlist_initialized = true;
@@ -271,7 +270,7 @@ move_t* sortNext(SplitPoint* sp, position_t *pos, movelist_t *mvlist, int& phase
             scoreCapturesPure(mvlist);
             break;
         case PH_BAD_CAPTURES:
-            for (int i = MAXMOVES-1; i >= mvlist->startBad; --i) {
+            for (int i = MAXMOVES - 1; i >= mvlist->startBad; --i) {
                 mvlist->list[mvlist->size] = mvlist->list[i];
                 mvlist->size++;
             }
@@ -284,7 +283,7 @@ move_t* sortNext(SplitPoint* sp, position_t *pos, movelist_t *mvlist, int& phase
             }
             if (mvlist->killer2 != EMPTY) {
                 mvlist->list[mvlist->size].m = mvlist->killer2;
-                mvlist->list[mvlist->size].s = MAXHIST-1;
+                mvlist->list[mvlist->size].s = MAXHIST - 1;
                 mvlist->size++;
             }
             break;

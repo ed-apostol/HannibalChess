@@ -43,7 +43,7 @@ typedef unsigned int		uint;
 #endif
 
 enum NodeType { CutNode = -1, PVNode = 0, AllNode };
-enum BookType { POLYGLOT_BOOK, PUCK_BOOK};
+enum BookType { POLYGLOT_BOOK, PUCK_BOOK };
 enum HashType { HTLower, HTUpper, HTCutUpper, HTAllLower, HTExact, HTNoMoves };
 enum HashMask { MLower = 1, MUpper = 2, MCutUpper = 4, MAllLower = 8, MExact = 16, MNoMoves = 32, MClear = 255 };
 
@@ -51,7 +51,7 @@ typedef uint32 basic_move_t;
 
 struct continuation_t
 {
-    basic_move_t moves[MAXPLY+1];
+    basic_move_t moves[MAXPLY + 1];
     int length;
 };
 
@@ -92,7 +92,7 @@ struct book_t {
     BookType type;
     book_t() : bookFile(NULL) {}
     ~book_t() { if (bookFile) fclose(bookFile); }
-    FILE *bookFile; 
+    FILE *bookFile;
     int64 size;
     string name;
 };
@@ -318,7 +318,7 @@ struct search_info_t{
 
 
 struct ThreadStack {
-    void Init () { 
+    void Init() {
         killer1 = EMPTY;
         killer2 = EMPTY;
     }
@@ -327,23 +327,23 @@ struct ThreadStack {
 };
 
 struct SearchStack {
-    SearchStack () :
-        firstExtend(false),
-        reducedMove(false),
-        moveGivesCheck(false),
-        playedMoves(0),
-        hisCnt(0),
-        evalvalue(-INF),
-        bestvalue(-INF),
-        bestmove(EMPTY),
-        dcc(0),
-        counterMove(EMPTY),
-        threatMove(EMPTY),
-        bannedMove(EMPTY),
-        hashMove(EMPTY),
-        hashDepth(0),
-        mvlist(&movelist),
-        mvlist_phase(0)
+    SearchStack() :
+    firstExtend(false),
+    reducedMove(false),
+    moveGivesCheck(false),
+    playedMoves(0),
+    hisCnt(0),
+    evalvalue(-INF),
+    bestvalue(-INF),
+    bestmove(EMPTY),
+    dcc(0),
+    counterMove(EMPTY),
+    threatMove(EMPTY),
+    bannedMove(EMPTY),
+    hashMove(EMPTY),
+    hashDepth(0),
+    mvlist(&movelist),
+    mvlist_phase(0)
     { }
     int playedMoves;
     int hisCnt;
@@ -411,7 +411,7 @@ struct thread_t {
 };
 
 
-enum directions {SW,W,NW,N,NE,E,SE,S,NO_DIR };//{-9, -1, 7, 8, 9, 1, -7, -8};
+enum directions { SW, W, NW, N, NE, E, SE, S, NO_DIR };//{-9, -1, 7, 8, 9, 1, -7, -8};
 
 /* the squares */
 enum squarenames {
