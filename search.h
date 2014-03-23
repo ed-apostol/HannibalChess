@@ -421,13 +421,13 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 int nullDepth = depth - (4 + depth / 5 + (ss.evalvalue - beta > PawnValue));
                 makeNullMove(pos, &undo);
                 int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, thread_id, invertNode(nt));
-				ss.threatMove = ss.counterMove;
+                ss.threatMove = ss.counterMove;
                 unmakeNullMove(pos, &undo);
                 if (Threads[thread_id].stop) return 0;
                 if (score >= beta) {
                     if (depth >= 12) {
-						score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, ssprev, thread_id, CutNode);
-						if (Threads[thread_id].stop) return 0;
+                        score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, ssprev, thread_id, CutNode);
+                        if (Threads[thread_id].stop) return 0;
                     }
                     if (score >= beta) {
                         if (ss.hashMove == EMPTY) {
@@ -455,15 +455,15 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 }
             }
         }
-		int newdepth;
-		if (ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8) && ss.hashDepth >= (newdepth = depth / 2)) { // singular extension (adding !inRoot) 
-			int targetScore = ss.evalvalue - EXPLORE_CUTOFF;
-			ssprev.bannedMove = ss.hashMove;
-			int score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, newdepth, ssprev, thread_id, nt);
-			if (Threads[thread_id].stop) return 0;
-			ssprev.bannedMove = EMPTY;
-			if (score <= targetScore) ss.firstExtend = true;
-		}
+        int newdepth;
+        if (ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8) && ss.hashDepth >= (newdepth = depth / 2)) { // singular extension (adding !inRoot) 
+            int targetScore = ss.evalvalue - EXPLORE_CUTOFF;
+            ssprev.bannedMove = ss.hashMove;
+            int score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, newdepth, ssprev, thread_id, nt);
+            if (Threads[thread_id].stop) return 0;
+            ssprev.bannedMove = EMPTY;
+            if (score <= targetScore) ss.firstExtend = true;
+        }
     }
 
     if (inSplitPoint) {
@@ -515,7 +515,7 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 int fullReduction = 0;
                 if (MoveGenPhase[ss.mvlist_phase] == PH_QUIET_MOVES && !ss.moveGivesCheck) { //never happens when in check
                     bool goodMove = (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsPassedPawn(pos, move->m);
-                    if (!inRoot && !inPvNode(nt)) { 
+                    if (!inRoot && !inPvNode(nt)) {
                         if (ss.playedMoves > lateMove && !goodMove) continue;
                         int predictedDepth = MAX(0, newdepth - ReductionTable[1][MIN(depth, 63)][MIN(ss.playedMoves, 63)]);
                         int scoreAprox = ss.evalvalue + FutilityMarginTable[MIN(predictedDepth, MAX_FUT_MARGIN)][MIN(ss.playedMoves, 63)]
@@ -541,16 +541,16 @@ int searchGeneric(position_t *pos, int alpha, int beta, const int depth, SearchS
                 makeMove(pos, &undo, move->m);
                 if (inSplitPoint) alpha = sp->alpha;
                 ss.reducedMove = (newdepthclone < newdepth); //TODO consider taking into account full reductions
-				score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepthclone, ss, thread_id, inCutNode(nt) ? AllNode : CutNode);
+                score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepthclone, ss, thread_id, inCutNode(nt) ? AllNode : CutNode);
                 if (ss.reducedMove && score > alpha) {
-					if (partialReduction >= 4) {
-						newdepthclone = newdepth - partialReduction/2;
-						score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepthclone, ss, thread_id, inCutNode(nt) ? AllNode : CutNode);
-					}
-					if (score > alpha) {
-						ss.reducedMove = false;
-						score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepth, ss, thread_id, AllNode);
-					}
+                    if (partialReduction >= 4) {
+                        newdepthclone = newdepth - partialReduction / 2;
+                        score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepthclone, ss, thread_id, inCutNode(nt) ? AllNode : CutNode);
+                    }
+                    if (score > alpha) {
+                        ss.reducedMove = false;
+                        score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepth, ss, thread_id, AllNode);
+                    }
                 }
                 if (inPvNode(nt) && score > alpha) {
                     if (inRoot) SearchInfo(thread_id).research = 1;
