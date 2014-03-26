@@ -19,33 +19,43 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\attacks.cpp" />
+    <ClCompile Include="..\bitutils.cpp" />
+    <ClCompile Include="..\book.cpp" />
+    <ClCompile Include="..\data.cpp" />
+    <ClCompile Include="..\endgame.cpp" />
+    <ClCompile Include="..\eval.cpp" />
+    <ClCompile Include="..\init.cpp" />
+    <ClCompile Include="..\main.cpp" />
+    <ClCompile Include="..\material.cpp" />
+    <ClCompile Include="..\movegen.cpp" />
+    <ClCompile Include="..\movepicker.cpp" />
+    <ClCompile Include="..\position.cpp" />
+    <ClCompile Include="..\search.cpp" />
+    <ClCompile Include="..\smp.cpp" />
+    <ClCompile Include="..\trans.cpp" />
+    <ClCompile Include="..\uci.cpp" />
+    <ClCompile Include="..\utils.cpp" />
+  </ItemGroup>
+  <ItemGroup>
     <ClInclude Include="..\attacks.h" />
     <ClInclude Include="..\bitutils.h" />
     <ClInclude Include="..\book.h" />
     <ClInclude Include="..\constants.h" />
     <ClInclude Include="..\data.h" />
-    <ClInclude Include="..\debug.h" />
-    <ClInclude Include="..\endgame.h" />
     <ClInclude Include="..\eval.h" />
     <ClInclude Include="..\init.h" />
     <ClInclude Include="..\macros.h" />
-    <ClInclude Include="..\main.h" />
     <ClInclude Include="..\material.h" />
     <ClInclude Include="..\movegen.h" />
     <ClInclude Include="..\movepicker.h" />
     <ClInclude Include="..\position.h" />
-    <ClInclude Include="..\protos.h" />
     <ClInclude Include="..\search.h" />
     <ClInclude Include="..\smp.h" />
-    <ClInclude Include="..\tests.h" />
     <ClInclude Include="..\trans.h" />
-    <ClInclude Include="..\tune.h" />
     <ClInclude Include="..\typedefs.h" />
     <ClInclude Include="..\uci.h" />
     <ClInclude Include="..\utils.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\hannibal.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{166894DF-87C9-4B1C-B6DA-F55F51031DB9}</ProjectGuid>

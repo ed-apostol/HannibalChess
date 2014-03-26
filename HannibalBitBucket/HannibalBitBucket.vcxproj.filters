@@ -15,6 +15,59 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\attacks.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\bitutils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\book.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\data.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\endgame.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\eval.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\init.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\material.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\movegen.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\movepicker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\position.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\search.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\smp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\trans.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\uci.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
     <ClInclude Include="..\attacks.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -30,12 +83,6 @@
     <ClInclude Include="..\data.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\debug.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\endgame.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\eval.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -43,9 +90,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\macros.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\main.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\material.h">
@@ -60,22 +104,13 @@
     <ClInclude Include="..\position.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\protos.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\search.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\smp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\tests.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\trans.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\tune.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\typedefs.h">
@@ -87,10 +122,5 @@
     <ClInclude Include="..\utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\hannibal.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
 </Project>

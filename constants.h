@@ -1,11 +1,15 @@
 /**************************************************/
 /*  Name: Hannibal						          */
-/*  Copyright: 2009                               */
+/*  Copyright: 2009-2014                          */
 /*  Author: Sam Hamilton, Edsel Apostol           */
-/*  Contact: shamilton@distributedinfinity.com    */
+/*  Contact: snhamilton@rocketmail.com            */
 /*  Contact: ed_apostol@yahoo.hom                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
+
+#pragma once
+
+#include "bitutils.h"
 
 const int sign[2] = { 1, -1 };
 
@@ -16,9 +20,9 @@ enum files { FileA, FileB, FileC, FileD, FileE, FileF, FileG, FileH };
 enum ranks { Rank1, Rank2, Rank3, Rank4, Rank5, Rank6, Rank7, Rank8 };
 
 //ENDGAME FLAGS (32 bits)
-static const int ATTACK_KING[2] = { 1, 2 }; // bit 1 and 2
-static const int ONE_SIDED_PAWNS = 4; // bit 3
-static const int OPPOSITE_BISHOPS = 8;
+const int ATTACK_KING[2] = { 1, 2 }; // bit 1 and 2
+const int ONE_SIDED_PAWNS = 4; // bit 3
+const int OPPOSITE_BISHOPS = 8;
 
 //N+B - R + P = 68
 const int  PawnValueOpen = 89;	//84
@@ -83,22 +87,6 @@ const int MatSummValue[8] = { 0, 1, 9, 27, 81, 243, 0, 0 };
 #define MLB MatSummValue[BISHOP]
 #define MLR MatSummValue[ROOK]
 #define MLQ MatSummValue[QUEEN]
-
-// used in setting up the position and eval symmetry
-const char *FenString[] = {
-    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -",
-    "r3k2r/3q4/2n1b3/7n/1bB5/2N2N2/1B2Q3/R3K2R w KQkq - 0 1",
-    "rnbq1bnr/1pppkp1p/4p3/2P1P3/p5p1/8/PP1PKPPP/RNBQ1BNR w - - 0 1",
-    "rn1q1bnr/1bP1kp1P/1p2p3/p7/8/8/PP1pKPpP/RNBQ1BNR w - - 0 1",
-    "r6r/3qk3/2n1b3/7n/1bB5/2N2N2/1B2QK2/R6R w - - 0 1",
-    NULL
-};
-
-/* used in fill algorithms */
-uint64(*FillPtr[])(uint64) = { &fillUp, &fillDown };
-uint64(*FillPtr2[])(uint64) = { &fillUp2, &fillDown2 };
-uint64(*ShiftPtr[])(uint64, uint32) = { &shiftLeft, &shiftRight };
 
 /* the following constants are used by the magic bitboard attacks */
 const uint64 DiagonalMask[64] = {
