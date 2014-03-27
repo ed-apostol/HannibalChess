@@ -78,7 +78,7 @@ int main(void) {
     initMaterial();
     InitMateBoost();
 
-    setPosition(&pos, STARTPOS);
+    setPosition(pos, STARTPOS);
     needReplyReady = FALSE;
     while (TRUE) {
         if (needReplyReady) {
@@ -115,31 +115,31 @@ int main(void) {
         } else if (!memcmp(command, "isready", 7)) {
             Print(3, "readyok\n");
         } else if (!memcmp(command, "position", 8)) {
-            uciSetPosition(&pos, command + 9);
+            uciSetPosition(pos, command + 9);
         } else if (!memcmp(command, "go", 2)) {
-            uciGo(&pos, command + 3);
+            uciGo(pos, command + 3);
         } else if (!memcmp(command, "setoption", 9)) {
             uciSetOption(command + 10);
         } else if (!memcmp(command, "testloop", 8)) {
 #ifdef DEBUG
-            nonUCI(&pos);
+            nonUCI(pos);
 #endif
         } else if (!memcmp(command, "stop", 4)) {
             /* no op */
         } else if (!memcmp(command, "quit", 4)) {
             break;
         } else if (!memcmp(command, "speedup", 7)) {
-            checkSpeedUp(&pos, command + 8);
+            checkSpeedUp(pos, command + 8);
         } else if (!memcmp(command, "split", 5)) {
-            benchSplitDepth(&pos, command + 6);
+            benchSplitDepth(pos, command + 6);
         } else if (!memcmp(command, "sthreads", 8)) {
-            benchSplitThreads(&pos, command + 9);
+            benchSplitThreads(pos, command + 9);
         }
 #ifdef OPTIMIZE
-        else if (!memcmp(command, "optimize1",9)) optimize(&pos, 1);
-        else if (!memcmp(command, "optimize2",9)) optimize(&pos, 2);
-        else if (!memcmp(command, "optimize4",9)) optimize(&pos, 4);
-        else if (!memcmp(command, "optimize8",9)) optimize(&pos, 8);
+        else if (!memcmp(command, "optimize1",9)) optimize(pos, 1);
+        else if (!memcmp(command, "optimize2",9)) optimize(pos, 2);
+        else if (!memcmp(command, "optimize4",9)) optimize(pos, 4);
+        else if (!memcmp(command, "optimize8",9)) optimize(pos, 8);
 #endif
 #ifdef LEARNING_ON
         else if (!memcmp(command,"ConsumeBook",11)) {
@@ -151,7 +151,7 @@ int main(void) {
                 continuation_t moves;
                 MutexLock(LearningLock);
                 MutexLock(BookLock);
-                long num = polyglot_to_puck(&GpolyglotBook, &HannibalFormat, &Glearn, &pos, &moves, 0);
+                long num = polyglot_to_puck(&GpolyglotBook, &HannibalFormat, &Glearn, pos, &moves, 0);
                 cout << "info string wrote " << num << " positions to book, size is now " << HannibalFormat.size << endl;
                 closeBook(&HannibalFormat);  
                 MutexUnlock(LearningLock);

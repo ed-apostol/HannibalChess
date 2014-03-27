@@ -9,6 +9,6 @@
 
 #pragma once
 
-extern int eval(const position_t* pos, int thread_id, int *pessimism);
-extern void evalEndgame(int attacker, const position_t* pos, eval_info_t *ei, int *score, int *draw, int mover);
+extern int eval(const position_t& pos, int thread_id, int *pessimism);
+extern void evalEndgame(int attacker, const position_t& pos, eval_info_t *ei, int *score, int *draw, int mover);
 

@@ -9,9 +9,9 @@
 
 #pragma once
 
-extern void unmakeNullMove(position_t *pos, pos_store_t *undo);
-extern void makeNullMove(position_t *pos, pos_store_t *undo);
-extern void unmakeMove(position_t *pos, pos_store_t *undo);
-extern void makeMove(position_t *pos, pos_store_t *undo, basic_move_t m);
-extern void setPosition(position_t *pos, const char *fen);
-extern char *positionToFEN(const position_t *pos);
+extern void unmakeNullMove(position_t& pos, pos_store_t *undo);
+extern void makeNullMove(position_t& pos, pos_store_t *undo);
+extern void unmakeMove(position_t& pos, pos_store_t *undo);
+extern void makeMove(position_t& pos, pos_store_t *undo, basic_move_t m);
+extern void setPosition(position_t& pos, const char *fen);
+extern char *positionToFEN(const position_t& pos);

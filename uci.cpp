@@ -191,7 +191,7 @@ void uciParseSearchmoves(movelist_t *ml, char *str, uint32 moves[]) {
     *move = 0;
 }
 
-void uciGo(position_t *pos, char *options) {
+void uciGo(position_t& pos, char *options) {
 
     char *ponder, *infinite;
     char *c;
@@ -294,7 +294,7 @@ void uciGo(position_t *pos, char *options) {
         SearchInfo(0).time_limit_abs = SearchInfo(0).start_time + movetime;
         Print(2, "info string Fixed time per move: %d ms\n", movetime);
     }
-    if (pos->side == WHITE) {
+    if (pos.side == WHITE) {
         mytime = wtime;
         t_inc = winc;
     } else {
@@ -338,8 +338,8 @@ void uciGo(position_t *pos, char *options) {
         Print(2, "info string Search status is THINKING\n");
     }
     /* initialize UCI parameters to be used in search */
-    DrawValue[pos->side] = -Guci_options.contempt;
-    DrawValue[pos->side ^ 1] = Guci_options.contempt;
+    DrawValue[pos.side] = -Guci_options.contempt;
+    DrawValue[pos.side ^ 1] = Guci_options.contempt;
     getBestMove(pos, 0);
     if (!SearchInfo(0).bestmove) {
         if (RETURN_MOVE)
@@ -354,7 +354,7 @@ void uciGo(position_t *pos, char *options) {
         origScore = SearchInfo(0).last_value; // just to be safe
     }
 }
-void uciSetPosition(position_t *pos, char *str) {
+void uciSetPosition(position_t& pos, char *str) {
     char *c = str, *m;
     char movestr[10];
     basic_move_t move;
@@ -401,12 +401,12 @@ void uciSetPosition(position_t *pos, char *str) {
             }
 #endif
             // this is to allow any number of moves in a game by only keeping the last relevant ones for rep detection
-            if (pos->posStore.fifty == 0) {
-                pos->stack[0] = pos->hash;
-                pos->sp = 0;
+            if (pos.posStore.fifty == 0) {
+                pos.stack[0] = pos.hash;
+                pos.sp = 0;
             }
             while (isspace(*c)) c++;
         }
     }
-    pos->ply = 0;
+    pos.ply = 0;
 }

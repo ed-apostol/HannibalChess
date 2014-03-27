@@ -13,5 +13,5 @@ extern void initOption(uci_option_t* opt);
 extern void uciStart(void);
 extern void uciSetOption(char string[]);
 extern void uciParseSearchmoves(movelist_t *ml, char *str, uint32 moves[]);
-extern void uciGo(position_t *pos, char *options);
-extern void uciSetPosition(position_t *pos, char *str);
+extern void uciGo(position_t& pos, char *options);
+extern void uciSetPosition(position_t& pos, char *str);

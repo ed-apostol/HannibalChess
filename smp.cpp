@@ -181,7 +181,7 @@ void stopThreads(void) {
     MutexDestroy(SMPLock);
 }
 
-bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, const int master) {
+bool splitRemainingMoves(const position_t& pos, movelist_t* mvlist, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, const int master) {
     SplitPoint *split_point = &Threads[master].sptable[Threads[master].num_sp];
     MutexLock(SMPLock);
     MutexLock(split_point->updatelock);
@@ -204,7 +204,7 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* s
     split_point->cutoff = false;
     split_point->sscurr = ss;
     split_point->ssprev = ssprev;
-    split_point->pos[master] = *p;
+    split_point->pos[master] = pos;
     split_point->workersBitMask = ((uint64)1 << master);
     Threads[master].split_point = split_point;
 
@@ -212,7 +212,7 @@ bool splitRemainingMoves(const position_t* p, movelist_t* mvlist, SearchStack* s
     for (int i = 0; i < Guci_options.threads; i++) {
         if (threadCnt < Guci_options.max_split_threads && threadIsAvailable(i, master)) {
             threadCnt++;
-            split_point->pos[i] = *p;
+            split_point->pos[i] = pos;
             Threads[i].split_point = split_point;
             split_point->workersBitMask |= ((uint64)1 << i);
         }
