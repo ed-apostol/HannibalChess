@@ -352,10 +352,13 @@ struct pos_store_t{
     int castle;
     int fifty;
     int epsq;
+    int pliesFromNull;
     int open[2];
     int end[2];
     int mat_summ[2];
     uint64 phash;
+    uint64 hash;
+    pos_store_t* previous;
 };
 
 /* the position structure */
@@ -375,8 +378,6 @@ struct position_t{
     int side;
     int ply;
     int sp;
-    uint64 hash;
-    uint64 stack[MAX_HASH_STORE];
 };
 
 typedef uint8 mflag_t;

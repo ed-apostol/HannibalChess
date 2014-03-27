@@ -382,8 +382,8 @@ bool learn_continuation(int thread_id, continuation_t *toLearn) {
     PuckBookEntry currentEntry;
     for (; toLearn->length>=0; toLearn->length--) { //now we learn
         MutexLock(BookLock);
-        long position = find_puck_key(GhannibalBook.bookFile, pos.hash, &currentEntry);
-        if (currentEntry.key != pos.hash || currentEntry.score == DEFAULT_BOOK_SCORE) searchIt = true;
+        long position = find_puck_key(GhannibalBook.bookFile, pos.posStore.hash, &currentEntry);
+        if (currentEntry.key != pos.posStore.hash || currentEntry.score == DEFAULT_BOOK_SCORE) searchIt = true;
         else searchIt = false;
         if (!searchIt) {
             if (DEBUG_LEARN) Print(3,"info string position known %d\n",currentEntry.score);
@@ -848,7 +848,7 @@ basic_move_t getBookMove(position_t& pos, book_t *book/*, movelist_t *ml, bool v
     }
     PolyglotBookEntry entry;
     PolyglotBookEntry entries[MAX_MOVES];
-    key = pos.hash;
+    key = pos.posStore.hash;
     offset = find_polyglot_key(f, key, &entry, pos);
     if (entry.key != key) {
         return NO_MOVE;

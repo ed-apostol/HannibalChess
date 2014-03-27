@@ -64,6 +64,8 @@ int CastleMask[64];
 /* used as initial king penalty */
 int KingPosPenalty[2][64];
 
+pos_store_t UndoStack[MAX_HASH_STORE];
+
 int DrawValue[2];
 /* this is used for pawn shelter and pawn storm */
 uint64 PassedMask[2][64];

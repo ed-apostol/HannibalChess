@@ -248,8 +248,8 @@ int qSearch(position_t& pos, int alpha, int beta, const int depth, SearchStack& 
     if (Threads[thread_id].stop) return 0;
 
     int t = 0;
-    for (trans_entry_t* entry = TransTable(thread_id).table + (KEY(pos.hash) & TransTable(thread_id).mask); t < 4; t++, entry++) {
-        if (transHashLock(entry) == LOCK(pos.hash)) {
+    for (trans_entry_t* entry = TransTable(thread_id).table + (KEY(pos.posStore.hash) & TransTable(thread_id).mask); t < 4; t++, entry++) {
+        if (transHashLock(entry) == LOCK(pos.posStore.hash)) {
             transSetAge(entry, TransTable(thread).date);
             if (!inPv) { // TODO: re-use values from here to evalvalue?
                 if (transMove(entry) != EMPTY && transLowerDepth(entry) > 0) {
@@ -307,9 +307,9 @@ int qSearch(position_t& pos, int alpha, int beta, const int depth, SearchStack& 
                 if (scoreAprox < beta) continue;
             }
             int newdepth = depth - !ss.moveGivesCheck;
-            makeMove(pos, &undo, move->m);
+            makeMove(pos, undo, move->m);
             score = -qSearch<inPv>(pos, -beta, -alpha, newdepth, ss, thread_id);
-            unmakeMove(pos, &undo);
+            unmakeMove(pos, undo);
         }
         if (Threads[thread_id].stop) return ss.bestvalue;
         if (score > ss.bestvalue) {
@@ -317,7 +317,7 @@ int qSearch(position_t& pos, int alpha, int beta, const int depth, SearchStack& 
             if (score > alpha) {
                 ss.bestmove = move->m;
                 if (score >= beta) {
-                    transStoreGeneric(HTLower, pos.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply), thread_id);
+                    transStoreGeneric(HTLower, pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply), thread_id);
                     ASSERT(valueIsOk(ss.bestvalue));
                     ssprev.counterMove = ss.bestmove;
                     return ss.bestvalue;
@@ -328,7 +328,7 @@ int qSearch(position_t& pos, int alpha, int beta, const int depth, SearchStack& 
     }
     if (ssprev.moveGivesCheck && ss.bestvalue == -INF) {
         ss.bestvalue = (-INF + pos.ply);
-        transStoreGeneric(HTNoMoves, pos.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos.ply), thread_id);
+        transStoreGeneric(HTNoMoves, pos.posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos.ply), thread_id);
         return ss.bestvalue;
     }
 
@@ -336,8 +336,8 @@ int qSearch(position_t& pos, int alpha, int beta, const int depth, SearchStack& 
 
     if (inPv && ss.bestmove != EMPTY) {
         ssprev.counterMove = ss.bestmove;
-        transStoreGeneric(HTExact, pos.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply), thread_id);
-    } else transStoreGeneric(HTUpper, pos.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos.ply), thread_id);
+        transStoreGeneric(HTExact, pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply), thread_id);
+    } else transStoreGeneric(HTUpper, pos.posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos.ply), thread_id);
 
     ASSERT(valueIsOk(ss.bestvalue));
 
@@ -388,8 +388,8 @@ int searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchS
         beta = MIN(INF - pos.ply - 1, beta);
         if (alpha >= beta) return alpha;
 
-        for (trans_entry_t * entry = TransTable(thread_id).table + (KEY(pos.hash) & TransTable(thread_id).mask); t < 4; t++, entry++) {
-            if (transHashLock(entry) == LOCK(pos.hash)) {
+        for (trans_entry_t * entry = TransTable(thread_id).table + (KEY(pos.posStore.hash) & TransTable(thread_id).mask); t < 4; t++, entry++) {
+            if (transHashLock(entry) == LOCK(pos.posStore.hash)) {
                 transSetAge(entry, TransTable(thread).date);
                 if (transMask(entry) & MNoMoves) {
                     if (inCheck) return -INF + pos.ply;
@@ -444,10 +444,10 @@ int searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchS
             if (depth >= 2 && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && ss.evalvalue >= beta) {
                 pos_store_t undo;
                 int nullDepth = depth - (4 + depth / 5 + (ss.evalvalue - beta > PawnValue));
-                makeNullMove(pos, &undo);
+                makeNullMove(pos, undo);
                 int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, thread_id, invertNode(nt));
                 ss.threatMove = ss.counterMove;
-                unmakeNullMove(pos, &undo);
+                unmakeNullMove(pos, undo);
                 if (Threads[thread_id].stop) return 0;
                 if (score >= beta) {
                     if (depth >= 12) {
@@ -456,8 +456,8 @@ int searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchS
                     }
                     if (score >= beta) {
                         if (ss.hashMove == EMPTY) {
-                            if (inCutNode(nt)) transStoreGeneric(HTLower, pos.hash, EMPTY, depth, scoreToTrans(score, pos.ply), thread_id);
-                            else transStoreGeneric(HTAllLower, pos.hash, EMPTY, depth, scoreToTrans(score, pos.ply), thread_id);
+                            if (inCutNode(nt)) transStoreGeneric(HTLower, pos.posStore.hash, EMPTY, depth, scoreToTrans(score, pos.ply), thread_id);
+                            else transStoreGeneric(HTAllLower, pos.posStore.hash, EMPTY, depth, scoreToTrans(score, pos.ply), thread_id);
                         }
                         return score;
                     }
@@ -531,7 +531,7 @@ int searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchS
             ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
             if (ss.bestvalue == -INF) { //TODO remove this from loop and do it first
                 newdepth = depth - !ss.firstExtend;
-                makeMove(pos, &undo, move->m);
+                makeMove(pos, undo, move->m);
                 score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, thread_id, invertNode(nt));
             } else {
                 newdepth = depth - 1;
@@ -563,7 +563,7 @@ int searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchS
                     (MoveGenPhase[ss.mvlist_phase] == PH_QUIET_MOVES && swap(pos, move->m) < 0)) && !inRoot && !inPvNode(nt)) fullReduction++;  //never happens when in check
                 newdepth -= fullReduction;
                 int newdepthclone = newdepth - partialReduction;
-                makeMove(pos, &undo, move->m);
+                makeMove(pos, undo, move->m);
                 if (inSplitPoint) alpha = sp->alpha;
                 ss.reducedMove = (newdepthclone < newdepth); //TODO consider taking into account full reductions
                 score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepthclone, ss, thread_id, inCutNode(nt) ? AllNode : CutNode);
@@ -582,7 +582,7 @@ int searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchS
                     score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, thread_id, PVNode);
                 }
             }
-            unmakeMove(pos, &undo);
+            unmakeMove(pos, undo);
         }
         if (Threads[thread_id].stop) return 0;
         if (inSplitPoint) MutexLock(sp->updatelock);
@@ -640,7 +640,7 @@ int searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchS
         if (ss.playedMoves == 0) {
             if (inCheck) ss.bestvalue = -INF + pos.ply;
             else ss.bestvalue = DrawValue[pos.side];
-            transStoreGeneric(HTNoMoves, pos.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply), thread_id);
+            transStoreGeneric(HTNoMoves, pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply), thread_id);
             return ss.bestvalue;
         }
         if (ss.bestmove != EMPTY && !moveIsTactical(ss.bestmove) && ss.bestvalue >= beta) { //> alpha account for pv better maybe? Sam
@@ -670,15 +670,15 @@ int searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchS
         if (ss.bestvalue >= beta) {
             ASSERT(valueIsOk(ss.bestvalue));
             ssprev.counterMove = ss.bestmove;
-            if (inCutNode(nt)) transStoreGeneric(HTLower, pos.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply), thread_id);
-            else transStoreGeneric(HTAllLower, pos.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply), thread_id);
+            if (inCutNode(nt)) transStoreGeneric(HTLower, pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply), thread_id);
+            else transStoreGeneric(HTAllLower, pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply), thread_id);
         } else {
             ASSERT(valueIsOk(bestvalue));
             if (inPvNode(nt) && ss.bestmove != EMPTY) {
                 ssprev.counterMove = ss.bestmove;
-                transStoreGeneric(HTExact, pos.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply), thread_id);
-            } else if (inCutNode(nt)) transStoreGeneric(HTCutUpper, pos.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply), thread_id);
-            else transStoreGeneric(HTUpper, pos.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply), thread_id);
+                transStoreGeneric(HTExact, pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply), thread_id);
+            } else if (inCutNode(nt)) transStoreGeneric(HTCutUpper, pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply), thread_id);
+            else transStoreGeneric(HTUpper, pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply), thread_id);
         }
     }
     ASSERT(valueIsOk(ss.bestvalue));
@@ -692,18 +692,18 @@ void extractPvMovesFromHash(position_t& pos, continuation_t* pv, basic_move_t mo
     basic_move_t hashMove;
     pv->length = 0;
     pv->moves[pv->length++] = move;
-    if (execMove) makeMove(pos, &(undo[ply++]), move);
-    while ((entry = pvHashProbe(pos.hash)) != NULL) {
+    if (execMove) makeMove(pos, undo[ply++], move);
+    while ((entry = pvHashProbe(pos.posStore.hash)) != NULL) {
         hashMove = pvGetMove(entry);
         if (hashMove == EMPTY) break;
         if (!genMoveIfLegal(pos, hashMove, pinnedPieces(pos, pos.side))) break;
         pv->moves[pv->length++] = hashMove;
         if (anyRep(pos)) break; // break on repetition to avoid long pv display
-        makeMove(pos, &(undo[ply++]), hashMove);
+        makeMove(pos, undo[ply++], hashMove);
         if (ply >= MAXPLY) break;
     }
     for (ply = ply - 1; ply >= 0; --ply) {
-        unmakeMove(pos, &(undo[ply]));
+        unmakeMove(pos, undo[ply]);
     }
 }
 
@@ -713,13 +713,13 @@ void repopulateHash(position_t& pos, continuation_t *rootPV) {
     for (moveOn = 0; moveOn + 1 <= rootPV->length; moveOn++) {
         basic_move_t move = rootPV->moves[moveOn];
         if (!move) break;
-        pvhash_entry_t* entry = getPvEntryFromMove(pos.hash, move);
+        pvhash_entry_t* entry = getPvEntryFromMove(pos.posStore.hash, move);
         if (NULL == entry) break;
-        transStoreGeneric(HTExact, pos.hash, pvGetMove(entry), pvGetDepth(entry), pvGetValue(entry), 0);
-        makeMove(pos, &(undo[moveOn]), move);
+        transStoreGeneric(HTExact, pos.posStore.hash, pvGetMove(entry), pvGetDepth(entry), pvGetValue(entry), 0);
+        makeMove(pos, undo[moveOn], move);
     }
     for (moveOn = moveOn - 1; moveOn >= 0; moveOn--) {
-        unmakeMove(pos, &(undo[moveOn]));
+        unmakeMove(pos, undo[moveOn]);
     }
 }
 
@@ -882,7 +882,7 @@ bool learn_position(position_t& pos,int thread_id, continuation_t *variation) {
             if (SHOW_LEARNING) Print(3, "info string learning %s discovered: %d (%llu)\n",pv2Str(variation).c_str(),bestScore,usedTime/1000);
             if (LOG_LEARNING) Print(2, "learning: %s discovered: %d (%llu)\n",pv2Str(variation).c_str(),bestScore,usedTime/1000);
             makeMove(pos, &undo, SearchInfo(thread_id).bestmove); //write the resulting position score if it is an unknown position (not repetition)
-            insert_score_to_puck_file(&GhannibalBook, pos.hash, -bestScore);//learn this position score, and after the desired move
+            insert_score_to_puck_file(&GhannibalBook, pos.posStore.hash, -bestScore);//learn this position score, and after the desired move
             unmakeMove(pos, &undo);
         }
         else {
@@ -892,7 +892,7 @@ bool learn_position(position_t& pos,int thread_id, continuation_t *variation) {
         }
         variation->length--;
         if (bestMove) { //write the current position score
-            insert_score_to_puck_file(&GhannibalBook, pos.hash, bestScore);//learn this position score, and after the desired move
+            insert_score_to_puck_file(&GhannibalBook, pos.posStore.hash, bestScore);//learn this position score, and after the desired move
         }
     }
     SearchInfoMap[thread_id] = &global_search_info; //reset before local variable disappears
@@ -919,7 +919,7 @@ void getBestMove(position_t& pos, int thread_id) {
     transNewDate(TransTable(thread_id).date, thread_id);
 
     do {
-        pvhash_entry_t *entry = pvHashProbe(pos.hash);
+        pvhash_entry_t *entry = pvHashProbe(pos.posStore.hash);
         if (NULL == entry) break;
         if (SearchInfo(thread_id).thinking_status == THINKING
             && entry->depth >= SearchInfo(thread_id).lastDepthSearched - 2

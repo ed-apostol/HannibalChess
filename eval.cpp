@@ -1473,8 +1473,8 @@ int eval(const position_t& pos, int thread_id, int *pessimism) {
     uint64 whitePassed, blackPassed;
     int upside[2] = { 0, 0 }; //this should never be negative
 
-    entry = SearchInfo(thread_id).et.table + (KEY(pos.hash) & SearchInfo(thread_id).et.mask);
-    if (entry->hashlock == LOCK(pos.hash)) {
+    entry = SearchInfo(thread_id).et.table + (KEY(pos.posStore.hash) & SearchInfo(thread_id).et.mask);
+    if (entry->hashlock == LOCK(pos.posStore.hash)) {
         *pessimism = entry->pessimism; //this was meant to be * 10
         if (showEval) Print(3, " from hash ");
         return entry->value;
@@ -1605,7 +1605,7 @@ int eval(const position_t& pos, int thread_id, int *pessimism) {
     if (score < -MAXEVAL) score = -MAXEVAL;
     else if (score > MAXEVAL) score = MAXEVAL;
 
-    entry->hashlock = LOCK(pos.hash);
+    entry->hashlock = LOCK(pos.posStore.hash);
     entry->pessimism = *pessimism;
     entry->value = score;
     return score;
