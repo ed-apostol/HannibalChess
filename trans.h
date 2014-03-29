@@ -43,8 +43,8 @@ inline void pvSetDepth(pvhash_entry_t * pve, uint8 depth)         { pve->depth =
 inline void pvSetValue(pvhash_entry_t * pve, int16 value)         { pve->score = value; }
 
 
-inline int scoreFromTrans(int score, int ply) { return (score > MAXEVAL) ? (score - ply) : ((score < MAXEVAL) ? (score + ply) : score); }
-inline int scoreToTrans(int score, int ply) { return (score > MAXEVAL) ? (score + ply) : ((score < MAXEVAL) ? (score - ply) : score); }
+inline int scoreFromTrans(int score, int ply) { return (score > MAXEVAL) ? (score - ply) : ((score < -MAXEVAL) ? (score + ply) : score); }
+inline int scoreToTrans(int score, int ply) { return (score > MAXEVAL) ? (score + ply) : ((score < -MAXEVAL) ? (score - ply) : score); }
 
 extern void transStoreGeneric(HashType ht, const uint64 hash, basic_move_t move, const int depth, const int value, const int thread);
 extern basic_move_t transGetHashMove(const uint64 hash, const int thread);

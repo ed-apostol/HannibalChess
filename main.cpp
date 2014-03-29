@@ -95,7 +95,6 @@ int main(void) {
 
         if (!memcmp(command, "ucinewgame", 10)) {
             origScore = 0;
-            SearchInfo(0).lastDepthSearched = MAXPLY;
             transClear(0);
             pvHashTableClear(&PVHashTable);
 #ifndef TRAINING_ON
@@ -107,7 +106,6 @@ int main(void) {
 #endif
             pawnTableClear(&SearchInfo(0).pt);
             evalTableClear(&SearchInfo(0).et);
-            SearchInfo(0).lastDepthSearched = MAXPLY;
         } else if (!memcmp(command, "uci", 3)) {
             uciStart();
         } else if (!memcmp(command, "debug", 5)) {

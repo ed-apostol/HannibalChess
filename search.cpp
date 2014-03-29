@@ -588,12 +588,6 @@ int searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchS
         if (inSplitPoint) MutexLock(sp->updatelock);
         if (inRoot) {
             move->s = score;
-            if (score > SearchInfo(thread_id).rbestscore1) {
-                SearchInfo(thread_id).rbestscore2 = SearchInfo(thread_id).rbestscore1;
-                SearchInfo(thread_id).rbestscore1 = score;
-            } else if (score > SearchInfo(thread_id).rbestscore2) {
-                SearchInfo(thread_id).rbestscore2 = score;
-            }
         }
         if (score > (inSplitPoint ? sp->bestvalue : ss.bestvalue)) {
             ss.bestvalue = inSplitPoint ? sp->bestvalue = score : score;
@@ -657,16 +651,6 @@ int searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchS
                 Threads[thread_id].ts[pos.ply].killer1 = ss.bestmove;
             }
         }
-        // DEBUG
-        if (inCutNode(nt)) {
-            SearchInfo(thread_id).cutnodes++;
-            if (ss.bestvalue < beta) SearchInfo(thread_id).cutfail++;
-        }
-        if (inAllNode(nt)) {
-            SearchInfo(thread_id).allnodes++;
-            if (ss.bestvalue >= beta) SearchInfo(thread_id).allfail++;
-        }
-
         if (ss.bestvalue >= beta) {
             ASSERT(valueIsOk(ss.bestvalue));
             ssprev.counterMove = ss.bestmove;
@@ -754,28 +738,6 @@ void timeManagement(int depth, int thread_id) {
                 } else { // if we are unlikely to get deeper, save our time
                     setAllThreadsToStop(thread_id);
                     Print(2, "info string Aborting search: root time limit 1: %d\n", time - SearchInfo(thread_id).start_time);
-                    return;
-                }
-            }
-            if (!gettingWorse && depth >= 8) {
-                const int EasyTime1 = 20;
-                const int EasyCutoff1 = 120;
-                const int EasyTime2 = 30;
-                const int EasyCutoff2 = 60;
-
-                int64 timeLimit = SearchInfo(thread_id).time_limit_max - SearchInfo(thread_id).start_time;
-                int64 timeExpended = time - SearchInfo(thread_id).start_time;
-
-                if (timeExpended > (timeLimit * EasyTime1) / 100 && SearchInfo(thread_id).rbestscore1 > SearchInfo(thread_id).rbestscore2 + EasyCutoff1) {
-                    setAllThreadsToStop(thread_id);
-                    Print(2, "info string Aborting search: easy move1: score1: %d score2: %d time: %d\n",
-                        SearchInfo(thread_id).rbestscore1, SearchInfo(thread_id).rbestscore2, time - SearchInfo(thread_id).start_time);
-                    return;
-                }
-                if (timeExpended > (timeLimit * EasyTime2) / 100 && SearchInfo(thread_id).rbestscore1 > SearchInfo(thread_id).rbestscore2 + EasyCutoff2) {
-                    setAllThreadsToStop(thread_id);
-                    Print(2, "info string Aborting search: easy move2: score1: %d score2: %d time: %d\n",
-                        SearchInfo(thread_id).rbestscore1, SearchInfo(thread_id).rbestscore2, time - SearchInfo(thread_id).start_time);
                     return;
                 }
             }
@@ -922,7 +884,6 @@ void getBestMove(position_t& pos, int thread_id) {
         pvhash_entry_t *entry = pvHashProbe(pos.posStore.hash);
         if (NULL == entry) break;
         if (SearchInfo(thread_id).thinking_status == THINKING
-            && entry->depth >= SearchInfo(thread_id).lastDepthSearched - 2
             && SearchInfo(thread_id).rootPV.moves[1] == pos.posStore.lastmove
             && SearchInfo(thread_id).rootPV.moves[2] == entry->move
             && ((moveCapture(pos.posStore.lastmove) && (moveTo(pos.posStore.lastmove) == moveTo(entry->move)))
@@ -974,7 +935,6 @@ void getBestMove(position_t& pos, int thread_id) {
     Threads[thread_id].split_point = NULL; //////&Threads[thread_id].sptable[0];
     SearchInfo(thread_id).mvlist_initialized = false;
 
-    SearchInfo(thread_id).try_easy = true;
     for (id = 1; id < MAXPLY; id++) {
         const int AspirationWindow = 24;
         int faillow = 0, failhigh = 0;
@@ -992,9 +952,6 @@ void getBestMove(position_t& pos, int thread_id) {
             if (beta > RookValue) beta = INF;
         }
         while (true) {
-            SearchInfo(thread_id).rbestscore1 = -INF;
-            SearchInfo(thread_id).rbestscore2 = -INF;
-
             searchNode<true, false, false>(pos, alpha, beta, id, ss, thread_id, PVNode);
 
             if (!Threads[thread_id].stop || SearchInfo(thread_id).best_value != -INF) {
@@ -1021,9 +978,7 @@ void getBestMove(position_t& pos, int thread_id) {
             SearchInfo(thread_id).last_last_value = SearchInfo(thread_id).last_value;
             SearchInfo(thread_id).last_value = SearchInfo(thread_id).best_value;
         }
-        //////Print(1, "info string cutfails: %d %% allfails: %d %%\n", (SearchInfo(0).cutfail * 100)/SearchInfo(0).cutnodes, (SearchInfo(0).allfail * 100)/SearchInfo(0).allnodes);
     }
-    SearchInfo(thread_id).lastDepthSearched = id;
     if (SearchInfo(thread_id).thinking_status != STOPPED) {
         if ((SearchInfo(thread_id).depth_is_limited || SearchInfo(thread_id).time_is_limited) && SearchInfo(thread_id).thinking_status == THINKING) {
             SearchInfo(thread_id).thinking_status = STOPPED;

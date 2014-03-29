@@ -25,8 +25,8 @@ write situation specific transtores
 can knight catch pawns code from LL
 //68 at 3:29
 */
-#define VERSION            "1.5beta4sam"
-#define NUM_THREADS			    1
+#define VERSION            "1.5beta5"
+#define NUM_THREADS			    6
 #define MIN_SPLIT_DEPTH			4 // best is 4
 #define MAX_SPLIT_THREADS		4 // best is 4
 //#define TESTING_ON true
@@ -419,18 +419,6 @@ struct search_info_t{
     int change;
     int research;
     int iteration;
-
-    // DEBUG
-    uint64 cutnodes;
-    uint64 allnodes;
-    uint64 cutfail;
-    uint64 allfail;
-
-    bool try_easy;
-    int rbestscore1;
-    int rbestscore2;
-
-    int lastDepthSearched;
 
     int legalmoves;
     basic_move_t bestmove;
