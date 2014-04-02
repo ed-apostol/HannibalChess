@@ -96,8 +96,7 @@ uint32 isMoveDefence(const position_t& pos, uint32 move, uint64 target) {
     if (BitMask[from] & target) return 1;
     to = moveTo(move);
     piece = pos.pieces[from];
-    switch (piece)
-    {
+    switch (piece) {
     case PAWN:
         if (PawnCaps[to][pos.side] & target) return 1;
         break;

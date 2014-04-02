@@ -52,8 +52,7 @@ public:
     Search(SearchInfo& _info, TranspositionTable& _tt, PvHashTable& _pvt) :
         m_Info(_info),
         m_TransTable(_tt),
-        m_PVHashTable(_pvt)
-    {}
+        m_PVHashTable(_pvt) {}
     void initNode(Thread& sthread);
     int simpleStalemate(const position_t& pos);
     void displayPV(continuation_t *pv, int multipvIdx, int depth, int alpha, int beta, int score);
@@ -223,7 +222,7 @@ void Search::updateEvalgains(const position_t& pos, uint32 move, int before, int
     }
 }
 
-const int MaxPieceValue[] = { 0, PawnValueEnd, KnightValueEnd, BishopValueEnd, RookValueEnd, QueenValueEnd, 10000 };
+const int MaxPieceValue[] = {0, PawnValueEnd, KnightValueEnd, BishopValueEnd, RookValueEnd, QueenValueEnd, 10000};
 
 template<bool inPv>
 int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread) {
@@ -338,10 +337,18 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     return ss.bestvalue;
 }
 
-inline bool inPvNode(NodeType nt) { return (nt == PVNode); }
-inline bool inCutNode(NodeType nt) { return (nt == CutNode); }
-inline bool inAllNode(NodeType nt) { return (nt == AllNode); }
-inline NodeType invertNode(NodeType nt) { return ((nt == PVNode) ? PVNode : ((nt == CutNode) ? AllNode : CutNode)); }
+inline bool inPvNode(NodeType nt) {
+    return (nt == PVNode);
+}
+inline bool inCutNode(NodeType nt) {
+    return (nt == CutNode);
+}
+inline bool inAllNode(NodeType nt) {
+    return (nt == AllNode);
+}
+inline NodeType invertNode(NodeType nt) {
+    return ((nt == PVNode) ? PVNode : ((nt == CutNode) ? AllNode : CutNode));
+}
 
 template <bool inRoot, bool inSplitPoint, bool inSingular>
 int Search::searchNode(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt) {
@@ -753,8 +760,12 @@ void Search::stopSearch() {
     ThreadsMgr.SetAllThreadsToStop();
 }
 
-Engine::Engine() { search = new Search(info, transtable, pvhashtable); }
-Engine::~Engine() { delete search; }
+Engine::Engine() {
+    search = new Search(info, transtable, pvhashtable);
+}
+Engine::~Engine() {
+    delete search;
+}
 
 void Engine::stopSearch() {
     search->stopSearch();

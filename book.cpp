@@ -175,7 +175,7 @@ basic_move_t getBookMove(position_t& pos, book_t *book/*, movelist_t *ml, bool v
     fseek(f, Polyglot_Entry_Size*(offset + 1), SEEK_SET);
 
     while (true) {
-        if (numMoves >= MAX_MOVES - 1){
+        if (numMoves >= MAX_MOVES - 1) {
             break;
         }
         if (entry_from_polyglot_file(f, &entry, pos)) break;

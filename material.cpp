@@ -265,7 +265,7 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
     return originalDrawn + drawn;
 }
 
-void initMaterial(void){
+void initMaterial(void) {
 
     int win, openscore, midscore1, midscore2, endscore, windex, bindex, phase;
     int bp, wp, bn, wn, bb, wb, br, wr, bq, wq;
@@ -281,7 +281,7 @@ void initMaterial(void){
     for (wn = 0; wn <= 2; wn++)
     for (bn = 0; bn <= 2; bn++)
     for (wp = 0; wp <= 8; wp++)
-    for (bp = 0; bp <= 8; bp++){
+    for (bp = 0; bp <= 8; bp++) {
         int wminors = wn + wb;
         int bminors = bn + bb;
         int wnonQ = wminors + wr;
@@ -397,8 +397,7 @@ void initMaterial(void){
             }
 
             // 3 pieces are great against a queen because it can grab pawns and escort own pawn to victory
-            if (wq == 1 && bq == 0 && bnonQ >= wnonQ + 3 && br >= wr && wp && bp)
-            {
+            if (wq == 1 && bq == 0 && bnonQ >= wnonQ + 3 && br >= wr && wp && bp) {
                 if (br > wr) {
                     openscore -= 25;
                     midscore1 -= 25;

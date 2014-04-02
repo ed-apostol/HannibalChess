@@ -54,8 +54,8 @@ move_t* getMove(movelist_t *mvlist) {
     *best = *temp;
     return start;
 }
-inline int scoreNonTactical (uint32 side, uint32 move, Thread& sthread) {
-    int score = sthread.history[historyIndex(side,move)];
+inline int scoreNonTactical(uint32 side, uint32 move, Thread& sthread) {
+    int score = sthread.history[historyIndex(side, move)];
     return score;
 }
 bool moveIsPassedPawn(const position_t& pos, uint32 move) {

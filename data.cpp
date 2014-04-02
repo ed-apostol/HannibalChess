@@ -91,9 +91,9 @@ const char *FenString[] = {
 };
 
 /* used in fill algorithms */
-uint64(*FillPtr[])(uint64) = { &fillUp, &fillDown };
-uint64(*FillPtr2[])(uint64) = { &fillUp2, &fillDown2 };
-uint64(*ShiftPtr[])(uint64, uint32) = { &shiftLeft, &shiftRight };
+uint64(*FillPtr[])(uint64) = {&fillUp, &fillDown};
+uint64(*FillPtr2[])(uint64) = {&fillUp2, &fillDown2};
+uint64(*ShiftPtr[])(uint64, uint32) = {&shiftLeft, &shiftRight};
 
 
 

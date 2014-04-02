@@ -49,7 +49,7 @@ void makeNullMove(position_t& pos, pos_store_t& undo) {
 
 /* this undos the move done */
 void unmakeMove(position_t& pos, pos_store_t& undo) {
-    unsigned int side, xside, m, rook_from=0, rook_to=0, epsq=0, from, to;
+    unsigned int side, xside, m, rook_from = 0, rook_to = 0, epsq = 0, from, to;
 
     ASSERT(pos != NULL);
 
@@ -194,7 +194,7 @@ void unmakeMove(position_t& pos, pos_store_t& undo) {
 
 /* this updates the position structure from the move being played */
 void makeMove(position_t& pos, pos_store_t& undo, basic_move_t m) {
-    unsigned int rook_from=0, rook_to=0, epsq=0, prom, from, to, side, xside;
+    unsigned int rook_from = 0, rook_to = 0, epsq = 0, prom, from, to, side, xside;
 
     ASSERT(pos != NULL);
     ASSERT(moveIsOk(m));
@@ -202,7 +202,7 @@ void makeMove(position_t& pos, pos_store_t& undo, basic_move_t m) {
     from = moveFrom(m);
     to = moveTo(m);
     side = pos.side;
-    xside = side^1;
+    xside = side ^ 1;
 
     undo = pos.posStore;
 
@@ -449,7 +449,7 @@ void makeMove(position_t& pos, pos_store_t& undo, basic_move_t m) {
     pos.color[side] ^= (BitMask[from] | BitMask[to]);
     pos.occupied = pos.color[side] | pos.color[xside];
     ++pos.ply;
-    ASSERT(pos.sp+1 <MAX_HASH_STORE);
+    ASSERT(pos.sp + 1 < MAX_HASH_STORE);
     ++pos.sp;
     pos.side = xside;
 #ifdef DEBUG
@@ -649,8 +649,8 @@ void setPosition(position_t& pos, const char *fen) {
             int fiftyInt;
             sscanf_s(fen, "%d", &fiftyInt);
             if (fiftyInt >= 0 && fiftyInt <= 100) {
-                pos.posStore.fifty = (uint32) fiftyInt;
-                pos.sp=pos.posStore.fifty;
+                pos.posStore.fifty = (uint32)fiftyInt;
+                pos.sp = pos.posStore.fifty;
             }
         }
     }

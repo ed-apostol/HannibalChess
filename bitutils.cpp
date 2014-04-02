@@ -152,7 +152,11 @@ uint64 fillDown2(uint64 b) {
 }
 
 // shift the parameter b with i places to the left
-uint64 shiftLeft(uint64 b, uint32 i) { return (b << i); }
+uint64 shiftLeft(uint64 b, uint32 i) {
+    return (b << i);
+}
 
 // shift the parameter b with i places to the right
-uint64 shiftRight(uint64 b, uint32 i) { return (b >> i); }
+uint64 shiftRight(uint64 b, uint32 i) {
+    return (b >> i);
+}

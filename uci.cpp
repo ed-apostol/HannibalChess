@@ -37,17 +37,37 @@ void on_clear_hash(const Options& o) {
     CEngine.ClearTTHash();
     CEngine.ClearPVTTHash();
 }
-void on_hash(const Options& o) { CEngine.InitTTHash(o.GetInt(), 4); }
-void on_pawn_hash(const Options& o) { ThreadsMgr.InitPawnHash(o.GetInt(), 1); }
-void on_eval_hash(const Options& o) { ThreadsMgr.InitEvalHash(o.GetInt(), 1); }
-void on_multi_pv(const Options& o) { CEngine.info.multipv = o.GetInt(); }
-void on_ponder(const Options& o) { }
-void on_time_buffer(const Options& o) { CEngine.info.time_buffer = o.GetInt(); }
-void on_threads(const Options& o) { ThreadsMgr.SetNumThreads(o.GetInt()); }
-void on_splits(const Options& o) { ThreadsMgr.m_MinSplitDepth = o.GetInt(); }
-void on_threads_split(const Options& o) { ThreadsMgr.m_MaxThreadsPerSplit = o.GetInt(); }
-void on_active_splits(const Options& o) { ThreadsMgr.m_MaxActiveSplitsPerThread = o.GetInt(); }
-void on_contempt(const Options& o) { CEngine.info.contempt = o.GetInt(); }
+void on_hash(const Options& o) {
+    CEngine.InitTTHash(o.GetInt(), 4);
+}
+void on_pawn_hash(const Options& o) {
+    ThreadsMgr.InitPawnHash(o.GetInt(), 1);
+}
+void on_eval_hash(const Options& o) {
+    ThreadsMgr.InitEvalHash(o.GetInt(), 1);
+}
+void on_multi_pv(const Options& o) {
+    CEngine.info.multipv = o.GetInt();
+}
+void on_ponder(const Options& o) {}
+void on_time_buffer(const Options& o) {
+    CEngine.info.time_buffer = o.GetInt();
+}
+void on_threads(const Options& o) {
+    ThreadsMgr.SetNumThreads(o.GetInt());
+}
+void on_splits(const Options& o) {
+    ThreadsMgr.m_MinSplitDepth = o.GetInt();
+}
+void on_threads_split(const Options& o) {
+    ThreadsMgr.m_MaxThreadsPerSplit = o.GetInt();
+}
+void on_active_splits(const Options& o) {
+    ThreadsMgr.m_MaxActiveSplitsPerThread = o.GetInt();
+}
+void on_contempt(const Options& o) {
+    CEngine.info.contempt = o.GetInt();
+}
 
 void Interface::InitUCIOptions(UCIOptions& uci_opt) {
     uci_opt["Hash"] = Options(64, 1, 65536, on_hash);
@@ -108,7 +128,25 @@ bool Interface::Input(std::istringstream& stream) {
     std::string command;
     stream >> command;
 
-    if (command == "stop")           { Stop(); } else if (command == "ponderhit") { Ponderhit(); } else if (command == "go")        { Go(stream); } else if (command == "position")  { Position(stream); } else if (command == "setoption") { SetOption(stream); } else if (command == "ucinewgame"){ NewGame(); } else if (command == "isready")   { LogAndPrintOutput() << "readyok"; } else if (command == "quit")      { Quit(); return false; } else if (command == "uci")       { Id(); } else std::cerr << "Unknown UCI command: " << command << std::endl;
+    if (command == "stop") {
+        Stop();
+    } else if (command == "ponderhit") {
+        Ponderhit();
+    } else if (command == "go") {
+        Go(stream);
+    } else if (command == "position") {
+        Position(stream);
+    } else if (command == "setoption") {
+        SetOption(stream);
+    } else if (command == "ucinewgame") {
+        NewGame();
+    } else if (command == "isready") {
+        LogAndPrintOutput() << "readyok";
+    } else if (command == "quit") {
+        Quit(); return false;
+    } else if (command == "uci") {
+        Id();
+    } else std::cerr << "Unknown UCI command: " << command << std::endl;
 
     return true;
 }
@@ -147,16 +185,24 @@ void Interface::Go(std::istringstream& stream) {
     info.Init();
 
     stream >> command;
-    while (command != ""){
+    while (command != "") {
         if (command == "wtime") stream >> wtime;
         else if (command == "btime") stream >> btime;
         else if (command == "winc") stream >> winc;
         else if (command == "binc") stream >> binc;
         else if (command == "movestogo") stream >> movestogo;
-        else if (command == "ponder") { ponder = true; } else if (command == "depth"){ stream >> upperdepth; } else if (command == "movetime") stream >> movetime;
-        else if (command == "infinite") { infinite = true; } else if (command == "nodes") stream >> nodes;
+        else if (command == "ponder") {
+            ponder = true;
+        } else if (command == "depth") {
+            stream >> upperdepth;
+        } else if (command == "movetime") stream >> movetime;
+        else if (command == "infinite") {
+            infinite = true;
+        } else if (command == "nodes") stream >> nodes;
         else if (command == "mate") stream >> mate;
-        else { std::cerr << "Wrong go command: " << command << std::endl; return; }
+        else {
+            std::cerr << "Wrong go command: " << command << std::endl; return;
+        }
         command = "";
         stream >> command;
     }

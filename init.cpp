@@ -15,25 +15,25 @@
 #include "bitutils.h"
 
 int mpawn(int sq) {
-    int central[8] = { 2, 1, 0, -1, -1, -1, -1, -1 };
-    int file[8] = { -16, -7, -1, 5, 5, -1, -7, -16 };
-    int rank[8] = { 0, -3, -2, 0, 1, 2, 0, 0 };
+    int central[8] = {2, 1, 0, -1, -1, -1, -1, -1};
+    int file[8] = {-16, -7, -1, 5, 5, -1, -7, -16};
+    int rank[8] = {0, -3, -2, 0, 1, 2, 0, 0};
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
 }
 int epawn(int sq) {
-    int file[8] = { -4, -5, -7, -8, -8, -7, -5, -4 };
-    int rank[8] = { 0, -2, -3, 1, 4, 7, 1, 0 };
+    int file[8] = {-4, -5, -7, -8, -8, -7, -5, -4};
+    int rank[8] = {0, -2, -3, 1, 4, 7, 1, 0};
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (file[f] + rank[r]);
 }
 
 int outpost(int sq) {
-    int central[8] = { 7, 6, 5, 4, 3, 2, 1, 0 };
-    int file[8] = { -20, -8, -2, 0, 0, -2, -8, -20 };
-    int rank[8] = { -20, -20, -5, 1, 5, 1, -5, -10 };
+    int central[8] = {7, 6, 5, 4, 3, 2, 1, 0};
+    int file[8] = {-20, -8, -2, 0, 0, -2, -8, -20};
+    int rank[8] = {-20, -20, -5, 1, 5, 1, -5, -10};
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     int value = (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
@@ -42,37 +42,37 @@ int outpost(int sq) {
 }
 int mknight(int sq) {
     //    int central[8] = {2,1,0,-1,-1,-1,-1,-1};
-    int file[8] = { -26, -9, 2, 5, 5, 2, -9, -26 };
-    int rank[8] = { -30, -9, 6, 16, 20, 19, 11, -11 };
+    int file[8] = {-26, -9, 2, 5, 5, 2, -9, -26};
+    int rank[8] = {-30, -9, 6, 16, 20, 19, 11, -11};
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (file[f] + rank[r]);
     //    return (central[abs(f-r)] + central[abs(f+r-7)] + file[f] + rank[r]); //CEN
 }
 int eknight(int sq) {
-    int central[8] = { 3, 2, 1, 0, -2, -4, -6, -8 };
-    int file[8] = { -10, -3, 0, 2, 2, 0, -3, -10 };
-    int rank[8] = { -10, -4, -1, 2, 4, 6, 3, -5 };
+    int central[8] = {3, 2, 1, 0, -2, -4, -6, -8};
+    int file[8] = {-10, -3, 0, 2, 2, 0, -3, -10};
+    int rank[8] = {-10, -4, -1, 2, 4, 6, 3, -5};
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
 }
 int mbishop(int sq) {
-    int central[8] = { 11, 6, 2, -2, -4, -6, -7, -11 };
-    int rank[8] = { -7, 0, 0, 0, 0, 0, 0, -1 };
+    int central[8] = {11, 6, 2, -2, -4, -6, -7, -11};
+    int rank[8] = {-7, 0, 0, 0, 0, 0, 0, -1};
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)] + rank[r]);
 }
 
 int ebishop(int sq) {
-    int central[8] = { 5, 3, 1, 1, -2, -2, -3, -5 };
+    int central[8] = {5, 3, 1, 1, -2, -2, -3, -5};
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)]);
 }
 int mrook(int sq) {
-    int file[8] = { -2, 1, 4, 7, 7, 4, 1, -2 };
+    int file[8] = {-2, 1, 4, 7, 7, 4, 1, -2};
     int f = SQFILE(sq);
     return (file[f]);
 }
@@ -80,17 +80,17 @@ int erook(int sq) {
     return 0;
 }
 int mqueen(int sq) {
-    int central[8] = { 4, 2, 0, -1, -2, -4, -6, -9 };
-    int file[8] = { -3, 0, 1, 3, 3, 1, 0, -3 };
-    int rank[8] = { -7, 0, 0, 1, 1, 0, 0, -1 };
+    int central[8] = {4, 2, 0, -1, -2, -4, -6, -9};
+    int file[8] = {-3, 0, 1, 3, 3, 1, 0, -3};
+    int rank[8] = {-7, 0, 0, 1, 1, 0, 0, -1};
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
 }
 int equeen(int sq) {
-    int central[8] = { 3, 2, 1, -1, -3, -5, -7, -11 };
-    int file[8] = { -3, 0, 1, 3, 3, 1, 0, -3 };
-    int rank[8] = { -3, 0, 1, 3, 3, 1, 0, -3 };
+    int central[8] = {3, 2, 1, -1, -3, -5, -7, -11};
+    int file[8] = {-3, 0, 1, 3, 3, 1, 0, -3};
+    int rank[8] = {-3, 0, 1, 3, 3, 1, 0, -3};
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
@@ -108,8 +108,8 @@ int equeen(int sq) {
 #define MKR4 4 //4
 #define MKR5 4 //4
 int mking(int sq) {
-    int file[8] = { MKF2 - MKF1, MKF2, 0, -MKF3, -MKF3, 0, MKF2, MKF2 - MKF1 };
-    int rank[8] = { MKR1, 0, -MKR2, -MKR2 - MKR3, -MKR2 - MKR3 - MKR4, -MKR2 - MKR3 - MKR4 - MKR5, -MKR2 - MKR3 - MKR4 - MKR5, -MKR2 - MKR3 - MKR4 - MKR5 };
+    int file[8] = {MKF2 - MKF1, MKF2, 0, -MKF3, -MKF3, 0, MKF2, MKF2 - MKF1};
+    int rank[8] = {MKR1, 0, -MKR2, -MKR2 - MKR3, -MKR2 - MKR3 - MKR4, -MKR2 - MKR3 - MKR4 - MKR5, -MKR2 - MKR3 - MKR4 - MKR5, -MKR2 - MKR3 - MKR4 - MKR5};
 
     int f = SQFILE(sq);
     int r = SQRANK(sq);
@@ -117,9 +117,9 @@ int mking(int sq) {
 }
 
 int eking(int sq) {
-    int central[8] = { 0, -2, -4, -7, -10, -14, -23, -32 };
-    int file[8] = { -13, 1, 11, 16, 16, 11, 1, -13 };
-    int rank[8] = { -29, -4, 1, 6, 10, 6, 1, -10 };
+    int central[8] = {0, -2, -4, -7, -10, -14, -23, -32};
+    int file[8] = {-13, 1, 11, 16, 16, 11, 1, -13};
+    int rank[8] = {-29, -4, 1, 6, 10, 6, 1, -10};
 
     int f = SQFILE(sq);
     int r = SQRANK(sq);
@@ -199,48 +199,40 @@ void InitTrapped() {
     }
 }
 
-void InitKingShelter()
-{
+void InitKingShelter() {
     // lets do king shelter and indirect shelter
     int i, j;
     int ri, fi, rj, fj;
-    for (i = 0; i < 64; i++)
-    {
+    for (i = 0; i < 64; i++) {
         kingShelter[WHITE][i] = 0;
         kingIndirectShelter[WHITE][i] = 0;
         kingShelter[BLACK][i] = 0;
         kingIndirectShelter[BLACK][i] = 0;
         ri = i / 8;
         fi = i % 8;
-        for (j = 0; j < 64; j++)
-        {
+        for (j = 0; j < 64; j++) {
             rj = j / 8;
             fj = j % 8;
             // WHITE
-            if (ri <= rj)
-            {
+            if (ri <= rj) {
                 //                if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1)
                 if (abs(ri - rj) <= 1 && abs(fi - fj) <= 1 && rj == Rank2) //only great protection on 2nd rate...example pawn on g2 protects Kg2/Kg1 equally
                 {
                     kingShelter[WHITE][i] |= BitMask[j];
                 }
                 //               if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1)
-                if (abs(ri - rj) <= 2 && abs(fi - fj) <= 1 && (rj <= Rank3 || abs(ri - rj) <= 1))
-                {
+                if (abs(ri - rj) <= 2 && abs(fi - fj) <= 1 && (rj <= Rank3 || abs(ri - rj) <= 1)) {
                     kingIndirectShelter[WHITE][i] |= BitMask[j];
                 }
             }
             // BLACK
-            if (ri >= rj)
-            {
+            if (ri >= rj) {
                 //                if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1)
-                if (abs(ri - rj) <= 1 && abs(fi - fj) <= 1 && rj == Rank7)
-                {
+                if (abs(ri - rj) <= 1 && abs(fi - fj) <= 1 && rj == Rank7) {
                     kingShelter[BLACK][i] |= BitMask[j];
                 }
                 //                if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1)
-                if (abs(ri - rj) <= 2 && abs(fi - fj) <= 1 && (rj >= Rank6 || abs(ri - rj) <= 1))
-                {
+                if (abs(ri - rj) <= 2 && abs(fi - fj) <= 1 && (rj >= Rank6 || abs(ri - rj) <= 1)) {
                     kingIndirectShelter[BLACK][i] |= BitMask[j];
                 }
             }
@@ -248,8 +240,7 @@ void InitKingShelter()
     }
 
     // deal with exceptions for white
-    for (i = 0; i < 7; i++)
-    {
+    for (i = 0; i < 7; i++) {
         // king on A file protected by pawn on C file
         kingIndirectShelter[WHITE][i * 8 + a1] |= BitMask[i * 8 + 8 + c1 - a1];
         kingIndirectShelter[WHITE][i * 8 + a1] |= BitMask[i * 8 + c1 - a1];
@@ -267,8 +258,7 @@ void InitKingShelter()
     }
 
     // deal with exceptions for black
-    for (i = 1; i < 8; i++)
-    {
+    for (i = 1; i < 8; i++) {
         // king on A file protected by pawn on C file
         kingIndirectShelter[BLACK][i * 8 + a1] |= BitMask[i * 8 - 8 + c1 - a1];
         kingIndirectShelter[BLACK][i * 8 + a1] |= BitMask[i * 8 + c1 - a1];
@@ -285,30 +275,25 @@ void InitKingShelter()
     }
 }
 
-uint64 BMagicHash(int i, uint64 occ)
-{
+uint64 BMagicHash(int i, uint64 occ) {
     uint64 free = 0;
     int j;
-    if (SQFILE(i) < 7 && SQRANK(i) < 7)
-    {
+    if (SQFILE(i) < 7 && SQRANK(i) < 7) {
         occ |= (FileBB[7] | RankBB[7]);
         for (j = i + 9; ((j & 7) < 7) && ((occ & ((uint64)1 << j)) == 0); j += 9) free |= (uint64)1 << j;
         free |= (uint64)1 << j;
     }
-    if (SQFILE(i) > 0 && SQRANK(i) < 7)
-    {
+    if (SQFILE(i) > 0 && SQRANK(i) < 7) {
         occ |= (FileBB[0] | RankBB[7]);
         for (j = i + 7; ((j & 7) > 0) && ((occ & ((uint64)1 << j)) == 0); j += 7) free |= (uint64)1 << j;
         free |= (uint64)1 << j;
     }
-    if (SQFILE(i) > 0 && SQRANK(i) > 0)
-    {
+    if (SQFILE(i) > 0 && SQRANK(i) > 0) {
         occ |= (FileBB[0] | RankBB[0]);
         for (j = i - 9; ((j & 7) > 0) && ((occ & ((uint64)1 << j)) == 0); j -= 9) free |= (uint64)1 << j;
         free |= (uint64)1 << j;
     }
-    if (SQFILE(i) < 7 && SQRANK(i) > 0)
-    {
+    if (SQFILE(i) < 7 && SQRANK(i) > 0) {
         occ |= (FileBB[7] | RankBB[0]);
         for (j = i - 7; ((j & 7) < 7) && ((occ & ((uint64)1 << j)) == 0); j -= 7) free |= (uint64)1 << j;
         free |= (uint64)1 << j;
@@ -316,30 +301,25 @@ uint64 BMagicHash(int i, uint64 occ)
     return free;
 }
 
-uint64 RMagicHash(int i, uint64 occ)
-{
+uint64 RMagicHash(int i, uint64 occ) {
     uint64 free = 0;
     int j;
-    if (SQFILE(i) < 7)
-    {
+    if (SQFILE(i) < 7) {
         occ |= FileBB[7];
         for (j = i + 1; ((j & 7) < 7) && ((occ & ((uint64)1 << j)) == 0); j++) free |= (uint64)1 << j;
         free |= (uint64)1 << j;
     }
-    if (SQFILE(i) > 0)
-    {
+    if (SQFILE(i) > 0) {
         occ |= FileBB[0];
         for (j = i - 1; ((j & 7) > 0) && ((occ & ((uint64)1 << j)) == 0); j--) free |= (uint64)1 << j;
         free |= (uint64)1 << j;
     }
-    if (SQRANK(i) < 7)
-    {
+    if (SQRANK(i) < 7) {
         occ |= RankBB[7];
         for (j = i + 8; (j < 56) && ((occ & ((uint64)1 << j)) == 0); j += 8) free |= (uint64)1 << j;
         free |= (uint64)1 << j;
     }
-    if (SQRANK(i) > 0)
-    {
+    if (SQRANK(i) > 0) {
         occ |= RankBB[0];
         for (j = i - 8; (j > 7) && ((occ & ((uint64)1 << j)) == 0); j -= 8) free |= (uint64)1 << j;
         free |= (uint64)1 << j;
@@ -350,14 +330,14 @@ uint64 RMagicHash(int i, uint64 occ)
 /* this initializes the pseudo-constant variables used in the program */
 void initArr(void) {
     int i, j, m, k, n;
-    const int kingd[] = { -9, -1, 7, 8, 9, 1, -7, -8 };
-    const int knightd[] = { -17, -10, 6, 15, 17, 10, -6, -15 };
-    const int wpawnd[] = { 8 };
-    const int bpawnd[] = { -8 };
-    const int wpawnc[] = { 7, 9 };
-    const int bpawnc[] = { -7, -9 };
-    const int wpawn2mov[] = { 16 };
-    const int bpawn2mov[] = { -16 };
+    const int kingd[] = {-9, -1, 7, 8, 9, 1, -7, -8};
+    const int knightd[] = {-17, -10, 6, 15, 17, 10, -6, -15};
+    const int wpawnd[] = {8};
+    const int bpawnd[] = {-8};
+    const int wpawnc[] = {7, 9};
+    const int bpawnc[] = {-7, -9};
+    const int wpawn2mov[] = {16};
+    const int bpawn2mov[] = {-16};
 
     int bit_list[16];
     //memset(BMagicMask, 0, sizeof(BMagicMask));
@@ -474,20 +454,16 @@ void initArr(void) {
         PassedMask[1][i] = fillDown2(b);
     }
 
-    for (i = 0; i <= MAX_FUT_MARGIN; i++)
-    {
-        for (j = 0; j < 64; j++)
-        {
+    for (i = 0; i <= MAX_FUT_MARGIN; i++) {
+        for (j = 0; j < 64; j++) {
             FutilityMarginTable[i][j] = ((i*i*FUTILITY_SCALE) + FUTILITY_SCALE) - (((i*i*FUTILITY_SCALE) + FUTILITY_SCALE) * j / FUTILITY_MOVE);
             if (i >= MAX_FUT_MARGIN) FutilityMarginTable[i][j] = INF;
             // Print(2, "FutilityMarginTable[%d][%d] = %d\n", i, j, FutilityMarginTable[i][j]);
         }
     }
 
-    for (j = 0; j < 64; j++)
-    {
-        for (k = 0; k < 64; k++)
-        {
+    for (j = 0; j < 64; j++) {
+        for (k = 0; k < 64; k++) {
             m = (int)(PV_REDUCE_MIN + log((double)j) * log((double)k) / PV_REDUCE_SCALE);
             n = (int)(REDUCE_MIN + log((double)j) * log((double)k) / REDUCE_SCALE);
             ReductionTable[0][j][k] = ((m >= 1) ? m : 0);
@@ -503,27 +479,22 @@ void initArr(void) {
     // Print(2, "LateMovePruningTable[%d] = %d\n", j, LateMovePruningTable[j]);
     }
     */
-    for (i = 0; i < 64; i++)
-    {
+    for (i = 0; i < 64; i++) {
         int bits = 64 - BShift[i];
         uint64 u;
         for (u = BMagicMask[i], j = 0; u; j++) bit_list[j] = popFirstBit(&u);
-        for (j = 0; j < (1 << bits); j++)
-        {
+        for (j = 0; j < (1 << bits); j++) {
             u = 0;
-            for (k = 0; k < bits; k++)
-            {
+            for (k = 0; k < bits; k++) {
                 if ((j >> k) & 1) u |= BitMask[bit_list[k]];
             }
             MagicAttacks[BOffset[i] + ((BMagic[i] * u) >> BShift[i])] = BMagicHash(i, u);
         }
         bits = 64 - RShift[i];
         for (u = RMagicMask[i], j = 0; u; j++) bit_list[j] = popFirstBit(&u);
-        for (j = 0; j < (1 << bits); j++)
-        {
+        for (j = 0; j < (1 << bits); j++) {
             u = 0;
-            for (k = 0; k < bits; k++)
-            {
+            for (k = 0; k < bits; k++) {
                 if ((j >> k) & 1) u |= BitMask[bit_list[k]];
             }
             MagicAttacks[ROffset[i] + ((RMagic[i] * u) >> RShift[i])] = RMagicHash(i, u);

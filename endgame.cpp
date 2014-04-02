@@ -178,7 +178,7 @@ void KnightBishopMate(int color, const position_t& pos, int *score, int *draw) {
 static int mate_square[64];
 // this is useful for combatting high draw scores, which may obfiscate progress in hard to mate situations
 void InitMateBoost() {
-    int row[8] = { 50, 30, 10, 0, 0, 10, 30, 50 };
+    int row[8] = {50, 30, 10, 0, 0, 10, 30, 50};
     int i, j;
     for (i = 0; i < 8; i++) {
         for (j = 0; j < 8; j++) {

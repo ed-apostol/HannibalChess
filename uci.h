@@ -17,12 +17,22 @@
 struct Options {
     typedef void(*ActionFunc)(const Options&);
     Options() {}
-    Options(const char* v, ActionFunc f) : m_Type("string"), m_Min(0), m_Max(0), OnChange(f) { m_DefVal = m_CurVal = v; }
-    Options(bool v, ActionFunc f) : m_Type("check"), m_Min(0), m_Max(0), OnChange(f) { m_DefVal = m_CurVal = (v ? "true" : "false"); }
+    Options(const char* v, ActionFunc f) : m_Type("string"), m_Min(0), m_Max(0), OnChange(f) {
+        m_DefVal = m_CurVal = v;
+    }
+    Options(bool v, ActionFunc f) : m_Type("check"), m_Min(0), m_Max(0), OnChange(f) {
+        m_DefVal = m_CurVal = (v ? "true" : "false");
+    }
     Options(ActionFunc f) : m_Type("button"), m_Min(0), m_Max(0), OnChange(f) {}
-    Options(int v, int minv, int maxv, ActionFunc f) : m_Type("spin"), m_Min(minv), m_Max(maxv), OnChange(f) { std::ostringstream ss; ss << v; m_DefVal = m_CurVal = ss.str(); }
-    int GetInt() const { return (m_Type == "spin" ? atoi(m_CurVal.c_str()) : m_CurVal == "true"); }
-    std::string GetStr() { return m_CurVal; }
+    Options(int v, int minv, int maxv, ActionFunc f) : m_Type("spin"), m_Min(minv), m_Max(maxv), OnChange(f) {
+        std::ostringstream ss; ss << v; m_DefVal = m_CurVal = ss.str();
+    }
+    int GetInt() const {
+        return (m_Type == "spin" ? atoi(m_CurVal.c_str()) : m_CurVal == "true");
+    }
+    std::string GetStr() {
+        return m_CurVal;
+    }
     Options& operator=(const std::string& val) {
         if (m_Type != "button") m_CurVal = val;
         if (OnChange) OnChange(*this);

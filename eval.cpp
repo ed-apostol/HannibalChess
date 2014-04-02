@@ -28,17 +28,17 @@
 // consider multiplying all the positional values by 32, and then not dividing by phase
 
 //some castling comments
-static const int KSC[2] = { WCKS, BCKS };
-static const int QSC[2] = { WCQS, BCQS };
-static const int Castle[2] = { WCQS + WCKS, BCQS + BCKS };
+static const int KSC[2] = {WCKS, BCKS};
+static const int QSC[2] = {WCQS, BCQS};
+static const int Castle[2] = {WCQS + WCKS, BCQS + BCKS};
 #define KS(c)			(WCKS+c*3)
 #define QS(c)			(WCQS+c*6)
 // F1 | G1, F8 | G8
-static const uint64 KCSQ[2] = { (0x0000000000000020ULL | 0x0000000000000040ULL), (0x2000000000000000ULL | 0x4000000000000000ULL) };
+static const uint64 KCSQ[2] = {(0x0000000000000020ULL | 0x0000000000000040ULL), (0x2000000000000000ULL | 0x4000000000000000ULL)};
 // C1 | D1, C8 | D8
-static const uint64 QCSQ[2] = { (0x0000000000000004ULL | 0x0000000000000008ULL), (0x0400000000000000ULL | 0x0800000000000000ULL) };
-static const int KScastleTo[2] = { g1, g8 };
-static const int QScastleTo[2] = { c1, c8 };
+static const uint64 QCSQ[2] = {(0x0000000000000004ULL | 0x0000000000000008ULL), (0x0400000000000000ULL | 0x0800000000000000ULL)};
+static const int KScastleTo[2] = {g1, g8};
+static const int QScastleTo[2] = {c1, c8};
 
 //constants
 #define NUM_GENOMES 3
@@ -70,7 +70,7 @@ public:
     static const int tempo_open = TEMPO_OPEN;
     static const int tempo_end = TEMPO_END;
 };
-const int Personality::TrappedMoves[] = { TRAPPED1 + TRAPPED2 + TRAPPED3 + TRAPPED4, TRAPPED2 + TRAPPED3 + TRAPPED4, TRAPPED3 + TRAPPED4, TRAPPED4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+const int Personality::TrappedMoves[] = {TRAPPED1 + TRAPPED2 + TRAPPED3 + TRAPPED4, TRAPPED2 + TRAPPED3 + TRAPPED4, TRAPPED3 + TRAPPED4, TRAPPED4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static const Personality personality;
 #define personality(thread) personality
 
@@ -131,14 +131,14 @@ static const int EndgameQueen7th = 20;
 #define KAW5 1 // 1
 #define KAW6 0 // 0
 #define KAW7 0 // 0
-static const int kingAttackWeakness[8] = { 0,
+static const int kingAttackWeakness[8] = {0,
 KAW1 + KAW2 + KAW3 + KAW4 + KAW5 + KAW6 + KAW7,
 KAW2 + KAW3 + KAW4 + KAW5 + KAW6 + KAW7,
 KAW3 + KAW4 + KAW5 + KAW6 + KAW7,
 KAW4 + KAW5 + KAW6 + KAW7,
 KAW5 + KAW6 + KAW7,
 KAW6 + KAW7,
-KAW7 };
+KAW7};
 
 #define DOUBLED_O 2
 #define DOUBLED_E 4
@@ -172,7 +172,7 @@ static const int MidgameCandidatePawnMax = 100 - MidgameCandidatePawnMin;
 static const int EndgameCandidatePawnMax = 50 - EndgameCandidatePawnMin; //50 WEIRD to have this less than middle, perhaps takes up space
 static const int ProtectedPasser = 10;
 static const int DuoPawnPasser = 15;
-static const int kingDistImp[8] = { 0, 20, 40, 55, 65, 70, 70, 70 }; //best if this cannot get higher than EndgamePassedMax
+static const int kingDistImp[8] = {0, 20, 40, 55, 65, 70, 70, 70}; //best if this cannot get higher than EndgamePassedMax
 static const int PathFreeFriendPasser = 10;
 static const int DefendedByPawnPasser = 10;
 static const int PathFreeNotAttackedDefAllPasser = 80;
@@ -213,7 +213,7 @@ static const int PieceAttackMulEnd = 3; //3
 #define TB1 8 
 #define TB2 80 
 
-static const int sbonus[8] = { 0, 0, 0, 13, 34, 77, 128, 0 };
+static const int sbonus[8] = {0, 0, 0, 13, 34, 77, 128, 0};
 #define scale(smax,sr) ((((smax))*sbonus[sr]) / sbonus[6])
 
 
@@ -229,8 +229,7 @@ void judgeTrapped(const position_t& pos, eval_info_t *ei, const int color, const
 
     if (!beware) return;
     targets = pos.knights & beware;
-    while (targets)
-    {
+    while (targets) {
         targetSq = popFirstBit(&targets);
         safeMoves = (KnightMoves[targetSq]) &
 
@@ -248,8 +247,7 @@ void judgeTrapped(const position_t& pos, eval_info_t *ei, const int color, const
         }
     }
     targets = pos.bishops & beware;
-    while (targets)
-    {
+    while (targets) {
         targetSq = popFirstBit(&targets);
         safeMoves = (bishopAttacksBB(targetSq, pos.occupied)) &
             (safe & (~ei->atkall[enemy] | ei->atkpawns[color] | ei->atkknights[color] | ei->atkrooks[color] | ei->atkqueens[color] | ei->atkkings[color]));
@@ -267,8 +265,7 @@ void judgeTrapped(const position_t& pos, eval_info_t *ei, const int color, const
     }
     safe &= ~(ei->atkknights[enemy] | ei->atkbishops[enemy]);
     targets = pos.rooks & beware;
-    while (targets)
-    {
+    while (targets) {
         targetSq = popFirstBit(&targets);
         safeMoves = (rookAttacksBB(targetSq, pos.occupied)) &
 
@@ -288,8 +285,7 @@ void judgeTrapped(const position_t& pos, eval_info_t *ei, const int color, const
 
     safe &= ~(ei->atkrooks[enemy]);
     targets = pos.queens & beware;
-    while (targets)
-    {
+    while (targets) {
         targetSq = popFirstBit(&targets);
         if (DISTANCE(targetSq, pos.kpos[enemy]) > 2) {
 
@@ -360,7 +356,7 @@ int computeMaterial(const position_t& pos, eval_info_t *ei) {
 }
 
 void initPawnEvalByColor(const position_t& pos, eval_info_t *ei, const int color) {
-    static const int Shift[] = { 9, 7 };
+    static const int Shift[] = {9, 7};
     uint64 temp64;
 
     ei->pawns[color] = (pos.pawns & pos.color[color]);
@@ -413,9 +409,9 @@ void evalShelter(const int color, eval_info_t *ei, const position_t& pos) {
 }
 
 void evalPawnsByColor(const position_t& pos, eval_info_t *ei, int mid_score[], int end_score[], const int color) {
-    static const int Shift[2][3][4] = { { { 23, 18, 13, 8 }, { 26, 21, 16, 11 }, { 28, 23, 18, 13 } }, { { 15, 26, 37, 48 }, { 18, 29, 40, 51 }, { 20, 31, 42, 53 } } };
-    static const int weakFile[8] = { 0, 2, 3, 3, 3, 3, 2, 0 };
-    static const int weakRank[8] = { 0, 0, 2, 4, 6, 8, 10, 0 };
+    static const int Shift[2][3][4] = {{{23, 18, 13, 8}, {26, 21, 16, 11}, {28, 23, 18, 13}}, {{15, 26, 37, 48}, {18, 29, 40, 51}, {20, 31, 42, 53}}};
+    static const int weakFile[8] = {0, 2, 3, 3, 3, 3, 2, 0};
+    static const int weakRank[8] = {0, 0, 2, 4, 6, 8, 10, 0};
     uint64 openBitMap, isolatedBitMap, doubledBitMap, passedBitMap, backwardBitMap, targetBitMap, temp64;
 
     int count, sq, rank;
@@ -721,7 +717,7 @@ void evalPieces(const position_t& pos, eval_info_t *ei, const int color, const i
     ei->end_score[color] += threatScore * PieceAttackMulEnd;
 }
 
-const int ThreatBonus[9] = { 0, TB1, TB1 + TB2, TB1 + TB2 + 20, TB1 + TB2 + 40, TB1 + TB2 + 50, TB1 + TB2 + 60, TB1 + TB2 + 20 + 70, TB1 + TB2 + 20 + 80 }; //021713 because of upside
+const int ThreatBonus[9] = {0, TB1, TB1 + TB2, TB1 + TB2 + 20, TB1 + TB2 + 40, TB1 + TB2 + 50, TB1 + TB2 + 60, TB1 + TB2 + 20 + 70, TB1 + TB2 + 20 + 80}; //021713 because of upside
 void evalThreats(const position_t& pos, eval_info_t *ei, const int color, int *upside) {
     uint64 temp64, not_guarded, enemy_pcs;
     int temp1;
@@ -1051,8 +1047,7 @@ void evalPassed(const position_t& pos, eval_info_t *ei, const int allied, uint64
         {
             int promotion = PAWN_PROMOTE(from, allied);
             int kDist = DISTANCE(pos.kpos[enemy], promotion) - (!myMove);
-            if (kDist > (7 - rank - myMove))
-            {
+            if (kDist > (7 - rank - myMove)) {
                 score += UnstoppablePassedPawn + RookValueMid2 - PawnValueMid2;
                 ei->queening = true;
                 if (showEval) Print(3, "info string unstopable connected ");
@@ -1079,8 +1074,8 @@ void evalPawns(const position_t& pos, eval_info_t *ei, int thread_id) {
     } else {
 
         {
-            int midpawnscore[2] = { 0, 0 };
-            int endpawnscore[2] = { 0, 0 };
+            int midpawnscore[2] = {0, 0};
+            int endpawnscore[2] = {0, 0};
             ei->pawn_entry->passedbits = 0;
             evalPawnsByColor(pos, ei, midpawnscore, endpawnscore, WHITE);
             evalPawnsByColor(pos, ei, midpawnscore, endpawnscore, BLACK);
@@ -1099,7 +1094,7 @@ int eval(const position_t& pos, int thread_id, int *pessimism) {
     int winning;
     EvalEntry *entry;
     uint64 whitePassed, blackPassed;
-    int upside[2] = { 0, 0 }; //this should never be negative
+    int upside[2] = {0, 0}; //this should never be negative
 
     entry = ThreadsMgr.ThreadFromIdx(thread_id).et.Entry(pos.posStore.hash);
     if (entry->hashlock == LOCK(pos.posStore.hash)) {
