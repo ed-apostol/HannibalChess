@@ -1073,7 +1073,7 @@ void evalPawns(const position_t& pos, eval_info_t *ei, int thread_id) {
     initPawnEvalByColor(pos, ei, BLACK);
 
     ei->pawn_entry = ThreadsMgr.ThreadFromIdx(thread_id).pt.Entry(pos.posStore.phash);
-    if (USE_PHASH && ei->pawn_entry->hashlock == LOCK(pos.posStore.phash)) {
+    if (ei->pawn_entry->hashlock == LOCK(pos.posStore.phash)) {
         ei->mid_score[WHITE] += ei->pawn_entry->opn;
         ei->end_score[WHITE] += ei->pawn_entry->end;
     } else {

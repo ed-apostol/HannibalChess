@@ -7,85 +7,16 @@
 /*  Description: A chess playing program.         */
 /**************************************************/
 
-// error check shows could use minor debugging work
-
 #pragma once
-// rbp v rb opp bishop drawish
-/*
-TODO ED:
--implement Search/Thread/Protocol/BitBoard/ classes
--fix all Level 4 warnings in MSVC
--fix all Code Analysis warnings in MSVC
--implement one score for midgame/endgame in eval, more efficient
--add Chess 960 support
-*/
-/* TODO EVAL
-rook vs pawn cut off on 4th rank
-try transstore on ALL pruning
-write situation specific transtores
-can knight catch pawns code from LL
-//68 at 3:29
-*/
-#define VERSION            "1.5beta5"
-#define NUM_THREADS			    6
-#define MIN_SPLIT_DEPTH			4 // best is 4
-#define MAX_SPLIT_THREADS		4 // best is 4
-//#define TESTING_ON true
 
-//#define SPEED_TEST
-//#define NEW_EASY true
-//#define DEBUG_EASY true
-//#define OPTIMIZE true
+
 //#define DEBUG
 //#define EVAL_DEBUG true
-//#define DEBUG_ML true
-//#define DEBUG_SEE true
-//#define DEBUG_EVAL_TABLE true
-//#define DEBUG_RAZOR true
 //#define DEBUG_INDEPTH true
 
-//#define SELF_TUNE2 1 //number of simultaneous training games
-//#define TUNE_MAT true
-
-#define NP2 true
-#define USE_PHASH true
-#define MIN_TRANS_SIZE 16
-
-#ifdef TCEC
-#define INIT_EVAL 64
-#define INIT_PAWN 32
-#define INIT_HASH 64
-#define INIT_PVHASH 1
-
-#else
-#define INIT_EVAL 64
-#define INIT_PAWN 32
-#define INIT_HASH 64
-#define INIT_PVHASH 1
-
-#define DEFAULT_POLYGLOT_BOOK "HannibalPoly.bin"
-#define MAX_BOOK 60 //could be MAXPLY
-#endif
-
 #define DEBUG_BOOK false
-#define DEBUG_LEARN false
-
-#define ERROR_FILE "errfile.txt"
-
-#ifdef SPEED_TEST
-#define SHOW_SEARCH false
-#define RETURN_MOVE false
-#else
-#ifdef SELF_TUNE2
-#define SHOW_SEARCH false
-#define RETURN_MOVE false
-#else
 #define SHOW_SEARCH true
 #define RETURN_MOVE true
-#endif
-#endif
-
-
 
 #if defined(__x86_64) || defined(_WIN64)
 #define VERSION64BIT
@@ -106,7 +37,6 @@ can knight catch pawns code from LL
 #undef WIN32_LEAN_AND_MEAN
 #include <sys/timeb.h>
 #else
-#include <pthread.h>
 #include <sys/time.h>
 #endif
 

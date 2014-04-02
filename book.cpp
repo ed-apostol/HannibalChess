@@ -19,7 +19,6 @@
 #include <string>
 using namespace std;
 
-#ifndef TESTING_ON
 #define NO_MOVE 0
 const int MAX_MOVES = 256;
 const int Polyglot_Entry_Size = 16;
@@ -202,4 +201,3 @@ basic_move_t getBookMove(position_t& pos, book_t *book/*, movelist_t *ml, bool v
     }
     return NO_MOVE;
 }
-#endif

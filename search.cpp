@@ -84,12 +84,10 @@ void Search::initNode(Thread& sthread) {
         return;
     }
 
-    sthread.nodes++;
-#ifdef SELF_TUNE2
+    //sthread.nodes++;
     if (sthread.nodes >= m_Info.node_limit && m_Info.node_is_limited) {
         stopSearch();
     }
-#endif
     if (sthread.thread_id == 0 && ++sthread.nodes_since_poll >= sthread.nodes_between_polls) {
         sthread.nodes_since_poll = 0;
         time2 = getTime();
@@ -302,6 +300,7 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
             }
             int newdepth = depth - !ss.moveGivesCheck;
             makeMove(pos, undo, move->m);
+            ++sthread.nodes;
             score = -qSearch<inPv>(pos, -beta, -alpha, newdepth, ss, sthread);
             unmakeMove(pos, undo);
         }
@@ -434,6 +433,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 pos_store_t undo;
                 int nullDepth = depth - (4 + depth / 5 + (ss.evalvalue - beta > PawnValue));
                 makeNullMove(pos, undo);
+                ++sthread.nodes;
                 int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, sthread, invertNode(nt));
                 ss.threatMove = ss.counterMove;
                 unmakeNullMove(pos, undo);
@@ -503,15 +503,15 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     move_t* move;
     while ((move = sortNext(sp, pos, ss.mvlist, ss.mvlist_phase, sthread)) != NULL) {
         int score = -INF;
+        if (inSingular && move->m == ssprev.bannedMove) continue;
         if (inSplitPoint) {
             sp->updatelock->lock();
             ss.playedMoves = ++sp->played;
-            sp->updatelock->unlock();
         } else ++ss.playedMoves;
-        if (inSingular && move->m == ssprev.bannedMove) continue;
-        if (!inSplitPoint && ss.hisCnt < 64 && !moveIsTactical(move->m)) {
+        if (ss.hisCnt < 64 && !moveIsTactical(move->m)) {
             ss.hisMoves[ss.hisCnt++] = move->m;
         }
+        if (inSplitPoint) sp->updatelock->unlock();
         if (anyRepNoMove(pos, move->m)) {
             score = DrawValue[pos.side];
         } else {
@@ -521,6 +521,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             if (ss.bestvalue == -INF) { //TODO remove this from loop and do it first
                 newdepth = depth - !ss.firstExtend;
                 makeMove(pos, undo, move->m);
+                ++sthread.nodes;
                 score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, sthread, invertNode(nt));
             } else {
                 newdepth = depth - 1;
@@ -553,6 +554,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 newdepth -= fullReduction;
                 int newdepthclone = newdepth - partialReduction;
                 makeMove(pos, undo, move->m);
+                ++sthread.nodes;
                 if (inSplitPoint) alpha = sp->alpha;
                 ss.reducedMove = (newdepthclone < newdepth); //TODO consider taking into account full reductions
                 score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepthclone, ss, sthread, inCutNode(nt) ? AllNode : CutNode);
