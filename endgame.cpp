@@ -252,11 +252,11 @@ void BishopEnding(int attacker, const position_t& pos, eval_info_t *ei, int *sco
         }
         // if the king is blocking the passed pawns its quite drawish
         {
-            int blockingAll = TRUE;
+            int blockingAll = true;
             while (passed) { // this is for both colors
                 int sq = popFirstBit(&passed);
                 if (abs(SQFILE(pos.kpos[defender]) - SQFILE(sq)) > 1 || !IN_FRONT(SQRANK(pos.kpos[defender]), SQRANK(sq), attacker)) {
-                    blockingAll = FALSE;
+                    blockingAll = false;
                     break;
                 }
             }

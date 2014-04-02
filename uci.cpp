@@ -12,283 +12,193 @@
 #include "constants.h"
 #include "macros.h"
 #include "search.h"
-#include "smp.h"
+#include "threads.h"
 #include "trans.h"
 #include "movegen.h"
+#include "threads.h"
 #include "position.h"
 #include "utils.h"
 #include "uci.h"
 #include "init.h"
 #include "material.h"
-#include "book.h"
+#include "utils.h"
 
-#define MIN_TIME 2
+const std::string Interface::name = "Hannibal";
+const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
+const std::string Interface::year = "2014";
+const std::string Interface::version = "TCEC";
+const std::string Interface::arch = "x64";
 
-void initOption(uci_option_t* opt) {
-    //TODO add hash size option
-    opt->contempt = 0;
-    opt->time_buffer = 1000;
-    opt->threads = NUM_THREADS;
-    opt->min_split_depth = MIN_SPLIT_DEPTH;
-    opt->max_split_threads = MAX_SPLIT_THREADS;
-    opt->evalcachesize = INIT_EVAL;
-    opt->pawnhashsize = INIT_PAWN;
-#ifdef LEARNING_ON
-    opt->learnThreads = DEFAULT_LEARN_THREADS;
-    opt->learnTime = DEFAULT_LEARN_TIME;
-    opt->bookExplore = DEFAULT_BOOK_EXPLORE;
-    opt->usehannibalbook = TRUE;//TODO fix
-#endif
-#ifndef TCEC
-    opt->try_book = FALSE;
-    opt->book_limit = 128;
+UCIOptions UCIOptionsMap;
 
-#endif
+void on_clear_hash(const Options& o) {
+    ThreadsMgr.ClearPawnHash();
+    ThreadsMgr.ClearEvalHash();
+    CEngine.ClearTTHash();
+    CEngine.ClearPVTTHash();
+}
+void on_hash(const Options& o) { CEngine.InitTTHash(o.GetInt(), 4); }
+void on_pawn_hash(const Options& o) { ThreadsMgr.InitPawnHash(o.GetInt(), 1); }
+void on_eval_hash(const Options& o) { ThreadsMgr.InitEvalHash(o.GetInt(), 1); }
+void on_multi_pv(const Options& o) { CEngine.info.multipv = o.GetInt(); }
+void on_ponder(const Options& o) { }
+void on_time_buffer(const Options& o) { CEngine.info.time_buffer = o.GetInt(); }
+void on_threads(const Options& o) { ThreadsMgr.SetNumThreads(o.GetInt()); }
+void on_splits(const Options& o) { ThreadsMgr.m_MinSplitDepth = o.GetInt(); }
+void on_threads_split(const Options& o) { ThreadsMgr.m_MaxThreadsPerSplit = o.GetInt(); }
+void on_active_splits(const Options& o) { ThreadsMgr.m_MaxActiveSplitsPerThread = o.GetInt(); }
+void on_contempt(const Options& o) { CEngine.info.contempt = o.GetInt(); }
+
+void Interface::InitUCIOptions(UCIOptions& uci_opt) {
+    uci_opt["Hash"] = Options(64, 1, 65536, on_hash);
+    uci_opt["Pawn Hash"] = Options(4, 1, 1024, on_pawn_hash);
+    uci_opt["Eval Cache"] = Options(4, 1, 1024, on_eval_hash);
+    uci_opt["MultiPV"] = Options(1, 1, 128, on_multi_pv);
+    uci_opt["Clear Hash"] = Options(on_clear_hash);
+    uci_opt["Ponder"] = Options(false, on_ponder);
+    uci_opt["Time Buffer"] = Options(1000, 0, 10000, on_time_buffer);
+    uci_opt["Threads"] = Options(6, 1, MaxNumOfThreads, on_threads);
+    uci_opt["Min Split Depth"] = Options(4, 1, 12, on_splits);
+    uci_opt["Max Threads/Split"] = Options(16, 2, MaxNumOfThreads, on_threads_split);
+    uci_opt["Max Active Splits/Thread"] = Options(4, 1, 8, on_active_splits);
+    uci_opt["Contempt"] = Options(0, -100, 100, on_contempt);
 }
 
-void uciStart(void) {
-    Print(3, "id name Hannibal %s\n", VERSION);
-    Print(3, "id author Sam Hamilton & Edsel Apostol\n");
-    Print(3, "option name Hash type spin min 1 max 16384 default %d\n", INIT_HASH);
-    Print(3, "option name Pawn Hash type spin min 1 max 128 default %d\n", INIT_PAWN);
-    Print(3, "option name Eval Cache type spin min 1 max 1024 default %d\n", INIT_EVAL);
-    Print(3, "option name Clear Hash type button\n");
-    Print(3, "option name Ponder type check default false\n");
-#ifndef TCEC
-    Print(3, "option name OwnBook type check default false\n");
-    Print(3, "option name Book File type string default %s\n", DEFAULT_POLYGLOT_BOOK);
-#ifdef LEARNING_ON
-    Print(3, "option name HannibalBook File type string default %s\n",DEFAULT_HANNIBAL_BOOK);
-    Print(3, "option name UseHannibalBook type check default true\n"); //TODO fix
-    Print(3, "option name LearnTime type spin min 0 max 20 default %d\n",DEFAULT_LEARN_TIME);
-    Print(3, "option name BookExplore type spin min 0 max 4 default %d\n",DEFAULT_BOOK_EXPLORE);
-    Print(3, "option name LearnThreads type spin min 0 max %d default %d\n", MaxNumOfThreads, DEFAULT_LEARN_THREADS);
-#endif
-    Print(3, "option name Book Move Limit type spin min 0 max 256 default 128\n");
-#endif
-    Print(3, "option name Time Buffer type spin min 0 max 10000 default 1000\n");
-    Print(3, "option name Threads type spin min 1 max %d default %d\n", MaxNumOfThreads, NUM_THREADS);
-
-    Print(3, "option name Min Split Depth type spin min 1 max 16 default %d\n", MIN_SPLIT_DEPTH);
-    Print(3, "option name Max Split Threads type spin min 2 max 8 default %d\n", MAX_SPLIT_THREADS);
-    Print(3, "option name Contempt type spin min -100 max 100 default 0\n");
-    Print(3, "uciok\n"); //this makes sure there are no issues I hope?
-}
-
-void uciSetOption(char string[]) {
-    char *name, *value;
-
-    name = strstr(string, "name ");
-    value = strstr(string, "value ");
-
-    name += 5;
-    value += 6;
-
-    if (!memcmp(name, "Hash", 4)) {
-        initTrans(atoi(value), 0);
-    } else if (!memcmp(name, "Pawn Hash", 9)) {
-        Guci_options.pawnhashsize = atoi(value);
-        initPawnTab(&SearchInfo(0).pt, Guci_options.pawnhashsize);
-
-    } else if (!memcmp(name, "Eval Cache", 10)) {
-        Guci_options.evalcachesize = atoi(value);
-        initEvalTab(&SearchInfo(0).et, Guci_options.evalcachesize);
-    } else if (!memcmp(name, "Clear Hash", 10)) {
-        transClear(0);
-    }
-#ifndef TCEC
-    else if (!memcmp(name, "OwnBook", 7)) {
-        SearchInfo(thread_id).outOfBook = 0;
-        if (value[0] == 't') Guci_options.try_book = TRUE;
-        else Guci_options.try_book = FALSE;
-    } else if (!memcmp(name, "Book File", 9)) {
-        initBook(value, &GpolyglotBook, POLYGLOT_BOOK);
-    } else if (!memcmp(name, "Book Move Limit", 15)) {
-        SearchInfo(thread_id).outOfBook = 0;
-        Guci_options.book_limit = atoi(value);
-    }
-#ifdef LEARNING_ON
-    else if (!memcmp(name,"HannibalBook File",17)) {
-        initBook(value, &GhannibalBook, PUCK_BOOK);
-    }
-    else if (!memcmp(name,"LearnTime",9)) {
-        Guci_options.learnTime = atoi(value);
-    } 
-    else if (!memcmp(name,"BookExplore",11)) {
-        Guci_options.bookExplore = atoi(value);
-    } 
-    else if (!memcmp(name,"LearnThreads",12)) {
-        int oldValue = Guci_options.learnThreads;
-        int newValue  = atoi(value);
-        if (Guci_options.threads + newValue > MaxNumOfThreads) newValue = MaxNumOfThreads - Guci_options.threads;
-        if (newValue != oldValue) {
-            if (SHOW_LEARNING) Print(3,"info string changing learn threads from %d to %d\n",oldValue,newValue);
-            Guci_options.learnThreads = newValue;
-
-            if (newValue < oldValue) { // go kill all the learning threads
-                for (int i = MaxNumOfThreads - oldValue; i < MaxNumOfThreads - newValue; i++) {
-                    if (SHOW_LEARNING) Print(3,"info string about to stop thread %d\n",i);
-                    SearchInfo(i).thinking_status = STOPPED;
-                }
-            }
-            else if (newValue > oldValue) {
-                for (int i = MaxNumOfThreads-newValue; i < MaxNumOfThreads-oldValue; i++) { //wake up if it needs to
-                    if (SHOW_LEARNING) Print(3,"info string about to wakup thread %d\n",i);
-                    SetEvent(Threads[i].idle_event);
-                    if (SHOW_LEARNING) Print(3,"info string wokeup thread %d\n",i);
-                }
-            }
-        }
-    }
-#endif
-#endif
-    else if (!memcmp(name, "Time Buffer", 11)) {
-        Guci_options.time_buffer = atoi(value);
-    } else if (!memcmp(name, "Contempt", 8)) {
-        Guci_options.contempt = atoi(value);
-    } else if (!memcmp(name, "Threads", 7)) {
-        int oldValue = Guci_options.threads;
-        int newValue = atoi(value);
-#ifdef LEARNING_ON
-        if (Guci_options.threads + Guci_options.learnThreads > MaxNumOfThreads) newValue = MaxNumOfThreads - Guci_options.learnThreads;
-#endif
-        if (newValue > oldValue) {
-            for (int i = oldValue; i < newValue; i++) {
-                initSearchThread(i);
-            }
-        }
-        Guci_options.threads = newValue;
-    } else if (!memcmp(name, "Min Split Depth", 15)) {
-        Guci_options.min_split_depth = atoi(value);
-    } else if (!memcmp(name, "Max Split Threads", 17)) {
-        Guci_options.max_split_threads = atoi(value);
+void Interface::PrintUCIOptions(const UCIOptions& uci_opt) {
+    for (UCIOptions::const_iterator it = uci_opt.begin(); it != uci_opt.end(); ++it) {
+        const Options& opt = it->second;
+        LogAndPrintOutput log;
+        log << "option name " << it->first << " type " << opt.m_Type;
+        if (opt.m_Type != "button") log << " default " << opt.m_DefVal;
+        if (opt.m_Type == "spin") log << " min " << opt.m_Min << " max " << opt.m_Max;
     }
 }
 
-void uciParseSearchmoves(movelist_t *ml, char *str, uint32 moves[]) {
-    char *c, movestr[10];
-    int i;
-    int m;
-    uint32 *move = moves;
-
-    ASSERT(ml != NULL);
-    ASSERT(moves != NULL);
-
-    c = str;
-    while (isspace(*c)) c++;
-    while (*c != '\0') {
-        i = 0;
-        while (*c != '\0' && !isspace(*c) && i < 9) movestr[i++] = *c++;
-        if (i >= 4 && 'a' <= movestr[0] && movestr[0] <= 'h' &&
-            '1' <= movestr[1] && movestr[1] <= '8' &&
-            'a' <= movestr[2] && movestr[2] <= 'h' &&
-            '1' <= movestr[3] && movestr[3] <= '8') {
-            m = parseMove(ml, movestr);
-            if (m) *move++ = m;
-        } else break;
-        while (isspace(*c)) c++;
-    }
-    *move = 0;
+void Interface::Info() {
+    LogAndPrintOutput() << name << " " << version << " " << arch;
+    LogAndPrintOutput() << "Copyright (C) " << year << " " << author;
+    LogAndPrintOutput() << "Use UCI commands";
+    LogAndPrintOutput();
 }
 
-void uciGo(position_t& pos, char *options) {
+Interface::Interface() {
+    fopen_s(&logfile, "logfile.txt", "a+");
+    fopen_s(&errfile, "errfile.txt", "a+");
+    fopen_s(&dumpfile, "dumpfile.txt", "a+");
 
-    char *ponder, *infinite;
-    char *c;
+    InitUCIOptions(UCIOptionsMap);
+    ThreadsMgr.InitVars();
+    ThreadsMgr.SetNumThreads(UCIOptionsMap["Threads"].GetInt());
+    CEngine.InitTTHash(UCIOptionsMap["Hash"].GetInt(), 4);
+    CEngine.InitPVTTHash(1, 8);
+
+    initArr();
+    initPST();
+    InitTrapped();
+    initMaterial();
+    InitMateBoost();
+
+    setPosition(CEngine.rootpos, STARTPOS);
+}
+
+void Interface::Run() {
+    std::string line;
+    while (getline(std::cin, line)) {
+        LogInfo() << line;
+        std::istringstream ss(line);
+        if (!Input(ss)) break;
+    }
+}
+
+bool Interface::Input(std::istringstream& stream) {
+    std::string command;
+    stream >> command;
+
+    if (command == "stop")           { Stop(); } else if (command == "ponderhit") { Ponderhit(); } else if (command == "go")        { Go(stream); } else if (command == "position")  { Position(stream); } else if (command == "setoption") { SetOption(stream); } else if (command == "ucinewgame"){ NewGame(); } else if (command == "isready")   { LogAndPrintOutput() << "readyok"; } else if (command == "quit")      { Quit(); return false; } else if (command == "uci")       { Id(); } else std::cerr << "Unknown UCI command: " << command << std::endl;
+
+    return true;
+}
+
+void Interface::Quit() {
+    if (logfile) fclose(logfile);
+    if (errfile) fclose(errfile);
+    if (dumpfile) fclose(dumpfile);
+    ThreadsMgr.SetNumThreads(0);
+    LogInfo() << "Interface quit";
+}
+
+void Interface::Id() {
+    LogAndPrintOutput() << "id name " << name << " " << version << " " << arch;
+    LogAndPrintOutput() << "id author " << author;
+    PrintUCIOptions(UCIOptionsMap);
+    LogAndPrintOutput() << "uciok";
+}
+
+void Interface::Stop() {
+    CEngine.stopSearch();
+    LogInfo() << "info string Aborting search: stop";
+}
+
+void Interface::Ponderhit() {
+    CEngine.ponderHit();
+}
+
+void Interface::Go(std::istringstream& stream) {
+    std::string command;
     int64 mytime = 0, t_inc = 0;
     int wtime = 0, btime = 0, winc = 0, binc = 0, movestogo = 0, upperdepth = 0, nodes = 0, mate = 0, movetime = 0;
-    movelist_t ml;
+    bool infinite = false, ponder = false;
+    SearchInfo& info = CEngine.info;
 
-    ASSERT(pos != NULL);
-    ASSERT(options != NULL);
+    info.Init();
 
-    /* initialization */
-    SearchInfo(0).depth_is_limited = FALSE;
-    SearchInfo(0).depth_limit = MAXPLY;
-    SearchInfo(0).moves_is_limited = FALSE;
-    SearchInfo(0).time_is_limited = FALSE;
-    SearchInfo(0).time_limit_max = 0;
-    SearchInfo(0).time_limit_abs = 0;
-    SearchInfo(0).node_is_limited = FALSE;
-    SearchInfo(0).node_limit = 0;
-    SearchInfo(0).start_time = SearchInfo(0).last_time = getTime();
-    SearchInfo(0).alloc_time = 0;
-    SearchInfo(0).best_value = -INF;
-    SearchInfo(0).last_value = -INF;
-    SearchInfo(0).last_last_value = -INF;
-    SearchInfo(0).change = 0;
-    SearchInfo(0).research = 0;
-    SearchInfo(0).bestmove = 0;
-    SearchInfo(0).pondermove = 0;
-    SearchInfo(0).mate_found = 0;
-    memset(SearchInfo(0).history, 0, sizeof(SearchInfo(0).history)); //TODO this is bad to share with learning
-    memset(SearchInfo(0).evalgains, 0, sizeof(SearchInfo(0).evalgains)); //TODO this is bad to share with learning
-
-    for (int i = 0; i < Guci_options.threads; i++) {
-        initSearchThread(i);
+    stream >> command;
+    while (command != ""){
+        if (command == "wtime") stream >> wtime;
+        else if (command == "btime") stream >> btime;
+        else if (command == "winc") stream >> winc;
+        else if (command == "binc") stream >> binc;
+        else if (command == "movestogo") stream >> movestogo;
+        else if (command == "ponder") { ponder = true; } else if (command == "depth"){ stream >> upperdepth; } else if (command == "movetime") stream >> movetime;
+        else if (command == "infinite") { infinite = true; } else if (command == "nodes") stream >> nodes;
+        else if (command == "mate") stream >> mate;
+        else { std::cerr << "Wrong go command: " << command << std::endl; return; }
+        command = "";
+        stream >> command;
     }
-
-    memset(SearchInfo(0).moves, 0, sizeof(SearchInfo(0).moves));
-
-    infinite = strstr(options, "infinite");
-    ponder = strstr(options, "ponder");
-    c = strstr(options, "wtime");
-    if (c != NULL) sscanf(c + 6, "%d", &wtime);
-    c = strstr(options, "btime");
-    if (c != NULL) sscanf(c + 6, "%d", &btime);
-    c = strstr(options, "winc");
-    if (c != NULL) sscanf(c + 5, "%d", &winc);
-    c = strstr(options, "binc");
-    if (c != NULL) sscanf(c + 5, "%d", &binc);
-    c = strstr(options, "movestogo");
-    if (c != NULL) sscanf(c + 10, "%d", &movestogo);
-    c = strstr(options, "depth");
-    if (c != NULL) sscanf(c + 6, "%d", &upperdepth);
-    c = strstr(options, "nodes");
-    if (c != NULL) sscanf(c + 6, "%d", &nodes);
-    c = strstr(options, "mate");
-    if (c != NULL) sscanf(c + 5, "%d", &mate);
-    c = strstr(options, "movetime");
-    if (c != NULL) sscanf(c + 9, "%d", &movetime);
-    c = strstr(options, "searchmoves");
-    if (c != NULL) {
-        genLegal(pos, &ml, TRUE);
-        uciParseSearchmoves(&ml, c + 12, &(SearchInfo(0).moves[0]));
-    }
-
     if (infinite) {
-        SearchInfo(0).depth_is_limited = TRUE;
-        SearchInfo(0).depth_limit = MAXPLY;
-        Print(2, "info string Infinite\n");
+        info.depth_is_limited = true;
+        info.depth_limit = MAXPLY;
+        LogInfo() << "info string Infinite";
     }
     if (upperdepth > 0) {
-        SearchInfo(0).depth_is_limited = TRUE;
-        SearchInfo(0).depth_limit = upperdepth;
-        Print(2, "info string Depth is limited to %d half moves\n", SearchInfo(0).depth_limit);
+        info.depth_is_limited = true;
+        info.depth_limit = upperdepth;
+        LogInfo() << "info string Depth is limited to " << info.depth_limit << " half moves";
     }
     if (mate > 0) {
-        SearchInfo(0).depth_is_limited = TRUE;
-        SearchInfo(0).depth_limit = mate * 2 - 1;
-        Print(2, "info string Mate in %d half moves\n", SearchInfo(0).depth_limit);
+        info.depth_is_limited = true;
+        info.depth_limit = mate * 2 - 1;
+        LogInfo() << "info string Mate in " << info.depth_limit << " half moves";
     }
     if (nodes > 0) {
-        SearchInfo(0).node_is_limited = TRUE;
-        SearchInfo(0).node_limit = nodes;
-        Print(2, "info string Nodes is limited to %d positions\n", SearchInfo(0).node_limit);
+        info.node_is_limited = true;
+        info.node_limit = nodes;
+        LogInfo() << "info string Nodes is limited to " << info.node_limit << " positions";
     }
-    if (SearchInfo(0).moves[0]) {
-        SearchInfo(0).moves_is_limited = TRUE;
-        Print(2, "info string Moves is limited\n");
+    if (info.moves[0]) {
+        info.moves_is_limited = true;
+        LogInfo() << "info string Moves is limited";
     }
 
     if (movetime > 0) {
-        SearchInfo(0).time_is_limited = TRUE;
-        SearchInfo(0).alloc_time = movetime;
-        SearchInfo(0).time_limit_max = SearchInfo(0).start_time + movetime;
-        SearchInfo(0).time_limit_abs = SearchInfo(0).start_time + movetime;
-        Print(2, "info string Fixed time per move: %d ms\n", movetime);
+        info.time_is_limited = true;
+        info.alloc_time = movetime;
+        info.time_limit_max = info.start_time + movetime;
+        info.time_limit_abs = info.start_time + movetime;
+        LogInfo() << "info string Fixed time per move: " << movetime << " ms";
     }
-    if (pos.side == WHITE) {
+    if (CEngine.rootpos.side == WHITE) {
         mytime = wtime;
         t_inc = winc;
     } else {
@@ -296,109 +206,89 @@ void uciGo(position_t& pos, char *options) {
         t_inc = binc;
     }
     if (mytime > 0) {
-        SearchInfo(0).time_is_limited = TRUE;
-        mytime = ((mytime * 95) / 100) - Guci_options.time_buffer;
+        info.time_is_limited = true;
+        mytime = ((mytime * 95) / 100) - info.time_buffer;
         if (mytime  < 0) mytime = 0;
+        if (movestogo <= 0 || movestogo > 20) movestogo = 20;
+        info.time_limit_max = (mytime / movestogo) + ((t_inc * 4) / 5);
+        if (ponder) info.time_limit_max += info.time_limit_max / 4;
 
-#define TIME_DIVIDER 30 //how many moves we divide remaining time into 
+        if (info.time_limit_max > mytime) info.time_limit_max = mytime;
+        info.time_limit_abs = ((mytime * 2) / 5) + ((t_inc * 4) / 5);
+        if (info.time_limit_abs < info.time_limit_max) info.time_limit_abs = info.time_limit_max;
+        if (info.time_limit_abs > mytime) info.time_limit_abs = mytime;
 
-        if (movestogo <= 0 || movestogo > TIME_DIVIDER) movestogo = TIME_DIVIDER;
-        SearchInfo(0).time_limit_max = (mytime / movestogo) + ((t_inc * 4) / 5);
-        if (ponder) SearchInfo(0).time_limit_max += SearchInfo(0).time_limit_max / 4;
+        if (info.time_limit_max < 2) info.time_limit_max = 2;
+        if (info.time_limit_abs < 2) info.time_limit_abs = 2;
 
-        if (SearchInfo(0).time_limit_max > mytime) SearchInfo(0).time_limit_max = mytime;
-        SearchInfo(0).time_limit_abs = ((mytime * 2) / 5) + ((t_inc * 4) / 5);
-        if (SearchInfo(0).time_limit_abs < SearchInfo(0).time_limit_max) SearchInfo(0).time_limit_abs = SearchInfo(0).time_limit_max;
-        if (SearchInfo(0).time_limit_abs > mytime) SearchInfo(0).time_limit_abs = mytime;
-
-        if (SearchInfo(0).time_limit_max < MIN_TIME) SearchInfo(0).time_limit_max = MIN_TIME; //SAM added to deail with issues when time < time_buffer
-        if (SearchInfo(0).time_limit_abs < MIN_TIME) SearchInfo(0).time_limit_abs = MIN_TIME;
-
-        Print(2, "info string Time is limited: ");
-        Print(2, "max = %d, ", SearchInfo(0).time_limit_max);
-        Print(2, "abs = %d\n", SearchInfo(0).time_limit_abs);
-        SearchInfo(0).alloc_time = SearchInfo(0).time_limit_max;
-        SearchInfo(0).time_limit_max += SearchInfo(0).start_time;
-        SearchInfo(0).time_limit_abs += SearchInfo(0).start_time;
+        LogInfo() << "info string Time is limited: ";
+        LogInfo() << "max = " << info.time_limit_max;
+        LogInfo() << "abs = " << info.time_limit_abs;
+        info.alloc_time = info.time_limit_max;
+        info.time_limit_max += info.start_time;
+        info.time_limit_abs += info.start_time;
     }
     if (infinite) {
-        SearchInfo(0).thinking_status = ANALYSING;
-        Print(2, "info string Search status is ANALYSING\n");
+        info.thinking_status = ANALYSING;
+        LogInfo() << "info string Search status is ANALYSING";
     } else if (ponder) {
-        SearchInfo(0).thinking_status = PONDERING;
-        Print(2, "info string Search status is PONDERING\n");
+        info.thinking_status = PONDERING;
+        LogInfo() << "info string Search status is PONDERING";
     } else {
-        SearchInfo(0).thinking_status = THINKING;
-        Print(2, "info string Search status is THINKING\n");
+        info.thinking_status = THINKING;
+        LogInfo() << "info string Search status is THINKING";
     }
-    /* initialize UCI parameters to be used in search */
-    DrawValue[pos.side] = -Guci_options.contempt;
-    DrawValue[pos.side ^ 1] = Guci_options.contempt;
-    getBestMove(pos, 0);
-    if (!SearchInfo(0).bestmove) {
-        if (RETURN_MOVE)
-            Print(3, "info string No legal move found. Start a new game.\n\n");
-        return;
-    } else {
-        if (RETURN_MOVE) {
-            Print(3, "bestmove %s", move2Str(SearchInfo(0).bestmove));
-            if (SearchInfo(0).pondermove) Print(3, " ponder %s", move2Str(SearchInfo(0).pondermove));
-            Print(3, "\n\n");
-        }
-        origScore = SearchInfo(0).last_value; // just to be safe
-    }
+
+    DrawValue[CEngine.rootpos.side] = -info.contempt;
+    DrawValue[CEngine.rootpos.side ^ 1] = info.contempt;
+
+    ThreadsMgr.StartThinking();
 }
-void uciSetPosition(position_t& pos, char *str) {
-    char *c = str, *m;
-    char movestr[10];
-    basic_move_t move;
-    movelist_t ml;
-    bool startPos = false;
 
-#ifdef LEARNING_ON
-    movesSoFar.length = 0; //I don't trust this position to be from book
-#endif
-    ASSERT(pos != NULL);
-    ASSERT(str != NULL);
+void Interface::Position(std::istringstream& stream) {
+    basic_move_t m;
+    string token, fen;
 
-    while (isspace(*c)) c++;
-    if (!memcmp(c, "startpos", 8)) {
-        c += 8;
-        while (isspace(*c)) c++;
-        setPosition(pos, STARTPOS);
-        startPos = true;
-    } else if (!memcmp(c, "fen", 3)) {
-        c += 3;
-        while (isspace(*c)) c++;
-        setPosition(pos, c);
-        while (*c != '\0' && memcmp(c, "moves", 5)) c++;
+    stream >> token;
+    if (token == "startpos") {
+        fen = STARTPOS;
+        stream >> token;
+    } else if (token == "fen") {
+        while (stream >> token && token != "moves")
+            fen += token + " ";
+    } else {
+        LogWarning() << "Invalid position!";
+        return;
     }
-    while (isspace(*c)) c++;
-    if (!memcmp(c, "moves", 5)) {
-        c += 5;
-        while (isspace(*c)) c++;
-        while (*c != '\0') {
-            m = movestr;
-            while (*c != '\0' && !isspace(*c)) *m++ = *c++;
-            *m = '\0';
-            genLegal(pos, &ml, TRUE);
-            move = parseMove(&ml, movestr);
-            if (!move) {
-                Print(3, "info string Illegal move: %s\n", movestr);
-                return;
-            } else makeMove(pos, UndoStack[pos.sp], move);
-#ifdef LEARNING_ON
-            if (startPos && movesSoFar.length < MAXPLY-1) {
-                movesSoFar.moves[movesSoFar.length] = move;
-                movesSoFar.length++;
-            }
-#endif
-            // this is to allow any number of moves in a game by only keeping the last relevant ones for rep detection
-            if (pos.posStore.fifty == 0) {
-                pos.sp = 0;
-            }
-            while (isspace(*c)) c++;
-        }
+
+    setPosition(CEngine.rootpos, fen.c_str());
+    while (stream >> token) {
+        movelist_t ml;
+        genLegal(CEngine.rootpos, &ml, true);
+        m = parseMove(&ml, token.c_str());
+        if (m) makeMove(CEngine.rootpos, UndoStack[CEngine.rootpos.sp], m);
+        else break;
+        if (CEngine.rootpos.posStore.fifty == 0) CEngine.rootpos.sp = 0;
     }
-    pos.ply = 0;
+    CEngine.rootpos.ply = 0;
+}
+
+void Interface::SetOption(std::istringstream& stream) {
+    string token, name, value;
+    stream >> token;
+    while (stream >> token && token != "value") name += string(" ", !name.empty()) + token;
+    while (stream >> token) value += string(" ", !value.empty()) + token;
+    if (UCIOptionsMap.count(name)) UCIOptionsMap[name] = value;
+    else LogAndPrintOutput() << "No such option: " << name;
+}
+
+void Interface::NewGame() {
+    ThreadsMgr.ClearPawnHash();
+    ThreadsMgr.ClearEvalHash();
+    CEngine.ClearTTHash();
+    CEngine.ClearPVTTHash();
+}
+
+Interface::~Interface() {
+
 }

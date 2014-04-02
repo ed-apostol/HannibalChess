@@ -7,7 +7,6 @@
 /*  Description: A chess playing program.         */
 /**************************************************/
 
-
 #include "typedefs.h"
 #include "data.h"
 #include "constants.h"
@@ -16,11 +15,6 @@
 #include "position.h"
 #include "utils.h"
 #include "eval.h"
-
-#ifdef TESTING_ON
-#include <sstream>
-using namespace std;
-#endif
 
 /* a utility to print output into different files:
 bit 0: stdout
@@ -107,8 +101,8 @@ char *move2Str(basic_move_t m) {
 
     /* ASSERT(moveIsOk(m)); */
 
-    if (m == 0) sprintf(str, "%c%c%c%c%c", '0', '0', '0', '0', '\0');
-    else sprintf(str, "%c%c%c%c%c",
+    if (m == 0) sprintf_s(str, "%c%c%c%c%c", '0', '0', '0', '0', '\0');
+    else sprintf_s(str, "%c%c%c%c%c",
         SQFILE(moveFrom(m)) + 'a',
         '1' + SQRANK(moveFrom(m)),
         SQFILE(moveTo(m)) + 'a',
@@ -124,68 +118,21 @@ char *sq2Str(int sq) {
 
     /* ASSERT(moveIsOk(m)); */
 
-    sprintf(str, "%c%c%c",
+    sprintf_s(str, "%c%c%c",
         SQFILE(sq) + 'a',
         '1' + SQRANK(sq),
         '\0'
         );
     return str;
 }
-#ifdef TESTING_ON
-string sqToStr(int sq) {
-    char c[3];
-    c[0] = 'a'+sq%8;
-    c[1] = '1'+sq/8;
-    c[2] = '\0';
-    return string(c);
-}
-string pieceToString(int pc) {
-    static const string PieceStrings[] = {"X","P","N","B","R","Q","K"};
-    return PieceStrings[pc];
-}
-string movenumToStr(int i) {
-    //	string s;
-    //	sprintf(s,"%d. ", i/2+1);
-    //	return s;
-    string result;//string which will contain the result
-    stringstream convert; // stringstream used for the conversion
-    convert << (i/2+1);//add the value of Number to the characters in the stream
-    result = convert.str();//set Result to the content of the stream
-    result.append(". ");
-    return result;
-}
-string moveToStr(basic_move_t m) {
-    if (m==0) return "none";
-    //    if (m==NULL_MOVE) return "0000";
-    string toReturn;
-    toReturn.append(sqToStr(moveFrom(m)));
-    toReturn.append(sqToStr(moveTo(m)));
-    if (movePromote(m)) {
-        toReturn.append(pieceToString(movePromote(m))); //learned the hard way this needs to be lower for comparisons to work
-    }
-    return toReturn;
-}
-string pv2Str(continuation_t *c) { //TODO promote use of this function throughout the code
-    if (c->length ==0) return "no_pv";
-    string s="";
-    string num;
-    for (int i=0; i < c->length; i++) {
-        if(i!=0) s.append(" ");
-        if (i%2==0) {
 
-            s.append(movenumToStr(i));
-        }
-        s.append(moveToStr(c->moves[i]));
-    }
-    return s;
-}
 /* a utility to print the position */
 void displayBoard(const position_t& pos, int x) {
     static char pcstr[] = ".PNBRQK.pnbrqk";
     int i, j, c, p;
     int pes;
     for (i = 56; i >= 0; i -= 8) {
-        Print(x, "\n%d  ",(i / 8) + 1);
+        Print(x, "\n%d  ", (i / 8) + 1);
         for (j = 0; j < 8; j++) {
             c = getColor(pos, i + j);
             p = getPiece(pos, i + j);
@@ -195,8 +142,8 @@ void displayBoard(const position_t& pos, int x) {
     Print(x, "\n\n");
     Print(x, "   a b c d e f g h \n\n");
     Print(x, "FEN %s\n", positionToFEN(pos));
-    Print(x, "%d.%s%s ", (pos.sp)/2
-        +(pos.side?1:0), pos.side?" ":" ..",
+    Print(x, "%d.%s%s ", (pos.sp) / 2
+        + (pos.side ? 1 : 0), pos.side ? " " : " ..",
         move2Str(pos.posStore.lastmove));
     Print(x, "%s, ", pos.side == WHITE ? "WHITE" : "BLACK");
     Print(x, "Castle = %d, ", pos.posStore.castle);
@@ -204,13 +151,11 @@ void displayBoard(const position_t& pos, int x) {
     Print(x, "Fifty = %d, ", pos.posStore.fifty);
     Print(x, "Ev = %d, ", eval(pos, 0, &pes));
     Print(x, "Ch = %s,\n",
-        isAtt(pos, pos.side^1, pos.kings&pos.color[pos.side])
+        isAtt(pos, pos.side ^ 1, pos.kings&pos.color[pos.side])
         ? "T" : "F");
     Print(x, "H = %s, ", bit2Str(pos.posStore.hash));
     Print(x, "PH = %s\n", bit2Str(pos.posStore.phash));
 }
-#endif
-
 
 /* a utility to get a certain piece from a position given a square */
 int getPiece(const position_t& pos, uint32 sq) {
@@ -255,12 +200,12 @@ int DiffColor(const position_t& pos, uint32 sq, int color) {
 uint64 getTime(void) {
 #if defined(_WIN32) || defined(_WIN64)
     static struct _timeb tv;
-    _ftime(&tv);
+    _ftime_s(&tv);
     return(tv.time * 1000 + tv.millitm);
 #else
     static struct timeval tv;
     static struct timezone tz;
-    gettimeofday (&tv, &tz);
+    gettimeofday(&tv, &tz);
     return(tv.tv_sec * 1000 + (tv.tv_usec / 1000));
 #endif
 }
@@ -268,7 +213,7 @@ uint64 getTime(void) {
 /* parse the move from string and returns a move from the
 move list of generated moves if the move string matched
 one of them */
-uint32 parseMove(movelist_t *mvlist, char *s) {
+uint32 parseMove(movelist_t *mvlist, const char *s) {
     uint32 m;
     uint32 from, to, p;
 
@@ -381,3 +326,6 @@ int anyRepNoMove(const position_t& pos, const int m) {//assumes no castle and no
     }
     return false;
 }
+
+
+

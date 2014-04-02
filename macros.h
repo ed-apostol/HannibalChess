@@ -22,11 +22,6 @@
 #  define CACHE_LINE_ALIGNMENT  __attribute__ ((aligned(64)))
 #endif
 
-//#define BOOL                unsigned int
-#define BOOL                bool
-#define TRUE                1
-#define FALSE               0
-
 #define MAXPLY              128
 #define MAX_HASH_STORE      (MAXPLY+102)
 #define MAXMOVES            256
@@ -100,13 +95,10 @@ enum PieceTypes {
 #define ENDGAME 1
 
 enum ThinkingStatus {
-    STOPPED = 0,
-    THINKING,
+    THINKING = 0,
     PONDERING,
     ANALYSING
 };
-
-#define DATESIZE            16
 
 #define REDUCED             4
 
@@ -118,7 +110,3 @@ enum ThinkingStatus {
 const int MaxNumOfThreads = 32;
 const int MaxNumSplitPointsPerThread = 8;
 
-#define MutexInit(x, y) InitializeCriticalSection(x)
-#define MutexLock(x) EnterCriticalSection(x)
-#define MutexUnlock(x) LeaveCriticalSection(x)
-#define MutexDestroy(x) DeleteCriticalSection(x)

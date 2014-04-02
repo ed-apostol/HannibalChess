@@ -52,14 +52,14 @@ uint32 isAtt(const position_t& pos, uint32 color, uint64 target) {
     while (target) {
         from = popFirstBit(&target);
         if ((pos.rooks | pos.queens) & pos.color[color]
-            & rookAttacksBB(from, pos.occupied)) return TRUE;
+            & rookAttacksBB(from, pos.occupied)) return true;
         if ((pos.bishops | pos.queens) & pos.color[color]
-            & bishopAttacksBB(from, pos.occupied)) return TRUE;
-        if (pos.knights & pos.color[color] & KnightMoves[from]) return TRUE;
-        if (pos.kings & pos.color[color] & KingMoves[from]) return TRUE;
-        if (pos.pawns & pos.color[color] & PawnCaps[from][color ^ 1]) return TRUE;
+            & bishopAttacksBB(from, pos.occupied)) return true;
+        if (pos.knights & pos.color[color] & KnightMoves[from]) return true;
+        if (pos.kings & pos.color[color] & KingMoves[from]) return true;
+        if (pos.pawns & pos.color[color] & PawnCaps[from][color ^ 1]) return true;
     }
-    return FALSE;
+    return false;
 }
 bool isSqAtt(const position_t& pos, uint64 occ, int sq, int color) {
 
@@ -176,8 +176,8 @@ uint32 moveIsLegal(const position_t& pos, uint32 move, uint64 pinned, uint32 inc
     ASSERT(pos != NULL);
     ASSERT(moveIsOk(move));
 
-    if (incheck) return TRUE;
-    if (isCastle(move)) return TRUE;
+    if (incheck) return true;
+    if (isCastle(move)) return true;
 
     us = pos.side;
     them = us ^ 1;
@@ -193,9 +193,9 @@ uint32 moveIsLegal(const position_t& pos, uint32 move, uint64 pinned, uint32 inc
             !(bishopAttacksBB(ksq, b) & (pos.queens | pos.bishops) & pos.color[them]));
     }
     if (from == ksq) return !(isSqAtt(pos, pos.occupied ^ (pos.kings&pos.color[us]), to, them));
-    if (!(pinned & BitMask[from])) return TRUE;
-    if (DirFromTo[from][ksq] == DirFromTo[to][ksq]) return TRUE;
-    return FALSE;
+    if (!(pinned & BitMask[from])) return true;
+    if (DirFromTo[from][ksq] == DirFromTo[to][ksq]) return true;
+    return false;
 }
 
 /* this determines if a move gives check */
@@ -214,71 +214,71 @@ bool moveIsCheck(const position_t& pos, basic_move_t m, uint64 dcc) {
 
     switch (movePiece(m)) {
     case PAWN:
-        if (PawnCaps[ksq][them] & BitMask[to]) return TRUE;
-        else if ((dcc & BitMask[from]) && DirFromTo[from][ksq] != DirFromTo[to][ksq]) return TRUE;
+        if (PawnCaps[ksq][them] & BitMask[to]) return true;
+        else if ((dcc & BitMask[from]) && DirFromTo[from][ksq] != DirFromTo[to][ksq]) return true;
         temp = pos.occupied ^ BitMask[from] ^ BitMask[to];
         switch (movePromote(m)) {
         case EMPTY:
             break;
         case KNIGHT:
-            if (KnightMoves[ksq] & BitMask[to]) return TRUE;
-            return FALSE;
+            if (KnightMoves[ksq] & BitMask[to]) return true;
+            return false;
         case BISHOP:
-            if (bishopAttacksBB(ksq, temp) & BitMask[to]) return TRUE;
-            return FALSE;
+            if (bishopAttacksBB(ksq, temp) & BitMask[to]) return true;
+            return false;
         case ROOK:
-            if (rookAttacksBB(ksq, temp) & BitMask[to]) return TRUE;
-            return FALSE;
+            if (rookAttacksBB(ksq, temp) & BitMask[to]) return true;
+            return false;
         case QUEEN:
-            if (queenAttacksBB(ksq, temp) & BitMask[to]) return TRUE;
-            return FALSE;
+            if (queenAttacksBB(ksq, temp) & BitMask[to]) return true;
+            return false;
         }
         if (isEnPassant(m)) {
             temp ^= BitMask[(SQRANK(from) << 3) + SQFILE(to)];
             if ((rookAttacksBB(ksq, temp) & (pos.queens | pos.rooks)
                 & pos.color[us]) || (bishopAttacksBB(ksq, temp) & (pos.queens | pos.bishops) & pos.color[us]))
-                return TRUE;
+                return true;
         }
-        return FALSE;
+        return false;
 
     case KNIGHT:
-        if ((dcc & BitMask[from])) return TRUE;
-        else if (KnightMoves[ksq] & BitMask[to]) return TRUE;
-        return FALSE;
+        if ((dcc & BitMask[from])) return true;
+        else if (KnightMoves[ksq] & BitMask[to]) return true;
+        return false;
 
     case BISHOP:
-        if ((dcc & BitMask[from])) return TRUE;
-        else if (bishopAttacksBB(ksq, pos.occupied) & BitMask[to]) return TRUE;
-        return FALSE;
+        if ((dcc & BitMask[from])) return true;
+        else if (bishopAttacksBB(ksq, pos.occupied) & BitMask[to]) return true;
+        return false;
 
     case ROOK:
-        if ((dcc & BitMask[from])) return TRUE;
-        else if (rookAttacksBB(ksq, pos.occupied) & BitMask[to]) return TRUE;
-        return FALSE;
+        if ((dcc & BitMask[from])) return true;
+        else if (rookAttacksBB(ksq, pos.occupied) & BitMask[to]) return true;
+        return false;
 
     case QUEEN:
         ASSERT(!(dcc & BitMask[from]));
-        if (queenAttacksBB(ksq, pos.occupied) & BitMask[to]) return TRUE;
-        return FALSE;
+        if (queenAttacksBB(ksq, pos.occupied) & BitMask[to]) return true;
+        return false;
 
     case KING:
         if ((dcc & BitMask[from]) &&
-            DirFromTo[from][ksq] != DirFromTo[to][ksq]) return TRUE;
+            DirFromTo[from][ksq] != DirFromTo[to][ksq]) return true;
         temp = pos.occupied ^ BitMask[from] ^ BitMask[to];
         if (from - to == 2) {
-            if (rookAttacksBB(ksq, temp) & BitMask[from - 1]) return TRUE;
+            if (rookAttacksBB(ksq, temp) & BitMask[from - 1]) return true;
         }
         if (from - to == -2) {
-            if (rookAttacksBB(ksq, temp) & BitMask[from + 1]) return TRUE;
+            if (rookAttacksBB(ksq, temp) & BitMask[from + 1]) return true;
         }
-        return FALSE;
+        return false;
 
     default:
-        ASSERT(FALSE);
-        return FALSE;
+        ASSERT(false);
+        return false;
     }
-    ASSERT(FALSE);
-    return FALSE;
+    ASSERT(false);
+    return false;
 }
 
 

@@ -9,6 +9,7 @@
 
 // error check shows could use minor debugging work
 
+#pragma once
 // rbp v rb opp bishop drawish
 /*
 TODO ED:
@@ -30,8 +31,6 @@ can knight catch pawns code from LL
 #define MIN_SPLIT_DEPTH			4 // best is 4
 #define MAX_SPLIT_THREADS		4 // best is 4
 //#define TESTING_ON true
-//#define TCEC true
-//#define LEARNING_ON true
 
 //#define SPEED_TEST
 //#define NEW_EASY true
@@ -46,30 +45,11 @@ can knight catch pawns code from LL
 //#define DEBUG_INDEPTH true
 
 //#define SELF_TUNE2 1 //number of simultaneous training games
-//#define TUNE_MAT TRUE
+//#define TUNE_MAT true
 
-#define NP2 TRUE
-#define USE_PHASH TRUE
+#define NP2 true
+#define USE_PHASH true
 #define MIN_TRANS_SIZE 16
-
-#ifdef LEARNING
-#define DEFAULT_LEARN_THREADS 0
-#define DEFAULT_LEARN_TIME 3
-#define LEARN_NODES 10000000
-#define SHOW_LEARNING false
-#define LOG_LEARNING true
-#define LEARN_PAWN_HASH_SIZE 32
-#define LEARN_EVAL_HASH_SIZE 32
-
-#define DEFAULT_BOOK_EXPLORE 2
-#define MAXLEARN_OUT_OF_BOOK 2
-#define DEFAULT_HANNIBAL_BOOK "HannibalBook.han"
-#define DEFAULT_HANNIBAL_LEARN "HannibalLearn.lrn"
-#define MAX_CONVERT 20
-#define HANNIBAL_BOOK_RANDOM (Guci_options.bookExplore*10)
-#define MIN_RANDOM -20
-#define DEFAULT_BOOK_SCORE INF
-#endif
 
 #ifdef TCEC
 #define INIT_EVAL 64
@@ -93,15 +73,15 @@ can knight catch pawns code from LL
 #define ERROR_FILE "errfile.txt"
 
 #ifdef SPEED_TEST
-#define SHOW_SEARCH FALSE
-#define RETURN_MOVE FALSE
+#define SHOW_SEARCH false
+#define RETURN_MOVE false
 #else
 #ifdef SELF_TUNE2
-#define SHOW_SEARCH FALSE
-#define RETURN_MOVE FALSE
+#define SHOW_SEARCH false
+#define RETURN_MOVE false
 #else
-#define SHOW_SEARCH TRUE
-#define RETURN_MOVE TRUE
+#define SHOW_SEARCH true
+#define RETURN_MOVE true
 #endif
 #endif
 
@@ -207,15 +187,6 @@ struct movelist_t {
     uint64 pinned;
     move_t list[MAXMOVES];
 };
-#ifndef TCEC
-#ifdef LEARNING_ON
-struct learn_t {
-    learn_t() : learnFile(NULL) {}
-    ~learn_t() { if (learnFile) fclose(learnFile); }
-    FILE *learnFile;
-    string name;
-};
-#endif
 
 struct book_t {
     BookType type;
@@ -224,126 +195,6 @@ struct book_t {
     FILE *bookFile;
     int64 size;
     string name;
-};
-#endif
-/* the pawn hash table entry type */
-struct pawn_entry_t{
-    uint32 hashlock;
-    uint64 passedbits;
-    int16 opn;
-    int16 end;
-    int8 shelter[2];
-    int8 kshelter[2];
-    int8 qshelter[2];
-    //	int8 halfPassed[2]; //currently unused
-};
-
-/* the pawn hash table type */
-struct pawntable_t{
-    pawntable_t() : table(NULL) {}
-    ~pawntable_t() { if (table) free(table); }
-    pawn_entry_t *table;
-    uint64 size;
-    uint64 mask;
-};
-
-struct eval_entry_t{
-    uint32 hashlock;
-    int16 value;
-    int16 pessimism;
-};
-
-struct evaltable_t{
-    evaltable_t() : table(NULL) {}
-    ~evaltable_t() { if (table) free(table); }
-    eval_entry_t *table;
-    uint64 size;
-    uint64 mask;
-};
-
-/* the trans table entry type */
-struct trans_entry_t{
-    uint32 hashlock;
-    uint32 move;
-    int16 uppervalue;
-    int16 lowervalue;
-    uint8 mask;
-    uint8 age;
-    uint8 upperdepth;
-    uint8 lowerdepth;
-};
-
-/* the trans table type */
-struct transtable_t{
-    transtable_t() : table(NULL) {}
-    ~transtable_t() { if (table) free(table); }
-    trans_entry_t *table;
-    uint64 size;
-    uint64 mask;
-    int32 date;
-    uint64 used;
-    int32 age[DATESIZE];
-};
-
-struct pvhash_entry_t {
-    uint32 hashlock;
-    basic_move_t move;
-    int16 score;
-    uint8 depth;
-    uint8 age;
-};
-
-struct pvhashtable_t {
-    pvhashtable_t() : table(NULL) {}
-    ~pvhashtable_t() { if (table) free(table); }
-    pvhash_entry_t *table;
-    uint64 size;
-    uint64 mask;
-};
-
-struct uci_option_t{
-    int time_buffer;
-    int contempt;
-    int threads;
-#ifndef TESTING_ON
-    int try_book;
-    int book_limit;
-    int learnThreads;
-    int usehannibalbook;
-    int learnTime;
-    int bookExplore;
-#endif
-    int min_split_depth;
-    int max_split_threads;
-    int evalcachesize;
-    int pawnhashsize;
-};
-
-/* the eval info structure */
-struct eval_info_t{
-    uint64 atkall[2];
-    uint64 atkpawns[2];
-    uint64 atkknights[2];
-    uint64 atkbishops[2];
-    uint64 kingatkbishops[2];
-    uint64 atkrooks[2];
-    uint64 kingatkrooks[2];
-    uint64 atkqueens[2];
-    uint64 atkkings[2];
-    uint64 kingzone[2];
-    uint64 kingadj[2];
-    uint64 potentialPawnAttack[2];
-    uint64 pawns[2];
-    int mid_score[2];
-    int end_score[2];
-    int draw[2];
-    int atkcntpcs[2];
-    int phase;
-    int MLindex[2];
-    int flags;
-    int queening;
-    uint8 endFlags[2];
-    pawn_entry_t *pawn_entry;
 };
 
 /* the undo structure */
@@ -390,60 +241,6 @@ struct material_info_t{
     mflag_t flags[2];
 };
 
-/* the search data structure */
-struct search_info_t{
-    int thinking_status;
-#ifndef TCEC
-    int outOfBook;
-#endif
-    int depth_is_limited;
-    int depth_limit;
-    int moves_is_limited;
-    int time_is_limited;
-
-    int64 time_limit_max;
-    int64 time_limit_abs;
-    int node_is_limited;
-    int64 node_limit;
-
-    int64 start_time;
-    int64 last_time;
-    int64 alloc_time;
-
-    int last_last_value;
-    int last_value;
-    int best_value;
-
-    int mate_found;
-    int currmovenumber;
-    int change;
-    int research;
-    int iteration;
-
-    int legalmoves;
-    basic_move_t bestmove;
-    basic_move_t pondermove;
-
-    basic_move_t moves[MAXMOVES];
-    bool mvlist_initialized;
-    continuation_t rootPV;
-    int32 evalgains[1024];
-    int32 history[1024];
-    evaltable_t et;
-    pawntable_t pt;
-    transtable_t tt;
-};
-
-
-struct ThreadStack {
-    void Init() {
-        killer1 = EMPTY;
-        killer2 = EMPTY;
-    }
-    basic_move_t killer1;
-    basic_move_t killer2;
-};
-
 struct SearchStack {
     SearchStack() :
     firstExtend(false),
@@ -485,50 +282,6 @@ struct SearchStack {
     int mvlist_phase;
 };
 
-typedef CRITICAL_SECTION mutex_t;
-
-struct SplitPoint {
-    position_t pos[MaxNumOfThreads];
-    SplitPoint* parent;
-    SearchStack* sscurr;
-    SearchStack* ssprev;
-    int depth;
-    bool inCheck;
-    bool inRoot;
-    NodeType nodeType;
-    volatile int alpha;
-    volatile int beta;
-    volatile int bestvalue;
-    volatile int played;
-    volatile basic_move_t bestmove;
-    volatile uint64 workersBitMask;
-    volatile bool cutoff;
-    mutex_t movelistlock[1];
-    mutex_t updatelock[1];
-};
-
-struct thread_t {
-    SplitPoint *split_point;
-    volatile bool stop;
-    volatile bool running;
-    volatile bool searching;
-    volatile bool exit_flag;
-    HANDLE idle_event;
-    uint64 nodes;
-    uint64 nodes_since_poll;
-    uint64 nodes_between_polls;
-    uint64 started; // DEBUG
-    uint64 ended; // DEBUG
-    int64 numsplits; // DEBUG
-    int num_sp;
-    ThreadStack ts[MAXPLY];
-    SplitPoint sptable[MaxNumSplitPointsPerThread];
-#ifdef SELF_TUNE2
-    bool playingGame;
-#endif
-};
-
-
 enum directions { SW, W, NW, N, NE, E, SE, S, NO_DIR };//{-9, -1, 7, 8, 9, 1, -7, -8};
 
 /* the squares */
@@ -562,45 +315,6 @@ enum movegen_phases {
     PH_GAINING,
     PH_END
 };
-
-#ifdef SELF_TUNE
-struct player_t { //if you put an array in here you need to change the copy and compare functions
-
-    /* MATERIAL
-    int p1, p2, p3, p4;
-    int n1, n2, n3, n4;
-    int b1, b2, b3, b4;
-    int r1, r2, r3, r4;
-    int q1, q2, q3, q4;
-    int bb1, bb2, bb3, bb4;
-    */
-    double red_min;
-    double p_red_min;
-    double red_scale;
-    double p_red_scale;
-    int lprune_min;
-    int lprune_scale;
-    int fut_scale;
-    int qch;
-    int p_qch;
-    int ddepth;
-    int dscore;
-    int fut;
-    int raz;
-    int min_n;
-    int n_scale;
-    int n_bon;
-    int n_res;
-    int swap_prune;
-    int ext_only;
-    int asp;
-    int lch;
-
-    int games;
-    int points; // win is 2, draw is 1.
-    double rating;
-};
-#endif
 
 INLINE uint moveFrom(basic_move_t m) { return (63 & (m)); }
 INLINE uint moveTo(basic_move_t m) { return (63 & ((m) >> 6)); }

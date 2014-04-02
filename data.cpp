@@ -77,33 +77,7 @@ FILE *errfile;
 FILE *dumpfile;
 int origScore;
 
-
-transtable_t global_trans_table;
-//#define TransTable(thread) (SearchInfo(thread).tt)
-#define TransTable(thread) global_trans_table
-pvhashtable_t PVHashTable;
-
-
-#ifndef TCEC
 book_t GpolyglotBook;
-#ifdef LEARNING
-book_t GhannibalBook;
-learn_t Glearn;
-mutex_t LearningLock[1];
-mutex_t BookLock[1];
-continuation_t movesSoFar;
-search_info_t global_search_info;
-search_info_t* SearchInfoMap[MaxNumOfThreads];
-#define SearchInfo(thread) (*SearchInfoMap[thread])
-#else
-search_info_t global_search_info;
-#define SearchInfo(thread) global_search_info
-#endif
-#endif
-uci_option_t Guci_options;
-
-mutex_t SMPLock[1];
-thread_t Threads[MaxNumOfThreads];
 
 // used in setting up the position and eval symmetry
 const char *FenString[] = {

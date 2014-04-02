@@ -65,7 +65,7 @@ void genLegal(const position_t& pos, movelist_t *mvlist, int promoteAll) {
         genCaptures(pos, &mlt);
         for (int i = 0; i < mlt.size; i++) {
             int mv = mlt.list[i].m;
-            if (!moveIsLegal(pos, mv, pinned, FALSE)) continue;
+            if (!moveIsLegal(pos, mv, pinned, false)) continue;
             mvlist->list[mvlist->size++] = mlt.list[i];
             if (promoteAll && movePromote(mv) == QUEEN) { // makes up for not generating ROOK and BISHOP promotes
                 int from = moveFrom(mv);
@@ -82,13 +82,13 @@ void genLegal(const position_t& pos, movelist_t *mvlist, int promoteAll) {
         mlt.pos = mlt.size;
         genNonCaptures(pos, &mlt);
         for (int i = mlt.pos; i < mlt.size; i++) {
-            if (!moveIsLegal(pos, mlt.list[i].m, pinned, FALSE)) continue;
+            if (!moveIsLegal(pos, mlt.list[i].m, pinned, false)) continue;
             mvlist->list[mvlist->size++] = mlt.list[i];
         }
     }
 }
 
-void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, int thread_id) {
+void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, Thread& sthread) {
     int from, to;
     uint64 pc_bits, pc_bits_p1, pc_bits_p2, mv_bits;
     uint64 occupied = pos.occupied;
@@ -102,22 +102,22 @@ void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, int t
     mvlist->size = mvlist->pos;
 
     if (pos.side == BLACK) { //TODO consider writing so we don't need this expensive branch
-        if (SearchInfo(thread_id).evalgains[historyIndex(pos.side, GenBlackOO())] >= delta && (pos.posStore.castle&BCKS) && (!(occupied&(F8 | G8)))) {
+        if (sthread.evalgains[historyIndex(pos.side, GenBlackOO())] >= delta && (pos.posStore.castle&BCKS) && (!(occupied&(F8 | G8)))) {
             if (!isAtt(pos, pos.side ^ 1, E8 | F8 | G8))
                 mvlist->list[mvlist->size++].m = GenBlackOO();
         }
-        if (SearchInfo(thread_id).evalgains[historyIndex(pos.side, GenBlackOOO())] >= delta && (pos.posStore.castle&BCQS) && (!(occupied&(B8 | C8 | D8)))) {
+        if (sthread.evalgains[historyIndex(pos.side, GenBlackOOO())] >= delta && (pos.posStore.castle&BCQS) && (!(occupied&(B8 | C8 | D8)))) {
             if (!isAtt(pos, pos.side ^ 1, E8 | D8 | C8))
                 mvlist->list[mvlist->size++].m = GenBlackOOO();
         }
         pc_bits_p1 = (pos.pawns & allies & ~Rank2BB) & ((~occupied) << 8);
         pc_bits_p2 = (pos.pawns & allies & Rank7BB) & ((~occupied) << 8) & ((~occupied) << 16);
     } else {
-        if (SearchInfo(thread_id).evalgains[historyIndex(pos.side, GenWhiteOO())] >= delta && (pos.posStore.castle&WCKS) && (!(occupied&(F1 | G1)))) {
+        if (sthread.evalgains[historyIndex(pos.side, GenWhiteOO())] >= delta && (pos.posStore.castle&WCKS) && (!(occupied&(F1 | G1)))) {
             if (!isAtt(pos, pos.side ^ 1, E1 | F1 | G1))
                 mvlist->list[mvlist->size++].m = GenWhiteOO();
         }
-        if (SearchInfo(thread_id).evalgains[historyIndex(pos.side, GenWhiteOOO())] >= delta && (pos.posStore.castle&WCQS) && (!(occupied&(B1 | C1 | D1)))) {
+        if (sthread.evalgains[historyIndex(pos.side, GenWhiteOOO())] >= delta && (pos.posStore.castle&WCQS) && (!(occupied&(B1 | C1 | D1)))) {
             if (!isAtt(pos, pos.side ^ 1, E1 | D1 | C1))
                 mvlist->list[mvlist->size++].m = GenWhiteOOO();
         }
@@ -130,7 +130,7 @@ void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, int t
         mv_bits = PawnMoves[from][pos.side];
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            if (SearchInfo(thread_id).evalgains[historyIndex(pos.side, GenOneForward(from, to))] >= delta)
+            if (sthread.evalgains[historyIndex(pos.side, GenOneForward(from, to))] >= delta)
                 mvlist->list[mvlist->size++].m = GenOneForward(from, to);
         }
     }
@@ -140,7 +140,7 @@ void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, int t
         mv_bits = PawnMoves2[from][pos.side];
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            if (SearchInfo(thread_id).evalgains[historyIndex(pos.side, GenTwoForward(from, to))] >= delta)
+            if (sthread.evalgains[historyIndex(pos.side, GenTwoForward(from, to))] >= delta)
                 mvlist->list[mvlist->size++].m = GenTwoForward(from, to);
         }
     }
@@ -150,7 +150,7 @@ void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, int t
         mv_bits = KnightMoves[from] & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            if (SearchInfo(thread_id).evalgains[historyIndex(pos.side, GenKnightMove(from, to, EMPTY))] >= delta)
+            if (sthread.evalgains[historyIndex(pos.side, GenKnightMove(from, to, EMPTY))] >= delta)
                 mvlist->list[mvlist->size++].m = GenKnightMove(from, to, EMPTY);
         }
     }
@@ -160,7 +160,7 @@ void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, int t
         mv_bits = bishopAttacksBB(from, occupied) & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            if (SearchInfo(thread_id).evalgains[historyIndex(pos.side, GenBishopMove(from, to, EMPTY))] >= delta)
+            if (sthread.evalgains[historyIndex(pos.side, GenBishopMove(from, to, EMPTY))] >= delta)
                 mvlist->list[mvlist->size++].m = GenBishopMove(from, to, EMPTY);
         }
     }
@@ -170,7 +170,7 @@ void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, int t
         mv_bits = rookAttacksBB(from, occupied) & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            if (SearchInfo(thread_id).evalgains[historyIndex(pos.side, GenRookMove(from, to, EMPTY))] >= delta)
+            if (sthread.evalgains[historyIndex(pos.side, GenRookMove(from, to, EMPTY))] >= delta)
                 mvlist->list[mvlist->size++].m = GenRookMove(from, to, EMPTY);
         }
     }
@@ -180,7 +180,7 @@ void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, int t
         mv_bits = queenAttacksBB(from, occupied) & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            if (SearchInfo(thread_id).evalgains[historyIndex(pos.side, GenQueenMove(from, to, EMPTY))] >= delta)
+            if (sthread.evalgains[historyIndex(pos.side, GenQueenMove(from, to, EMPTY))] >= delta)
                 mvlist->list[mvlist->size++].m = GenQueenMove(from, to, EMPTY);
         }
     }
@@ -190,7 +190,7 @@ void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, int t
         mv_bits = KingMoves[from] & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            if (SearchInfo(thread_id).evalgains[historyIndex(pos.side, GenKingMove(from, to, EMPTY))] >= delta)
+            if (sthread.evalgains[historyIndex(pos.side, GenKingMove(from, to, EMPTY))] >= delta)
                 mvlist->list[mvlist->size++].m = GenKingMove(from, to, EMPTY);
         }
     }
@@ -743,20 +743,20 @@ uint32 genMoveIfLegal(const position_t& pos, uint32 move, uint64 pinned) {
     opp = me ^ 1;
     occupied = pos.occupied;
 
-    if (from == to) return FALSE;
-    if (from < a1 || from > h8) return FALSE;
-    if (to < a1 || to > h8) return FALSE;
-    if (pc < PAWN || pc > KING) return FALSE;
-    if (capt < EMPTY || capt > QUEEN) return FALSE;
-    if (pc != PAWN && prom != EMPTY) return FALSE;
+    if (from == to) return false;
+    if (from < a1 || from > h8) return false;
+    if (to < a1 || to > h8) return false;
+    if (pc < PAWN || pc > KING) return false;
+    if (capt < EMPTY || capt > QUEEN) return false;
+    if (pc != PAWN && prom != EMPTY) return false;
 
     if (move == EMPTY || getPiece(pos, from) != pc || DiffColor(pos, from, me) ||
-        ((pinned & BitMask[from]) && (DirFromTo[from][pos.kpos[me]] != DirFromTo[to][pos.kpos[me]]))) return FALSE;
+        ((pinned & BitMask[from]) && (DirFromTo[from][pos.kpos[me]] != DirFromTo[to][pos.kpos[me]]))) return false;
     switch (pc) {
     case PAWN:
         if (isEnPassant(move)) {
             inc = ((me == WHITE) ? -8 : 8);
-            if (to != pos.posStore.epsq || getPiece(pos, pos.posStore.epsq + inc) != PAWN || DiffColor(pos, pos.posStore.epsq + inc, opp)) return FALSE;
+            if (to != pos.posStore.epsq || getPiece(pos, pos.posStore.epsq + inc) != PAWN || DiffColor(pos, pos.posStore.epsq + inc, opp)) return false;
             {
                 uint64 b = pos.occupied ^ BitMask[from] ^ BitMask[pos.posStore.epsq + inc] ^ BitMask[to];
                 int ksq = pos.kpos[me];
@@ -765,63 +765,63 @@ uint32 genMoveIfLegal(const position_t& pos, uint32 move, uint64 pinned) {
                     !(bishopAttacksBB(ksq, b) & (pos.queens | pos.bishops) & pos.color[opp]));
             }
         } else {
-            if (prom > QUEEN || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp)) return FALSE;
+            if (prom > QUEEN || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp)) return false;
             inc = ((me == WHITE) ? 8 : -8);
             delta = to - from;
             if (capt == EMPTY) {
                 if (!(delta == inc) && !(delta == (2 * inc)
                     && PAWN_RANK(from, me) == Rank2
-                    && getPiece(pos, from + inc) == EMPTY)) return FALSE;
+                    && getPiece(pos, from + inc) == EMPTY)) return false;
             } else {
-                if (!(delta == (inc - 1)) && !(delta == (inc + 1))) return FALSE;
+                if (!(delta == (inc - 1)) && !(delta == (inc + 1))) return false;
             }
             return ((prom != 0) == (PAWN_RANK(to, me) == Rank8));
         }
         break;
 
     case KNIGHT:
-        if (moveAction(move) != KNIGHT || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(KnightMoves[from] & BitMask[to])) return FALSE;
-        return TRUE;
+        if (moveAction(move) != KNIGHT || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(KnightMoves[from] & BitMask[to])) return false;
+        return true;
         break;
     case BISHOP:
-        if (moveAction(move) != BISHOP || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(bishopAttacksBB(from, occupied) & BitMask[to])) return FALSE;
-        return TRUE;
+        if (moveAction(move) != BISHOP || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(bishopAttacksBB(from, occupied) & BitMask[to])) return false;
+        return true;
         break;
 
     case ROOK:
-        if (moveAction(move) != ROOK || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(rookAttacksBB(from, occupied) & BitMask[to])) return FALSE;
-        return TRUE;
+        if (moveAction(move) != ROOK || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(rookAttacksBB(from, occupied) & BitMask[to])) return false;
+        return true;
         break;
 
     case QUEEN:
-        if (moveAction(move) != QUEEN || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(queenAttacksBB(from, occupied) & BitMask[to])) return FALSE;
-        return TRUE;
+        if (moveAction(move) != QUEEN || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(queenAttacksBB(from, occupied) & BitMask[to])) return false;
+        return true;
         break;
 
     case KING:
-        if ((getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp)) return FALSE;
+        if ((getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp)) return false;
         if (isCastle(move)) {
             if (me == WHITE) {
-                if (from != e1) return FALSE;
+                if (from != e1) return false;
                 if (to == g1) {
-                    if (!(pos.posStore.castle & WCKS) || (occupied&(F1 | G1)) || isAtt(pos, opp, E1 | F1 | G1)) return FALSE;
+                    if (!(pos.posStore.castle & WCKS) || (occupied&(F1 | G1)) || isAtt(pos, opp, E1 | F1 | G1)) return false;
                 } else if (to == c1) {
-                    if (!(pos.posStore.castle & WCQS) || (occupied&(B1 | C1 | D1)) || isAtt(pos, opp, C1 | D1 | E1)) return FALSE;
-                } else return FALSE;
+                    if (!(pos.posStore.castle & WCQS) || (occupied&(B1 | C1 | D1)) || isAtt(pos, opp, C1 | D1 | E1)) return false;
+                } else return false;
             } else {
-                if (from != e8) return FALSE;
+                if (from != e8) return false;
                 if (to == g8) {
-                    if (!(pos.posStore.castle & BCKS) || (occupied&(F8 | G8)) || isAtt(pos, opp, E8 | F8 | G8)) return FALSE;
+                    if (!(pos.posStore.castle & BCKS) || (occupied&(F8 | G8)) || isAtt(pos, opp, E8 | F8 | G8)) return false;
                 } else if (to == c8) {
-                    if (!(pos.posStore.castle & BCQS) || (occupied&(B8 | C8 | D8)) || isAtt(pos, opp, C8 | D8 | E8)) return FALSE;
-                } else return FALSE;
+                    if (!(pos.posStore.castle & BCQS) || (occupied&(B8 | C8 | D8)) || isAtt(pos, opp, C8 | D8 | E8)) return false;
+                } else return false;
             }
-            return TRUE;
+            return true;
         }//isSqAtt(const position_t& pos, uint64 occ, int sq,int color) {
-        else if (!(KingMoves[from] & BitMask[to]) || isSqAtt(pos, pos.occupied ^ (pos.kings & pos.color[me]), to, opp)) return FALSE;
-        return TRUE;
+        else if (!(KingMoves[from] & BitMask[to]) || isSqAtt(pos, pos.occupied ^ (pos.kings & pos.color[me]), to, opp)) return false;
+        return true;
         break;
     }
-    return FALSE;
+    return false;
 }
 

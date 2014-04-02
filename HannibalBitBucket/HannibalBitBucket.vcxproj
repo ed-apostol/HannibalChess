@@ -32,7 +32,7 @@
     <ClCompile Include="..\movepicker.cpp" />
     <ClCompile Include="..\position.cpp" />
     <ClCompile Include="..\search.cpp" />
-    <ClCompile Include="..\smp.cpp" />
+    <ClCompile Include="..\threads.cpp" />
     <ClCompile Include="..\trans.cpp" />
     <ClCompile Include="..\uci.cpp" />
     <ClCompile Include="..\utils.cpp" />
@@ -51,7 +51,7 @@
     <ClInclude Include="..\movepicker.h" />
     <ClInclude Include="..\position.h" />
     <ClInclude Include="..\search.h" />
-    <ClInclude Include="..\smp.h" />
+    <ClInclude Include="..\threads.h" />
     <ClInclude Include="..\trans.h" />
     <ClInclude Include="..\typedefs.h" />
     <ClInclude Include="..\uci.h" />

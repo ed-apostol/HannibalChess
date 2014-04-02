@@ -113,7 +113,7 @@ void unmakeMove(position_t& pos, pos_store_t& undo) {
             rook_to = f8;
             break;
         default:
-            ASSERT(FALSE);
+            ASSERT(false);
             break;
         }
         pos.pieces[rook_from] = ROOK;
@@ -315,7 +315,7 @@ void makeMove(position_t& pos, pos_store_t& undo, basic_move_t m) {
             rook_to = f8;
             break;
         default:
-            ASSERT(FALSE);
+            ASSERT(false);
             break;
         }
         pos.pieces[rook_to] = ROOK;
@@ -441,7 +441,7 @@ void makeMove(position_t& pos, pos_store_t& undo, basic_move_t m) {
         break;
 #ifdef TESTING_ON
     case KING:
-        ASSERT(FALSE);
+        ASSERT(false);
         Print(8, "Move capturing the King: %s\n", move2Str(m));
         displayBoard(pos, 8);
         break;

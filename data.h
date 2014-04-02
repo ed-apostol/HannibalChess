@@ -12,7 +12,7 @@
 #ifdef EVAL_DEBUG
 extern int showEval;
 #else
-#define showEval FALSE
+#define showEval false
 #endif
 
 /* the precomputed extern piece 64 bit attacks */
@@ -80,33 +80,7 @@ extern FILE *errfile;
 extern FILE *dumpfile;
 extern int origScore;
 
-
-extern transtable_t global_trans_table;
-//#define TransTable(thread) (SearchInfo(thread).tt)
-#define TransTable(thread) global_trans_table
-extern pvhashtable_t PVHashTable;
-
-
-#ifndef TCEC
 extern book_t GpolyglotBook;
-#ifdef LEARNING
-extern book_t GhannibalBook;
-extern learn_t Glearn;
-mutex_t LearningLock[1];
-mutex_t BookLock[1];
-continuation_t movesSoFar;
-extern search_info_t global_search_info;
-extern search_info_t* SearchInfoMap[MaxNumOfThreads];
-#define SearchInfo(thread) (*SearchInfoMap[thread])
-#else
-extern search_info_t global_search_info;
-#define SearchInfo(thread) global_search_info
-#endif
-#endif
-extern uci_option_t Guci_options;
-
-extern mutex_t SMPLock[1];
-extern thread_t Threads[MaxNumOfThreads];
 
 // used in setting up the position and eval symmetry
 extern const char *FenString[];
