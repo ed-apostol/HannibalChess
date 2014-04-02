@@ -81,15 +81,22 @@ typedef unsigned __int64	uint64;
 typedef unsigned int		uint;
 #endif
 
-enum NodeType { CutNode = -1, PVNode = 0, AllNode };
-enum BookType { POLYGLOT_BOOK, PUCK_BOOK };
-enum HashType { HTLower, HTUpper, HTCutUpper, HTAllLower, HTExact, HTNoMoves };
-enum HashMask { MLower = 1, MUpper = 2, MCutUpper = 4, MAllLower = 8, MExact = 16, MNoMoves = 32, MClear = 255 };
+enum NodeType {
+    CutNode = -1, PVNode = 0, AllNode
+};
+enum BookType {
+    POLYGLOT_BOOK, PUCK_BOOK
+};
+enum HashType {
+    HTLower, HTUpper, HTCutUpper, HTAllLower, HTExact, HTNoMoves
+};
+enum HashMask {
+    MLower = 1, MUpper = 2, MCutUpper = 4, MAllLower = 8, MExact = 16, MNoMoves = 32, MClear = 255
+};
 
 typedef uint32 basic_move_t;
 
-struct continuation_t
-{
+struct continuation_t {
     basic_move_t moves[MAXPLY + 1];
     int length;
 };
@@ -121,14 +128,16 @@ struct movelist_t {
 struct book_t {
     BookType type;
     book_t() : bookFile(NULL) {}
-    ~book_t() { if (bookFile) fclose(bookFile); }
+    ~book_t() {
+        if (bookFile) fclose(bookFile);
+    }
     FILE *bookFile;
     int64 size;
     string name;
 };
 
 /* the undo structure */
-struct pos_store_t{
+struct pos_store_t {
     uint32 lastmove;
     int castle;
     int fifty;
@@ -143,7 +152,7 @@ struct pos_store_t{
 };
 
 /* the position structure */
-struct position_t{
+struct position_t {
     uint64 pawns;
     uint64 knights;
     uint64 bishops;
@@ -164,7 +173,7 @@ struct position_t{
 typedef uint8 mflag_t;
 
 /* the material info structure */
-struct material_info_t{
+struct material_info_t {
     int16 value;
     uint8 phase;
     uint8 draw[2];
@@ -188,8 +197,7 @@ struct SearchStack {
     hashMove(EMPTY),
     hashDepth(0),
     mvlist(&movelist),
-    mvlist_phase(0)
-    { }
+    mvlist_phase(0) {}
     int playedMoves;
     int hisCnt;
     basic_move_t hisMoves[64];
@@ -212,7 +220,9 @@ struct SearchStack {
     int mvlist_phase;
 };
 
-enum directions { SW, W, NW, N, NE, E, SE, S, NO_DIR };//{-9, -1, 7, 8, 9, 1, -7, -8};
+enum directions {
+    SW, W, NW, N, NE, E, SE, S, NO_DIR
+};//{-9, -1, 7, 8, 9, 1, -7, -8};
 
 /* the squares */
 enum squarenames {
@@ -246,33 +256,87 @@ enum movegen_phases {
     PH_END
 };
 
-INLINE uint moveFrom(basic_move_t m) { return (63 & (m)); }
-INLINE uint moveTo(basic_move_t m) { return (63 & ((m) >> 6)); }
-INLINE uint movePiece(basic_move_t m) { return (7 & ((m) >> 12)); }
-INLINE uint moveAction(basic_move_t m) { return (63 & ((m) >> 12)); }
-INLINE uint moveCapture(basic_move_t m) { return (7 & ((m) >> 18)); }
-INLINE uint moveRemoval(basic_move_t m) { return (15 & ((m) >> 18)); }
-INLINE uint movePromote(basic_move_t m) { return (7 & ((m) >> 22)); }
-INLINE uint isCastle(basic_move_t m) { return (((m) >> 15) & 1); }
-INLINE uint isPawn2Forward(basic_move_t m) { return (((m) >> 16) & 1); }
-INLINE uint isPromote(basic_move_t m) { return (((m) >> 17) & 1); }
-INLINE uint isEnPassant(basic_move_t m) { return  (((m) >> 21) & 1); }
+INLINE uint moveFrom(basic_move_t m) {
+    return (63 & (m));
+}
+INLINE uint moveTo(basic_move_t m) {
+    return (63 & ((m) >> 6));
+}
+INLINE uint movePiece(basic_move_t m) {
+    return (7 & ((m) >> 12));
+}
+INLINE uint moveAction(basic_move_t m) {
+    return (63 & ((m) >> 12));
+}
+INLINE uint moveCapture(basic_move_t m) {
+    return (7 & ((m) >> 18));
+}
+INLINE uint moveRemoval(basic_move_t m) {
+    return (15 & ((m) >> 18));
+}
+INLINE uint movePromote(basic_move_t m) {
+    return (7 & ((m) >> 22));
+}
+INLINE uint isCastle(basic_move_t m) {
+    return (((m) >> 15) & 1);
+}
+INLINE uint isPawn2Forward(basic_move_t m) {
+    return (((m) >> 16) & 1);
+}
+INLINE uint isPromote(basic_move_t m) {
+    return (((m) >> 17) & 1);
+}
+INLINE uint isEnPassant(basic_move_t m) {
+    return  (((m) >> 21) & 1);
+}
 
-INLINE basic_move_t GenOneForward(uint f, uint t) { return ((f) | ((t) << 6) | (PAWN << 12)); }
-INLINE basic_move_t GenTwoForward(uint f, uint t) { return ((f) | ((t) << 6) | (PAWN << 12) | (1 << 16)); }
-INLINE basic_move_t GenPromote(uint f, uint t, uint r, uint c) { return ((f) | ((t) << 6) | (PAWN << 12) | ((c) << 18) | ((r) << 22) | (1 << 17)); }
-INLINE basic_move_t GenPromoteStraight(uint f, uint t, uint r) { return ((f) | ((t) << 6) | (PAWN << 12) | ((r) << 22) | (1 << 17)); }
-INLINE basic_move_t GenEnPassant(uint f, uint t) { return ((f) | ((t) << 6) | (PAWN << 12) | (PAWN << 18) | (1 << 21)); }
-INLINE basic_move_t GenPawnMove(uint f, uint t, uint c) { return ((f) | ((t) << 6) | (PAWN << 12) | ((c) << 18)); }
-INLINE basic_move_t GenKnightMove(uint f, uint t, uint c) { return ((f) | ((t) << 6) | (KNIGHT << 12) | ((c) << 18)); }
-INLINE basic_move_t GenBishopMove(uint f, uint t, uint c) { return ((f) | ((t) << 6) | (BISHOP << 12) | ((c) << 18)); }
-INLINE basic_move_t GenRookMove(uint f, uint t, uint c) { return ((f) | ((t) << 6) | (ROOK << 12) | ((c) << 18)); }
-INLINE basic_move_t GenQueenMove(uint f, uint t, uint c) { return ((f) | ((t) << 6) | (QUEEN << 12) | ((c) << 18)); }
-INLINE basic_move_t GenKingMove(uint f, uint t, uint c) { return ((f) | ((t) << 6) | (KING << 12) | ((c) << 18)); }
-INLINE basic_move_t GenWhiteOO(void) { return (e1 | (g1 << 6) | (KING << 12) | (1 << 15)); }
-INLINE basic_move_t GenWhiteOOO(void) { return (e1 | (c1 << 6) | (KING << 12) | (1 << 15)); }
-INLINE basic_move_t GenBlackOO(void) { return (e8 | (g8 << 6) | (KING << 12) | (1 << 15)); }
-INLINE basic_move_t GenBlackOOO(void) { return (e8 | (c8 << 6) | (KING << 12) | (1 << 15)); }
-INLINE basic_move_t GenBasicMove(uint f, uint t, int pieceType, uint c) { return ((f) | ((t) << 6) | (pieceType << 12) | ((c) << 18)); }
+INLINE basic_move_t GenOneForward(uint f, uint t) {
+    return ((f) | ((t) << 6) | (PAWN << 12));
+}
+INLINE basic_move_t GenTwoForward(uint f, uint t) {
+    return ((f) | ((t) << 6) | (PAWN << 12) | (1 << 16));
+}
+INLINE basic_move_t GenPromote(uint f, uint t, uint r, uint c) {
+    return ((f) | ((t) << 6) | (PAWN << 12) | ((c) << 18) | ((r) << 22) | (1 << 17));
+}
+INLINE basic_move_t GenPromoteStraight(uint f, uint t, uint r) {
+    return ((f) | ((t) << 6) | (PAWN << 12) | ((r) << 22) | (1 << 17));
+}
+INLINE basic_move_t GenEnPassant(uint f, uint t) {
+    return ((f) | ((t) << 6) | (PAWN << 12) | (PAWN << 18) | (1 << 21));
+}
+INLINE basic_move_t GenPawnMove(uint f, uint t, uint c) {
+    return ((f) | ((t) << 6) | (PAWN << 12) | ((c) << 18));
+}
+INLINE basic_move_t GenKnightMove(uint f, uint t, uint c) {
+    return ((f) | ((t) << 6) | (KNIGHT << 12) | ((c) << 18));
+}
+INLINE basic_move_t GenBishopMove(uint f, uint t, uint c) {
+    return ((f) | ((t) << 6) | (BISHOP << 12) | ((c) << 18));
+}
+INLINE basic_move_t GenRookMove(uint f, uint t, uint c) {
+    return ((f) | ((t) << 6) | (ROOK << 12) | ((c) << 18));
+}
+INLINE basic_move_t GenQueenMove(uint f, uint t, uint c) {
+    return ((f) | ((t) << 6) | (QUEEN << 12) | ((c) << 18));
+}
+INLINE basic_move_t GenKingMove(uint f, uint t, uint c) {
+    return ((f) | ((t) << 6) | (KING << 12) | ((c) << 18));
+}
+INLINE basic_move_t GenWhiteOO(void) {
+    return (e1 | (g1 << 6) | (KING << 12) | (1 << 15));
+}
+INLINE basic_move_t GenWhiteOOO(void) {
+    return (e1 | (c1 << 6) | (KING << 12) | (1 << 15));
+}
+INLINE basic_move_t GenBlackOO(void) {
+    return (e8 | (g8 << 6) | (KING << 12) | (1 << 15));
+}
+INLINE basic_move_t GenBlackOOO(void) {
+    return (e8 | (c8 << 6) | (KING << 12) | (1 << 15));
+}
+INLINE basic_move_t GenBasicMove(uint f, uint t, int pieceType, uint c) {
+    return ((f) | ((t) << 6) | (pieceType << 12) | ((c) << 18));
+}
 
 

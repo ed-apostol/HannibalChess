@@ -12,7 +12,7 @@
 #include "trans.h"
 
 /* the eval info structure */
-struct eval_info_t{
+struct eval_info_t {
     uint64 atkall[2];
     uint64 atkpawns[2];
     uint64 atkknights[2];

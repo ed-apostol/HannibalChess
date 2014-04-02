@@ -18,9 +18,15 @@
 
 class Spinlock {
 public:
-    Spinlock() { m_Lock.clear(std::memory_order_release); }
-    void lock() { while (m_Lock.test_and_set(std::memory_order_acquire)); }
-    void unlock() { m_Lock.clear(std::memory_order_release); }
+    Spinlock() {
+        m_Lock.clear(std::memory_order_release);
+    }
+    void lock() {
+        while (m_Lock.test_and_set(std::memory_order_acquire));
+    }
+    void unlock() {
+        m_Lock.clear(std::memory_order_release);
+    }
 private:
     std::atomic_flag m_Lock;
 };
@@ -41,8 +47,7 @@ struct SplitPoint {
     bestmove(EMPTY),
     workersBitMask(0),
     allWorkersBitMask(0),
-    cutoff(false)
-    { }
+    cutoff(false) {}
     bool cutoffOccurred() {
         if (cutoff) return true;
         if (parent && parent->cutoffOccurred()) {
@@ -107,7 +112,9 @@ public:
         std::unique_lock<std::mutex>(threadLock);
         sleepCondition.notify_one();
     }
-    std::thread& NativeThread() { return nativeThread; }
+    std::thread& NativeThread() {
+        return nativeThread;
+    }
 
     int thread_id;
     volatile bool stop;
@@ -162,7 +169,7 @@ public:
 
 class ThreadsManager {
 public:
-    ThreadsManager() : m_StartThinking(false) { }
+    ThreadsManager() : m_StartThinking(false) {}
     void StartThinking();
     void IdleLoop(const int thread_id);
     void GetWork(const int thread_id, SplitPoint* master_sp);
@@ -174,13 +181,25 @@ public:
     uint64 ComputeNodes();
     void SearchSplitPoint(const position_t& pos, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread);
 
-    Thread& ThreadFromIdx(int thread_id) { return *m_Threads[thread_id]; }
-    size_t ThreadNum() const { return m_Threads.size(); }
+    Thread& ThreadFromIdx(int thread_id) {
+        return *m_Threads[thread_id];
+    }
+    size_t ThreadNum() const {
+        return m_Threads.size();
+    }
 
-    void InitPawnHash(int size, int bucket) { for (Thread* th : m_Threads) th->pt.Init(size, bucket); }
-    void InitEvalHash(int size, int bucket) { for (Thread* th : m_Threads) th->et.Init(size, bucket); }
-    void ClearPawnHash() { for (Thread* th : m_Threads) th->pt.Clear(); }
-    void ClearEvalHash() { for (Thread* th : m_Threads) th->et.Clear(); }
+    void InitPawnHash(int size, int bucket) {
+        for (Thread* th : m_Threads) th->pt.Init(size, bucket);
+    }
+    void InitEvalHash(int size, int bucket) {
+        for (Thread* th : m_Threads) th->et.Init(size, bucket);
+    }
+    void ClearPawnHash() {
+        for (Thread* th : m_Threads) th->pt.Clear();
+    }
+    void ClearEvalHash() {
+        for (Thread* th : m_Threads) th->et.Clear();
+    }
 
     void PrintDebugData() {
         Print(2, "================================================================\n");
@@ -191,7 +210,9 @@ public:
         }
         Print(2, "================================================================\n");
     }
-    bool StillThinking() { return m_StartThinking; }
+    bool StillThinking() {
+        return m_StartThinking;
+    }
 
     int m_MinSplitDepth;
     int m_MaxThreadsPerSplit;

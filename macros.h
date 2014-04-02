@@ -11,7 +11,7 @@
 
 #ifdef DEBUG
 #define ASSERT(a) { if (!(a)) \
-    Print(4, "file \"%s\", line %d, assertion \"" #a "\" failed\n",__FILE__,__LINE__);}
+    Print(4, "file \"%s\", line %d, assertion \"" #a "\" failed\n", __FILE__, __LINE__); }
 #else
 #define ASSERT(a)
 #endif

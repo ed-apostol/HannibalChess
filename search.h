@@ -16,7 +16,7 @@
 
 
 /* the search data structure */
-struct SearchInfo{
+struct SearchInfo {
     void Init() {
         stop_search = false;
         depth_is_limited = false;
@@ -103,10 +103,18 @@ public:
     void getBestMove(Thread& sthread);
     void stopSearch();
 
-    void InitTTHash(int size, int bucket) { transtable.Init(size, bucket); }
-    void InitPVTTHash(int size, int bucket) { pvhashtable.Init(size, bucket); }
-    void ClearTTHash() { transtable.Clear(); }
-    void ClearPVTTHash() { pvhashtable.Clear(); }
+    void InitTTHash(int size, int bucket) {
+        transtable.Init(size, bucket);
+    }
+    void InitPVTTHash(int size, int bucket) {
+        pvhashtable.Init(size, bucket);
+    }
+    void ClearTTHash() {
+        transtable.Clear();
+    }
+    void ClearPVTTHash() {
+        pvhashtable.Clear();
+    }
 
     Search* search;
     SearchInfo info;

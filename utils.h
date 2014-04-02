@@ -30,18 +30,22 @@ extern int getDirIndex(int d);
 extern int anyRep(const position_t& pos);
 extern int anyRepNoMove(const position_t& pos, const int m);
 
-enum LogLevel { logNONE = 0, logOUT = 1, logERROR = 2, logWARNING = 3, logINFO = 4, logDEBUG = 5 }; // TOD: to be improved
+enum LogLevel {
+    logNONE = 0, logOUT = 1, logERROR = 2, logWARNING = 3, logINFO = 4, logDEBUG = 5
+}; // TOD: to be improved
 
 struct LogToFile : public std::ofstream {
     LogToFile(const std::string& f = "log.txt") : std::ofstream(f.c_str(), std::ios::out | std::ios::app) {}
-    ~LogToFile() { if (is_open()) close(); }
+    ~LogToFile() {
+        if (is_open()) close();
+    }
 };
 
 template <LogLevel level, bool logtofile = false>
 class Log {
 public:
     static const LogLevel ClearanceLevel = logINFO;
-    Log() { }
+    Log() {}
     template <typename T>
     Log& operator << (const T& object) {
         if (level > logNONE && level <= ClearanceLevel) _buffer << object;
@@ -49,7 +53,7 @@ public:
     }
     ~Log() {
         if (level > logNONE && level <= ClearanceLevel) {
-            static const std::string LevelText[6] = { "NONE", "OUT", "ERROR", "WARNING", "INFO", "DEBUG" };
+            static const std::string LevelText[6] = {"NONE", "OUT", "ERROR", "WARNING", "INFO", "DEBUG"};
             _buffer << std::endl;
             if (level == logOUT) std::cout << _buffer.str();
             if (logtofile) LogToFile() << LevelText[level] << ": " << _buffer.str();
