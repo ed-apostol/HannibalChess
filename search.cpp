@@ -66,7 +66,7 @@ public:
     int searchNode(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt);
     template<bool inRoot, bool inSplitPoint, bool inCheck, bool inSingular>
     int searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt);
-    void extractPvMovesFromHash(position_t& pos, continuation_t& pv);
+    void extractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_move_t move);
     void repopulateHash(position_t& pos, continuation_t& rootPV);
     void timeManagement(int depth);
     void stopSearch();
@@ -489,7 +489,10 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             if (!m_Info.mvlist_initialized) {
                 sortInit(pos, ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseRoot, sthread);
             } else {
-                ss.mvlist->pos = 0;
+                if (m_Info.multipvIdx > 0) {
+                    ss.mvlist->pos = m_Info.multipvIdx - 1;
+                    getMove(ss.mvlist);
+                } else ss.mvlist->pos = 0;
                 ss.mvlist->phase = MoveGenPhaseRoot + 1;
             }
         } else {
@@ -583,6 +586,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (score > (inSplitPoint ? sp->bestvalue : ss.bestvalue)) {
             ss.bestvalue = inSplitPoint ? sp->bestvalue = score : score;
             if (inRoot) {
+                ssprev.counterMove = move->m;
                 m_Info.best_value = ss.bestvalue;
                 if (m_Info.iteration > 1 && m_Info.bestmove != move->m) m_Info.change = 1;
             }
@@ -619,7 +623,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         }
     }
     if (inRoot && !inSplitPoint) {
-        if (ss.bestmove != EMPTY && ss.bestvalue < beta) m_PVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
         if (ss.playedMoves == 0) {
             if (inCheck) return -INF;
             else return DrawValue[pos.side];
@@ -665,18 +668,19 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     return ss.bestvalue;
 }
 
-void Search::extractPvMovesFromHash(position_t& pos, continuation_t& pv) {
+void Search::extractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_move_t move) {
     PvHashEntry *entry;
     pos_store_t undo[MAXPLY];
     int ply = 0;
-    basic_move_t hashMove;
     pv.length = 0;
+    pv.moves[pv.length++] = move;
+    makeMove(pos, undo[ply++], move);
     while ((entry = m_PVHashTable.pvEntry(pos.posStore.hash)) != NULL) {
-        hashMove = entry->pvMove();
+        basic_move_t hashMove = entry->pvMove();
         if (hashMove == EMPTY) break;
         if (!genMoveIfLegal(pos, hashMove, pinnedPieces(pos, pos.side))) break;
-        pv.moves[pv.length++] = hashMove;
         if (anyRep(pos)) break; // break on repetition to avoid long pv display
+        pv.moves[pv.length++] = hashMove;
         makeMove(pos, undo[ply++], hashMove);
         if (ply >= MAXPLY) break;
     }
@@ -810,7 +814,7 @@ void Engine::getBestMove(Thread& sthread) {
             || (PcValSEE[moveCapture(entry->pvMove())] > PcValSEE[movePiece(entry->pvMove())]))) {
             info.bestmove = entry->pvMove();
             info.best_value = entry->pvScore();
-            search->extractPvMovesFromHash(rootpos, info.rootPV);
+            search->extractPvMovesFromHash(rootpos, info.rootPV, entry->pvMove());
             if (info.rootPV.length > 1) info.pondermove = info.rootPV.moves[1];
             else info.pondermove = 0;
             search->displayPV(&info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
@@ -854,7 +858,7 @@ void Engine::getBestMove(Thread& sthread) {
                 search->searchNode<true, false, false>(rootpos, alpha, beta, id, ss, sthread, PVNode);
 
                 if (!sthread.stop || info.best_value != -INF) {
-                    search->extractPvMovesFromHash(rootpos, info.rootPV);
+                    search->extractPvMovesFromHash(rootpos, info.rootPV, ss.counterMove);
                     search->repopulateHash(rootpos, info.rootPV);
                     if (SHOW_SEARCH && id >= 8) {
                         search->displayPV(&info.rootPV, info.multipvIdx, id, alpha, beta, info.best_value);
