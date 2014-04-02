@@ -549,8 +549,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                         int reduction = ReductionTable[(inPvNode(nt) ? 0 : 1)][MIN(depth, 63)][MIN(ss.playedMoves, 63)];
                         partialReduction += goodMove ? (reduction + 1) / 2 : reduction;
                     }
-                } else if ((MoveGenPhase[ss.mvlist_phase] == PH_BAD_CAPTURES ||
-                    (MoveGenPhase[ss.mvlist_phase] == PH_QUIET_MOVES && swap(pos, move->m) < 0)) && !inRoot && !inPvNode(nt)) fullReduction++;  //never happens when in check
+                } else if ((MoveGenPhase[ss.mvlist_phase] == PH_BAD_CAPTURES || (MoveGenPhase[ss.mvlist_phase] == PH_QUIET_MOVES
+                    && swap(pos, move->m) < 0)) && !inRoot && !inPvNode(nt)) fullReduction++;  //never happens when in check
                 newdepth -= fullReduction;
                 int newdepthclone = newdepth - partialReduction;
                 makeMove(pos, undo, move->m);

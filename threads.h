@@ -18,11 +18,11 @@
 
 class Spinlock {
 public:
-    Spinlock() : m_Lock(false) { }
-    void lock() { while (m_Lock.exchange(true)); }
-    void unlock() { m_Lock.store(false); }
+    Spinlock() { m_Lock.clear(std::memory_order_release); }
+    void lock() { while (m_Lock.test_and_set(std::memory_order_acquire)); }
+    void unlock() { m_Lock.clear(std::memory_order_release); }
 private:
-    std::atomic<bool> m_Lock;
+    std::atomic_flag m_Lock;
 };
 
 struct SplitPoint {
