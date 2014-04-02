@@ -10,7 +10,9 @@
 #pragma once
 #include <map>
 #include <sstream>
+#include <vector>
 #include "typedefs.h"
+#include "utils.h"
 
 struct Options {
     typedef void(*ActionFunc)(const Options&);
@@ -31,7 +33,34 @@ struct Options {
     ActionFunc OnChange;
 };
 
-typedef std::map<std::string, Options> UCIOptions;
+typedef std::map<std::string, Options> UCIOptionsBasic;
+
+class UCIOptions : public UCIOptionsBasic {
+public:
+    Options& operator[] (std::string const& key) {
+        UCIOptionsBasic::iterator opt = find(key);
+        if (opt != end()) {
+            return opt->second;
+        } else {
+            mKeys.push_back(key);
+            return (insert(std::make_pair(key, Options())).first)->second;
+        }
+    }
+    void Print() const {
+        for (int idx = 0; idx < mKeys.size(); ++idx) {
+            UCIOptionsBasic::const_iterator itr = find(mKeys[idx]);
+            if (itr != end()) {
+                const Options& opt = itr->second;
+                LogAndPrintOutput log;
+                log << "option name " << mKeys[idx] << " type " << opt.m_Type;
+                if (opt.m_Type != "button") log << " default " << opt.m_DefVal;
+                if (opt.m_Type == "spin") log << " min " << opt.m_Min << " max " << opt.m_Max;
+            }
+        }
+    }
+private:
+    std::vector<std::string> mKeys;
+};
 
 extern UCIOptions UCIOptionsMap;
 
@@ -53,7 +82,7 @@ private:
     void NewGame();
     void Id();
     void Quit();
-    void PrintUCIOptions(const UCIOptions& uci_opt);
+    void PrintUCIOptions(UCIOptions& uci_opt);
     void InitUCIOptions(UCIOptions& uci_opt);
 
     static const std::string name;

@@ -26,7 +26,7 @@
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
 const std::string Interface::year = "2014";
-const std::string Interface::version = "TCEC";
+const std::string Interface::version = "1.5beta";
 const std::string Interface::arch = "x64";
 
 UCIOptions UCIOptionsMap;
@@ -64,14 +64,8 @@ void Interface::InitUCIOptions(UCIOptions& uci_opt) {
     uci_opt["Contempt"] = Options(0, -100, 100, on_contempt);
 }
 
-void Interface::PrintUCIOptions(const UCIOptions& uci_opt) {
-    for (UCIOptions::const_iterator it = uci_opt.begin(); it != uci_opt.end(); ++it) {
-        const Options& opt = it->second;
-        LogAndPrintOutput log;
-        log << "option name " << it->first << " type " << opt.m_Type;
-        if (opt.m_Type != "button") log << " default " << opt.m_DefVal;
-        if (opt.m_Type == "spin") log << " min " << opt.m_Min << " max " << opt.m_Max;
-    }
+void Interface::PrintUCIOptions(UCIOptions& uci_opt) {
+    uci_opt.Print();
 }
 
 void Interface::Info() {
