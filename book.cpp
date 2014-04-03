@@ -131,12 +131,12 @@ bool move_in_list(const basic_move_t m, const movelist_t *ml) {
     return false;
 }
 
-void initBook(char* book_name, book_t *book, BookType type) {
+void initBook(std::string book_name, book_t *book, BookType type) {
     if (type != POLYGLOT_BOOK) cout << "info string book type not supported" << endl;
     else {
         if (book->bookFile != NULL) fclose(book->bookFile);
-        book->bookFile = fopen(book_name, "rb");
-        book->name = string(book_name);
+        book->bookFile = fopen(book_name.c_str(), "rb");
+        book->name = book_name;
 
         if (book->bookFile != NULL) {
             book->type = type;
@@ -148,7 +148,7 @@ void initBook(char* book_name, book_t *book, BookType type) {
         }
     }
 }
-basic_move_t getBookMove(position_t& pos, book_t *book/*, movelist_t *ml, bool verbose*/, int randomness) {
+basic_move_t getBookMove(position_t& pos, book_t *book) {
     uint64 key;
     int numMoves = 0;
     uint64 totalWeight = 0;

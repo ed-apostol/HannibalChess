@@ -836,6 +836,13 @@ void Engine::getBestMove(Thread& sthread) {
         ss.hashMove = entry->pvMove();
     } while (false);
 
+    if (info.thinking_status == THINKING && UCIOptionsMap["OwnBook"].GetInt() && !anyRep(rootpos)) {
+        if ((info.bestmove = getBookMove(rootpos, &GpolyglotBook)) != 0) {
+            sendBestMove();
+            return;
+        }
+    }
+
     // extend time when there is no hashmove from hashtable, this is useful when just out of the book
     if (ss.hashMove == EMPTY) {
         info.time_limit_max += info.alloc_time / 2;

@@ -9,5 +9,5 @@
 
 #pragma once
 
-extern void initBook(char* book_name, book_t *book, BookType type);
-extern basic_move_t getBookMove(position_t& pos, book_t *book/*, movelist_t *ml, bool verbose*/, int randomness);
+extern void initBook(std::string book_name, book_t *book, BookType type);
+extern basic_move_t getBookMove(position_t& pos, book_t *book);

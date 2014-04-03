@@ -22,6 +22,7 @@
 #include "init.h"
 #include "material.h"
 #include "utils.h"
+#include "book.h"
 
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
@@ -49,7 +50,9 @@ void on_eval_hash(const Options& o) {
 void on_multi_pv(const Options& o) {
     CEngine.info.multipv = o.GetInt();
 }
-void on_ponder(const Options& o) {}
+void on_ponder(const Options& o) {
+
+}
 void on_time_buffer(const Options& o) {
     CEngine.info.time_buffer = o.GetInt();
 }
@@ -68,6 +71,12 @@ void on_active_splits(const Options& o) {
 void on_contempt(const Options& o) {
     CEngine.info.contempt = o.GetInt();
 }
+void on_ownbook(const Options& o) {
+
+}
+void on_bookfile(const Options& o) {
+
+}
 
 void Interface::InitUCIOptions(UCIOptions& uci_opt) {
     uci_opt["Hash"] = Options(64, 1, 65536, on_hash);
@@ -75,6 +84,8 @@ void Interface::InitUCIOptions(UCIOptions& uci_opt) {
     uci_opt["Eval Cache"] = Options(4, 1, 1024, on_eval_hash);
     uci_opt["MultiPV"] = Options(1, 1, 128, on_multi_pv);
     uci_opt["Clear Hash"] = Options(on_clear_hash);
+    uci_opt["OwnBook"] = Options(false, on_ownbook);
+    uci_opt["Book File"] = Options("Hannibal.bin", on_bookfile);
     uci_opt["Ponder"] = Options(false, on_ponder);
     uci_opt["Time Buffer"] = Options(1000, 0, 10000, on_time_buffer);
     uci_opt["Threads"] = Options(6, 1, MaxNumOfThreads, on_threads);
@@ -111,6 +122,7 @@ Interface::Interface() {
     InitTrapped();
     initMaterial();
     InitMateBoost();
+    initBook(UCIOptionsMap["Book File"].GetStr(), &GpolyglotBook, POLYGLOT_BOOK);
 
     setPosition(CEngine.rootpos, STARTPOS);
 }
