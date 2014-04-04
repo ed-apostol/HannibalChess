@@ -111,6 +111,8 @@ Interface::Interface() {
     fopen_s(&errfile, "errfile.txt", "a+");
     fopen_s(&dumpfile, "dumpfile.txt", "a+");
 
+    std::cout.setf(std::ios::unitbuf);
+
     InitUCIOptions(UCIOptionsMap);
     ThreadsMgr.InitVars();
     ThreadsMgr.SetNumThreads(UCIOptionsMap["Threads"].GetInt());
