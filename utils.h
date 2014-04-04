@@ -13,8 +13,6 @@
 #include <iostream>
 #include <sstream>
 
-/* utils.c */
-extern void Print(int vb, char *fmt, ...);
 extern void displayBit(uint64 a, int x);
 extern char *bit2Str(uint64 n);
 extern char *move2Str(basic_move_t m);

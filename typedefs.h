@@ -16,7 +16,6 @@
 
 #define DEBUG_BOOK false
 #define SHOW_SEARCH true
-#define RETURN_MOVE true
 
 #if defined(__x86_64) || defined(_WIN64)
 #define VERSION64BIT

@@ -107,10 +107,6 @@ void Interface::Info() {
 }
 
 Interface::Interface() {
-    fopen_s(&logfile, "logfile.txt", "a+");
-    fopen_s(&errfile, "errfile.txt", "a+");
-    fopen_s(&dumpfile, "dumpfile.txt", "a+");
-
     std::cout.setf(std::ios::unitbuf);
 
     InitUCIOptions(UCIOptionsMap);
@@ -166,9 +162,6 @@ bool Interface::Input(std::istringstream& stream) {
 }
 
 void Interface::Quit() {
-    if (logfile) fclose(logfile);
-    if (errfile) fclose(errfile);
-    if (dumpfile) fclose(dumpfile);
     ThreadsMgr.SetNumThreads(0);
     LogInfo() << "Interface quit";
 }

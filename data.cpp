@@ -71,11 +71,6 @@ int DrawValue[2];
 uint64 PassedMask[2][64];
 uint64 kingShelter[2][64]; // provides good shelter for king SAM1 added static
 uint64 kingIndirectShelter[2][64]; // provides ok shelter for king SAM1 added static
-/* used in debugging, etc.. */
-FILE *logfile;
-FILE *errfile;
-FILE *dumpfile;
-int origScore;
 
 book_t GpolyglotBook;
 

@@ -786,15 +786,11 @@ void Engine::searchFromIdleLoop(SplitPoint& sp, Thread& sthread) {
 
 void Engine::sendBestMove() {
     if (!info.bestmove) {
-        if (RETURN_MOVE)
-            LogAndPrintOutput() << "info string No legal move found. Start a new game.";
+        LogAndPrintOutput() << "info string No legal move found. Start a new game.";
     } else {
-        if (RETURN_MOVE) {
-            LogAndPrintOutput log;
-            log << "bestmove " << move2Str(info.bestmove);
-            if (info.pondermove) log << " ponder " << move2Str(info.pondermove);
-        }
-        origScore = info.last_value; // just to be safe
+        LogAndPrintOutput log;
+        log << "bestmove " << move2Str(info.bestmove);
+        if (info.pondermove) log << " ponder " << move2Str(info.pondermove);
     }
     ThreadsMgr.SetAllThreadsToSleep();
     //ThreadsMgr.PrintDebugData();
