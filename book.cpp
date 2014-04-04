@@ -143,9 +143,6 @@ void initBook(std::string book_name, book_t *book, BookType type) {
             fseek(book->bookFile, 0, SEEK_END);
             book->size = ftell(book->bookFile) / Polyglot_Entry_Size;
         }
-        if (DEBUG_BOOK) {
-            cout << "info string init polyglot book " << book_name << endl;
-        }
     }
 }
 basic_move_t getBookMove(position_t& pos, book_t *book) {
@@ -192,7 +189,6 @@ basic_move_t getBookMove(position_t& pos, book_t *book) {
     // chose here the move from the array and verify if it exists in the movelist
     uint64 bookRandom = rand() % totalWeight; //TODO do a real randomization
     uint64 bookIndex = 0;
-    //    if (DEBUG_BOOK && verbose) cout << "info string random " << bookRandom << " out of " << totalWeight << endl;
     for (int i = 0; i<numMoves; i++) {
         bookIndex += entries[i].weight;
         if (bookIndex > bookRandom) {

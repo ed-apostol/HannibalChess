@@ -14,7 +14,6 @@
 //#define EVAL_DEBUG true
 //#define DEBUG_INDEPTH true
 
-#define DEBUG_BOOK false
 #define SHOW_SEARCH true
 
 #if defined(__x86_64) || defined(_WIN64)
