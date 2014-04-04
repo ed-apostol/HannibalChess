@@ -458,7 +458,7 @@ void initArr(void) {
         for (j = 0; j < 64; j++) {
             FutilityMarginTable[i][j] = ((i*i*FUTILITY_SCALE) + FUTILITY_SCALE) - (((i*i*FUTILITY_SCALE) + FUTILITY_SCALE) * j / FUTILITY_MOVE);
             if (i >= MAX_FUT_MARGIN) FutilityMarginTable[i][j] = INF;
-            // Print(2, "FutilityMarginTable[%d][%d] = %d\n", i, j, FutilityMarginTable[i][j]);
+            // LogOutput() << "FutilityMarginTable[%d][%d] = %d\n", i, j, FutilityMarginTable[i][j]);
         }
     }
 
@@ -468,15 +468,15 @@ void initArr(void) {
             n = (int)(REDUCE_MIN + log((double)j) * log((double)k) / REDUCE_SCALE);
             ReductionTable[0][j][k] = ((m >= 1) ? m : 0);
             ReductionTable[1][j][k] = ((n >= 1) ? n : 0);
-            // Print(2, "ReductionTable[PV][%d][%d] = %d\n", j, k, ReductionTable[0][j][k]);
-            // Print(2, "ReductionTable[NonPV][%d][%d] = %d\n", j, k, ReductionTable[1][j][k]);
+            // LogOutput() << "ReductionTable[PV][%d][%d] = %d\n", j, k, ReductionTable[0][j][k]);
+            // LogOutput() << "ReductionTable[NonPV][%d][%d] = %d\n", j, k, ReductionTable[1][j][k]);
         }
     }
     /*
     for (j = 0; j < 32; j++)
     {
     LateMovePruningTable[j] = LATE_PRUNE_MIN + ((j * j) / LATE_PRUNE_SCALE);
-    // Print(2, "LateMovePruningTable[%d] = %d\n", j, LateMovePruningTable[j]);
+    // LogOutput() << "LateMovePruningTable[%d] = %d\n", j, LateMovePruningTable[j]);
     }
     */
     for (i = 0; i < 64; i++) {

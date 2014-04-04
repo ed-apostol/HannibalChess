@@ -70,13 +70,9 @@ uint32 captureIsGood(const position_t& pos, const basic_move_t m) {
     uint32 capt = moveCapture(m);
     uint32 pc = movePiece(m);
 
-    ASSERT(pos != NULL);
     ASSERT(moveIsOk(m));
     ASSERT(moveIsTactical(m));
 
-#ifdef DEBUG
-    if (!moveIsTactical(m)) Print(8, "%s: pc: %d, cap: %d, prom: %d\n", __FUNCTION__, pc, capt, prom);
-#endif
     if (prom != EMPTY && prom != QUEEN) return false;
     if (capt != EMPTY) {
         if (prom != EMPTY) return true;
@@ -120,7 +116,6 @@ void scoreNonCaptures(const position_t& pos, movelist_t *mvlist, Thread& sthread
 void scoreAll(const position_t& pos, movelist_t *mvlist, Thread& sthread) {
     move_t *m;
 
-    ASSERT(pos != NULL);
     ASSERT(mvlist != NULL);
 
     for (m = &mvlist->list[mvlist->pos]; m < &mvlist->list[mvlist->size]; m++) {
@@ -312,7 +307,6 @@ move_t* sortNext(SplitPoint* sp, position_t& pos, movelist_t *mvlist, int& phase
         case PH_GAINING:
             if (mvlist->scout - mvlist->evalvalue > 150) continue; // TODO: test other values
             genGainingMoves(pos, mvlist, mvlist->scout - mvlist->evalvalue, sthread);
-            // Print(3, "delta = %d, mvlist->size = %d\n", mvlist->scout - SearchInfo.evalvalue[pos.ply], mvlist->size);
             scoreNonCaptures(pos, mvlist, sthread);
             break;
         default:

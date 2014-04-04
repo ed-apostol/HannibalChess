@@ -202,13 +202,14 @@ public:
     }
 
     void PrintDebugData() {
-        Print(2, "================================================================\n");
+        LogInfo() << "================================================================";
         for (Thread* th : m_Threads) {
-            Print(2, "%s: thread_id: %d, nodes: %d joined_split: %0.2f%% threads_per_split: %0.2f\n",
-                __FUNCTION__, th->thread_id, th->nodes,
-                double(th->numsplits2 * 100.0) / double(th->numsplits), double(th->workers2) / double(th->numsplits2));
+            LogInfo() << "thread_id: " << th->thread_id
+                << " nodes: " << th->nodes
+                << " joined_split: " << double(th->numsplits2 * 100.0) / double(th->numsplits)
+                << " threads_per_split: " << double(th->workers2) / double(th->numsplits2);
         }
-        Print(2, "================================================================\n");
+        LogInfo() << "================================================================";
     }
     bool StillThinking() {
         return m_StartThinking;

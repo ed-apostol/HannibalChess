@@ -160,7 +160,6 @@ void displayBoard(const position_t& pos, int x) {
 /* a utility to get a certain piece from a position given a square */
 int getPiece(const position_t& pos, uint32 sq) {
 
-    ASSERT(pos != NULL);
     ASSERT(squareIsOk(sq));
 
     //uint64 mask = BitMask[sq];
@@ -178,7 +177,6 @@ int getPiece(const position_t& pos, uint32 sq) {
 int getColor(const position_t& pos, uint32 sq) {
     uint64 mask = BitMask[sq];
 
-    ASSERT(pos != NULL);
     ASSERT(squareIsOk(sq));
 
     if (mask & pos.color[WHITE]) return WHITE;
@@ -191,7 +189,6 @@ int getColor(const position_t& pos, uint32 sq) {
 int DiffColor(const position_t& pos, uint32 sq, int color) {
     //    uint64 mask = BitMask[sq];
 
-    ASSERT(pos != NULL);
     ASSERT(squareIsOk(sq));
 
     return ((BitMask[sq] & pos.color[color]) == 0);
@@ -249,43 +246,6 @@ uint32 parseMove(movelist_t *mvlist, const char *s) {
         }
     }
     return 0;
-}
-
-int biosKey(void) {
-#if defined(_WIN32) || defined(_WIN64)
-    /* Windows-version */
-    static int init = 0, pipe;
-    static HANDLE inh;
-    DWORD dw;
-    if (stdin->_cnt > 0) return stdin->_cnt;
-    if (!init) {
-        init = 1;
-        inh = GetStdHandle(STD_INPUT_HANDLE);
-        pipe = !GetConsoleMode(inh, &dw);
-        if (!pipe) {
-            SetConsoleMode(inh, dw & ~(ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT));
-            FlushConsoleInputBuffer(inh);
-        }
-    }
-    if (pipe) {
-        if (!PeekNamedPipe(inh, NULL, 0, NULL, &dw, NULL)) return 1;
-        return dw;
-    } else {
-        GetNumberOfConsoleInputEvents(inh, &dw);
-        return dw <= 1 ? 0 : dw;
-    }
-#else
-    /* Non-windows version */
-    fd_set readfds;
-    struct timeval timeout;
-    FD_ZERO(&readfds);
-    FD_SET(fileno(stdin), &readfds);
-    /* Set to timeout immediately */
-    timeout.tv_sec = 0;
-    timeout.tv_usec = 0;
-    select(16, &readfds, 0, 0, &timeout);
-    return (FD_ISSET(fileno(stdin), &readfds));
-#endif
 }
 
 int anyRep(const position_t& pos) {//this is used for book repetition detection, but should not be used in search

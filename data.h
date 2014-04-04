@@ -9,12 +9,6 @@
 
 #pragma once
 
-#ifdef EVAL_DEBUG
-extern int showEval;
-#else
-#define showEval false
-#endif
-
 /* the precomputed extern piece 64 bit attacks */
 extern uint64 KnightMoves[64];
 extern uint64 KingMoves[64];

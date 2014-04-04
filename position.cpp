@@ -196,7 +196,6 @@ void unmakeMove(position_t& pos, pos_store_t& undo) {
 void makeMove(position_t& pos, pos_store_t& undo, basic_move_t m) {
     unsigned int rook_from = 0, rook_to = 0, epsq = 0, prom, from, to, side, xside;
 
-    ASSERT(pos != NULL);
     ASSERT(moveIsOk(m));
 
     from = moveFrom(m);
@@ -441,7 +440,7 @@ void makeMove(position_t& pos, pos_store_t& undo, basic_move_t m) {
         break;
     case KING:
         ASSERT(false);
-        Print(8, "Move capturing the King: %s\n", move2Str(m));
+        LogError() << "Move capturing the King: " << move2Str(m);
         displayBoard(pos, 8);
         break;
     }
@@ -464,7 +463,6 @@ void makeMove(position_t& pos, pos_store_t& undo, basic_move_t m) {
 void setPosition(position_t& pos, const char *fen) {
     int rank = 7, file = 0, pc = 0, color = 0, count = 0, i, sq;
 
-    ASSERT(pos != NULL);
     ASSERT(fen != NULL);
 
     pos.pawns = EmptyBoardBB;
@@ -563,7 +561,7 @@ void setPosition(position_t& pos, const char *fen) {
             count = *fen - '0';
             break;
         default:
-            Print(3, "info string FEN Error 1!");
+            LogAndPrintOutput() << "info string FEN Error 1!";
             return;
         }
         for (i = 0; i < count; i++, file++) {
@@ -614,7 +612,7 @@ void setPosition(position_t& pos, const char *fen) {
         pos.side = BLACK;
         break;
     default:
-        Print(3, "info string FEN Error: %c\n", *fen);
+        LogAndPrintOutput() << "info string FEN Error: " << *fen;
         return;
     }
     do {

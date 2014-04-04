@@ -45,7 +45,6 @@ is being attacked by the side color */
 uint32 isAtt(const position_t& pos, uint32 color, uint64 target) {
     int from;
 
-    ASSERT(pos != NULL);
     ASSERT(target);
     ASSERT(colorIsOk(color));
 
@@ -172,7 +171,6 @@ uint32 moveIsLegal(const position_t& pos, uint32 move, uint64 pinned, uint32 inc
     int us, them, ksq, from, to, capsq;
     uint64 b;
 
-    ASSERT(pos != NULL);
     ASSERT(moveIsOk(move));
 
     if (incheck) return true;
@@ -204,7 +202,6 @@ bool moveIsCheck(const position_t& pos, basic_move_t m, uint64 dcc) {
     us = pos.side;
     them = us ^ 1;
 
-    ASSERT(pos != NULL);
     ASSERT(moveIsOk(m));
 
     from = moveFrom(m);
@@ -287,7 +284,6 @@ bool moveIsCheck(const position_t& pos, basic_move_t m, uint64 dcc) {
 uint64 attackingPiecesSide(const position_t& pos, uint32 sq, uint32 side) {
     uint64 attackers = 0;
 
-    ASSERT(pos != NULL);
     ASSERT(squareIsOk(sq));
     ASSERT(colorIsOk(side));
 
@@ -335,7 +331,6 @@ int swap(const position_t& pos, uint32 m) {
 
     uint64 occ;
 
-    ASSERT(pos != NULL);
     ASSERT(moveIsOk(m));
 
     slist[0] = PcValSEE[moveCapture(m)] + promoValue;
@@ -423,7 +418,6 @@ int swapSquare(const position_t& pos, uint32 m) {
     int promBonus = (to >= a8 || to <= h1)*(PcValSEE[QUEEN] - PcValSEE[PAWN]);
     uint64 attack;
 
-    ASSERT(pos != NULL);
     ASSERT(moveIsOk(m));
 
     //attack = attackingPiecesAll(pos, pos.occupied,to);

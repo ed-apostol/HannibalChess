@@ -94,14 +94,11 @@ void Search::initNode(Thread& sthread) {
             int64 time = time2 - m_Info.start_time;
             m_Info.last_time = time2;
             if (SHOW_SEARCH) {
-                uint64 sum_nodes;
-                Print(1, "info ");
-                Print(1, "time %llu ", time);
-                sum_nodes = ThreadsMgr.ComputeNodes();
-                Print(1, "nodes %llu ", sum_nodes);
-                Print(1, "hashfull %d ", (m_TransTable.Used() * 1000) / m_TransTable.HashSize());
-                Print(1, "nps %llu ", (sum_nodes * 1000ULL) / (time));
-                Print(1, "\n");
+                uint64 sum_nodes = ThreadsMgr.ComputeNodes();
+                PrintOutput() << "info time " << time
+                    << " nodes " << sum_nodes
+                    << " hashfull " << (m_TransTable.Used() * 1000) / m_TransTable.HashSize()
+                    << " nps " << (sum_nodes * 1000ULL) / (time);
             }
         }
         if (m_Info.thinking_status == THINKING && m_Info.time_is_limited) {
@@ -111,12 +108,12 @@ void Search::initNode(Thread& sthread) {
                         bool gettingWorse = m_Info.best_value != -INF && m_Info.best_value + WORSE_SCORE_CUTOFF <= m_Info.last_value;
                         if (!gettingWorse) {
                             stopSearch();
-                            Print(2, "info string Aborting search: time limit 2: %d\n", time2 - m_Info.start_time);
+                            LogInfo() << "info string Aborting search: time limit 2: " << time2 - m_Info.start_time;
                         }
                     }
                 } else {
                     stopSearch();
-                    Print(2, "info string Aborting search: time limit 1: %d\n", time2 - m_Info.start_time);
+                    LogInfo() << "info string Aborting search: time limit 1: " << time2 - m_Info.start_time;
                 }
             }
         }
@@ -140,6 +137,7 @@ int Search::simpleStalemate(const position_t& pos) {
 void Search::displayPV(continuation_t *pv, int multipvIdx, int depth, int alpha, int beta, int score) {
     uint64 time;
     uint64 sum_nodes = 0;
+    PrintOutput log;
 
     ASSERT(pv != NULL);
     ASSERT(valueIsOk(score));
@@ -148,25 +146,25 @@ void Search::displayPV(continuation_t *pv, int multipvIdx, int depth, int alpha,
     m_Info.last_time = time;
     time = m_Info.last_time - m_Info.start_time;
 
-    Print(1, "info depth %d ", depth);
+    log << "info depth " << depth;
     if (abs(score) < (INF - MAXPLY)) {
         if (score < beta) {
-            if (score <= alpha) Print(1, "score cp %d upperbound ", score);
-            else Print(1, "score cp %d ", score);
-        } else Print(1, "score cp %d lowerbound ", score);
+            if (score <= alpha) log << " score cp " << score << " upperbound";
+            else log << " score cp " << score;
+        } else log << " score cp " << score << " lowerbound";
     } else {
-        Print(1, "score mate %d ", (score>0) ? (INF - score + 1) / 2 : -(INF + score) / 2);
+        log << " score mate " << ((score>0) ? (INF - score + 1) / 2 : -(INF + score) / 2);
     }
 
-    Print(1, "time %llu ", time);
+    log << " time " << time;
     sum_nodes = ThreadsMgr.ComputeNodes();
-    Print(1, "nodes %llu ", sum_nodes);
-    Print(1, "hashfull %d ", (m_TransTable.Used() * 1000) / m_TransTable.HashSize());
-    if (time > 10) Print(1, "nps %llu ", (sum_nodes * 1000) / (time));
-    if (multipvIdx > 0) Print(1, "multipv %d ", multipvIdx + 1);
-    Print(1, "pv ");
-    for (int i = 0; i < pv->length; i++) printf("%s ", move2Str(pv->moves[i]));
-    Print(1, "\n");
+    log << " nodes " << sum_nodes;
+    log << " hashfull " << (m_TransTable.Used() * 1000) / m_TransTable.HashSize();
+    if (time > 10) log << " nps " << (sum_nodes * 1000) / (time);
+
+    if (multipvIdx > 0) log << " multipv " << multipvIdx + 1;
+    log << " pv ";
+    for (int i = 0; i < pv->length; i++) log << move2Str(pv->moves[i]) << " ";
 }
 
 int moveIsTactical(uint32 m) {
@@ -229,7 +227,6 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     int pes = 0;
     SearchStack ss;
 
-    ASSERT(pos != NULL);
     ASSERT(valueIsOk(alpha));
     ASSERT(valueIsOk(beta));
     ASSERT(alpha < beta);
@@ -367,7 +364,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     SplitPoint* sp = NULL;
     SearchStack ss;
 
-    ASSERT(pos != NULL);
     ASSERT(valueIsOk(alpha));
     ASSERT(valueIsOk(beta));
     ASSERT(alpha < beta);
@@ -722,7 +718,7 @@ void Search::timeManagement(int depth) {
             if (m_Info.legalmoves == 1 || m_Info.mate_found >= 3) {
                 if (depth >= 8) {
                     stopSearch();
-                    Print(2, "info string Aborting search: legalmove/mate found depth >= 8\n");
+                    LogInfo() << "info string Aborting search: legalmove/mate found depth >= 8";
                     return;
                 }
             }
@@ -731,7 +727,7 @@ void Search::timeManagement(int depth) {
                 if (gettingWorse) {
                     int amountWorse = m_Info.last_value - m_Info.best_value;
                     addTime += ((amountWorse - (WORSE_SCORE_CUTOFF - 10)) * m_Info.alloc_time) / WORSE_TIME_BONUS;
-                    Print(2, "info string Extending time (root gettingWorse): %d\n", addTime);
+                    LogInfo() << "info string Extending time (root gettingWorse): " << addTime;
                 }
                 if (m_Info.change) {
                     addTime += (m_Info.alloc_time * CHANGE_TIME_BONUS) / 100;
@@ -742,7 +738,7 @@ void Search::timeManagement(int depth) {
                         m_Info.time_limit_max = m_Info.time_limit_abs;
                 } else { // if we are unlikely to get deeper, save our time
                     stopSearch();
-                    Print(2, "info string Aborting search: root time limit 1: %d\n", time - m_Info.start_time);
+                    LogInfo() << "info string Aborting search: root time limit 1: " << time - m_Info.start_time;
                     return;
                 }
             }
@@ -750,7 +746,7 @@ void Search::timeManagement(int depth) {
     }
     if (m_Info.depth_is_limited && depth >= m_Info.depth_limit) {
         stopSearch();
-        Print(2, "info string Aborting search: depth limit 1\n");
+        LogInfo() << "info string Aborting search: depth limit 1";
         return;
     }
 }
@@ -776,10 +772,10 @@ void Engine::ponderHit() { //no pondering in tuning
 
     if ((info.iteration >= 8 && (info.legalmoves == 1 || info.mate_found >= 3)) || (time > info.time_limit_abs)) {
         stopSearch();
-        Print(3, "info string Has searched enough the ponder move: aborting\n");
+        LogInfo() << "info string Has searched enough the ponder move: aborting";
     } else {
         info.thinking_status = THINKING;
-        Print(2, "info string Switch from pondering to thinking\n");
+        LogInfo() << "info string Switch from pondering to thinking";
     }
 }
 
@@ -791,12 +787,12 @@ void Engine::searchFromIdleLoop(SplitPoint& sp, Thread& sthread) {
 void Engine::sendBestMove() {
     if (!info.bestmove) {
         if (RETURN_MOVE)
-            Print(3, "info string No legal move found. Start a new game.\n\n");
+            LogAndPrintOutput() << "info string No legal move found. Start a new game.";
     } else {
         if (RETURN_MOVE) {
-            Print(3, "bestmove %s", move2Str(info.bestmove));
-            if (info.pondermove) Print(3, " ponder %s", move2Str(info.pondermove));
-            Print(3, "\n\n");
+            LogAndPrintOutput log;
+            log << "bestmove " << move2Str(info.bestmove);
+            if (info.pondermove) log << " ponder " << move2Str(info.pondermove);
         }
         origScore = info.last_value; // just to be safe
     }
@@ -835,13 +831,6 @@ void Engine::getBestMove(Thread& sthread) {
         }
         ss.hashMove = entry->pvMove();
     } while (false);
-
-    if (info.thinking_status == THINKING && UCIOptionsMap["OwnBook"].GetInt() && !anyRep(rootpos)) {
-        if ((info.bestmove = getBookMove(rootpos, &GpolyglotBook)) != 0) {
-            sendBestMove();
-            return;
-        }
-    }
 
     // extend time when there is no hashmove from hashtable, this is useful when just out of the book
     if (ss.hashMove == EMPTY) {
@@ -907,13 +896,12 @@ void Engine::getBestMove(Thread& sthread) {
         if ((info.depth_is_limited || info.time_is_limited) && info.thinking_status == THINKING) {
             info.stop_search = true;;
             stopSearch();
-            Print(2, "info string Aborting search: end of getBestMove: id=%d, best_value = %d sp = %d, ply = %d\n",
-                id, info.best_value, rootpos.sp, rootpos.ply);
+            LogInfo() << "info string Aborting search: end of getBestMove: id = " << id << ", best_value = " << info.best_value << " sp = " << rootpos.sp << ", ply = " << rootpos.ply;
         } else {
-            Print(3, "info string Waiting for stop, quit, or ponderhit\n");
+            LogAndPrintInfo() << "info string Waiting for stop, quit, or ponderhit";
             while (!info.stop_search);
             stopSearch();
-            Print(2, "info string Aborting search: end of waiting for stop/quit/ponderhit\n");
+            LogInfo() << "info string Aborting search: end of waiting for stop/quit/ponderhit";
         }
     }
 

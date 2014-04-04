@@ -37,7 +37,6 @@ void genLegal(const position_t& pos, movelist_t *mvlist, int promoteAll) {
     movelist_t mlt;
     uint64 pinned;
 
-    ASSERT(pos != NULL);
     ASSERT(mvlist != NULL);
 
     if (kingIsInCheck(pos)) {
@@ -95,7 +94,6 @@ void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, Threa
     uint64 allies = pos.color[pos.side];
     uint64 mask = ~occupied;
 
-    ASSERT(pos != NULL);
     ASSERT(mvlist != NULL);
 
     //mvlist->size = 0;
@@ -206,7 +204,6 @@ void genNonCaptures(const position_t& pos, movelist_t *mvlist) {
     uint64 allies = pos.color[pos.side];
     uint64 mask = ~occupied;
 
-    ASSERT(pos != NULL);
     ASSERT(mvlist != NULL);
 
     //mvlist->size = 0;
@@ -308,7 +305,6 @@ void genCaptures(const position_t& pos, movelist_t *mvlist) {
     uint64 occupied = pos.occupied;
     uint64 allies = pos.color[pos.side];
     const uint64 mask = pos.color[pos.side ^ 1] & ~pos.kings;
-    ASSERT(pos != NULL);
     ASSERT(mvlist != NULL);
 
     //mvlist->size = 0;
@@ -405,7 +401,6 @@ void genEvasions(const position_t& pos, movelist_t *mvlist) {
     int sqchecker, from, to, ksq, side, xside;
     uint64  pc_bits, mv_bits, enemies, friends, temp, checkers, pinned;
 
-    ASSERT(pos != NULL);
     ASSERT(mvlist != NULL);
 
     //mvlist->size = 0;

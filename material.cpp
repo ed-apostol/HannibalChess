@@ -72,30 +72,7 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
     int bminors = bn + bb;
     int drawn = 0;
     SetPhase(wn + wb + bn + bb, wr + br, wq + bq);
-    if (DEBUG_DRAW) {
-        if (wp < 0) Print(3, "info string <0 wpawns\n");
-        if (bp < 0) Print(3, "info string <0 bpawns\n");
-        if (wp > 8) Print(3, "info string >8 wpawns\n");
-        if (wp > 8) Print(3, "info string >8 wpawns\n");
-        if (wn < 0) Print(3, "info string <0 wn\n");
-        if (bn < 0) Print(3, "info string <0 bn\n");
-        if (wn > 2) Print(3, "info string >2 wn\n");
-        if (bn > 2) Print(3, "info string >2 bn\n");
-        if (wb < 0) Print(3, "info string <0 wb\n");
-        if (bb < 0) Print(3, "info string <0 bb\n");
-        if (wb > 2) Print(3, "info string >2 wb\n");
-        if (bb > 2) Print(3, "info string >2 bb\n");
-        if (wr < 0) Print(3, "info string <0 wr\n");
-        if (br < 0) Print(3, "info string <0 br\n");
-        if (wr > 2) Print(3, "info string >2 wr\n");
-        if (br > 2) Print(3, "info string >2 br\n");
-        if (wq < 0) Print(3, "info string <0 wq\n");
-        if (bq < 0) Print(3, "info string <0 bq\n");
-        if (wq > 1) Print(3, "info string >1 wq\n");
-        if (bq > 1) Print(3, "info string >1 bq\n");
-        if (wminors != wn + wb) Print(3, "info string mismatched wminors\n");
-        if (bminors != bn + bb) Print(3, "info string mismatched bminors\n");
-    }
+
     // now lets deal with no pawns left situations
     if (wp == 0) {
         // 1 or less pieces is drawn

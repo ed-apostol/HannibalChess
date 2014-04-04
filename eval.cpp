@@ -232,18 +232,11 @@ void judgeTrapped(const position_t& pos, eval_info_t *ei, const int color, const
     while (targets) {
         targetSq = popFirstBit(&targets);
         safeMoves = (KnightMoves[targetSq]) &
-
             (safe & (~ei->atkall[enemy] | ei->atkpawns[color] | ei->atkbishops[color] | ei->atkrooks[color] | ei->atkqueens[color] | ei->atkkings[color]));
-        if (showEval) Print(3, " judging knight %d ", targetSq);
 
         if (!(escapeTrapped[color] & safeMoves)) {
             penalty = (BitMask[targetSq] & safer) != 0 ? personality(thread).TrappedMoves[bitCnt(safeMoves)] / 2 : personality(thread).TrappedMoves[bitCnt(safeMoves)];
             ei->mid_score[color] -= penalty;
-            //			*upside += penalty/2;
-            //			*downside += penalty/2;
-            if (showEval) {
-                Print(3, " trapped knight %d", bitCnt(safeMoves));
-            }
         }
     }
     targets = pos.bishops & beware;
@@ -251,16 +244,10 @@ void judgeTrapped(const position_t& pos, eval_info_t *ei, const int color, const
         targetSq = popFirstBit(&targets);
         safeMoves = (bishopAttacksBB(targetSq, pos.occupied)) &
             (safe & (~ei->atkall[enemy] | ei->atkpawns[color] | ei->atkknights[color] | ei->atkrooks[color] | ei->atkqueens[color] | ei->atkkings[color]));
-        if (showEval) Print(3, " judging bishop %d ", targetSq);
 
         if (!(escapeTrapped[color] & safeMoves)) {
             penalty = (BitMask[targetSq] & safer) != 0 ? personality(thread).TrappedMoves[bitCnt(safeMoves)] / 2 : personality(thread).TrappedMoves[bitCnt(safeMoves)];
             ei->mid_score[color] -= penalty;
-            //			*upside += penalty/2;
-            //			*downside += penalty/2;
-            if (showEval) {
-                Print(3, " trapped bishop %d", bitCnt(safeMoves));
-            }
         }
     }
     safe &= ~(ei->atkknights[enemy] | ei->atkbishops[enemy]);
@@ -268,18 +255,11 @@ void judgeTrapped(const position_t& pos, eval_info_t *ei, const int color, const
     while (targets) {
         targetSq = popFirstBit(&targets);
         safeMoves = (rookAttacksBB(targetSq, pos.occupied)) &
-
             (safe & (~ei->atkall[enemy] | ei->atkpawns[color] | ei->atkbishops[color] | ei->atkknights[color] | ei->atkqueens[color] | ei->atkkings[color]));
-        if (showEval) Print(3, " judging rook %d ", targetSq);
 
         if (!(escapeTrapped[color] & safeMoves)) {
             penalty = personality(thread).TrappedMoves[bitCnt(safeMoves)] / 2; //trapped rooks often get the exchange anyway
             ei->mid_score[color] -= penalty;
-            //			*upside += penalty/2;
-            //			*downside += penalty/2;
-            if (showEval) {
-                Print(3, " trapped rook %d", bitCnt(safeMoves));
-            }
         }
     }
 
@@ -290,18 +270,11 @@ void judgeTrapped(const position_t& pos, eval_info_t *ei, const int color, const
         if (DISTANCE(targetSq, pos.kpos[enemy]) > 2) {
 
             safeMoves = (queenAttacksBB(targetSq, pos.occupied)) &
-
                 (safe & (~ei->atkall[enemy] | ei->atkpawns[color] | ei->atkbishops[color] | ei->atkrooks[color] | ei->atkknights[color] | ei->atkkings[color]));
-            if (showEval) Print(3, " judging queen %d ", targetSq);
 
             if (!(escapeTrapped[color] & safeMoves)) {
                 penalty = personality(thread).TrappedMoves[bitCnt(safeMoves)] / 2; //trapped queens are still dangerous
                 ei->mid_score[color] -= penalty;
-                //				*upside += penalty/2;
-                //				*downside += penalty/2;
-                if (showEval) {
-                    Print(3, " trapped queen %d", bitCnt(safeMoves));
-                }
             }
         }
     }
@@ -364,15 +337,6 @@ void initPawnEvalByColor(const position_t& pos, eval_info_t *ei, const int color
     ei->atkpawns[color] = temp64;
     ei->atkcntpcs[color ^ 1] += bitCnt(temp64 & ei->kingadj[color ^ 1]);
     ei->potentialPawnAttack[color] = (*FillPtr2[color])(temp64);
-    /*	if (showEval) {
-    uint64 pAtt = temp64;
-    while (pAtt)
-    {
-    int sq = popFirstBit(&pAtt);
-    Print(3,"a %c%i ",sq%8+'a',sq/8+1);
-    }
-    }
-    */
 }
 
 void evalShelter(const int color, eval_info_t *ei, const position_t& pos) {
@@ -435,7 +399,6 @@ void evalPawnsByColor(const position_t& pos, eval_info_t *ei, int mid_score[], i
             (BitMask[sq + PAWN_MOVE_INC(color)] & ei->atkpawns[color]) == 0); //support pawn within 1
         if (permWeak) {
             targetBitMap |= BitMask[sq];
-            if (showEval) Print(3, " pwb %s ", sq2Str(sq));
         }
     }
 
@@ -518,17 +481,9 @@ void evalPawnsByColor(const position_t& pos, eval_info_t *ei, int mid_score[], i
             sqPenalty = weakFile[SQFILE(sq)] + weakRank[PAWN_RANK(sq, color)]; //TODO precale 64 entries
             mid_score[color] -= sqPenalty;	//penalty for being weak in middlegame
             end_score[color] -= kingAttackWeakness[DISTANCE(sq, enemyKing)]; //end endgame, king attacks is best measure of vulnerability
-            if (showEval) Print(3, "w %s ", sq2Str(sq));
-            //if (showEval && (backwardBitMap & sqBitMask)) Print(3," back %s ",sq2Str(sq));
             if (openPawn) {
                 mid_score[color] -= sqPenalty;
             }
-            /*
-            if (fixedPawn) { //if we cannot move it
-            if (showEval) Print(3,"f %s ",sq2Str(sq));
-            mid_score[color] -= WEAK_FIXED_O;
-            end_score[color] -= WEAK_FIXED_E;
-            }*/
         }
     }
     evalShelter(color, ei, pos);
@@ -565,7 +520,6 @@ void evalPieces(const position_t& pos, eval_info_t *ei, const int color, const i
     if (0 == (pos.posStore.castle & Castle[color])) boardSkeleton |= (pos.kings & pos.color[color]);
     notOwnSkeleton = ~(boardSkeleton & pos.color[color]);
 
-    ASSERT(pos != NULL);
     ASSERT(ei != NULL);
     ASSERT(colorIsOk(color));
     mobileSquare = ~ei->atkpawns[enemy] & notOwnColor;
@@ -616,7 +570,6 @@ void evalPieces(const position_t& pos, eval_info_t *ei, const int color, const i
         if (temp1 < 3) {
             ei->mid_score[color] -= personality(thread).stuck_bishop;
             ei->end_score[color] -= personality(thread).stuck_bishop*personality(thread).stuck_end;
-            if (showEval) Print(3, " stuck bishop %s %d %d", sq2Str(from), personality(thread).stuck_bishop, personality(thread).stuck_bishop*personality(thread).stuck_end);
         }
         if (BitMask[from] & weak_sq_mask) {
             temp1 = outpost(pos, ei, color, enemy, from) / 2;
@@ -649,7 +602,6 @@ void evalPieces(const position_t& pos, eval_info_t *ei, const int color, const i
         if (temp1 < 3) {
             ei->mid_score[color] -= personality(thread).stuck_rook;
             ei->end_score[color] -= personality(thread).stuck_rook*personality(thread).stuck_end;
-            if (showEval) Print(3, " stuck rook %s ", sq2Str(from));
         }
         ei->mid_score[color] += temp1 * MidgameXrayRookMob;
         ei->end_score[color] += temp1 * EndgameXrayRookMob;
@@ -659,7 +611,6 @@ void evalPieces(const position_t& pos, eval_info_t *ei, const int color, const i
         uint64 pawnsPressured = pressured & ei->pawns[enemy] & ~ei->atkpawns[enemy];
         if (pawnsPressured) {
             int numPawnsPressured = bitCnt(pawnsPressured);
-            if (showEval) Print(3, "pp %d ", numPawnsPressured);
             ei->mid_score[color] += MidgameRookPawnPressure * numPawnsPressured;
             ei->mid_score[color] += EndgameRookPawnPressure * numPawnsPressured;
         }
@@ -694,7 +645,6 @@ void evalPieces(const position_t& pos, eval_info_t *ei, const int color, const i
         if (temp1 < 3) {
             ei->mid_score[color] -= personality(thread).stuck_queen;
             ei->end_score[color] -= personality(thread).stuck_queen*personality(thread).stuck_end;
-            if (showEval) Print(3, " stuck queen %s ", sq2Str(from));
         }
         ei->mid_score[color] += temp1 * MidgameXrayQueenMob;
         ei->end_score[color] += temp1 * EndgameXrayQueenMob;
@@ -722,7 +672,6 @@ void evalThreats(const position_t& pos, eval_info_t *ei, const int color, int *u
     uint64 temp64, not_guarded, enemy_pcs;
     int temp1;
 
-    ASSERT(pos != NULL);
     ASSERT(ei != NULL);
     ASSERT(colorIsOk(color));
 
@@ -782,10 +731,6 @@ void evalThreats(const position_t& pos, eval_info_t *ei, const int color, int *u
 
         if (threatB) {
             int numThreats = bitCnt(threatB);
-            if (showEval) {
-                if (color == WHITE) Print(3, "WTHR %d ", numThreats);
-                else Print(3, "BTHR %d ", numThreats);
-            }
             if (pos.side != color) *upside += ThreatBonus[numThreats];
             //only really takes double threats for the opponent seriously, since its not handled well by qsearch and such
             numThreats += (pos.side == color);
@@ -810,10 +755,6 @@ void KingShelter(const int color, eval_info_t *ei, const position_t& pos, int da
     if (currentKing > (LOW_SHELTER*danger)) currentKing -= (currentKing - (LOW_SHELTER*danger)) / 2;
     currentKing = (currentKing - (9 * danger)) / 2;
 
-    if (showEval) {
-        if (color == WHITE) Print(3, " ws %d ", currentKing);
-        else Print(3, " bs %d ", currentKing);
-    }
     ei->mid_score[color] += currentKing;
 }
 
@@ -822,7 +763,6 @@ void evalKingAttacks(const position_t& pos, eval_info_t *ei, const int color, in
     int danger;
     uint64 pc_atkrs_mask, pc_atkhelpersmask, king_atkmask, pc_defenders_mask;
     int penalty, tot_atkrs, pc_weights, kzone_atkcnt;
-    ASSERT(pos != NULL);
     ASSERT(ei != NULL);
     ASSERT(colorIsOk(color));
 
@@ -852,14 +792,7 @@ void evalKingAttacks(const position_t& pos, eval_info_t *ei, const int color, in
                 do {
                     int sq = popFirstBit(&queenContact);
                     uint64 queenCovers = queenAttacksBB(sq, pos.occupied);
-                    /*
-                    if (showEval) {
-                    Print(3," qcontact %s \n",sq2Str(sq));
-                    showBitboard(queenCovers,3);
 
-                    Print(3,"\n");
-                    showBitboard(kingEscape,3);
-                    }*/
                     penalty += bonus;
                     if (0 == (kingEscape & ~queenCovers)) { //checkmate
                         //MAKE SURE IT IS REALLY MATE
@@ -872,18 +805,11 @@ void evalKingAttacks(const position_t& pos, eval_info_t *ei, const int color, in
                         if (pos.side == (color ^ 1)) {
                             ei->mid_score[color] -= 10000;
                             ei->end_score[color] -= 10000; //CHECKMATE
-                            if (showEval) Print(3, " checkmate %s ", sq2Str(sq));
                         } else {
                             penalty += MATE_CODE;
                             *upside += 10000; // maybe checkmate!!
-                            if (showEval) Print(3, " MateThreat %s ", sq2Str(sq));
                         }
                     }
-                    /*
-                    else if (showEval) {
-                    Print(3,"\n");
-                    showBitboard((kingEscape & ~queenCovers),3);
-                    }*/
 
                 } while (queenContact);
             }
@@ -904,13 +830,7 @@ void evalKingAttacks(const position_t& pos, eval_info_t *ei, const int color, in
         if (pc_atkrs_mask) penalty += bitCnt(pc_atkrs_mask) * DiscoveredCheckValue;
         ei->mid_score[color] -= (penalty * (penalty - EXP_PENALTY) * KING_ATT_W) / 20;
         *upside += (penalty * penalty*KING_ATT_W) / 20;
-
-        if (showEval) {
-            if (color == WHITE) Print(3, " wa %d", penalty * (penalty - EXP_PENALTY));
-            else Print(3, " ba %d", penalty * (penalty - EXP_PENALTY) * KING_ATT_W / 20);
-        }
     } else if (PARTIAL_ATTACK) { //if there is a maximum of 1 active attacker
-        if (showEval) Print(3, " pa %d", kzone_atkcnt*PARTIAL_ATTACK);
         ei->mid_score[color] -= kzone_atkcnt*PARTIAL_ATTACK;
     }
 }
@@ -942,7 +862,6 @@ void evalPassedvsKing(const position_t& pos, eval_info_t *ei, const int allied, 
         if (ei->atkpawns[allied] & BitMask[from]) score += DefendedByPawnPasser;
         if (ei->atkpawns[allied] & BitMask[from + PAWN_MOVE_INC(allied)]) {
             score += DuoPawnPasser;
-            if (showEval) Print(3, " duo passer %s ", sq2Str(from));
         }
         ei->mid_score[allied] += MidgamePassedMin + scale(MidgamePassedMax, rank);
         score += EndgamePassedMax;
@@ -969,12 +888,9 @@ void evalPassedvsKing(const position_t& pos, eval_info_t *ei, const int allied, 
                 int promotion = PAWN_PROMOTE(from, allied);
                 int eDist = DISTANCE(oppking, promotion);
 
-                if (showEval) Print(3, " passed rank %d qdist %d ", rank, qDist);
-
                 if (eDist - 1 > qDist) {
                     score += UnstoppablePassedPawn;
                     ei->queening = true;
-                    if (showEval) Print(3, " unstoppable ");
                 }
                 // or king can escort pawn in
                 else if (qDist <= 2) {
@@ -984,7 +900,6 @@ void evalPassedvsKing(const position_t& pos, eval_info_t *ei, const int allied, 
                     if (mDist < eDist || (mDist == eDist && myMove)) { //if this race is a tie we can still win it, but must spend move on king first not pawn
                         score += UnstoppablePassedPawn;
                         ei->queening = true;
-                        if (showEval) Print(3, " unstopable king escort ");
                     }
                 }
 
@@ -996,16 +911,13 @@ void evalPassedvsKing(const position_t& pos, eval_info_t *ei, const int allied, 
     } while (passedpawn_mask);
 
     fileDist = rightBestFile - leftBestFile;
-    if (showEval) Print(3, " file dist %d ", fileDist);
     if (leftBestToQueen > rightBestToQueen) {
         if (fileDist > leftBestToQueen) {
             ei->end_score[allied] += scale(UnstoppablePassedPawn, 7 - leftBestToQueen);
-            if (showEval) Print(3, " unstoppable separated %d ", leftBestToQueen);
             ei->queening = true;
         }
     } else if (fileDist > rightBestToQueen) {
         ei->end_score[allied] += scale(UnstoppablePassedPawn, 7 - rightBestToQueen);
-        if (showEval) Print(3, " unstoppable separated %d ", rightBestToQueen);
         ei->queening = true;
     }
 }
@@ -1039,7 +951,6 @@ void evalPassed(const position_t& pos, eval_info_t *ei, const int allied, uint64
         if (ei->atkpawns[allied] & BitMask[from]) score += DefendedByPawnPasser;
         if (ei->atkpawns[allied] & BitMask[frontSq]) {
             score += DuoPawnPasser;
-            if (showEval) Print(3, " duo passer %s ", sq2Str(from));
         }
 
         if (passed & (PawnCaps[from][allied] | PawnCaps[frontSq][enemy])
@@ -1050,7 +961,6 @@ void evalPassed(const position_t& pos, eval_info_t *ei, const int allied, uint64
             if (kDist > (7 - rank - myMove)) {
                 score += UnstoppablePassedPawn + RookValueMid2 - PawnValueMid2;
                 ei->queening = true;
-                if (showEval) Print(3, "info string unstopable connected ");
             }
         }
 
@@ -1061,7 +971,6 @@ void evalPassed(const position_t& pos, eval_info_t *ei, const int allied, uint64
 
 void evalPawns(const position_t& pos, eval_info_t *ei, int thread_id) {
 
-    ASSERT(pos != NULL);
     ASSERT(ei != NULL);
 
     initPawnEvalByColor(pos, ei, WHITE);
@@ -1099,11 +1008,9 @@ int eval(const position_t& pos, int thread_id, int *pessimism) {
     entry = ThreadsMgr.ThreadFromIdx(thread_id).et.Entry(pos.posStore.hash);
     if (entry->hashlock == LOCK(pos.posStore.hash)) {
         *pessimism = entry->pessimism; //this was meant to be * 10
-        if (showEval) Print(3, " from hash ");
         return entry->value;
     }
 
-    ASSERT(pos != NULL);
     ei.MLindex[WHITE] = pos.posStore.mat_summ[WHITE];
     ei.MLindex[BLACK] = pos.posStore.mat_summ[BLACK];
 
@@ -1120,9 +1027,6 @@ int eval(const position_t& pos, int thread_id, int *pessimism) {
         ei.endFlags[BLACK] = mat->flags[BLACK];
     } else {
         score = computeMaterial(pos, &ei);
-    }
-    if (showEval) {
-        Print(3, "info string mat %d ", score);
     }
 
     ei.mid_score[WHITE] = pos.posStore.open[WHITE];
@@ -1215,10 +1119,8 @@ int eval(const position_t& pos, int thread_id, int *pessimism) {
     if (!ei.queening) {
         int edge = score < DrawValue[WHITE];
         int draw = ei.draw[edge]; //this is who is trying to draw 
-        if (showEval) Print(3, " preenddraw %d ", draw);
         evalEndgame(edge, pos, &ei, &score, &draw, pos.side);
         draw = MIN(MAX_DRAW, draw); // max of 200 draw
-        if (showEval) Print(3, " draw %d ", draw);
         score = ((score * (MAX_DRAW - draw)) + (DrawValue[WHITE] * draw)) / MAX_DRAW;
     }
     score = score*sign[pos.side];
