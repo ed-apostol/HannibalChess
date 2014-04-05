@@ -216,7 +216,6 @@ public:
     }
 
     int m_MinSplitDepth;
-    int m_MaxThreadsPerSplit;
     int m_MaxActiveSplitsPerThread;
 private:
     std::vector<Thread*> m_Threads;
