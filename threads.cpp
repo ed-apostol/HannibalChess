@@ -41,10 +41,9 @@ void ThreadsManager::IdleLoop(const int thread_id) {
         if (!m_StopThreads && m_Threads[thread_id]->searching) {
             SplitPoint* sp = m_Threads[thread_id]->activeSplitPoint; // this is correctly located, don't move this, else bug
             CEngine.searchFromIdleLoop(*sp, ThreadFromIdx(thread_id));
-            sp->updatelock->lock();
+            std::lock_guard<Spinlock> lck(sp->updatelock[0]);
             sp->workersBitMask &= ~((uint64)1 << thread_id);
             m_Threads[thread_id]->searching = false;
-            sp->updatelock->unlock();
         }
         if (master_sp != NULL && (!master_sp->workersBitMask || m_StopThreads)) return;
     }
@@ -71,7 +70,7 @@ void ThreadsManager::GetWork(const int thread_id, SplitPoint* master_sp) {
         }
     }
     if (!m_StopThreads && best_split_point != NULL) {
-        best_split_point->updatelock->lock();
+        std::lock_guard<Spinlock> lck(best_split_point->updatelock[0]);
         if (master_thread->searching && master_thread->num_sp > 0 && !best_split_point->cutoff
             && (best_split_point->workersBitMask == best_split_point->allWorkersBitMask)
             && (!master_sp || (best_split_point->allWorkersBitMask & ((uint64)1 << master_thread->thread_id)))) { // redundant criteria, just to be sure
@@ -82,7 +81,6 @@ void ThreadsManager::GetWork(const int thread_id, SplitPoint* master_sp) {
             m_Threads[thread_id]->searching = true;
             m_Threads[thread_id]->stop = false;
         }
-        best_split_point->updatelock->unlock();
     }
 }
 

@@ -51,6 +51,7 @@ struct SplitPoint {
     bool cutoffOccurred() {
         if (cutoff) return true;
         if (parent && parent->cutoffOccurred()) {
+            std::lock_guard<Spinlock> lck(updatelock[0]);
             cutoff = true;
             return true;
         }
@@ -72,7 +73,7 @@ struct SplitPoint {
     volatile basic_move_t bestmove;
     volatile uint64 workersBitMask;
     volatile uint64 allWorkersBitMask;
-    volatile bool cutoff;
+    std::atomic<bool> cutoff;
     Spinlock movelistlock[1];
     Spinlock updatelock[1];
 };
