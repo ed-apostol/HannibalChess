@@ -97,7 +97,7 @@ void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, Threa
     ASSERT(mvlist != NULL);
 
     //mvlist->size = 0;
-    //mvlist->size = mvlist->pos;
+    mvlist->size = mvlist->pos;
 
     if (pos.side == BLACK) { //TODO consider writing so we don't need this expensive branch
         if (sthread.evalgains[historyIndex(pos.side, GenBlackOO())] >= delta && (pos.posStore.castle&BCKS) && (!(occupied&(F8 | G8)))) {
@@ -207,7 +207,7 @@ void genNonCaptures(const position_t& pos, movelist_t *mvlist) {
     ASSERT(mvlist != NULL);
 
     //mvlist->size = 0;
-    //mvlist->size = mvlist->pos;
+    mvlist->size = mvlist->pos;
 
     if (pos.side == BLACK) { //TODO consider writing so we don't need this expensive branch
         if ((pos.posStore.castle&BCKS) && (!(occupied&(F8 | G8)))) {
@@ -308,7 +308,7 @@ void genCaptures(const position_t& pos, movelist_t *mvlist) {
     ASSERT(mvlist != NULL);
 
     //mvlist->size = 0;
-    //mvlist->size = mvlist->pos;
+    mvlist->size = mvlist->pos;
 
     /* promotions only */
     pc_bits = pos.pawns & allies & Rank7ByColorBB[pos.side];
@@ -404,7 +404,7 @@ void genEvasions(const position_t& pos, movelist_t *mvlist) {
     ASSERT(mvlist != NULL);
 
     //mvlist->size = 0;
-    //mvlist->size = mvlist->pos;
+    mvlist->size = mvlist->pos;
 
     side = pos.side;
     xside = side ^ 1;
@@ -555,7 +555,7 @@ void genQChecks(const position_t& pos, movelist_t *mvlist) {
     uint64 dc, empty, checkSqs, bit1, bit2, bit3;
 
     //mvlist->size = 0;
-    //mvlist->size = mvlist->pos;
+    mvlist->size = mvlist->pos;
 
     us = pos.side;
     them = us ^ 1;
