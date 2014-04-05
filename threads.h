@@ -117,10 +117,10 @@ public:
     }
 
     int thread_id;
-    volatile bool stop;
-    volatile bool doSleep;
-    volatile bool searching;
-    volatile bool exit_flag;
+    std::atomic<bool> stop;
+    std::atomic<bool> doSleep;
+    std::atomic<bool> searching;
+    std::atomic<bool> exit_flag;
 private:
     std::thread nativeThread;
     std::condition_variable sleepCondition;
@@ -219,8 +219,8 @@ public:
     int m_MaxActiveSplitsPerThread;
 private:
     std::vector<Thread*> m_Threads;
-    volatile bool m_StartThinking;
-    volatile bool m_StopThreads;
+    std::atomic<bool> m_StartThinking;
+    std::atomic<bool> m_StopThreads;
 };
 
 extern ThreadsManager ThreadsMgr;
