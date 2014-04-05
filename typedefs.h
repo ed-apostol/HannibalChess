@@ -107,7 +107,6 @@ struct move_t {
 
 /* the structure used in generating moves */
 struct movelist_t {
-    volatile uint32 phase;
     basic_move_t transmove;
     basic_move_t killer1;
     basic_move_t killer2;
@@ -116,6 +115,7 @@ struct movelist_t {
     int32 ply;
     int32 depth;
     int32 side;
+    volatile uint32 phase;
     volatile int32 pos;
     volatile int32 size;
     volatile int32 startBad;

@@ -45,7 +45,7 @@ struct SearchInfo {
         multipv = UCIOptionsMap["MultiPV"].GetInt();
     }
     int thinking_status;
-    volatile bool stop_search;
+    std::atomic<bool> stop_search;
 
     int time_buffer;
     int contempt;

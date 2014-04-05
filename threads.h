@@ -66,11 +66,11 @@ struct SplitPoint {
     bool inCheck;
     bool inRoot;
     NodeType nodeType;
-    volatile int alpha;
-    volatile int beta;
-    volatile int bestvalue;
-    volatile int played;
-    volatile basic_move_t bestmove;
+    std::atomic<int> alpha;
+    std::atomic<int> beta;
+    std::atomic<int> bestvalue;
+    std::atomic<int> played;
+    std::atomic<basic_move_t> bestmove;
     volatile uint64 workersBitMask;
     volatile uint64 allWorkersBitMask;
     std::atomic<bool> cutoff;

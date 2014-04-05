@@ -586,14 +586,14 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (inRoot) {
             move->s = score;
         }
-        if (score > (inSplitPoint ? sp->bestvalue : ss.bestvalue)) {
+        if (score > (inSplitPoint ? sp->bestvalue.load() : ss.bestvalue)) {
             ss.bestvalue = inSplitPoint ? sp->bestvalue = score : score;
             if (inRoot) {
                 ssprev.counterMove = move->m;
                 m_Info.best_value = ss.bestvalue;
                 if (m_Info.iteration > 1 && m_Info.bestmove != move->m) m_Info.change = 1;
             }
-            if (ss.bestvalue > (inSplitPoint ? sp->alpha : alpha)) {
+            if (ss.bestvalue > (inSplitPoint ? sp->alpha.load() : alpha)) {
                 ss.bestmove = inSplitPoint ? sp->bestmove = move->m : move->m;
                 if (inRoot) {
                     m_Info.bestmove = ss.bestmove;
