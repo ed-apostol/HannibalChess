@@ -41,7 +41,7 @@ void ThreadsManager::IdleLoop(const int thread_id) {
         if (!m_StopThreads && m_Threads[thread_id]->searching) {
             SplitPoint* sp = m_Threads[thread_id]->activeSplitPoint; // this is correctly located, don't move this, else bug
             CEngine.searchFromIdleLoop(*sp, ThreadFromIdx(thread_id));
-            std::lock_guard<Spinlock> lck(sp->updatelock[0]);
+            std::lock_guard<Spinlock> lck(sp->updatelock);
             sp->workersBitMask &= ~((uint64)1 << thread_id);
             m_Threads[thread_id]->searching = false;
         }
@@ -70,7 +70,7 @@ void ThreadsManager::GetWork(const int thread_id, SplitPoint* master_sp) {
         }
     }
     if (!m_StopThreads && best_split_point != NULL) {
-        std::lock_guard<Spinlock> lck(best_split_point->updatelock[0]);
+        std::lock_guard<Spinlock> lck(best_split_point->updatelock);
         if (master_thread->searching && master_thread->num_sp > 0 && !best_split_point->cutoff
             && (best_split_point->workersBitMask == best_split_point->allWorkersBitMask)
             && (!master_sp || (best_split_point->allWorkersBitMask & ((uint64)1 << master_thread->thread_id)))) { // redundant criteria, just to be sure
@@ -135,7 +135,7 @@ void ThreadsManager::SetNumThreads(int num) {
 void ThreadsManager::SearchSplitPoint(const position_t& pos, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread) {
     SplitPoint *active_sp = &sthread.sptable[sthread.num_sp];
 
-    active_sp->updatelock->lock();
+    active_sp->updatelock.lock();
     active_sp->parent = sthread.activeSplitPoint;
     active_sp->depth = depth;
     active_sp->alpha = alpha;
@@ -158,11 +158,11 @@ void ThreadsManager::SearchSplitPoint(const position_t& pos, SearchStack* ss, Se
     sthread.stop = false;
     sthread.num_sp++;
     sthread.numsplits++;
-    active_sp->updatelock->unlock();
+    active_sp->updatelock.unlock();
 
     IdleLoop(sthread.thread_id);
 
-    active_sp->updatelock->lock();
+    active_sp->updatelock.lock();
     sthread.num_sp--;
     ss->bestvalue = active_sp->bestvalue;
     ss->bestmove = active_sp->bestmove;
@@ -178,5 +178,5 @@ void ThreadsManager::SearchSplitPoint(const position_t& pos, SearchStack* ss, Se
         sthread.numsplits2++;
         sthread.workers2 += cnt;
     }
-    active_sp->updatelock->unlock();
+    active_sp->updatelock.unlock();
 }

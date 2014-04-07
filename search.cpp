@@ -511,13 +511,13 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         int score = -INF;
         if (inSingular && move->m == ssprev.bannedMove) continue;
         if (inSplitPoint) {
-            sp->updatelock->lock();
+            sp->updatelock.lock();
             ss.playedMoves = ++sp->played;
         } else ++ss.playedMoves;
         if (ss.hisCnt < 64 && !moveIsTactical(move->m)) {
             ss.hisMoves[ss.hisCnt++] = move->m;
         }
-        if (inSplitPoint) sp->updatelock->unlock();
+        if (inSplitPoint) sp->updatelock.unlock();
         if (anyRepNoMove(pos, move->m)) {
             score = DrawValue[pos.side];
         } else {
@@ -582,7 +582,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             unmakeMove(pos, undo);
         }
         if (sthread.stop) return 0;
-        if (inSplitPoint) sp->updatelock->lock();
+        if (inSplitPoint) sp->updatelock.lock();
         if (inRoot) {
             move->s = score;
         }
@@ -604,19 +604,19 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     alpha = inSplitPoint ? sp->alpha = ss.bestvalue : ss.bestvalue;
                 } else {
                     if (inRoot) {
-                        if (inSplitPoint) sp->movelistlock->lock();
+                        if (inSplitPoint) sp->movelistlock.lock();
                         for (int i = ss.mvlist->pos; i < ss.mvlist->size; ++i) ss.mvlist->list[i].s = -INF;
-                        if (inSplitPoint) sp->movelistlock->unlock();
+                        if (inSplitPoint) sp->movelistlock.unlock();
                     }
                     if (inSplitPoint) {
                         sp->cutoff = true;
-                        sp->updatelock->unlock();
+                        sp->updatelock.unlock();
                     }
                     break;
                 }
             }
         }
-        if (inSplitPoint) sp->updatelock->unlock();
+        if (inSplitPoint) sp->updatelock.unlock();
         if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < ThreadsMgr.m_MaxActiveSplitsPerThread
             && ThreadsMgr.ThreadNum() > 1 && depth >= ThreadsMgr.m_MinSplitDepth
             && (!inCutNode(nt) || (MoveGenPhase[ss.mvlist_phase] != PH_GOOD_CAPTURES && MoveGenPhase[ss.mvlist_phase] != PH_KILLER_MOVES))) {

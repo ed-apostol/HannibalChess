@@ -51,7 +51,7 @@ struct SplitPoint {
     bool cutoffOccurred() {
         if (cutoff) return true;
         if (parent && parent->cutoffOccurred()) {
-            std::lock_guard<Spinlock> lck(updatelock[0]);
+            std::lock_guard<Spinlock> lck(updatelock);
             cutoff = true;
             return true;
         }
@@ -74,8 +74,8 @@ struct SplitPoint {
     volatile uint64 workersBitMask;
     volatile uint64 allWorkersBitMask;
     std::atomic<bool> cutoff;
-    Spinlock movelistlock[1];
-    Spinlock updatelock[1];
+    Spinlock movelistlock;
+    Spinlock updatelock;
 };
 
 struct ThreadStack {
