@@ -234,15 +234,6 @@ const uint64 FileBB[8] = {
 };
 
 /* the bit masks of Ranks */
-#define Rank1BB  0xFFULL
-#define Rank2BB  0xFF00ULL
-#define Rank3BB  0xFF0000ULL
-#define Rank4BB  0xFF000000ULL
-#define Rank5BB  0xFF00000000ULL
-#define Rank6BB  0xFF0000000000ULL
-#define Rank7BB  0xFF000000000000ULL
-#define Rank8BB  0xFF00000000000000ULL
-/*
 const uint64 Rank1BB = 0xFFULL;
 const uint64 Rank2BB = 0xFF00ULL;
 const uint64 Rank3BB = 0xFF0000ULL;
@@ -251,7 +242,6 @@ const uint64 Rank5BB = 0xFF00000000ULL;
 const uint64 Rank6BB = 0xFF0000000000ULL;
 const uint64 Rank7BB = 0xFF000000000000ULL;
 const uint64 Rank8BB = 0xFF00000000000000ULL;
-*/
 
 const uint64 RankBB[8] = {
     0xFFULL, 0xFF00ULL, 0xFF0000ULL, 0xFF000000ULL, 0xFF00000000ULL,
