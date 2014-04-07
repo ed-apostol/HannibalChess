@@ -37,7 +37,6 @@ extern uint64 InBetween[64][64];
 #define MAX_FUT_MARGIN 10
 extern int FutilityMarginTable[MAX_FUT_MARGIN + 1][64];
 extern int ReductionTable[2][64][64];
-extern int needReplyReady;
 
 #define MoveGenPhaseEvasion 0
 #define MoveGenPhaseStandard (MoveGenPhaseEvasion+3)

@@ -40,7 +40,6 @@ uint64 InBetween[64][64];
 #define MAX_FUT_MARGIN 10
 int FutilityMarginTable[MAX_FUT_MARGIN + 1][64];
 int ReductionTable[2][64][64];
-int needReplyReady;
 
 const int MoveGenPhase[] = {
     PH_NONE, PH_EVASION, PH_END, //MoveGenPhaseEvasion

@@ -28,17 +28,17 @@
 // consider multiplying all the positional values by 32, and then not dividing by phase
 
 //some castling comments
-static const int KSC[2] = {WCKS, BCKS};
-static const int QSC[2] = {WCQS, BCQS};
-static const int Castle[2] = {WCQS + WCKS, BCQS + BCKS};
+const int KSC[2] = {WCKS, BCKS};
+const int QSC[2] = {WCQS, BCQS};
+const int Castle[2] = {WCQS + WCKS, BCQS + BCKS};
 #define KS(c)			(WCKS+c*3)
 #define QS(c)			(WCQS+c*6)
 // F1 | G1, F8 | G8
-static const uint64 KCSQ[2] = {(0x0000000000000020ULL | 0x0000000000000040ULL), (0x2000000000000000ULL | 0x4000000000000000ULL)};
+const uint64 KCSQ[2] = {(0x0000000000000020ULL | 0x0000000000000040ULL), (0x2000000000000000ULL | 0x4000000000000000ULL)};
 // C1 | D1, C8 | D8
-static const uint64 QCSQ[2] = {(0x0000000000000004ULL | 0x0000000000000008ULL), (0x0400000000000000ULL | 0x0800000000000000ULL)};
-static const int KScastleTo[2] = {g1, g8};
-static const int QScastleTo[2] = {c1, c8};
+const uint64 QCSQ[2] = {(0x0000000000000004ULL | 0x0000000000000008ULL), (0x0400000000000000ULL | 0x0800000000000000ULL)};
+const int KScastleTo[2] = {g1, g8};
+const int QScastleTo[2] = {c1, c8};
 
 //constants
 #define NUM_GENOMES 3
@@ -84,39 +84,39 @@ static const Personality personality;
 #define EXP_PENALTY 1
 
 // side to move bonus
-//static const int MidgameTempo = 20;
-//static const int EndgameTempo = 10;
+//const int MidgameTempo = 20;
+//const int EndgameTempo = 10;
 
-static const int MidgameKnightMob = 6;
-static const int EndgameKnightMob = 8;
+const int MidgameKnightMob = 6;
+const int EndgameKnightMob = 8;
 
-static const int MidgameBishopMob = 3;
-static const int MidgameXrayBishopMob = 2;
+const int MidgameBishopMob = 3;
+const int MidgameXrayBishopMob = 2;
 
-static const int EndgameBishopMob = 3;
-static const int EndgameXrayBishopMob = 2;
+const int EndgameBishopMob = 3;
+const int EndgameXrayBishopMob = 2;
 
-static const int MidgameRookMob = 1;
-static const int MidgameXrayRookMob = 3;
+const int MidgameRookMob = 1;
+const int MidgameXrayRookMob = 3;
 
-static const int EndgameRookMob = 2;
-static const int EndgameXrayRookMob = 3;
+const int EndgameRookMob = 2;
+const int EndgameXrayRookMob = 3;
 
-static const int MidgameQueenMob = 1;
-static const int MidgameXrayQueenMob = 1;
+const int MidgameQueenMob = 1;
+const int MidgameXrayQueenMob = 1;
 
-static const int EndgameQueenMob = 2;
-static const int EndgameXrayQueenMob = 2;
+const int EndgameQueenMob = 2;
+const int EndgameXrayQueenMob = 2;
 
 // rook specific evaluation
-static const int MidgameRookPawnPressure = 4;
-static const int EndgameRookPawnPressure = 8;
-static const int MidgameRook7th = 20 - MidgameRookPawnPressure * 2;
-static const int EndgameRook7th = 40 - EndgameRookPawnPressure * 2;
+const int MidgameRookPawnPressure = 4;
+const int EndgameRookPawnPressure = 8;
+const int MidgameRook7th = 20 - MidgameRookPawnPressure * 2;
+const int EndgameRook7th = 40 - EndgameRookPawnPressure * 2;
 
 // queen specific evaluation
-static const int MidgameQueen7th = 10;
-static const int EndgameQueen7th = 20;
+const int MidgameQueen7th = 10;
+const int EndgameQueen7th = 20;
 //bishop specific
 #define OB_WEIGHT 12 //opposite color bishops drawishness
 
@@ -131,7 +131,7 @@ static const int EndgameQueen7th = 20;
 #define KAW5 1 // 1
 #define KAW6 0 // 0
 #define KAW7 0 // 0
-static const int kingAttackWeakness[8] = {0,
+const int kingAttackWeakness[8] = {0,
 KAW1 + KAW2 + KAW3 + KAW4 + KAW5 + KAW6 + KAW7,
 KAW2 + KAW3 + KAW4 + KAW5 + KAW6 + KAW7,
 KAW3 + KAW4 + KAW5 + KAW6 + KAW7,
@@ -161,59 +161,59 @@ KAW7};
 
 
 //passed pawns
-static const int UnstoppablePassedPawn = 700;
+const int UnstoppablePassedPawn = 700;
 #define EndgamePassedMin 10 // maybe needs to be higher
-static const int EndgamePassedMax = 70 - EndgamePassedMin;
+const int EndgamePassedMax = 70 - EndgamePassedMin;
 #define MidgamePassedMin 20
-static const int MidgamePassedMax = 140 - MidgamePassedMin;
+const int MidgamePassedMax = 140 - MidgamePassedMin;
 #define MidgameCandidatePawnMin 10
-static const int MidgameCandidatePawnMax = 100 - MidgameCandidatePawnMin;
+const int MidgameCandidatePawnMax = 100 - MidgameCandidatePawnMin;
 #define EndgameCandidatePawnMin 5
-static const int EndgameCandidatePawnMax = 50 - EndgameCandidatePawnMin; //50 WEIRD to have this less than middle, perhaps takes up space
-static const int ProtectedPasser = 10;
-static const int DuoPawnPasser = 15;
-static const int kingDistImp[8] = {0, 20, 40, 55, 65, 70, 70, 70}; //best if this cannot get higher than EndgamePassedMax
-static const int PathFreeFriendPasser = 10;
-static const int DefendedByPawnPasser = 10;
-static const int PathFreeNotAttackedDefAllPasser = 80;
-static const int PathFreeNotAttackedDefPasser = 70;
-static const int PathFreeAttackedDefAllPasser = 60;
-static const int PathFreeAttackedDefPasser = 40;
-static const int PathNotFreeAttackedDefPasser = 10;
-static const int PassedPawnAttackerDistance = 20;
-static const int PassedPawnDefenderDistance = 40;
+const int EndgameCandidatePawnMax = 50 - EndgameCandidatePawnMin; //50 WEIRD to have this less than middle, perhaps takes up space
+const int ProtectedPasser = 10;
+const int DuoPawnPasser = 15;
+const int kingDistImp[8] = {0, 20, 40, 55, 65, 70, 70, 70}; //best if this cannot get higher than EndgamePassedMax
+const int PathFreeFriendPasser = 10;
+const int DefendedByPawnPasser = 10;
+const int PathFreeNotAttackedDefAllPasser = 80;
+const int PathFreeNotAttackedDefPasser = 70;
+const int PathFreeAttackedDefAllPasser = 60;
+const int PathFreeAttackedDefPasser = 40;
+const int PathNotFreeAttackedDefPasser = 10;
+const int PassedPawnAttackerDistance = 20;
+const int PassedPawnDefenderDistance = 40;
 
 // king safety
-static const int QueenAttackValue = 5;
-static const int RookAttackValue = 3;
-static const int BishopAttackValue = 2;
-static const int KnightAttackValue = 2;
-static const int QueenSafeContactCheckValue = 3;
-static const int QueenSafeCheckValue = 2;
-static const int RookSafeCheckValue = 1;
-static const int BishopSafeCheckValue = 1;
-static const int KnightSafeCheckValue = 1;
-static const int DiscoveredCheckValue = 3;
+const int QueenAttackValue = 5;
+const int RookAttackValue = 3;
+const int BishopAttackValue = 2;
+const int KnightAttackValue = 2;
+const int QueenSafeContactCheckValue = 3;
+const int QueenSafeCheckValue = 2;
+const int RookSafeCheckValue = 1;
+const int BishopSafeCheckValue = 1;
+const int KnightSafeCheckValue = 1;
+const int DiscoveredCheckValue = 3;
 
 // piece attacks
-static const int QueenAttacked = 4; //4
-static const int RookAttacked = 3; //3
-static const int BishopAttacked = 2; //2
-static const int KnightAttacked = 2; //2
+const int QueenAttacked = 4; //4
+const int RookAttacked = 3; //3
+const int BishopAttacked = 2; //2
+const int KnightAttacked = 2; //2
 
-static const int QueenAttackPower = 1; //1
-static const int RookAttackPower = 2; //2
-static const int BishopAttackPower = 3; //3
-static const int KnightAttackPower = 3; //3
-static const int PawnAttackPower = 4; //4
+const int QueenAttackPower = 1; //1
+const int RookAttackPower = 2; //2
+const int BishopAttackPower = 3; //3
+const int KnightAttackPower = 3; //3
+const int PawnAttackPower = 4; //4
 
-static const int PieceAttackMulMid = 4; //5
-static const int PieceAttackMulEnd = 3; //3
+const int PieceAttackMulMid = 4; //5
+const int PieceAttackMulEnd = 3; //3
 
 #define TB1 8 
 #define TB2 80 
 
-static const int sbonus[8] = {0, 0, 0, 13, 34, 77, 128, 0};
+const int sbonus[8] = {0, 0, 0, 13, 34, 77, 128, 0};
 #define scale(smax,sr) ((((smax))*sbonus[sr]) / sbonus[6])
 
 
