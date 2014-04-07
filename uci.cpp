@@ -57,10 +57,10 @@ void on_threads(const Options& o) {
     ThreadsMgr.SetNumThreads(o.GetInt());
 }
 void on_splits(const Options& o) {
-    ThreadsMgr.m_MinSplitDepth = o.GetInt();
+    ThreadsMgr.mMinSplitDepth = o.GetInt();
 }
 void on_active_splits(const Options& o) {
-    ThreadsMgr.m_MaxActiveSplitsPerThread = o.GetInt();
+    ThreadsMgr.mMaxActiveSplitsPerThread = o.GetInt();
 }
 void on_contempt(const Options& o) {
     CEngine.info.contempt = o.GetInt();

@@ -20,32 +20,32 @@
 ThreadsManager ThreadsMgr;
 
 void ThreadsManager::StartThinking() {
-    m_StartThinking = true;
+    mStartThinking = true;
     ThreadFromIdx(0).TriggerCondition();
 }
 
 void ThreadsManager::IdleLoop(const int thread_id) {
-    SplitPoint* master_sp = m_Threads[thread_id]->activeSplitPoint;
-    while (!m_Threads[thread_id]->exit_flag) {
-        if (master_sp == NULL && m_Threads[thread_id]->doSleep) {
-            m_Threads[thread_id]->SleepAndWaitForCondition();
-            if (m_StartThinking && thread_id == 0) {
-                m_StartThinking = false;
+    SplitPoint* master_sp = mThreads[thread_id]->activeSplitPoint;
+    while (!mThreads[thread_id]->exit_flag) {
+        if (master_sp == NULL && mThreads[thread_id]->doSleep) {
+            mThreads[thread_id]->SleepAndWaitForCondition();
+            if (mStartThinking && thread_id == 0) {
+                mStartThinking = false;
                 CEngine.getBestMove(ThreadFromIdx(thread_id));
-                m_Threads[thread_id]->searching = false;
+                mThreads[thread_id]->searching = false;
             }
         }
-        if (!m_StopThreads && !m_Threads[thread_id]->searching) {
+        if (!mStopThreads && !mThreads[thread_id]->searching) {
             GetWork(thread_id, master_sp);
         }
-        if (!m_StopThreads && m_Threads[thread_id]->searching) {
-            SplitPoint* sp = m_Threads[thread_id]->activeSplitPoint; // this is correctly located, don't move this, else bug
+        if (!mStopThreads && mThreads[thread_id]->searching) {
+            SplitPoint* sp = mThreads[thread_id]->activeSplitPoint; // this is correctly located, don't move this, else bug
             CEngine.searchFromIdleLoop(*sp, ThreadFromIdx(thread_id));
             std::lock_guard<Spinlock> lck(sp->updatelock);
             sp->workersBitMask &= ~((uint64)1 << thread_id);
-            m_Threads[thread_id]->searching = false;
+            mThreads[thread_id]->searching = false;
         }
-        if (master_sp != NULL && (!master_sp->workersBitMask || m_StopThreads)) return;
+        if (master_sp != NULL && (!master_sp->workersBitMask || mStopThreads)) return;
     }
 }
 
@@ -54,7 +54,7 @@ void ThreadsManager::GetWork(const int thread_id, SplitPoint* master_sp) {
     Thread* master_thread = NULL;
     SplitPoint *best_split_point = NULL;
 
-    for (Thread* th : m_Threads) {
+    for (Thread* th : mThreads) {
         if (th->thread_id == thread_id) continue;
         if (!th->searching) continue; // idle thread or master waiting for other threads, no need to help
         if (master_sp && !(master_sp->allWorkersBitMask & ((uint64)1 << th->thread_id))) continue; // helpful master: looking to help threads working for it
@@ -69,7 +69,7 @@ void ThreadsManager::GetWork(const int thread_id, SplitPoint* master_sp) {
             }
         }
     }
-    if (!m_StopThreads && best_split_point != NULL) {
+    if (!mStopThreads && best_split_point != NULL) {
         std::lock_guard<Spinlock> lck(best_split_point->updatelock);
         if (master_thread->searching && master_thread->num_sp > 0 && !best_split_point->cutoff
             && (best_split_point->workersBitMask == best_split_point->allWorkersBitMask)
@@ -77,56 +77,56 @@ void ThreadsManager::GetWork(const int thread_id, SplitPoint* master_sp) {
             best_split_point->pos[thread_id] = best_split_point->origpos;
             best_split_point->workersBitMask |= ((uint64)1 << thread_id);
             best_split_point->allWorkersBitMask |= ((uint64)1 << thread_id);
-            m_Threads[thread_id]->activeSplitPoint = best_split_point;
-            m_Threads[thread_id]->searching = true;
-            m_Threads[thread_id]->stop = false;
+            mThreads[thread_id]->activeSplitPoint = best_split_point;
+            mThreads[thread_id]->searching = true;
+            mThreads[thread_id]->stop = false;
         }
     }
 }
 
 void ThreadsManager::SetAllThreadsToStop() {
-    m_StopThreads = true;
-    for (Thread* th : m_Threads) {
+    mStopThreads = true;
+    for (Thread* th : mThreads) {
         th->stop = true;
     }
 }
 
 void ThreadsManager::SetAllThreadsToSleep() {
-    for (Thread* th : m_Threads) {
+    for (Thread* th : mThreads) {
         th->doSleep = true;
     }
 }
 
 void ThreadsManager::SetAllThreadsToWork() {
-    for (Thread* th : m_Threads) {
+    for (Thread* th : mThreads) {
         if (th->thread_id != 0) th->TriggerCondition(); // thread_id == 0 is triggered separately
     }
 }
 
 uint64 ThreadsManager::ComputeNodes() {
     uint64 nodes = 0;
-    for (Thread* th : m_Threads) nodes += th->nodes;
+    for (Thread* th : mThreads) nodes += th->nodes;
     return nodes;
 }
 
 void ThreadsManager::InitVars() {
-    m_StopThreads = false;
-    m_MinSplitDepth = UCIOptionsMap["Min Split Depth"].GetInt();
-    m_MaxActiveSplitsPerThread = UCIOptionsMap["Max Active Splits/Thread"].GetInt();
-    for (Thread* th : m_Threads) {
+    mStopThreads = false;
+    mMinSplitDepth = UCIOptionsMap["Min Split Depth"].GetInt();
+    mMaxActiveSplitsPerThread = UCIOptionsMap["Max Active Splits/Thread"].GetInt();
+    for (Thread* th : mThreads) {
         th->Init();
     }
 }
 
 void ThreadsManager::SetNumThreads(int num) {
-    while (m_Threads.size() < num) {
-        int id = m_Threads.size();
-        m_Threads.push_back(new Thread(id));
-        m_Threads[id]->NativeThread() = std::thread(&ThreadsManager::IdleLoop, this, id);
+    while (mThreads.size() < num) {
+        int id = mThreads.size();
+        mThreads.push_back(new Thread(id));
+        mThreads[id]->NativeThread() = std::thread(&ThreadsManager::IdleLoop, this, id);
     }
-    while (m_Threads.size() > num) {
-        delete m_Threads.back();
-        m_Threads.pop_back();
+    while (mThreads.size() > num) {
+        delete mThreads.back();
+        mThreads.pop_back();
     }
     InitPawnHash(UCIOptionsMap["Pawn Hash"].GetInt(), 1);
     InitEvalHash(UCIOptionsMap["Eval Cache"].GetInt(), 1);
@@ -168,7 +168,7 @@ void ThreadsManager::SearchSplitPoint(const position_t& pos, SearchStack* ss, Se
     ss->bestmove = active_sp->bestmove;
     ss->playedMoves = active_sp->played;
     sthread.activeSplitPoint = active_sp->parent;
-    if (!m_StopThreads) {
+    if (!mStopThreads) {
         sthread.stop = false;
         sthread.searching = true;
     }

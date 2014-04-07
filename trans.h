@@ -13,94 +13,94 @@ template <typename Entity>
 class BaseHashTable {
 public:
     BaseHashTable() :
-        m_pTable(NULL),
-        m_Size(0),
-        m_Mask(0),
-        m_BucketSize(0) {}
+        mpTable(NULL),
+        mSize(0),
+        mMask(0),
+        mBucketSize(0) {}
     ~BaseHashTable() {
-        delete[] m_pTable;
+        delete[] mpTable;
     }
     virtual void Clear() {
-        memset(m_pTable, 0, m_Size * sizeof (Entity));
+        memset(mpTable, 0, mSize * sizeof (Entity));
     }
     Entity* Entry(const uint64 hash) const {
-        return &m_pTable[KEY(hash) & m_Mask];
+        return &mpTable[KEY(hash) & mMask];
     }
     void Init(uint64 target, const int bucket_size) {
         uint64 size = 2;
-        m_BucketSize = bucket_size;
+        mBucketSize = bucket_size;
         if (target < 1) target = 1;
         target *= 1024 * 1024;
         while (size * sizeof (Entity) <= target) size *= 2;
         size = size / 2;
-        if (size + bucket_size - 1 == m_Size) {
+        if (size + bucket_size - 1 == mSize) {
             Clear();
         } else {
-            m_Size = size + bucket_size - 1;
-            m_Mask = size - 1;
-            delete[] m_pTable;
-            m_pTable = new Entity[m_Size];
+            mSize = size + bucket_size - 1;
+            mMask = size - 1;
+            delete[] mpTable;
+            mpTable = new Entity[mSize];
         }
     }
     uint64 HashSize() const {
-        return m_Size;
+        return mSize;
     }
     uint64 BucketSize() const {
-        return m_BucketSize;
+        return mBucketSize;
     }
 protected:
-    Entity* m_pTable;
-    uint64 m_Size;
-    uint64 m_Mask;
-    uint64 m_BucketSize;
+    Entity* mpTable;
+    uint64 mSize;
+    uint64 mMask;
+    uint64 mBucketSize;
 };
 
 
 struct PvHashEntry {
 public:
     PvHashEntry() :
-        m_Hashlock(0),
-        m_Move(EMPTY),
-        m_Score(0),
-        m_Depth(0),
-        m_Age(0) {}
+        mHashlock(0),
+        mMove(EMPTY),
+        mScore(0),
+        mDepth(0),
+        mAge(0) {}
     inline uint32 pvHashLock() const {
-        return m_Hashlock;
+        return mHashlock;
     }
     inline basic_move_t pvMove() const {
-        return m_Move;
+        return mMove;
     }
     inline int pvAge() const {
-        return m_Age;
+        return mAge;
     }
     inline int pvDepth() const {
-        return m_Depth;
+        return mDepth;
     }
     inline int pvScore() const {
-        return m_Score;
+        return mScore;
     }
 
     inline void pvSetHashLock(const uint32 hashlock) {
-        m_Hashlock = hashlock;
+        mHashlock = hashlock;
     }
     inline void pvSetMove(const basic_move_t move) {
-        m_Move = move;
+        mMove = move;
     }
     inline void pvSetAge(const uint8 age) {
-        m_Age = age;
+        mAge = age;
     }
     inline void pvSetDepth(const uint8 depth) {
-        m_Depth = depth;
+        mDepth = depth;
     }
     inline void pvSetValue(const int16 value) {
-        m_Score = value;
+        mScore = value;
     }
 private:
-    uint32 m_Hashlock;
-    basic_move_t m_Move;
-    int16 m_Score;
-    uint8 m_Depth;
-    uint8 m_Age;
+    uint32 mHashlock;
+    basic_move_t mMove;
+    int16 mScore;
+    uint8 mDepth;
+    uint8 mAge;
 };
 
 class TranspositionTable;
@@ -115,14 +115,14 @@ public:
     PvHashEntry *pvEntry(const uint64 hash) const;
     PvHashEntry *pvEntryFromMove(const uint64 hash, basic_move_t move) const;
     int32 Date() const {
-        return m_Date;
+        return mDate;
     }
     int32 Age(const int Idx) const {
-        return m_Age[Idx];
+        return mAge[Idx];
     }
 private:
-    int32 m_Date;
-    int32 m_Age[DATESIZE];
+    int32 mDate;
+    int32 mAge[DATESIZE];
 };
 
 
@@ -164,78 +164,78 @@ class EvalHashTable : public BaseHashTable<EvalEntry> {};
 struct TransEntry {
 public:
     TransEntry() :
-        m_Hashlock(0),
-        m_Move(0),
-        m_UpperValue(0),
-        m_LowerValue(0),
-        m_Mask(0),
-        m_Age(0),
-        m_UpperDepth(0),
-        m_LowerDepth(0) {}
+        mHashlock(0),
+        mMove(0),
+        mUpperValue(0),
+        mLowerValue(0),
+        mMask(0),
+        mAge(0),
+        mUpperDepth(0),
+        mLowerDepth(0) {}
     inline uint32 HashLock() const {
-        return m_Hashlock;
+        return mHashlock;
     }
     inline basic_move_t Move() const {
-        return m_Move;
+        return mMove;
     }
     inline int Age() const {
-        return m_Age;
+        return mAge;
     }
     inline int Mask() const {
-        return m_Mask;
+        return mMask;
     }
     inline int LowerDepth() const {
-        return m_LowerDepth;
+        return mLowerDepth;
     }
     inline int UpperDepth() const {
-        return m_UpperDepth;
+        return mUpperDepth;
     }
     inline int LowerValue() const {
-        return m_LowerValue;
+        return mLowerValue;
     }
     inline int UpperValue() const {
-        return m_UpperValue;
+        return mUpperValue;
     }
 
     inline void SetHashLock(const uint32 hashlock) {
-        m_Hashlock = hashlock;
+        mHashlock = hashlock;
     }
     inline void SetMove(const basic_move_t move) {
-        m_Move = move;
+        mMove = move;
     }
     inline void SetAge(const uint8 date) {
-        m_Age = date;
+        mAge = date;
     }
     inline void SetMask(const uint8 mask) {
-        m_Mask |= mask;
+        mMask |= mask;
     }
     inline void RemMask(const uint8 mask) {
-        m_Mask &= ~mask;
+        mMask &= ~mask;
     }
     inline void ReplaceMask(const uint8 mask) {
-        m_Mask = mask;
+        mMask = mask;
     }
     inline void SetLowerDepth(const uint8 lowerdepth) {
-        m_LowerDepth = lowerdepth;
+        mLowerDepth = lowerdepth;
     }
     inline void SetUpperDepth(const uint8 upperdepth) {
-        m_UpperDepth = upperdepth;
+        mUpperDepth = upperdepth;
     }
     inline void SetLowerValue(const int16 lowervalue) {
-        m_LowerValue = lowervalue;
+        mLowerValue = lowervalue;
     }
     inline void SetUpperValue(const int16 uppervalue) {
-        m_UpperValue = uppervalue;
+        mUpperValue = uppervalue;
     }
 private:
-    uint32 m_Hashlock;
-    uint32 m_Move;
-    int16 m_UpperValue;
-    int16 m_LowerValue;
-    uint8 m_Mask;
-    uint8 m_Age;
-    uint8 m_UpperDepth;
-    uint8 m_LowerDepth;
+    uint32 mHashlock;
+    uint32 mMove;
+    int16 mUpperValue;
+    int16 mLowerValue;
+    uint8 mMask;
+    uint8 mAge;
+    uint8 mUpperDepth;
+    uint8 mLowerDepth;
 };
 
 class TranspositionTable : public BaseHashTable<TransEntry> {
@@ -254,18 +254,18 @@ public:
 
     basic_move_t TransMove(uint64 hash);
     int32 Date() const {
-        return m_Date;
+        return mDate;
     }
     uint64 Used() const {
-        return m_Used;
+        return mUsed;
     }
     int32 Age(const int Idx) const {
-        return m_Age[Idx];
+        return mAge[Idx];
     }
 private:
-    int32 m_Date;
-    uint64 m_Used;
-    int32 m_Age[DATESIZE];
+    int32 mDate;
+    uint64 mUsed;
+    int32 mAge[DATESIZE];
 };
 
 inline int scoreFromTrans(int score, int ply) { // TODO: make static inside TranspositionTable

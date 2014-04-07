@@ -50,9 +50,9 @@ Engine CEngine;
 class Search {
 public:
     Search(SearchInfo& _info, TranspositionTable& _tt, PvHashTable& _pvt) :
-        m_Info(_info),
-        m_TransTable(_tt),
-        m_PVHashTable(_pvt) {}
+        mInfo(_info),
+        mTransTable(_tt),
+        mPVHashTable(_pvt) {}
     void initNode(Thread& sthread);
     int simpleStalemate(const position_t& pos);
     void displayPV(continuation_t *pv, int multipvIdx, int depth, int alpha, int beta, int score);
@@ -70,9 +70,9 @@ public:
     void timeManagement(int depth);
     void stopSearch();
 private:
-    SearchInfo& m_Info;
-    TranspositionTable& m_TransTable;
-    PvHashTable& m_PVHashTable;
+    SearchInfo& mInfo;
+    TranspositionTable& mTransTable;
+    PvHashTable& mPVHashTable;
 };
 
 void Search::initNode(Thread& sthread) {
@@ -84,36 +84,36 @@ void Search::initNode(Thread& sthread) {
     }
 
     //sthread.nodes++;
-    if (sthread.nodes >= m_Info.node_limit && m_Info.node_is_limited) {
+    if (sthread.nodes >= mInfo.node_limit && mInfo.node_is_limited) {
         stopSearch();
     }
     if (sthread.thread_id == 0 && ++sthread.nodes_since_poll >= sthread.nodes_between_polls) {
         sthread.nodes_since_poll = 0;
         time2 = getTime();
-        if (time2 - m_Info.last_time > 1000) {
-            int64 time = time2 - m_Info.start_time;
-            m_Info.last_time = time2;
+        if (time2 - mInfo.last_time > 1000) {
+            int64 time = time2 - mInfo.start_time;
+            mInfo.last_time = time2;
             if (SHOW_SEARCH) {
-                uint64 sum_nodes = ThreadsMgr.ComputeNodes();
+                uint64 sumnodes = ThreadsMgr.ComputeNodes();
                 PrintOutput() << "info time " << time
-                    << " nodes " << sum_nodes
-                    << " hashfull " << (m_TransTable.Used() * 1000) / m_TransTable.HashSize()
-                    << " nps " << (sum_nodes * 1000ULL) / (time);
+                    << " nodes " << sumnodes
+                    << " hashfull " << (mTransTable.Used() * 1000) / mTransTable.HashSize()
+                    << " nps " << (sumnodes * 1000ULL) / (time);
             }
         }
-        if (m_Info.thinking_status == THINKING && m_Info.time_is_limited) {
-            if (time2 > m_Info.time_limit_max) {
-                if (time2 < m_Info.time_limit_abs) {
-                    if (!m_Info.research && !m_Info.change) {
-                        bool gettingWorse = m_Info.best_value != -INF && m_Info.best_value + WORSE_SCORE_CUTOFF <= m_Info.last_value;
+        if (mInfo.thinking_status == THINKING && mInfo.time_is_limited) {
+            if (time2 > mInfo.time_limit_max) {
+                if (time2 < mInfo.time_limit_abs) {
+                    if (!mInfo.research && !mInfo.change) {
+                        bool gettingWorse = mInfo.best_value != -INF && mInfo.best_value + WORSE_SCORE_CUTOFF <= mInfo.last_value;
                         if (!gettingWorse) {
                             stopSearch();
-                            LogInfo() << "info string Aborting search: time limit 2: " << time2 - m_Info.start_time;
+                            LogInfo() << "info string Aborting search: time limit 2: " << time2 - mInfo.start_time;
                         }
                     }
                 } else {
                     stopSearch();
-                    LogInfo() << "info string Aborting search: time limit 1: " << time2 - m_Info.start_time;
+                    LogInfo() << "info string Aborting search: time limit 1: " << time2 - mInfo.start_time;
                 }
             }
         }
@@ -136,15 +136,15 @@ int Search::simpleStalemate(const position_t& pos) {
 
 void Search::displayPV(continuation_t *pv, int multipvIdx, int depth, int alpha, int beta, int score) {
     uint64 time;
-    uint64 sum_nodes = 0;
+    uint64 sumnodes = 0;
     PrintOutput log;
 
     ASSERT(pv != NULL);
     ASSERT(valueIsOk(score));
 
     time = getTime();
-    m_Info.last_time = time;
-    time = m_Info.last_time - m_Info.start_time;
+    mInfo.last_time = time;
+    time = mInfo.last_time - mInfo.start_time;
 
     log << "info depth " << depth;
     if (abs(score) < (INF - MAXPLY)) {
@@ -157,10 +157,10 @@ void Search::displayPV(continuation_t *pv, int multipvIdx, int depth, int alpha,
     }
 
     log << " time " << time;
-    sum_nodes = ThreadsMgr.ComputeNodes();
-    log << " nodes " << sum_nodes;
-    log << " hashfull " << (m_TransTable.Used() * 1000) / m_TransTable.HashSize();
-    if (time > 10) log << " nps " << (sum_nodes * 1000) / (time);
+    sumnodes = ThreadsMgr.ComputeNodes();
+    log << " nodes " << sumnodes;
+    log << " hashfull " << (mTransTable.Used() * 1000) / mTransTable.HashSize();
+    if (time > 10) log << " nps " << (sumnodes * 1000) / (time);
 
     if (multipvIdx > 0) log << " multipv " << multipvIdx + 1;
     log << " pv ";
@@ -236,9 +236,9 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     if (sthread.stop) return 0;
 
     int t = 0;
-    for (TransEntry* entry = m_TransTable.Entry(pos.posStore.hash); t < m_TransTable.BucketSize(); t++, entry++) {
+    for (TransEntry* entry = mTransTable.Entry(pos.posStore.hash); t < mTransTable.BucketSize(); t++, entry++) {
         if (entry->HashLock() == LOCK(pos.posStore.hash)) {
-            entry->SetAge(m_TransTable.Date());
+            entry->SetAge(mTransTable.Date());
             if (!inPv) { // TODO: re-use values from here to evalvalue?
                 if (entry->Move() != EMPTY && entry->LowerDepth() > 0) {
                     int score = scoreFromTrans(entry->LowerValue(), pos.ply);
@@ -306,7 +306,7 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
             if (score > alpha) {
                 ss.bestmove = move->m;
                 if (score >= beta) {
-                    m_TransTable.StoreLower(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
+                    mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
                     ASSERT(valueIsOk(ss.bestvalue));
                     ssprev.counterMove = ss.bestmove;
                     return ss.bestvalue;
@@ -317,7 +317,7 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     }
     if (ssprev.moveGivesCheck && ss.bestvalue == -INF) {
         ss.bestvalue = (-INF + pos.ply);
-        m_TransTable.StoreNoMoves(pos.posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos.ply));
+        mTransTable.StoreNoMoves(pos.posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos.ply));
         return ss.bestvalue;
     }
 
@@ -325,9 +325,9 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
 
     if (inPv && ss.bestmove != EMPTY) {
         ssprev.counterMove = ss.bestmove;
-        m_TransTable.StoreExact(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
-        m_PVHashTable.pvStore(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
-    } else m_TransTable.StoreUpper(pos.posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos.ply));
+        mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
+        mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
+    } else mTransTable.StoreUpper(pos.posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos.ply));
 
     ASSERT(valueIsOk(ss.bestvalue));
 
@@ -380,9 +380,9 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         beta = MIN(INF - pos.ply - 1, beta);
         if (alpha >= beta) return alpha;
 
-        for (TransEntry * entry = m_TransTable.Entry(pos.posStore.hash); t < m_TransTable.BucketSize(); t++, entry++) {
+        for (TransEntry * entry = mTransTable.Entry(pos.posStore.hash); t < mTransTable.BucketSize(); t++, entry++) {
             if (entry->HashLock() == LOCK(pos.posStore.hash)) {
-                entry->SetAge(m_TransTable.Date());
+                entry->SetAge(mTransTable.Date());
                 if (entry->Mask() & MNoMoves) {
                     if (inCheck) return -INF + pos.ply;
                     else return DrawValue[pos.side];
@@ -448,8 +448,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     }
                     if (score >= beta) {
                         if (ss.hashMove == EMPTY) {
-                            if (inCutNode(nt)) m_TransTable.StoreLower(pos.posStore.hash, EMPTY, depth, scoreToTrans(score, pos.ply));
-                            else m_TransTable.StoreAllLower(pos.posStore.hash, EMPTY, depth, scoreToTrans(score, pos.ply));
+                            if (inCutNode(nt)) mTransTable.StoreLower(pos.posStore.hash, EMPTY, depth, scoreToTrans(score, pos.ply));
+                            else mTransTable.StoreAllLower(pos.posStore.hash, EMPTY, depth, scoreToTrans(score, pos.ply));
                         }
                         return score;
                     }
@@ -489,11 +489,11 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     } else {
         if (inRoot) {
             ss = ssprev; // this is correct, ss.mvlist points to the ssprev.mvlist, at the same time, ssprev resets other member vars
-            if (!m_Info.mvlist_initialized) {
+            if (!mInfo.mvlist_initialized) {
                 sortInit(pos, ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseRoot, sthread);
             } else {
-                if (m_Info.multipvIdx > 0) {
-                    ss.mvlist->pos = m_Info.multipvIdx - 1;
+                if (mInfo.multipvIdx > 0) {
+                    ss.mvlist->pos = mInfo.multipvIdx - 1;
                     getMove(ss.mvlist);
                 } else ss.mvlist->pos = 0;
                 ss.mvlist->phase = MoveGenPhaseRoot + 1;
@@ -575,7 +575,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     }
                 }
                 if (inPvNode(nt) && score > alpha) {
-                    if (inRoot) m_Info.research = 1;
+                    if (inRoot) mInfo.research = 1;
                     score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, sthread, PVNode);
                 }
             }
@@ -590,15 +590,15 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             ss.bestvalue = inSplitPoint ? sp->bestvalue = score : score;
             if (inRoot) {
                 ssprev.counterMove = move->m;
-                m_Info.best_value = ss.bestvalue;
-                if (m_Info.iteration > 1 && m_Info.bestmove != move->m) m_Info.change = 1;
+                mInfo.best_value = ss.bestvalue;
+                if (mInfo.iteration > 1 && mInfo.bestmove != move->m) mInfo.change = 1;
             }
             if (ss.bestvalue > (inSplitPoint ? sp->alpha.load() : alpha)) {
                 ss.bestmove = inSplitPoint ? sp->bestmove = move->m : move->m;
                 if (inRoot) {
-                    m_Info.bestmove = ss.bestmove;
-                    if (m_Info.rootPV.length > 1) m_Info.pondermove = m_Info.rootPV.moves[1];
-                    else m_Info.pondermove = 0;
+                    mInfo.bestmove = ss.bestmove;
+                    if (mInfo.rootPV.length > 1) mInfo.pondermove = mInfo.rootPV.moves[1];
+                    else mInfo.pondermove = 0;
                 }
                 if (inPvNode(nt) && ss.bestvalue < beta) {
                     alpha = inSplitPoint ? sp->alpha = ss.bestvalue : ss.bestvalue;
@@ -617,8 +617,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             }
         }
         if (inSplitPoint) sp->updatelock.unlock();
-        if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < ThreadsMgr.m_MaxActiveSplitsPerThread
-            && ThreadsMgr.ThreadNum() > 1 && depth >= ThreadsMgr.m_MinSplitDepth
+        if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < ThreadsMgr.mMaxActiveSplitsPerThread
+            && ThreadsMgr.ThreadNum() > 1 && depth >= ThreadsMgr.mMinSplitDepth
             && (!inCutNode(nt) || (MoveGenPhase[ss.mvlist_phase] != PH_GOOD_CAPTURES && MoveGenPhase[ss.mvlist_phase] != PH_KILLER_MOVES))) {
             ThreadsMgr.SearchSplitPoint(pos, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, sthread);
             if (sthread.stop) return 0;
@@ -635,7 +635,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (ss.playedMoves == 0) {
             if (inCheck) ss.bestvalue = -INF + pos.ply;
             else ss.bestvalue = DrawValue[pos.side];
-            m_TransTable.StoreNoMoves(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
+            mTransTable.StoreNoMoves(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
             return ss.bestvalue;
         }
         if (ss.bestmove != EMPTY && !moveIsTactical(ss.bestmove) && ss.bestvalue >= beta) { //> alpha account for pv better maybe? Sam
@@ -655,16 +655,16 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (ss.bestvalue >= beta) {
             ASSERT(valueIsOk(ss.bestvalue));
             ssprev.counterMove = ss.bestmove;
-            if (inCutNode(nt)) m_TransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
-            else m_TransTable.StoreAllLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
+            if (inCutNode(nt)) mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
+            else mTransTable.StoreAllLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
         } else {
             ASSERT(valueIsOk(bestvalue));
             if (inPvNode(nt) && ss.bestmove != EMPTY) {
                 ssprev.counterMove = ss.bestmove;
-                m_TransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
-                m_PVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
-            } else if (inCutNode(nt)) m_TransTable.StoreCutUpper(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
-            else m_TransTable.StoreUpper(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
+                mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
+                mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
+            } else if (inCutNode(nt)) mTransTable.StoreCutUpper(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
+            else mTransTable.StoreUpper(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
         }
     }
     ASSERT(valueIsOk(ss.bestvalue));
@@ -678,7 +678,7 @@ void Search::extractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_m
     pv.length = 0;
     pv.moves[pv.length++] = move;
     makeMove(pos, undo[ply++], move);
-    while ((entry = m_PVHashTable.pvEntry(pos.posStore.hash)) != NULL) {
+    while ((entry = mPVHashTable.pvEntry(pos.posStore.hash)) != NULL) {
         basic_move_t hashMove = entry->pvMove();
         if (hashMove == EMPTY) break;
         if (!genMoveIfLegal(pos, hashMove, pinnedPieces(pos, pos.side))) break;
@@ -698,9 +698,9 @@ void Search::repopulateHash(position_t& pos, continuation_t& rootPV) {
     for (moveOn = 0; moveOn + 1 <= rootPV.length; moveOn++) {
         basic_move_t move = rootPV.moves[moveOn];
         if (!move) break;
-        PvHashEntry* entry = m_PVHashTable.pvEntryFromMove(pos.posStore.hash, move);
+        PvHashEntry* entry = mPVHashTable.pvEntryFromMove(pos.posStore.hash, move);
         if (NULL == entry) break;
-        m_TransTable.StoreExact(pos.posStore.hash, entry->pvMove(), entry->pvDepth(), entry->pvScore());
+        mTransTable.StoreExact(pos.posStore.hash, entry->pvMove(), entry->pvDepth(), entry->pvScore());
         makeMove(pos, undo[moveOn], move);
     }
     for (moveOn = moveOn - 1; moveOn >= 0; moveOn--) {
@@ -709,42 +709,42 @@ void Search::repopulateHash(position_t& pos, continuation_t& rootPV) {
 }
 
 void Search::timeManagement(int depth) {
-    if (m_Info.best_value > INF - MAXPLY) m_Info.mate_found++;
-    if (m_Info.thinking_status == THINKING) {
-        if (m_Info.time_is_limited) {
+    if (mInfo.best_value > INF - MAXPLY) mInfo.mate_found++;
+    if (mInfo.thinking_status == THINKING) {
+        if (mInfo.time_is_limited) {
             int64 time = getTime();
-            bool gettingWorse = (m_Info.best_value + WORSE_SCORE_CUTOFF) <= m_Info.last_value;
+            bool gettingWorse = (mInfo.best_value + WORSE_SCORE_CUTOFF) <= mInfo.last_value;
 
-            if (m_Info.legalmoves == 1 || m_Info.mate_found >= 3) {
+            if (mInfo.legalmoves == 1 || mInfo.mate_found >= 3) {
                 if (depth >= 8) {
                     stopSearch();
                     LogInfo() << "info string Aborting search: legalmove/mate found depth >= 8";
                     return;
                 }
             }
-            if ((time - m_Info.start_time) > ((m_Info.time_limit_max - m_Info.start_time) * 60) / 100) {
+            if ((time - mInfo.start_time) > ((mInfo.time_limit_max - mInfo.start_time) * 60) / 100) {
                 int64 addTime = 0;
                 if (gettingWorse) {
-                    int amountWorse = m_Info.last_value - m_Info.best_value;
-                    addTime += ((amountWorse - (WORSE_SCORE_CUTOFF - 10)) * m_Info.alloc_time) / WORSE_TIME_BONUS;
+                    int amountWorse = mInfo.last_value - mInfo.best_value;
+                    addTime += ((amountWorse - (WORSE_SCORE_CUTOFF - 10)) * mInfo.alloc_time) / WORSE_TIME_BONUS;
                     LogInfo() << "info string Extending time (root gettingWorse): " << addTime;
                 }
-                if (m_Info.change) {
-                    addTime += (m_Info.alloc_time * CHANGE_TIME_BONUS) / 100;
+                if (mInfo.change) {
+                    addTime += (mInfo.alloc_time * CHANGE_TIME_BONUS) / 100;
                 }
                 if (addTime > 0) {
-                    m_Info.time_limit_max += addTime;
-                    if (m_Info.time_limit_max > m_Info.time_limit_abs)
-                        m_Info.time_limit_max = m_Info.time_limit_abs;
+                    mInfo.time_limit_max += addTime;
+                    if (mInfo.time_limit_max > mInfo.time_limit_abs)
+                        mInfo.time_limit_max = mInfo.time_limit_abs;
                 } else { // if we are unlikely to get deeper, save our time
                     stopSearch();
-                    LogInfo() << "info string Aborting search: root time limit 1: " << time - m_Info.start_time;
+                    LogInfo() << "info string Aborting search: root time limit 1: " << time - mInfo.start_time;
                     return;
                 }
             }
         }
     }
-    if (m_Info.depth_is_limited && depth >= m_Info.depth_limit) {
+    if (mInfo.depth_is_limited && depth >= mInfo.depth_limit) {
         stopSearch();
         LogInfo() << "info string Aborting search: depth limit 1";
         return;
@@ -752,7 +752,7 @@ void Search::timeManagement(int depth) {
 }
 
 void Search::stopSearch() {
-    m_Info.stop_search = true;
+    mInfo.stop_search = true;
     ThreadsMgr.SetAllThreadsToStop();
 }
 

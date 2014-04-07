@@ -19,16 +19,16 @@
 class Spinlock {
 public:
     Spinlock() {
-        m_Lock.clear(std::memory_order_release);
+        mLock.clear(std::memory_order_release);
     }
     void lock() {
-        while (m_Lock.test_and_set(std::memory_order_acquire));
+        while (mLock.test_and_set(std::memory_order_acquire));
     }
     void unlock() {
-        m_Lock.clear(std::memory_order_release);
+        mLock.clear(std::memory_order_release);
     }
 private:
-    std::atomic_flag m_Lock;
+    std::atomic_flag mLock;
 };
 
 struct SplitPoint {
@@ -170,7 +170,7 @@ public:
 
 class ThreadsManager {
 public:
-    ThreadsManager() : m_StartThinking(false) {}
+    ThreadsManager() : mStartThinking(false) {}
     void StartThinking();
     void IdleLoop(const int thread_id);
     void GetWork(const int thread_id, SplitPoint* master_sp);
@@ -183,28 +183,28 @@ public:
     void SearchSplitPoint(const position_t& pos, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread);
 
     Thread& ThreadFromIdx(int thread_id) {
-        return *m_Threads[thread_id];
+        return *mThreads[thread_id];
     }
     size_t ThreadNum() const {
-        return m_Threads.size();
+        return mThreads.size();
     }
 
     void InitPawnHash(int size, int bucket) {
-        for (Thread* th : m_Threads) th->pt.Init(size, bucket);
+        for (Thread* th : mThreads) th->pt.Init(size, bucket);
     }
     void InitEvalHash(int size, int bucket) {
-        for (Thread* th : m_Threads) th->et.Init(size, bucket);
+        for (Thread* th : mThreads) th->et.Init(size, bucket);
     }
     void ClearPawnHash() {
-        for (Thread* th : m_Threads) th->pt.Clear();
+        for (Thread* th : mThreads) th->pt.Clear();
     }
     void ClearEvalHash() {
-        for (Thread* th : m_Threads) th->et.Clear();
+        for (Thread* th : mThreads) th->et.Clear();
     }
 
     void PrintDebugData() {
         LogInfo() << "================================================================";
-        for (Thread* th : m_Threads) {
+        for (Thread* th : mThreads) {
             LogInfo() << "thread_id: " << th->thread_id
                 << " nodes: " << th->nodes
                 << " joined_split: " << double(th->numsplits2 * 100.0) / double(th->numsplits)
@@ -213,15 +213,15 @@ public:
         LogInfo() << "================================================================";
     }
     bool StillThinking() {
-        return m_StartThinking;
+        return mStartThinking;
     }
 
-    int m_MinSplitDepth;
-    int m_MaxActiveSplitsPerThread;
+    int mMinSplitDepth;
+    int mMaxActiveSplitsPerThread;
 private:
-    std::vector<Thread*> m_Threads;
-    std::atomic<bool> m_StartThinking;
-    std::atomic<bool> m_StopThreads;
+    std::vector<Thread*> mThreads;
+    std::atomic<bool> mStartThinking;
+    std::atomic<bool> mStopThreads;
 };
 
 extern ThreadsManager ThreadsMgr;
