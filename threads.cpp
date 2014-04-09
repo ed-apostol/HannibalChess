@@ -42,7 +42,6 @@ void ThreadsManager::IdleLoop(const int thread_id) {
             SplitPoint* sp = mThreads[thread_id]->activeSplitPoint; // this is correctly located, don't move this, else bug
             CEngine.searchFromIdleLoop(*sp, ThreadFromIdx(thread_id));
             std::lock_guard<Spinlock> lck(sp->updatelock);
-            sp->isActive = false;
             sp->workersBitMask &= ~((uint64)1 << thread_id);
             mThreads[thread_id]->searching = false;
         }
@@ -63,7 +62,6 @@ void ThreadsManager::GetWork(const int thread_id, SplitPoint* master_sp) {
             SplitPoint* sp = &th->sptable[splitIdx];
             if (sp->workersBitMask != sp->allWorkersBitMask) continue; // only search those with all threads still searching
             if (sp->cutoff) continue; // if it already has cutoff, move on
-            if (!sp->isActive) continue; // if it is not being searched, move on
             if (sp->depth > best_depth) { // deeper is better
                 best_split_point = sp;
                 best_depth = sp->depth;
@@ -74,12 +72,10 @@ void ThreadsManager::GetWork(const int thread_id, SplitPoint* master_sp) {
     }
     if (!mStopThreads && best_split_point != NULL && thread_to_help != NULL) {
         std::lock_guard<Spinlock> lck(best_split_point->updatelock);
-        if (thread_to_help->searching // check if helper thread is still searching
+        if (thread_to_help->searching // check if the thread to be helped is still searching
             && !best_split_point->cutoff // check if the splitpoint has not cutoff yet
-            && best_split_point->isActive // check if splitpoint is still being searched
             && (best_split_point->workersBitMask == best_split_point->allWorkersBitMask) // check if all helper threads are still searching this splitpoint
             && (master_sp == NULL || (master_sp->workersBitMask & ((uint64)1 << thread_to_help->thread_id)))) { // check if the helper thread is still working to master
-            best_split_point->pos[thread_id] = best_split_point->origpos;
             best_split_point->workersBitMask |= ((uint64)1 << thread_id);
             best_split_point->allWorkersBitMask |= ((uint64)1 << thread_id);
             mThreads[thread_id]->activeSplitPoint = best_split_point;
@@ -152,10 +148,8 @@ void ThreadsManager::SearchSplitPoint(const position_t& pos, SearchStack* ss, Se
     active_sp->inCheck = inCheck;
     active_sp->inRoot = inRoot;
     active_sp->cutoff = false;
-    active_sp->isActive = true;
     active_sp->sscurr = ss;
     active_sp->ssprev = ssprev;
-    active_sp->pos[sthread.thread_id] = pos;
     active_sp->origpos = pos;
     active_sp->workersBitMask = ((uint64)1 << sthread.thread_id);
     active_sp->allWorkersBitMask = ((uint64)1 << sthread.thread_id);

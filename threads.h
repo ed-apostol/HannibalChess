@@ -51,17 +51,16 @@ struct SplitPoint {
         workersBitMask = 0;
         allWorkersBitMask = 0;
         cutoff = false;
-        isActive = false;
     }
     bool cutoffOccurred() {
         if (cutoff) return true;
         if (parent && parent->cutoffOccurred()) {
+            std::lock_guard<Spinlock> lck(updatelock);
             cutoff = true;
             return true;
         }
         return false;
     }
-    position_t pos[MaxNumOfThreads];
     position_t origpos;
     SplitPoint* parent;
     SearchStack* sscurr;
@@ -78,7 +77,6 @@ struct SplitPoint {
     volatile uint64 workersBitMask;
     volatile uint64 allWorkersBitMask;
     volatile bool cutoff;
-    volatile bool isActive;
     Spinlock movelistlock;
     Spinlock updatelock;
 };

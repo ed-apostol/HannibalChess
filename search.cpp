@@ -800,8 +800,9 @@ void Engine::ponderHit() { //no pondering in tuning
 }
 
 void Engine::searchFromIdleLoop(SplitPoint& sp, Thread& sthread) {
-    if (sp.inRoot) search->searchNode<true, true, false>(sp.pos[sthread.thread_id], sp.alpha, sp.beta, sp.depth, *sp.ssprev, sthread, sp.nodeType);
-    else search->searchNode<false, true, false>(sp.pos[sthread.thread_id], sp.alpha, sp.beta, sp.depth, *sp.ssprev, sthread, sp.nodeType);
+    position_t pos = sp.origpos;
+    if (sp.inRoot) search->searchNode<true, true, false>(pos, sp.alpha, sp.beta, sp.depth, *sp.ssprev, sthread, sp.nodeType);
+    else search->searchNode<false, true, false>(pos, sp.alpha, sp.beta, sp.depth, *sp.ssprev, sthread, sp.nodeType);
 }
 
 void Engine::sendBestMove() {
