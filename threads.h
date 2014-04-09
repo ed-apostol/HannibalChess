@@ -51,7 +51,6 @@ struct SplitPoint {
     bool cutoffOccurred() {
         if (cutoff) return true;
         if (parent && parent->cutoffOccurred()) {
-            std::lock_guard<Spinlock> lck(updatelock);
             cutoff = true;
             return true;
         }
@@ -170,7 +169,7 @@ public:
 
 class ThreadsManager {
 public:
-    ThreadsManager() : mStartThinking(false) {}
+    ThreadsManager() : mThinking(false) {}
     void StartThinking();
     void IdleLoop(const int thread_id);
     void GetWork(const int thread_id, SplitPoint* master_sp);
@@ -212,15 +211,15 @@ public:
         }
         LogInfo() << "================================================================";
     }
-    bool StillThinking() {
-        return mStartThinking;
+    volatile bool StillThinking() {
+        return mThinking;
     }
 
     int mMinSplitDepth;
     int mMaxActiveSplitsPerThread;
 private:
     std::vector<Thread*> mThreads;
-    volatile bool mStartThinking;
+    volatile bool mThinking;
     volatile bool mStopThreads;
 };
 

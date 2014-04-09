@@ -27,7 +27,7 @@
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
 const std::string Interface::year = "2014";
-const std::string Interface::version = "1.5beta_volatile";
+const std::string Interface::version = "1.5beta_x3";
 const std::string Interface::arch = "x64";
 
 UCIOptions UCIOptionsMap;
@@ -152,6 +152,10 @@ bool Interface::Input(std::istringstream& stream) {
 }
 
 void Interface::Quit() {
+    if (ThreadsMgr.StillThinking()) {
+        Stop();
+        while (ThreadsMgr.StillThinking());
+    }
     ThreadsMgr.SetNumThreads(0);
     LogInfo() << "Interface quit";
 }

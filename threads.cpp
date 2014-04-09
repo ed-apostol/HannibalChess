@@ -20,7 +20,7 @@
 ThreadsManager ThreadsMgr;
 
 void ThreadsManager::StartThinking() {
-    mStartThinking = true;
+    mThinking = true;
     ThreadFromIdx(0).TriggerCondition();
 }
 
@@ -29,9 +29,9 @@ void ThreadsManager::IdleLoop(const int thread_id) {
     while (!mThreads[thread_id]->exit_flag) {
         if (master_sp == NULL && mThreads[thread_id]->doSleep) {
             mThreads[thread_id]->SleepAndWaitForCondition();
-            if (mStartThinking && thread_id == 0) {
-                mStartThinking = false;
+            if (mThinking && thread_id == 0) {
                 CEngine.getBestMove(ThreadFromIdx(thread_id));
+                mThinking = false;
                 mThreads[thread_id]->searching = false;
             }
         }
@@ -51,29 +51,34 @@ void ThreadsManager::IdleLoop(const int thread_id) {
 
 void ThreadsManager::GetWork(const int thread_id, SplitPoint* master_sp) {
     int best_depth = 0;
-    Thread* master_thread = NULL;
-    SplitPoint *best_split_point = NULL;
+    int best_split_idx = INF;
+    Thread* thread_to_help = NULL;
+    SplitPoint* best_split_point = NULL;
 
     for (Thread* th : mThreads) {
-        if (th->thread_id == thread_id) continue;
-        if (!th->searching) continue; // idle thread or master waiting for other threads, no need to help
-        if (master_sp && !(master_sp->allWorkersBitMask & ((uint64)1 << th->thread_id))) continue; // helpful master: looking to help threads working for it
+        if (th->thread_id == thread_id) continue; // no need to help self
+        if (!th->searching) continue; // this is probably an idle thread or a master thread waiting for other threads, no need to help
+        if (master_sp != NULL && !(master_sp->workersBitMask & ((uint64)1 << th->thread_id))) continue; // helpful master: looking to help threads still actively working for it
         for (int splitIdx = 0; splitIdx < th->num_sp; splitIdx++) {
             SplitPoint* sp = &th->sptable[splitIdx];
             if (sp->workersBitMask != sp->allWorkersBitMask) continue; // only search those with all threads still searching
-            if (sp->depth > best_depth) {
+            if (sp->cutoff) continue; // if it already has cutoff, move on
+            if (sp->depth > best_depth) { // deeper is better
                 best_split_point = sp;
                 best_depth = sp->depth;
-                master_thread = th;
+                best_split_idx = splitIdx + 1; // this is intended (correct)
+                thread_to_help = th;
                 break; // best split found on this thread, break
             }
         }
     }
-    if (!mStopThreads && best_split_point != NULL) {
+    if (!mStopThreads && best_split_point != NULL && thread_to_help != NULL) {
         std::lock_guard<Spinlock> lck(best_split_point->updatelock);
-        if (master_thread->searching && master_thread->num_sp > 0 && !best_split_point->cutoff
-            && (best_split_point->workersBitMask == best_split_point->allWorkersBitMask)
-            && (!master_sp || (best_split_point->allWorkersBitMask & ((uint64)1 << master_thread->thread_id)))) { // redundant criteria, just to be sure
+        if (thread_to_help->searching // check if helper thread is still searching
+            && thread_to_help->num_sp >= best_split_idx // check if the splitpoint is still active
+            && !best_split_point->cutoff // check if the splitpoint has not cutoff yet
+            && (best_split_point->workersBitMask == best_split_point->allWorkersBitMask) // check if all helper threads are still searching this splitpoint
+            && (master_sp == NULL || (master_sp->workersBitMask & ((uint64)1 << thread_to_help->thread_id)))) { // check if the helper thread is still working to master
             best_split_point->pos[thread_id] = best_split_point->origpos;
             best_split_point->workersBitMask |= ((uint64)1 << thread_id);
             best_split_point->allWorkersBitMask |= ((uint64)1 << thread_id);
