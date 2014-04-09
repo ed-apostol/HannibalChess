@@ -55,7 +55,6 @@ struct SplitPoint {
     bool cutoffOccurred() {
         if (cutoff) return true;
         if (parent && parent->cutoffOccurred()) {
-            std::lock_guard<Spinlock> lck(updatelock);
             cutoff = true;
             return true;
         }
