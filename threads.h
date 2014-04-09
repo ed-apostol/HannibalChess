@@ -66,14 +66,14 @@ struct SplitPoint {
     bool inCheck;
     bool inRoot;
     NodeType nodeType;
-    std::atomic<int> alpha;
-    std::atomic<int> beta;
-    std::atomic<int> bestvalue;
-    std::atomic<int> played;
-    std::atomic<basic_move_t> bestmove;
+    volatile int alpha;
+    volatile int beta;
+    volatile int bestvalue;
+    volatile int played;
+    volatile basic_move_t bestmove;
     volatile uint64 workersBitMask;
     volatile uint64 allWorkersBitMask;
-    std::atomic<bool> cutoff;
+    volatile bool cutoff;
     Spinlock movelistlock;
     Spinlock updatelock;
 };
@@ -118,10 +118,10 @@ public:
     }
 
     int thread_id;
-    std::atomic<bool> stop;
-    std::atomic<bool> doSleep;
-    std::atomic<bool> searching;
-    std::atomic<bool> exit_flag;
+    volatile bool stop;
+    volatile bool doSleep;
+    volatile bool searching;
+    volatile bool exit_flag;
 private:
     std::thread nativeThread;
     std::condition_variable sleepCondition;
@@ -220,8 +220,8 @@ public:
     int mMaxActiveSplitsPerThread;
 private:
     std::vector<Thread*> mThreads;
-    std::atomic<bool> mStartThinking;
-    std::atomic<bool> mStopThreads;
+    volatile bool mStartThinking;
+    volatile bool mStopThreads;
 };
 
 extern ThreadsManager ThreadsMgr;
