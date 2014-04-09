@@ -66,6 +66,7 @@ public:
     template<bool inRoot, bool inSplitPoint, bool inCheck, bool inSingular>
     int searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt);
     void extractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_move_t move);
+    void extractPvMovesFromHash2(position_t& pos, continuation_t& pv, basic_move_t move);
     void repopulateHash(position_t& pos, continuation_t& rootPV);
     void timeManagement(int depth);
     void stopSearch();
@@ -692,6 +693,25 @@ void Search::extractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_m
     }
 }
 
+void Search::extractPvMovesFromHash2(position_t& pos, continuation_t& pv, basic_move_t move) {
+    basic_move_t hashMove;
+    pos_store_t undo[MAXPLY];
+    int ply = 0;
+    pv.length = 0;
+    pv.moves[pv.length++] = move;
+    makeMove(pos, undo[ply++], move);
+    while ((hashMove = mTransTable.TransMove(pos.posStore.hash)) != EMPTY) {
+        if (!genMoveIfLegal(pos, hashMove, pinnedPieces(pos, pos.side))) break;
+        if (anyRep(pos)) break; // break on repetition to avoid long pv display
+        pv.moves[pv.length++] = hashMove;
+        makeMove(pos, undo[ply++], hashMove);
+        if (ply >= MAXPLY) break;
+    }
+    for (ply = ply - 1; ply >= 0; --ply) {
+        unmakeMove(pos, undo[ply]);
+    }
+}
+
 void Search::repopulateHash(position_t& pos, continuation_t& rootPV) {
     int moveOn;
     pos_store_t undo[MAXPLY];
@@ -857,12 +877,15 @@ void Engine::getBestMove(Thread& sthread) {
                 if (beta > QueenValue) beta = INF;
             }
             while (true) {
-
                 search->searchNode<true, false, false>(rootpos, alpha, beta, id, ss, sthread, PVNode);
 
-                if (!sthread.stop || info.best_value != -INF) {
-                    search->extractPvMovesFromHash(rootpos, info.rootPV, ss.counterMove);
-                    search->repopulateHash(rootpos, info.rootPV);
+                if (!info.stop_search || info.best_value != -INF) {
+                    if (info.best_value <= alpha || info.best_value >= beta) {
+                        search->extractPvMovesFromHash2(rootpos, info.rootPV, ss.counterMove);
+                    } else {
+                        search->extractPvMovesFromHash(rootpos, info.rootPV, ss.counterMove);
+                        search->repopulateHash(rootpos, info.rootPV);
+                    }
                     if (SHOW_SEARCH && id >= 8) {
                         search->displayPV(&info.rootPV, info.multipvIdx, id, alpha, beta, info.best_value);
                     }
