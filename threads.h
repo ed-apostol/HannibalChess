@@ -32,22 +32,27 @@ private:
 };
 
 struct SplitPoint {
-    SplitPoint() :
-    parent(NULL),
-    sscurr(NULL),
-    ssprev(NULL),
-    depth(0),
-    inCheck(false),
-    inRoot(false),
-    nodeType(PVNode),
-    alpha(0),
-    beta(0),
-    bestvalue(0),
-    played(0),
-    bestmove(EMPTY),
-    workersBitMask(0),
-    allWorkersBitMask(0),
-    cutoff(false) {}
+    SplitPoint() {
+        Init();
+    }
+    void Init() {
+        parent = NULL;
+        sscurr = NULL;
+        ssprev = NULL;
+        depth = 0;
+        inCheck = false;
+        inRoot = false;
+        nodeType = PVNode;
+        alpha = 0;
+        beta = 0;
+        bestvalue = 0;
+        played = 0;
+        bestmove = EMPTY;
+        workersBitMask = 0;
+        allWorkersBitMask = 0;
+        cutoff = false;
+        isActive = false;
+    }
     bool cutoffOccurred() {
         if (cutoff) return true;
         if (parent && parent->cutoffOccurred()) {
@@ -73,6 +78,7 @@ struct SplitPoint {
     volatile uint64 workersBitMask;
     volatile uint64 allWorkersBitMask;
     volatile bool cutoff;
+    volatile bool isActive;
     Spinlock movelistlock;
     Spinlock updatelock;
 };
@@ -142,10 +148,10 @@ public:
         workers2 = 0;
         num_sp = 0;
         activeSplitPoint = NULL;
-        for (int j = 0; j < MaxNumSplitPointsPerThread; ++j) {
-            sptable[j].workersBitMask = 0;
+        for (int Idx = 0; Idx < MaxNumSplitPointsPerThread; ++Idx) {
+            sptable[Idx].Init();
         }
-        for (int Idx = 0; Idx < MAXPLY; Idx++) {
+        for (int Idx = 0; Idx < MAXPLY; ++Idx) {
             ts[Idx].Init();
         }
         memset(history, 0, sizeof(history));
