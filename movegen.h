@@ -3,7 +3,7 @@
 /*  Copyright: 2009-2014                          */
 /*  Author: Sam Hamilton, Edsel Apostol           */
 /*  Contact: snhamilton@rocketmail.com            */
-/*  Contact: ed_apostol@yahoo.hom                 */
+/*  Contact: ed_apostol@yahoo.com                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
 
