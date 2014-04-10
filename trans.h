@@ -55,7 +55,6 @@ protected:
     uint64 mBucketSize;
 };
 
-
 struct PvHashEntry {
 public:
     PvHashEntry() :
@@ -125,7 +124,6 @@ private:
     int32 mAge[DATESIZE];
 };
 
-
 struct PawnEntry {
     PawnEntry() :
     hashlock(0),
@@ -147,7 +145,6 @@ struct PawnEntry {
 
 class PawnHashTable : public BaseHashTable<PawnEntry> {};
 
-
 struct EvalEntry {
     EvalEntry() :
     hashlock(0),
@@ -159,7 +156,6 @@ struct EvalEntry {
 };
 
 class EvalHashTable : public BaseHashTable<EvalEntry> {};
-
 
 struct TransEntry {
 public:
@@ -274,20 +270,3 @@ inline int scoreFromTrans(int score, int ply) { // TODO: make static inside Tran
 inline int scoreToTrans(int score, int ply) { // TODO: make static inside TranspositionTable
     return (score > MAXEVAL) ? (score + ply) : ((score < -MAXEVAL) ? (score - ply) : score);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

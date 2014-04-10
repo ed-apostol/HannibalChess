@@ -32,7 +32,7 @@
 #define EXPLORE_DEPTH_PV 6
 #define EXPLORE_DEPTH_NOPV 8
 #define EXTEND_ONLY 0 // 3 means quiesc, pv and non-pv, 2 means both pv and non-pv, 1 means only pv (0-3)
-#define Q_CHECK 1 // implies 1 check 
+#define Q_CHECK 1 // implies 1 check
 #define Q_PVCHECK 2 // implies 2 checks
 #define MIN_REDUCTION_DEPTH 4 // default is false
 
@@ -41,9 +41,7 @@
 #define LAST_PLY_TIME 40 //what percentage of alloc remaining to be worth trying another complete ply
 #define INCREASE_CHANGE 0 //what percentage of alloc to increase during a change move
 
-
 const int WORSE_SCORE_CUTOFF = 20;
-
 
 Engine CEngine;
 
@@ -474,7 +472,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             }
         }
         int newdepth;
-        if (ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8) && ss.hashDepth >= (newdepth = depth / 2)) { // singular extension (adding !inRoot) 
+        if (ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8) && ss.hashDepth >= (newdepth = depth / 2)) { // singular extension (adding !inRoot)
             int targetScore = ss.evalvalue - EXPLORE_CUTOFF;
             ssprev.bannedMove = ss.hashMove;
             int score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, newdepth, ssprev, sthread, nt);
@@ -828,6 +826,13 @@ void Engine::getBestMove(Thread& sthread) {
     transtable.NewDate(transtable.Date());
     pvhashtable.NewDate(pvhashtable.Date());
 
+    if (info.thinking_status == THINKING && UCIOptionsMap["OwnBook"].GetInt() && !anyRep(rootpos)) {
+        if ((info.bestmove = PolyBook.getBookMove(rootpos)) != 0) {
+            sendBestMove();
+            return;
+        }
+    }
+
     do {
         PvHashEntry *entry = pvhashtable.pvEntry(rootpos.posStore.hash);
         if (NULL == entry) break;
@@ -856,7 +861,7 @@ void Engine::getBestMove(Thread& sthread) {
             info.time_limit_max = info.time_limit_abs;
     }
 
-    // SMP 
+    // SMP
     ThreadsMgr.InitVars();
     ThreadsMgr.SetAllThreadsToWork();
 
@@ -927,5 +932,3 @@ void Engine::getBestMove(Thread& sthread) {
 
     sendBestMove();
 }
-
-

@@ -246,6 +246,3 @@ int anyRepNoMove(const position_t& pos, const int m) {//assumes no castle and no
     }
     return false;
 }
-
-
-

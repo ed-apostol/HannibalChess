@@ -14,7 +14,6 @@
 #include "utils.h"
 #include "uci.h"
 
-
 /* the search data structure */
 struct SearchInfo {
     void Init() {
@@ -85,7 +84,6 @@ struct SearchInfo {
     bool mvlist_initialized;
     continuation_t rootPV;
 };
-
 
 /* search.c */
 extern inline int moveIsTactical(uint32 m);

@@ -81,7 +81,6 @@ uint32 captureIsGood(const position_t& pos, const basic_move_t m) {
     return (swap(pos, m) >= 0);
 }
 
-
 void scoreCapturesPure(movelist_t *mvlist) {
     move_t *m;
 
@@ -316,5 +315,3 @@ move_t* sortNext(SplitPoint* sp, position_t& pos, movelist_t *mvlist, int& phase
         }
     }
 }
-
-

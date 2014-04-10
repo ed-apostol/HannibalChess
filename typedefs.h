@@ -9,7 +9,6 @@
 
 #pragma once
 
-
 //#define DEBUG
 //#define EVAL_DEBUG true
 //#define DEBUG_INDEPTH true
@@ -82,12 +81,11 @@ typedef unsigned int		uint;
 enum NodeType {
     CutNode = -1, PVNode = 0, AllNode
 };
-enum BookType {
-    POLYGLOT_BOOK, PUCK_BOOK
-};
+
 enum HashType {
     HTLower, HTUpper, HTCutUpper, HTAllLower, HTExact, HTNoMoves
 };
+
 enum HashMask {
     MLower = 1, MUpper = 2, MCutUpper = 4, MAllLower = 8, MExact = 16, MNoMoves = 32, MClear = 255
 };
@@ -121,17 +119,6 @@ struct movelist_t {
     volatile int32 startBad;
     uint64 pinned;
     move_t list[MAXMOVES];
-};
-
-struct book_t {
-    BookType type;
-    book_t() : bookFile(NULL) {}
-    ~book_t() {
-        if (bookFile) fclose(bookFile);
-    }
-    FILE *bookFile;
-    int64 size;
-    string name;
 };
 
 /* the undo structure */
@@ -336,5 +323,3 @@ INLINE basic_move_t GenBlackOOO(void) {
 INLINE basic_move_t GenBasicMove(uint f, uint t, int pieceType, uint c) {
     return ((f) | ((t) << 6) | (pieceType << 12) | ((c) << 18));
 }
-
-

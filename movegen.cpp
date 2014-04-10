@@ -192,7 +192,6 @@ void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, Threa
                 mvlist->list[mvlist->size++].m = GenKingMove(from, to, EMPTY);
         }
     }
-
 }
 
 /* the move generator, this generates all pseudo-legal non tactical moves,
@@ -295,7 +294,6 @@ void genNonCaptures(const position_t& pos, movelist_t *mvlist) {
             mvlist->list[mvlist->size++].m = GenKingMove(from, to, EMPTY);
         }
     }
-
 }
 
 /* this generate captures including en-passant captures, and promotions*/
@@ -819,4 +817,3 @@ uint32 genMoveIfLegal(const position_t& pos, uint32 move, uint64 pinned) {
     }
     return false;
 }
-

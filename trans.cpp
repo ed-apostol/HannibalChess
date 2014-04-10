@@ -319,5 +319,3 @@ void PvHashTable::pvStore(const uint64 hash, const basic_move_t move, const uint
     replace->pvSetDepth(depth);
     replace->pvSetValue(value);
 }
-
-

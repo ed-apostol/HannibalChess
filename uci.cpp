@@ -65,9 +65,10 @@ void on_active_splits(const Options& o) {
 void on_contempt(const Options& o) {
     CEngine.info.contempt = o.GetInt();
 }
-void on_dummy(const Options& o) {
-
+void on_bookfile(const Options& o) {
+    PolyBook.initBook(UCIOptionsMap["Book File"].GetStr());
 }
+void on_dummy(const Options& o) {}
 
 void Interface::InitUCIOptions(UCIOptions& uci_opt) {
     uci_opt["Hash"] = Options(64, 1, 65536, on_hash);
@@ -76,7 +77,7 @@ void Interface::InitUCIOptions(UCIOptions& uci_opt) {
     uci_opt["MultiPV"] = Options(1, 1, 128, on_multi_pv);
     uci_opt["Clear Hash"] = Options(on_clear_hash);
     uci_opt["OwnBook"] = Options(false, on_dummy);
-    uci_opt["Book File"] = Options("Hannibal.bin", on_dummy);
+    uci_opt["Book File"] = Options("Hannibal.bin", on_bookfile);
     uci_opt["Ponder"] = Options(false, on_dummy);
     uci_opt["Time Buffer"] = Options(1000, 0, 10000, on_time_buffer);
     uci_opt["Threads"] = Options(6, 1, MaxNumOfThreads, on_threads);
@@ -110,7 +111,6 @@ Interface::Interface() {
     InitTrapped();
     initMaterial();
     InitMateBoost();
-    initBook(UCIOptionsMap["Book File"].GetStr(), &GpolyglotBook, POLYGLOT_BOOK);
 
     setPosition(CEngine.rootpos, STARTPOS);
 }
@@ -142,11 +142,14 @@ bool Interface::Input(std::istringstream& stream) {
         NewGame();
     } else if (command == "isready") {
         LogAndPrintOutput() << "readyok";
-    } else if (command == "quit") {
-        Quit(); return false;
     } else if (command == "uci") {
         Id();
-    } else std::cerr << "Unknown UCI command: " << command << std::endl;
+    } else if (command == "quit") {
+        Quit();
+        return false;
+    } else {
+        LogAndPrintError() << "Unknown UCI command: " << command;
+    }
 
     return true;
 }
@@ -187,22 +190,31 @@ void Interface::Go(std::istringstream& stream) {
 
     stream >> command;
     while (command != "") {
-        if (command == "wtime") stream >> wtime;
-        else if (command == "btime") stream >> btime;
-        else if (command == "winc") stream >> winc;
-        else if (command == "binc") stream >> binc;
-        else if (command == "movestogo") stream >> movestogo;
-        else if (command == "ponder") {
+        if (command == "wtime") {
+            stream >> wtime;
+        } else if (command == "btime") {
+            stream >> btime;
+        } else if (command == "winc") {
+            stream >> winc;
+        } else if (command == "binc") {
+            stream >> binc;
+        } else if (command == "movestogo") {
+            stream >> movestogo;
+        } else if (command == "ponder") {
             ponder = true;
         } else if (command == "depth") {
             stream >> upperdepth;
-        } else if (command == "movetime") stream >> movetime;
-        else if (command == "infinite") {
+        } else if (command == "movetime") {
+            stream >> movetime;
+        } else if (command == "infinite") {
             infinite = true;
-        } else if (command == "nodes") stream >> nodes;
-        else if (command == "mate") stream >> mate;
-        else {
-            std::cerr << "Wrong go command: " << command << std::endl; return;
+        } else if (command == "nodes") {
+            stream >> nodes;
+        } else if (command == "mate") {
+            stream >> mate;
+        } else {
+            LogAndPrintError() << "Wrong go command: " << command;
+            return;
         }
         command = "";
         stream >> command;
@@ -330,6 +342,4 @@ void Interface::NewGame() {
     CEngine.ClearPVTTHash();
 }
 
-Interface::~Interface() {
-
-}
+Interface::~Interface() {}

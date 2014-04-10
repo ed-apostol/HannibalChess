@@ -71,8 +71,6 @@ uint64 PassedMask[2][64];
 uint64 kingShelter[2][64]; // provides good shelter for king SAM1 added static
 uint64 kingIndirectShelter[2][64]; // provides ok shelter for king SAM1 added static
 
-book_t GpolyglotBook;
-
 // used in setting up the position and eval symmetry
 const char *FenString[] = {
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
@@ -88,6 +86,3 @@ const char *FenString[] = {
 uint64(*FillPtr[])(uint64) = {&fillUp, &fillDown};
 uint64(*FillPtr2[])(uint64) = {&fillUp2, &fillDown2};
 uint64(*ShiftPtr[])(uint64, uint32) = {&shiftLeft, &shiftRight};
-
-
-

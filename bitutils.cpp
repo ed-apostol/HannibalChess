@@ -21,29 +21,27 @@
 #define USING_INTRINSICS
 #endif
 #elif defined(__GNUC__) && defined(__LP64__)
-static INLINE unsigned char _BitScanForward64(unsigned int* const Index, const U64 Mask)
-{
+static INLINE unsigned char _BitScanForward64(unsigned int* const Index, const U64 Mask) {
     U64 Ret;
     __asm__
         (
         "bsfq %[Mask], %[Ret]"
         :[Ret] "=r" (Ret)
-        :[Mask] "mr" (Mask)
+        : [Mask] "mr" (Mask)
         );
     *Index = (unsigned int)Ret;
-    return Mask?1:0;
+    return Mask ? 1 : 0;
 }
-static INLINE unsigned char _BitScanReverse64(unsigned int* const Index, const U64 Mask)
-{
+static INLINE unsigned char _BitScanReverse64(unsigned int* const Index, const U64 Mask) {
     U64 Ret;
     __asm__
         (
         "bsrq %[Mask], %[Ret]"
         :[Ret] "=r" (Ret)
-        :[Mask] "mr" (Mask)
+        : [Mask] "mr" (Mask)
         );
     *Index = (unsigned int)Ret;
-    return Mask?1:0;
+    return Mask ? 1 : 0;
 }
 #define USING_INTRINSICS
 #endif
@@ -71,31 +69,31 @@ INLINE uint32 bitCnt(uint64 x) {
 }
 #else
 static const int FoldedTable[64] = {
-    63, 30,  3, 32, 59, 14, 11, 33,
-    60, 24, 50,  9, 55, 19, 21, 34,
-    61, 29,  2, 53, 51, 23, 41, 18,
-    56, 28,  1, 43, 46, 27,  0, 35,
-    62, 31, 58,  4,  5, 49, 54,  6,
-    15, 52, 12, 40,  7, 42, 45, 16,
-    25, 57, 48, 13, 10, 39,  8, 44,
+    63, 30, 3, 32, 59, 14, 11, 33,
+    60, 24, 50, 9, 55, 19, 21, 34,
+    61, 29, 2, 53, 51, 23, 41, 18,
+    56, 28, 1, 43, 46, 27, 0, 35,
+    62, 31, 58, 4, 5, 49, 54, 6,
+    15, 52, 12, 40, 7, 42, 45, 16,
+    25, 57, 48, 13, 10, 39, 8, 44,
     20, 47, 38, 22, 17, 37, 36, 26,
 };
 
 static const int FoldedTable64[64] = {
-    63,  0, 58,  1, 59, 47, 53,  2,
-    60, 39, 48, 27, 54, 33, 42,  3,
+    63, 0, 58, 1, 59, 47, 53, 2,
+    60, 39, 48, 27, 54, 33, 42, 3,
     61, 51, 37, 40, 49, 18, 28, 20,
-    55, 30, 34, 11, 43, 14, 22,  4,
+    55, 30, 34, 11, 43, 14, 22, 4,
     62, 57, 46, 52, 38, 26, 32, 41,
     50, 36, 17, 19, 29, 10, 13, 21,
-    56, 45, 25, 31, 35, 16,  9, 12,
-    44, 24, 15,  8, 23,  7,  6,  5
+    56, 45, 25, 31, 35, 16, 9, 12,
+    44, 24, 15, 8, 23, 7, 6, 5
 };
 /* this count the number of bits in a given bitfield,
 it is using a SWAR algorithm I think */
 INLINE uint32 bitCnt(uint64 bb) {
-    uint32 w = (uint32) (bb >> 32);
-    uint32 v = (uint32) bb;
+    uint32 w = (uint32)(bb >> 32);
+    uint32 v = (uint32)bb;
 
     v = v - ((v >> 1) & 0x55555555);
     w = w - ((w >> 1) & 0x55555555);
@@ -103,7 +101,7 @@ INLINE uint32 bitCnt(uint64 bb) {
     w = (w & 0x33333333) + ((w >> 2) & 0x33333333);
     v = (v + (v >> 4)) & 0x0F0F0F0F;
     w = (w + (w >> 4)) & 0x0F0F0F0F;
-    v = ((v+w) * 0x01010101) >> 24;
+    v = ((v + w) * 0x01010101) >> 24;
     return v;
 }
 /* returns the least significant square from the 64 bitfield */

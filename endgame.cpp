@@ -223,7 +223,6 @@ void BishopEnding(int attacker, const position_t& pos, eval_info_t *ei, int *sco
             return;
         }
 
-
         passed = ei->pawn_entry->passedbits & pos.color[attacker];
         if (passed == 0) *draw += 30;
         else if (MaxOneBit(passed)) *draw += 20;
@@ -232,7 +231,6 @@ void BishopEnding(int attacker, const position_t& pos, eval_info_t *ei, int *sco
             if (pUp == 1 || pUp == 2) {
                 *score = (attacker == WHITE) ? MAX(*score / 2, *score - 50 * pUp) : MIN(*score / 2, *score + 50 * pUp);
             }
-
         }
         // if the king is blocking the passed pawns its quite drawish
         {
@@ -248,7 +246,6 @@ void BishopEnding(int attacker, const position_t& pos, eval_info_t *ei, int *sco
             else
                 *draw += 10; // all opposite bishop endings are somewhat drawish
         }
-
     }
     // same color bishop
     else {
@@ -275,7 +272,6 @@ void DrawnNP(int attacker, const position_t& pos, eval_info_t *ei, int *score, i
         int sq = GetOnlyBit(pawn);
         if (abs(SQFILE(pos.kpos[defender]) - SQFILE(sq)) <= 1 && IN_FRONT(SQRANK(pos.kpos[defender]), SQRANK(sq), attacker))
             *draw = SUPER_DRAWISH;
-
     }
 }
 void PawnEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score, int *draw, int mover) {
@@ -334,7 +330,6 @@ void PawnEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score
     }
 }
 
-
 void RookEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score, int *draw) {
     // if we can get in front of a single pawn we are safe
     // TODO address h and a pawn situations
@@ -368,10 +363,8 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score
                 // = is ok since shouldering does not rook if opponent king is on rook file
                 if (DISTANCE(pos.kpos[defender], promoteSquare) <= Q_DIST(sq, attacker) &&
                     sqFile == SQFILE(pos.kpos[attacker])) { //there are many more cases, but want to be a bit conservative
-
                     *draw = (DRAWN + DRAWN1) / 2;
                     return;
-
                 }
                 if (Q_DIST(sq, attacker) == 1 &&
                     PAWN_PROMOTE(sq, attacker) == pos.kpos[attacker] &&
@@ -379,7 +372,6 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score
                     *draw = (DRAWN + DRAWN1) / 2;
                     return;
                 }
-
             }
         }
         // if we have a rook in front of a pawn on the 7th
@@ -436,7 +428,6 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score
                 }
                 // if closer to queening square than opponent
             }
-
         }
     }
     if (ei->MLindex[attacker] == MLR + MLP) {
@@ -470,7 +461,6 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score
         }
     }
 }
-
 
 // detect queen vs. rook pawn or bishop pawn draws
 // for now, just rely on search to find exceptions
@@ -523,7 +513,6 @@ void RookvPawnsEnding(int attacker, const position_t& pos, eval_info_t *ei, int 
             *score = *score / 4; // each pawn effects score, so multiple pawns are good
 
             if (newDraw > *draw) *draw = newDraw;
-
         }
         // this is drawish, but many times lost, so lets be conservative
         else if (dkDist - defenderMove <  akDist) {
@@ -609,4 +598,3 @@ void evalEndgame(int attacker, const position_t& pos, eval_info_t *ei, int *scor
         break;
     }
 }
-

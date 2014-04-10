@@ -18,8 +18,6 @@
 /* this undos the null move done */
 void unmakeNullMove(position_t& pos, pos_store_t& undo) {
 
-    ASSERT(pos != NULL);
-
     --pos.ply;
     --pos.sp;
     pos.side ^= 1;
@@ -29,8 +27,6 @@ void unmakeNullMove(position_t& pos, pos_store_t& undo) {
 
 /* this updates the position structure from the null move being played */
 void makeNullMove(position_t& pos, pos_store_t& undo) {
-    ASSERT(pos != NULL);
-
     undo = pos.posStore;
 
     pos.posStore.previous = &undo;
@@ -50,8 +46,6 @@ void makeNullMove(position_t& pos, pos_store_t& undo) {
 /* this undos the move done */
 void unmakeMove(position_t& pos, pos_store_t& undo) {
     unsigned int side, xside, m, rook_from = 0, rook_to = 0, epsq = 0, from, to;
-
-    ASSERT(pos != NULL);
 
     m = pos.posStore.lastmove;
 
@@ -598,7 +592,6 @@ void setPosition(position_t& pos, const char *fen) {
                 pos.occupied ^= BitMask[sq];
                 pos.posStore.hash ^= ZobPiece[color][pc][sq];
                 if (pc == PAWN || pc == KING) pos.posStore.phash ^= ZobPiece[color][pc][sq];
-
             }
         }
         fen++;
@@ -719,4 +712,3 @@ char *positionToFEN(const position_t& pos) {
     fen[c] = '\0';
     return fen;
 }
-

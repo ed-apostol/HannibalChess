@@ -9,5 +9,28 @@
 
 #pragma once
 
-extern void initBook(std::string book_name, book_t *book, BookType type);
-extern basic_move_t getBookMove(position_t& pos, book_t *book);
+struct PolyglotBookEntry {
+    uint64 key;
+    basic_move_t move;
+    uint16 weight;
+    uint32 learn;
+};
+
+class Book {
+public:
+    Book() : bookFile(NULL) {}
+    ~Book() {
+        if (bookFile) fclose(bookFile);
+    }
+
+    void initBook(std::string book_name);
+    int Book::entry_from_polyglot_file(PolyglotBookEntry *entry, position_t& pos);
+    long Book::find_polyglot_key(uint64 key, PolyglotBookEntry *entry, position_t& pos);
+    basic_move_t getBookMove(position_t& pos);
+private:
+    FILE *bookFile;
+    int64 size;
+    string name;
+};
+
+extern Book PolyBook;

@@ -68,14 +68,9 @@ extern uint64 PassedMask[2][64];
 extern uint64 kingShelter[2][64]; // provides good shelter for king SAM1 added extern
 extern uint64 kingIndirectShelter[2][64]; // provides ok shelter for king SAM1 added extern
 
-extern book_t GpolyglotBook;
-
 // used in setting up the position and eval symmetry
 extern const char *FenString[];
 
 extern uint64(*FillPtr[])(uint64);
 extern uint64(*FillPtr2[])(uint64);
 extern uint64(*ShiftPtr[])(uint64, uint32);
-
-
-

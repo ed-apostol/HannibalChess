@@ -13,7 +13,7 @@
 
 #define MAX_DRAW 100
 #define DRAWN 100
-#define DRAWN1 (90 - (90 * DRAW_ADJUST) / 100) 
+#define DRAWN1 (90 - (90 * DRAW_ADJUST) / 100)
 #define DRAWN2 (75 - (75 * DRAW_ADJUST) / 100)
 #define DRAWN3 (60 - (60 * DRAW_ADJUST) / 100)
 #define DRAWN4 (50 - (50 * DRAW_ADJUST) / 100)
@@ -48,4 +48,3 @@
 #define SUPER_DRAWISH (((DRAWN1+DRAWN)/2))
 
 extern  void initMaterial(void);
-

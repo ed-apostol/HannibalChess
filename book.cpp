@@ -17,26 +17,32 @@
 
 #include <iostream>
 #include <string>
-using namespace std;
+
+Book PolyBook;
 
 #define NO_MOVE 0
 const int MAX_MOVES = 256;
 const int Polyglot_Entry_Size = 16;
-struct PolyglotBookEntry {
-    uint64 key;
-    basic_move_t move;
-    uint16 weight;
-    uint32 learn;
-};
 const PolyglotBookEntry PolyglotBookEntryNone = {
     0, NO_MOVE, 0, 0
 };
-void closeBook(book_t *book) { //TODO consider mutex ramifications
-    if (book->bookFile != NULL) fclose(book->bookFile);
+
+// Utils
+bool equalMove(const basic_move_t m1, const basic_move_t m2) {
+    return (moveTo(m1) == moveTo(m2) && moveFrom(m1) == moveFrom(m2));
 }
+
+bool move_in_list(const basic_move_t m, const movelist_t *ml) {
+    int on;
+    for (on = 0; on < ml->size; on++) {
+        if (equalMove(ml->list[on].m, m)) return true;
+    }
+    return false;
+}
+
 int int_from_file(FILE *f, int l, uint64 *r) {
     if (f == NULL) {
-        cout << "info string NULL file int_from_file\n";
+        LogAndPrintWarning() << "info string NULL file int_from_file";
         return 0;
     }
     int i, c;
@@ -49,6 +55,7 @@ int int_from_file(FILE *f, int l, uint64 *r) {
     }
     return 0;
 }
+
 basic_move_t polyglot_move_to_move(uint16 move, position_t& pos) {
     int from, to;
     from = ((move >> 6) & 077);
@@ -73,44 +80,46 @@ basic_move_t polyglot_move_to_move(uint16 move, position_t& pos) {
     if (movedPiece == PAWN && to == pos.posStore.epsq) return GenEnPassant(from, to);
     return GenBasicMove(from, to, movedPiece, capturedPiece);
 }
-int entry_from_polyglot_file(FILE *f, PolyglotBookEntry *entry, position_t& pos) {
+
+int Book::entry_from_polyglot_file(PolyglotBookEntry *entry, position_t& pos) {
     uint64 r;
-    if (int_from_file(f, 8, &r)) return 1;
+    if (int_from_file(bookFile, 8, &r)) return 1;
     entry->key = r;
-    if (int_from_file(f, 2, &r)) return 1;
+    if (int_from_file(bookFile, 2, &r)) return 1;
     entry->move = polyglot_move_to_move((uint16)r, pos);
 
-    if (int_from_file(f, 2, &r)) return 1;
+    if (int_from_file(bookFile, 2, &r)) return 1;
     entry->weight = (uint16)r;
-    if (int_from_file(f, 4, &r)) return 1;
+    if (int_from_file(bookFile, 4, &r)) return 1;
     entry->learn = (uint16)r;
     return 0;
 }
-long find_polyglot_key(FILE *f, uint64 key, PolyglotBookEntry *entry, position_t& pos) {
+
+long Book::find_polyglot_key(uint64 key, PolyglotBookEntry *entry, position_t& pos) {
     long first, last, middle;
     PolyglotBookEntry first_entry = PolyglotBookEntryNone, last_entry, middle_entry;
-    if (f == NULL) {
+    if (bookFile == NULL) {
         *entry = PolyglotBookEntryNone;
         entry->key = key + 1; //hack, should not be necessary if no entry can be 0
-        cout << "info string NULL file find_polyglot_key" << endl;
+        LogAndPrintWarning() << "info string NULL file find_polyglot_key";
         return -1;
     }
     first = -1;
-    if (fseek(f, -Polyglot_Entry_Size, SEEK_END)) {
+    if (fseek(bookFile, -Polyglot_Entry_Size, SEEK_END)) {
         *entry = PolyglotBookEntryNone;
         entry->key = key + 1; //hack, should not be necessary if no entry can be 0
         return -1;
     }
-    last = ftell(f) / Polyglot_Entry_Size;
-    entry_from_polyglot_file(f, &last_entry, pos);
+    last = ftell(bookFile) / Polyglot_Entry_Size;
+    entry_from_polyglot_file(&last_entry, pos);
     while (true) {
         if (last - first == 1) {
             *entry = last_entry;
             return last;
         }
         middle = (first + last) / 2;
-        fseek(f, Polyglot_Entry_Size*middle, SEEK_SET);
-        entry_from_polyglot_file(f, &middle_entry, pos);
+        fseek(bookFile, Polyglot_Entry_Size*middle, SEEK_SET);
+        entry_from_polyglot_file(&middle_entry, pos);
         if (key <= middle_entry.key) {
             last = middle;
             last_entry = middle_entry;
@@ -120,45 +129,31 @@ long find_polyglot_key(FILE *f, uint64 key, PolyglotBookEntry *entry, position_t
         }
     }
 }
-bool equalMove(const basic_move_t m1, const basic_move_t m2) {
-    return (moveTo(m1) == moveTo(m2) && moveFrom(m1) == moveFrom(m2));
-}
-bool move_in_list(const basic_move_t m, const movelist_t *ml) {
-    int on;
-    for (on = 0; on < ml->size; on++) {
-        if (equalMove(ml->list[on].m, m)) return true;
-    }
-    return false;
-}
 
-void initBook(std::string book_name, book_t *book, BookType type) {
-    if (type != POLYGLOT_BOOK) cout << "info string book type not supported" << endl;
-    else {
-        if (book->bookFile != NULL) fclose(book->bookFile);
-        book->bookFile = fopen(book_name.c_str(), "rb");
-        book->name = book_name;
+void Book::initBook(std::string book_name) {
+    if (bookFile != NULL) fclose(bookFile);
+    bookFile = fopen(book_name.c_str(), "rb");
+    name = book_name;
 
-        if (book->bookFile != NULL) {
-            book->type = type;
-            fseek(book->bookFile, 0, SEEK_END);
-            book->size = ftell(book->bookFile) / Polyglot_Entry_Size;
-        }
+    if (bookFile != NULL) {
+        fseek(bookFile, 0, SEEK_END);
+        size = ftell(bookFile) / Polyglot_Entry_Size;
     }
 }
-basic_move_t getBookMove(position_t& pos, book_t *book) {
+
+basic_move_t Book::getBookMove(position_t& pos) {
     uint64 key;
     int numMoves = 0;
     uint64 totalWeight = 0;
     long offset;
-    FILE *f = book->bookFile;
 
-    if (f == NULL || book->size == 0) {
+    if (bookFile == NULL || size == 0) {
         return NO_MOVE;
     }
     PolyglotBookEntry entry;
     PolyglotBookEntry entries[MAX_MOVES];
     key = pos.posStore.hash;
-    offset = find_polyglot_key(f, key, &entry, pos);
+    offset = find_polyglot_key(key, &entry, pos);
     if (entry.key != key) {
         return NO_MOVE;
     }
@@ -169,13 +164,13 @@ basic_move_t getBookMove(position_t& pos, book_t *book) {
         totalWeight += entry.weight;
         numMoves++;
     }
-    fseek(f, Polyglot_Entry_Size*(offset + 1), SEEK_SET);
+    fseek(bookFile, Polyglot_Entry_Size*(offset + 1), SEEK_SET);
 
     while (true) {
         if (numMoves >= MAX_MOVES - 1) {
             break;
         }
-        if (entry_from_polyglot_file(f, &entry, pos)) break;
+        if (entry_from_polyglot_file(&entry, pos)) break;
         if (entry.key != key) break;
         entries[numMoves] = entry;
         if (move_in_list(entry.move, &moves)) {

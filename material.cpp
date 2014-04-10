@@ -61,9 +61,7 @@ int SetPhase(int minors, int rooks, int queens) {
     if (p < 0) return 0;
     if (p >32) return 32;
     else return p;
-
 }
-
 
 // white is the side trying to win
 int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int wq, int bq, int originalDrawn) {
@@ -88,7 +86,6 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
             if (wn == 2) {
                 if (bp == 0 || bminors || br || bq) drawn += DRAWN;
                 else drawn += DRAWN1;
-
             } else if (wb == 2 && bq == 0 && br == 0 && bn == 1) drawn += DRAWN8;
             else if (bq || br || bminors) drawn += DRAWN1;
         }
@@ -133,7 +130,6 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
             drawn += DRAWN10;
             if (wp == 1) drawn += DRAWN10;
         }
-
     }
     // lets imagine some possible trades
     // AFTER SIGH4
@@ -156,10 +152,8 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
                 int pGone = Drawish(wp, bp, wn - 1, bn, wb, bb, wr, br, wq, bq - 1, 0) - 5;
                 if (pGone > drawn) drawn = pGone;
             }
-
         }
         if (br) {
-
             if (wr) {
                 int pGone;
                 if (wr > 1 || br > 1) pGone = Drawish(wp, bp, wn, bn, wb, bb, wr - 1, br - 1, wq, bq, 0) - 5;
@@ -187,7 +181,6 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
                 } else pGone = Drawish(wp, bp, wn - 1, bn, wb, bb - 1, wr, br, wq, bq, 0) - 20;
                 if (pGone > drawn) drawn = pGone;
             }
-
         }
         if (bn) {
             if (wb) {
@@ -206,7 +199,6 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
                     pGone = Drawish(wp, bp, wn - 1, bn - 1, wb, bb, wr, br, wq, bq, 0) - 20;
                 if (pGone > drawn) drawn = pGone;
             }
-
         }
     }
     if (wp == 1) { // only saq for pawn if we can get to a special case
@@ -243,11 +235,9 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
 }
 
 void initMaterial(void) {
-
     int win, openscore, midscore1, midscore2, endscore, windex, bindex, phase;
     int bp, wp, bn, wn, bb, wb, br, wr, bq, wq;
     int wdraw, bdraw;
-
 
     for (wq = 0; wq <= 1; wq++)
     for (bq = 0; bq <= 1; bq++)
@@ -359,7 +349,7 @@ void initMaterial(void) {
                 midscore2 += 20;
                 endscore += 20;
             }
-            //N2BN 2 bishops works particularly well against 2 knights 
+            //N2BN 2 bishops works particularly well against 2 knights
             if (wb == 2 && wn == 0 && bb == 0 && bn == 2 && wr == br && wq == bq) {
                 openscore += 10;
                 midscore1 += 10;
@@ -387,7 +377,6 @@ void initMaterial(void) {
                     endscore -= 10;
                 }
             }
-
 
             // a single rook can often wipe up non-advanced pawns
             // if advanced this is countered by high passed pawn scores
@@ -443,12 +432,9 @@ void initMaterial(void) {
             if (wp == 0 && win > 0 && ((wq - bq) * 9 + (wr - br) * 5 + (wminors - bminors) * 3) <= 3) win /= 2; //max of a piece up
             if (bp == 0 && win < 0 && ((bq - wq) * 9 + (br - wr) * 5 + (bminors - wminors) * 3) <= 3) win /= 2; //max of a piece up
 
-
             // reverse order, least material first
             wdraw = Drawish(wp, bp, wn, bn, wb, bb, wr, br, wq, bq, wdraw);
             bdraw = Drawish(bp, wp, bn, wn, bb, wb, br, wr, bq, wq, bdraw);
-
-
 
             if (wdraw < 0) wdraw = 0;
             if (wdraw > MAX_DRAW) wdraw = MAX_DRAW;
@@ -467,9 +453,6 @@ void initMaterial(void) {
             MaterialTable[bindex][windex].phase = phase;
             MaterialTable[bindex][windex].draw[WHITE] = bdraw;
             MaterialTable[bindex][windex].draw[BLACK] = wdraw;
-
-
-
 
             if (windex == MLP) wflag = 1;
             if (bindex == MLP) bflag = 1;
@@ -542,7 +525,6 @@ void initMaterial(void) {
             if (bflag == 0 && win < -40 && bp == 0 && bdraw < MAX_DRAW) {
                 bflag = 13; // try to mate with no pawns (do not supercede other things like NB v. King)
             }
-
 
             MaterialTable[windex][bindex].flags[WHITE] = wflag;
             MaterialTable[windex][bindex].flags[BLACK] = bflag;

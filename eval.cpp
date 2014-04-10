@@ -56,10 +56,10 @@ const int QScastleTo[2] = {c1, c8};
 #define TRAPPED3 25 //25
 #define TRAPPED4 4 //4
 
-#define TM1 64 
-#define TM2 54 
-#define TM3 25 
-#define TM4 4 
+#define TM1 64
+#define TM2 54
+#define TM3 25
+#define TM4 4
 class Personality {
 public:
     static const int stuck_end = STUCK_END;
@@ -73,7 +73,6 @@ public:
 const int Personality::TrappedMoves[] = {TRAPPED1 + TRAPPED2 + TRAPPED3 + TRAPPED4, TRAPPED2 + TRAPPED3 + TRAPPED4, TRAPPED3 + TRAPPED4, TRAPPED4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static const Personality personality;
 #define personality(thread) personality
-
 
 //king safety stuff
 #define PARTIAL_ATTACK 0 //0 means don't count, otherwise multiplies attack by 5
@@ -159,7 +158,6 @@ KAW7};
 #define DOUBLE_TARGET_OPEN_O 4
 #define DOUBLE_TARGET_OPEN_E 6
 
-
 //passed pawns
 const int UnstoppablePassedPawn = 700;
 #define EndgamePassedMin 10 // maybe needs to be higher
@@ -210,15 +208,13 @@ const int PawnAttackPower = 4; //4
 const int PieceAttackMulMid = 4; //5
 const int PieceAttackMulEnd = 3; //3
 
-#define TB1 8 
-#define TB2 80 
+#define TB1 8
+#define TB2 80
 
 const int sbonus[8] = {0, 0, 0, 13, 34, 77, 128, 0};
 #define scale(smax,sr) ((((smax))*sbonus[sr]) / sbonus[6])
 
-
 void judgeTrapped(const position_t& pos, eval_info_t *ei, const int color, const int thread/*, int *upside, int *downside*/) {
-
     uint64 targets, safeMoves;
     int targetSq;
     int penalty;
@@ -268,7 +264,6 @@ void judgeTrapped(const position_t& pos, eval_info_t *ei, const int color, const
     while (targets) {
         targetSq = popFirstBit(&targets);
         if (DISTANCE(targetSq, pos.kpos[enemy]) > 2) {
-
             safeMoves = (queenAttacksBB(targetSq, pos.occupied)) &
                 (safe & (~ei->atkall[enemy] | ei->atkpawns[color] | ei->atkbishops[color] | ei->atkrooks[color] | ei->atkknights[color] | ei->atkkings[color]));
 
@@ -282,7 +277,6 @@ void judgeTrapped(const position_t& pos, eval_info_t *ei, const int color, const
 
 // this is only called when there are more than 1 queen for a side
 int computeMaterial(const position_t& pos, eval_info_t *ei) {
-
     int whiteM = ei->MLindex[WHITE];
     int blackM = ei->MLindex[BLACK];
     int wq, bq, wr, br, wb, bb, wn, bn;
@@ -318,7 +312,6 @@ int computeMaterial(const position_t& pos, eval_info_t *ei) {
     ei->phase += (wn + bn);
 
     score += (whiteM - blackM) * ((PawnValueMid1 + PawnValueMid2) / 2);
-
 
     if (ei->phase > 32) ei->phase = 32;
     ei->draw[WHITE] = 0;
@@ -402,7 +395,7 @@ void evalPawnsByColor(const position_t& pos, eval_info_t *ei, int mid_score[], i
         }
     }
 
-    //lets look through all the passed pawns and give them their static bonuses 
+    //lets look through all the passed pawns and give them their static bonuses
     //TODO consider moving some king distance stuff in here
     temp64 = ei->pawns[color] & openBitMap & ~passedBitMap;
     while (temp64) {
@@ -415,7 +408,6 @@ void evalPawnsByColor(const position_t& pos, eval_info_t *ei, int mid_score[], i
 
             mid_score[color] += MidgameCandidatePawnMin + scale(MidgameCandidatePawnMax, rank);
             end_score[color] += EndgameCandidatePawnMin + scale(EndgameCandidatePawnMax, rank);
-
         }
     }
     if (doubledBitMap) {
@@ -488,7 +480,6 @@ void evalPawnsByColor(const position_t& pos, eval_info_t *ei, int mid_score[], i
     }
     evalShelter(color, ei, pos);
 
-
     ei->pawn_entry->passedbits |= passedBitMap;
 
     ei->mid_score[color] += mid_score[color];
@@ -507,7 +498,6 @@ inline int outpost(const position_t& pos, eval_info_t *ei, const int color, cons
     return outpostValue;
 }
 void evalPieces(const position_t& pos, eval_info_t *ei, const int color, const int thread) {
-
     uint64 pc_bits, temp64, katemp64, xtemp64, weak_sq_mask;
     int from, temp1;
     const int enemy = color ^ 1;
@@ -575,9 +565,7 @@ void evalPieces(const position_t& pos, eval_info_t *ei, const int color, const i
             temp1 = outpost(pos, ei, color, enemy, from) / 2;
             ei->mid_score[color] += temp1;
             ei->end_score[color] += temp1;
-
         }
-
     }
     pc_bits = pos.rooks & pos.color[color];
     ei->kingatkrooks[color] = 0;
@@ -621,14 +609,12 @@ void evalPieces(const position_t& pos, eval_info_t *ei, const int color, const i
                 ei->end_score[color] += EndgameRook7th;
             }
         }
-
     }
     pc_bits = pos.queens & pos.color[color];
     while (pc_bits) {
         from = popFirstBit(&pc_bits);
         temp64 = queenAttacksBB(from, pos.occupied);
         ei->atkqueens[color] |= temp64;
-
 
         if (temp64 & ei->kingzone[enemy]) {
             ei->atkcntpcs[enemy] += (1 << 20) + bitCnt(temp64 & ei->kingadj[enemy]) * 2 + (QueenAttackValue << 10);
@@ -689,7 +675,6 @@ void evalThreats(const position_t& pos, eval_info_t *ei, const int color, int *u
 
     temp64 = ei->atkknights[color] & enemy_pcs;
     if (temp64) {
-
         temp1 += KnightAttackPower * QueenAttacked *((temp64 & pos.queens) != 0);
         temp1 += KnightAttackPower * QueenAttacked *((temp64 & pos.queens) != 0);
         temp1 += KnightAttackPower * RookAttacked *((temp64 & pos.rooks) != 0);
@@ -746,7 +731,6 @@ void KingShelter(const int color, eval_info_t *ei, const position_t& pos, int da
     int kingSide = ((pos.posStore.castle & KSC[color]) == 0 || (ei->atkall[color ^ 1] & KCSQ[color])) ? 0 : ei->pawn_entry->kshelter[color];
     int queenSide = ((pos.posStore.castle & QSC[color]) == 0 || (ei->atkall[color ^ 1] & QCSQ[color])) ? 0 : ei->pawn_entry->qshelter[color];
 
-
     kingSide = (kingSide > queenSide) ? kingSide : queenSide;
     currentKing = (currentKing >= kingSide) ? currentKing : (currentKing / 2 + kingSide / 2);
 
@@ -759,7 +743,6 @@ void KingShelter(const int color, eval_info_t *ei, const position_t& pos, int da
 }
 
 void evalKingAttacks(const position_t& pos, eval_info_t *ei, const int color, int *upside) {
-
     int danger;
     uint64 pc_atkrs_mask, pc_atkhelpersmask, king_atkmask, pc_defenders_mask;
     int penalty, tot_atkrs, pc_weights, kzone_atkcnt;
@@ -772,7 +755,6 @@ void evalKingAttacks(const position_t& pos, eval_info_t *ei, const int color, in
     danger = (tot_atkrs >= 2 && kzone_atkcnt >= 1);
     KingShelter(color, ei, pos, kzone_atkcnt + tot_atkrs);
     if (danger) {
-
         king_atkmask = KingMoves[pos.kpos[color]];
         pc_weights = (ei->atkcntpcs[color] & ((1 << 20) - 1)) >> 10;
         penalty = KingPosPenalty[color][pos.kpos[color]] + ((pc_weights * tot_atkrs) / 2)
@@ -810,7 +792,6 @@ void evalKingAttacks(const position_t& pos, eval_info_t *ei, const int color, in
                             *upside += 10000; // maybe checkmate!!
                         }
                     }
-
                 } while (queenContact);
             }
         }
@@ -902,12 +883,9 @@ void evalPassedvsKing(const position_t& pos, eval_info_t *ei, const int allied, 
                         ei->queening = true;
                     }
                 }
-
             }
-
         }
         ei->end_score[allied] += EndgamePassedMin + scale(score, rank);
-
     } while (passedpawn_mask);
 
     fileDist = rightBestFile - leftBestFile;
@@ -965,12 +943,10 @@ void evalPassed(const position_t& pos, eval_info_t *ei, const int allied, uint64
         }
 
         ei->end_score[allied] += EndgamePassedMin + scale(score, rank);
-
     } while (passedpawn_mask);
 }
 
 void evalPawns(const position_t& pos, eval_info_t *ei, int thread_id) {
-
     ASSERT(ei != NULL);
 
     initPawnEvalByColor(pos, ei, WHITE);
@@ -981,7 +957,6 @@ void evalPawns(const position_t& pos, eval_info_t *ei, int thread_id) {
         ei->mid_score[WHITE] += ei->pawn_entry->opn;
         ei->end_score[WHITE] += ei->pawn_entry->end;
     } else {
-
         {
             int midpawnscore[2] = {0, 0};
             int endpawnscore[2] = {0, 0};
@@ -994,7 +969,6 @@ void evalPawns(const position_t& pos, eval_info_t *ei, int thread_id) {
         }
     }
 }
-
 
 int eval(const position_t& pos, int thread_id, int *pessimism) {
     eval_info_t ei;
@@ -1118,13 +1092,13 @@ int eval(const position_t& pos, int thread_id, int *pessimism) {
     // if there is an unstoppable pawn on the board, we cannot trust any of our draw estimates or endgame rules of thumb
     if (!ei.queening) {
         int edge = score < DrawValue[WHITE];
-        int draw = ei.draw[edge]; //this is who is trying to draw 
+        int draw = ei.draw[edge]; //this is who is trying to draw
         evalEndgame(edge, pos, &ei, &score, &draw, pos.side);
         draw = MIN(MAX_DRAW, draw); // max of 200 draw
         score = ((score * (MAX_DRAW - draw)) + (DrawValue[WHITE] * draw)) / MAX_DRAW;
     }
     score = score*sign[pos.side];
-    *pessimism = upside[pos.side ^ 1]; //make sure this can fit in 8 bits 
+    *pessimism = upside[pos.side ^ 1]; //make sure this can fit in 8 bits
 
     if (score < -MAXEVAL) score = -MAXEVAL;
     else if (score > MAXEVAL) score = MAXEVAL;
@@ -1134,4 +1108,3 @@ int eval(const position_t& pos, int thread_id, int *pessimism) {
     entry->value = score;
     return score;
 }
-

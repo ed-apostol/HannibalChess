@@ -74,7 +74,6 @@ private:
 
 extern UCIOptions UCIOptionsMap;
 
-
 class Interface {
 public:
     Interface();

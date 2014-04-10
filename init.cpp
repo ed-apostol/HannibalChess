@@ -96,8 +96,6 @@ int equeen(int sq) {
     return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
 }
 
-
-
 #define MKF1 04 //5
 #define MKF2 30 //30
 #define MKF3 20 //20
