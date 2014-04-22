@@ -60,6 +60,19 @@ public:
     void timeManagement(int depth);
     void stopSearch();
 private:
+    inline bool inPvNode(NodeType nt) {
+        return (nt == PVNode);
+    }
+    inline bool inCutNode(NodeType nt) {
+        return (nt == CutNode);
+    }
+    inline bool inAllNode(NodeType nt) {
+        return (nt == AllNode);
+    }
+    inline NodeType invertNode(NodeType nt) {
+        return ((nt == PVNode) ? PVNode : ((nt == CutNode) ? AllNode : CutNode));
+    }
+
     static const int EXPLORE_CUTOFF = 20;
     static const int Q_CHECK = 1; // implies 1 check
     static const int Q_PVCHECK = 2; // implies 2 checks
@@ -319,19 +332,6 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     ASSERT(valueIsOk(ss.bestvalue));
 
     return ss.bestvalue;
-}
-
-inline bool inPvNode(NodeType nt) {
-    return (nt == PVNode);
-}
-inline bool inCutNode(NodeType nt) {
-    return (nt == CutNode);
-}
-inline bool inAllNode(NodeType nt) {
-    return (nt == AllNode);
-}
-inline NodeType invertNode(NodeType nt) {
-    return ((nt == PVNode) ? PVNode : ((nt == CutNode) ? AllNode : CutNode));
 }
 
 template <bool inRoot, bool inSplitPoint, bool inSingular>
