@@ -85,9 +85,6 @@ struct SearchInfo {
     continuation_t rootPV;
 };
 
-/* search.c */
-extern inline int moveIsTactical(uint32 m);
-extern inline int historyIndex(uint32 side, uint32 move);
 
 class Search;
 
@@ -122,3 +119,6 @@ public:
 };
 
 extern Engine CEngine;
+
+extern inline int moveIsTactical(uint32 m);
+extern inline int historyIndex(uint32 side, uint32 move);

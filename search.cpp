@@ -27,6 +27,15 @@
 
 Engine CEngine;
 
+int moveIsTactical(uint32 m) { // TODO
+    ASSERT(moveIsOk(m));
+    return (m & 0x01fe0000UL);
+}
+
+int historyIndex(uint32 side, uint32 move) { // TODO
+    return ((((side) << 9) + ((movePiece(move)) << 6) + (moveTo(move))) & 0x3ff);
+}
+
 class Search {
 public:
     Search(SearchInfo& _info, TranspositionTable& _tt, PvHashTable& _pvt) :
@@ -152,15 +161,6 @@ void Search::displayPV(continuation_t *pv, int multipvIdx, int depth, int alpha,
     if (multipvIdx > 0) log << " multipv " << multipvIdx + 1;
     log << " pv ";
     for (int i = 0; i < pv->length; i++) log << move2Str(pv->moves[i]) << " ";
-}
-
-int moveIsTactical(uint32 m) {
-    ASSERT(moveIsOk(m));
-    return (m & 0x01fe0000UL);
-}
-
-int historyIndex(uint32 side, uint32 move) {
-    return ((((side) << 9) + ((movePiece(move)) << 6) + (moveTo(move))) & 0x3ff);
 }
 
 bool Search::prevMoveAllowsThreat(const position_t& pos, basic_move_t first, basic_move_t second) {
