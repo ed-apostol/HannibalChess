@@ -423,7 +423,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             const int MaxRazorDepth = 10;
             int rvalue;
             if (depth < MaxRazorDepth && (pos.color[pos.side] & ~(pos.pawns | pos.kings))
-                && ss.evalvalue >(rvalue = beta + FutilityMarginTable[MIN(depth, MaxRazorDepth)][MIN(ssprev.playedMoves, 63)])) {
+                && ss.evalvalue > (rvalue = beta + FutilityMarginTable[MIN(depth, MaxRazorDepth)][MIN(ssprev.playedMoves, 63)])) {
                 return rvalue;
             }
             if (depth < MaxRazorDepth && pos.posStore.lastmove != EMPTY
@@ -466,19 +466,20 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 ss.evalvalue = score;
                 if (score > alpha) {
                     ss.hashMove = ssprev.counterMove;
-                    ss.evalvalue = score;
                     ss.hashDepth = newdepth;
                 }
             }
         }
-        int newdepth;
-        if (ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8) && ss.hashDepth >= (newdepth = depth / 2)) { // singular extension (adding !inRoot)
-            int targetScore = ss.evalvalue - EXPLORE_CUTOFF;
-            ssprev.bannedMove = ss.hashMove;
-            int score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, newdepth, ssprev, sthread, nt);
-            if (sthread.stop) return 0;
-            ssprev.bannedMove = EMPTY;
-            if (score <= targetScore) ss.firstExtend = true;
+        if (!inAllNode(nt) && !inCheck && ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8)) { // singular extension
+            int newdepth = depth / 2;
+            if (ss.hashDepth >= newdepth) {
+                int targetScore = ss.evalvalue - EXPLORE_CUTOFF;
+                ssprev.bannedMove = ss.hashMove;
+                int score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, newdepth, ssprev, sthread, nt);
+                if (sthread.stop) return 0;
+                ssprev.bannedMove = EMPTY;
+                if (score <= targetScore) ss.firstExtend = true;
+            }
         }
     }
 
@@ -563,17 +564,17 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (inSplitPoint) alpha = sp->alpha;
                 ss.reducedMove = (newdepthclone < newdepth); //TODO consider taking into account full reductions
                 score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepthclone, ss, sthread, inCutNode(nt) ? AllNode : CutNode);
-                if (ss.reducedMove && score > alpha) {
+                if (!sthread.stop && ss.reducedMove && score > alpha) {
                     if (partialReduction >= 4) {
                         newdepthclone = newdepth - partialReduction / 2;
                         score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepthclone, ss, sthread, inCutNode(nt) ? AllNode : CutNode);
                     }
-                    if (score > alpha) {
+                    if (!sthread.stop && score > alpha) {
                         ss.reducedMove = false;
                         score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepth, ss, sthread, AllNode);
                     }
                 }
-                if (inPvNode(nt) && score > alpha) {
+                if (inPvNode(nt) && !sthread.stop && score > alpha) {
                     if (inRoot) mInfo.research = 1;
                     score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, sthread, PVNode);
                 }
