@@ -25,18 +25,6 @@
 #include "book.h"
 #include "init.h"
 
-const int MAX_HDEPTH = 20;
-const int NEW_HISTORY = (10 + MAX_HDEPTH);
-
-const int EXPLORE_CUTOFF = 20;
-const int Q_CHECK = 1; // implies 1 check
-const int Q_PVCHECK = 2; // implies 2 checks
-const int MIN_REDUCTION_DEPTH = 4; // default is false
-
-const int WORSE_TIME_BONUS = 20; //how many points more than 20 it takes to increase time by alloc to a maximum of 2*alloc
-const int CHANGE_TIME_BONUS = 50; //what percentage of alloc to increase if the last move is a change move
-const int WORSE_SCORE_CUTOFF = 20;
-
 Engine CEngine;
 
 class Search {
@@ -63,6 +51,12 @@ public:
     void timeManagement(int depth);
     void stopSearch();
 private:
+    static const int EXPLORE_CUTOFF = 20;
+    static const int Q_CHECK = 1; // implies 1 check
+    static const int Q_PVCHECK = 2; // implies 2 checks
+    static const int MIN_REDUCTION_DEPTH = 4; // default is false
+    static const int WORSE_SCORE_CUTOFF = 20;
+
     SearchInfo& mInfo;
     TranspositionTable& mTransTable;
     PvHashTable& mPVHashTable;
@@ -414,7 +408,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         updateEvalgains(pos, pos.posStore.lastmove, ssprev.evalvalue, ss.evalvalue, sthread);
 
         if (!inPvNode(nt) && !inCheck) {
-            const int MaxRazorDepth = 10;
+            static const int MaxRazorDepth = 10;
             int rvalue;
             if (depth < MaxRazorDepth && (pos.color[pos.side] & ~(pos.pawns | pos.kings))
                 && ss.evalvalue > (rvalue = beta + FutilityMarginTable[MIN(depth, MaxRazorDepth)][MIN(ssprev.playedMoves, 63)])) {
@@ -633,6 +627,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             return ss.bestvalue;
         }
         if (ss.bestmove != EMPTY && !moveIsTactical(ss.bestmove) && ss.bestvalue >= beta) { //> alpha account for pv better maybe? Sam
+            static const int MAX_HDEPTH = 20;
+            static const int NEW_HISTORY = (10 + MAX_HDEPTH);
             int index = historyIndex(pos.side, ss.bestmove);
             int hisDepth = MIN(depth, MAX_HDEPTH);
             sthread.history[index] += hisDepth * hisDepth;
@@ -722,6 +718,9 @@ void Search::repopulateHash(position_t& pos, continuation_t& rootPV) {
 }
 
 void Search::timeManagement(int depth) {
+    static const int WORSE_TIME_BONUS = 20; //how many points more than 20 it takes to increase time by alloc to a maximum of 2*alloc
+    static const int CHANGE_TIME_BONUS = 50; //what percentage of alloc to increase if the last move is a change move
+    
     if (mInfo.best_value > INF - MAXPLY) mInfo.mate_found++;
     if (mInfo.thinking_status == THINKING) {
         if (mInfo.time_is_limited) {
