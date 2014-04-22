@@ -25,22 +25,16 @@
 #include "book.h"
 #include "init.h"
 
-#define MAX_HDEPTH 20
-#define NEW_HISTORY (10 + MAX_HDEPTH)
+const int MAX_HDEPTH = 20;
+const int NEW_HISTORY = (10 + MAX_HDEPTH);
 
-#define EXPLORE_CUTOFF 20
-#define EXPLORE_DEPTH_PV 6
-#define EXPLORE_DEPTH_NOPV 8
-#define EXTEND_ONLY 0 // 3 means quiesc, pv and non-pv, 2 means both pv and non-pv, 1 means only pv (0-3)
-#define Q_CHECK 1 // implies 1 check
-#define Q_PVCHECK 2 // implies 2 checks
-#define MIN_REDUCTION_DEPTH 4 // default is false
+const int EXPLORE_CUTOFF = 20;
+const int Q_CHECK = 1; // implies 1 check
+const int Q_PVCHECK = 2; // implies 2 checks
+const int MIN_REDUCTION_DEPTH = 4; // default is false
 
-#define WORSE_TIME_BONUS 20 //how many points more than 20 it takes to increase time by alloc to a maximum of 2*alloc
-#define CHANGE_TIME_BONUS 50 //what percentage of alloc to increase if the last move is a change move
-#define LAST_PLY_TIME 40 //what percentage of alloc remaining to be worth trying another complete ply
-#define INCREASE_CHANGE 0 //what percentage of alloc to increase during a change move
-
+const int WORSE_TIME_BONUS = 20; //how many points more than 20 it takes to increase time by alloc to a maximum of 2*alloc
+const int CHANGE_TIME_BONUS = 50; //what percentage of alloc to increase if the last move is a change move
 const int WORSE_SCORE_CUTOFF = 20;
 
 Engine CEngine;
@@ -476,8 +470,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 int targetScore = ss.evalvalue - EXPLORE_CUTOFF;
                 ssprev.bannedMove = ss.hashMove;
                 int score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, newdepth, ssprev, sthread, nt);
-                if (sthread.stop) return 0;
                 ssprev.bannedMove = EMPTY;
+                if (sthread.stop) return 0;
                 if (score <= targetScore) ss.firstExtend = true;
             }
         }
