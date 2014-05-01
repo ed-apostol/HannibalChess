@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include<string>
+
 struct PolyglotBookEntry {
     uint64 key;
     basic_move_t move;
@@ -30,7 +32,7 @@ public:
 private:
     FILE *bookFile;
     int64 size;
-    string name;
+    std::string name;
 };
 
 extern Book PolyBook;

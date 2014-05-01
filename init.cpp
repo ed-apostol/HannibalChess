@@ -7,6 +7,8 @@
 /*  Description: A chess playing program.         */
 /**************************************************/
 
+#include <cstring>
+#include <cmath>
 #include "typedefs.h"
 #include "data.h"
 #include "constants.h"

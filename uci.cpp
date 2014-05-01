@@ -300,7 +300,7 @@ void Interface::Go(std::istringstream& stream) {
 
 void Interface::Position(std::istringstream& stream) {
     basic_move_t m;
-    string token, fen;
+    std::string token, fen;
 
     stream >> token;
     if (token == "startpos") {
@@ -327,10 +327,10 @@ void Interface::Position(std::istringstream& stream) {
 }
 
 void Interface::SetOption(std::istringstream& stream) {
-    string token, name, value;
+    std::string token, name, value;
     stream >> token;
-    while (stream >> token && token != "value") name += string(" ", !name.empty()) + token;
-    while (stream >> token) value += string(" ", !value.empty()) + token;
+    while (stream >> token && token != "value") name += std::string(" ", !name.empty()) + token;
+    while (stream >> token) value += std::string(" ", !value.empty()) + token;
     if (UCIOptionsMap.count(name)) UCIOptionsMap[name] = value;
     else LogAndPrintOutput() << "No such option: " << name;
 }

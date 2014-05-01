@@ -121,7 +121,7 @@ void ThreadsManager::InitVars() {
 
 void ThreadsManager::SetNumThreads(int num) {
     while (mThreads.size() < num) {
-        int id = mThreads.size();
+        int id = (int)mThreads.size();
         mThreads.push_back(new Thread(id));
         mThreads[id]->NativeThread() = std::thread(&ThreadsManager::IdleLoop, this, id);
     }

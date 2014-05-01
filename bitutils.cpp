@@ -7,6 +7,7 @@
 /*  Description: A chess playing program.         */
 /**************************************************/
 
+#include <intrin.h>
 #include "typedefs.h"
 #include "data.h"
 #include "constants.h"
@@ -47,14 +48,14 @@ static INLINE unsigned char _BitScanReverse64(unsigned int* const Index, const U
 #endif
 /* returns the least significant square from the 64 bitfield */
 INLINE uint32 getFirstBit(uint64 bb) {
-    DWORD index = 0;
+    unsigned long index = 0;
     _BitScanForward64(&index, bb);
     return index;
 }
 
 /* returns the least significant square and clears it from the 64 bitfield */
 INLINE uint32 popFirstBit(uint64 *b) {
-    DWORD index = 0;
+    unsigned long index = 0;
     _BitScanForward64(&index, *b);
     *b &= (*b - 1);
     return index;

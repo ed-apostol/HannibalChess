@@ -7,6 +7,7 @@
 /*  Description: A chess playing program.         */
 /**************************************************/
 
+#include <chrono>
 #include "typedefs.h"
 #include "data.h"
 #include "constants.h"
@@ -155,16 +156,7 @@ int DiffColor(const position_t& pos, uint32 sq, int color) {
 }
 /* returns time in milli-seconds */
 uint64 getTime(void) {
-#if defined(_WIN32) || defined(_WIN64)
-    static struct _timeb tv;
-    _ftime_s(&tv);
-    return(tv.time * 1000 + tv.millitm);
-#else
-    static struct timeval tv;
-    static struct timezone tz;
-    gettimeofday(&tv, &tz);
-    return(tv.tv_sec * 1000 + (tv.tv_usec / 1000));
-#endif
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
 /* parse the move from string and returns a move from the

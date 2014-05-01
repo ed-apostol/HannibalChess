@@ -214,7 +214,7 @@ const int PieceAttackMulEnd = 3; //3
 const int sbonus[8] = {0, 0, 0, 13, 34, 77, 128, 0};
 #define scale(smax,sr) ((((smax))*sbonus[sr]) / sbonus[6])
 
-void judgeTrapped(const position_t& pos, eval_info_t *ei, const int color, const int thread/*, int *upside, int *downside*/) {
+void judgeTrapped(const position_t& pos, eval_info_t *ei, const int color) {
     uint64 targets, safeMoves;
     int targetSq;
     int penalty;
@@ -276,7 +276,7 @@ void judgeTrapped(const position_t& pos, eval_info_t *ei, const int color, const
 }
 
 // this is only called when there are more than 1 queen for a side
-int computeMaterial(const position_t& pos, eval_info_t *ei) {
+int computeMaterial(eval_info_t *ei) {
     int whiteM = ei->MLindex[WHITE];
     int blackM = ei->MLindex[BLACK];
     int wq, bq, wr, br, wb, bb, wn, bn;
@@ -463,7 +463,6 @@ void evalPawnsByColor(const position_t& pos, eval_info_t *ei, int mid_score[], i
         while (temp64) {
             uint64 openPawn, doublePawn, sqBitMask;
             int sqPenalty;
-            int weakness = 0;
             sq = popFirstBit(&temp64);
             sqBitMask = BitMask[sq];
 
@@ -497,7 +496,7 @@ inline int outpost(const position_t& pos, eval_info_t *ei, const int color, cons
     }
     return outpostValue;
 }
-void evalPieces(const position_t& pos, eval_info_t *ei, const int color, const int thread) {
+void evalPieces(const position_t& pos, eval_info_t *ei, const int color) {
     uint64 pc_bits, temp64, katemp64, xtemp64, weak_sq_mask;
     int from, temp1;
     const int enemy = color ^ 1;
@@ -1000,7 +999,7 @@ int eval(const position_t& pos, int thread_id, int *pessimism) {
         ei.endFlags[WHITE] = mat->flags[WHITE];
         ei.endFlags[BLACK] = mat->flags[BLACK];
     } else {
-        score = computeMaterial(pos, &ei);
+        score = computeMaterial(&ei);
     }
 
     ei.mid_score[WHITE] = pos.posStore.open[WHITE];
@@ -1051,8 +1050,8 @@ int eval(const position_t& pos, int thread_id, int *pessimism) {
     ei.flags |= ATTACK_KING[BLACK] * (ei.MLindex[WHITE] >= MLQ + MLN);
     ei.flags |= ATTACK_KING[WHITE] * (ei.MLindex[BLACK] >= MLQ + MLN);
 
-    evalPieces(pos, &ei, WHITE, thread_id);
-    evalPieces(pos, &ei, BLACK, thread_id);
+    evalPieces(pos, &ei, WHITE);
+    evalPieces(pos, &ei, BLACK);
 
     ei.queening = false;
 
@@ -1065,7 +1064,7 @@ int eval(const position_t& pos, int thread_id, int *pessimism) {
         if (ei.flags & ATTACK_KING[BLACK]) {
             evalKingAttacks(pos, &ei, BLACK, &upside[WHITE]);
         }
-        judgeTrapped(pos, &ei, WHITE, thread_id/*,&upside[WHITE],&upside[BLACK]*/);
+        judgeTrapped(pos, &ei, WHITE);
     } else {
         if (blackPassed) evalPassedvsKing(pos, &ei, BLACK, blackPassed);
     }
@@ -1076,7 +1075,7 @@ int eval(const position_t& pos, int thread_id, int *pessimism) {
         if (ei.flags & ATTACK_KING[WHITE]) { // attacking the white king
             evalKingAttacks(pos, &ei, WHITE, &upside[BLACK]);
         }
-        judgeTrapped(pos, &ei, BLACK, thread_id/*,&upside[WHITE],&upside[BLACK]*/);
+        judgeTrapped(pos, &ei, BLACK);
     } else {
         if (whitePassed) evalPassedvsKing(pos, &ei, WHITE, whitePassed);
     }

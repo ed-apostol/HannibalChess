@@ -12,39 +12,19 @@
 //#define DEBUG
 //#define EVAL_DEBUG true
 //#define DEBUG_INDEPTH true
-
 #define SHOW_SEARCH true
 
 #if defined(__x86_64) || defined(_WIN64)
 #define VERSION64BIT
 #endif
 
-#define _CRT_SECURE_NO_DEPRECATE
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <ctype.h>
-#include <math.h>
-#include <setjmp.h>
-
-#if defined(_WIN32) || defined(_WIN64)
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#undef WIN32_LEAN_AND_MEAN
-#include <sys/timeb.h>
-#else
-#include <sys/time.h>
-#endif
-
+#define _CRT_SECURE_NO_WARNINGS 
 #pragma warning(disable: 4127) // Conditional expression is constant
-#pragma warning(disable: 4146) // Unary minus operator applied to unsigned type
+#pragma warning(disable: 4244) // Possible loss of data
 
 #include "macros.h"
 
-#include <iostream>
-using namespace std;
-/* some basic definitions */
+
 #ifndef INLINE
 #ifdef _MSC_VER
 #define INLINE __forceinline
@@ -54,6 +34,7 @@ using namespace std;
 #define INLINE inline
 #endif
 #endif
+
 
 #ifndef _MSC_VER
 #include <inttypes.h>

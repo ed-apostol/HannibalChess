@@ -58,7 +58,7 @@ struct SearchInfo {
     int64 time_limit_max;
     int64 time_limit_abs;
     bool node_is_limited;
-    int64 node_limit;
+    uint64 node_limit;
 
     int64 start_time;
     int64 last_time;

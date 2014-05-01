@@ -270,8 +270,6 @@ bool moveIsCheck(const position_t& pos, basic_move_t m, uint64 dcc) {
         ASSERT(false);
         return false;
     }
-    ASSERT(false);
-    return false;
 }
 
 /* this returns the bitboard of all pieces of a given side attacking a certain square */

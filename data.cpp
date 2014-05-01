@@ -7,6 +7,7 @@
 /*  Description: A chess playing program.         */
 /**************************************************/
 
+#include <cstdlib>
 #include "typedefs.h"
 #include "data.h"
 #include "constants.h"
