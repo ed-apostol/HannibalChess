@@ -25,25 +25,26 @@ void ThreadsManager::StartThinking() {
 }
 
 void ThreadsManager::IdleLoop(const int thread_id) {
-    SplitPoint* master_sp = mThreads[thread_id]->activeSplitPoint;
-    while (!mThreads[thread_id]->exit_flag) {
-        if (master_sp == NULL && mThreads[thread_id]->doSleep) {
-            mThreads[thread_id]->SleepAndWaitForCondition();
+    Thread& sthread = *mThreads[thread_id];
+    SplitPoint* master_sp = sthread.activeSplitPoint;
+    while (!sthread.exit_flag) {
+        if (master_sp == NULL && sthread.doSleep) {
+            sthread.SleepAndWaitForCondition();
             if (mThinking && thread_id == 0) {
-                CEngine.getBestMove(ThreadFromIdx(thread_id));
+                CEngine.getBestMove(sthread);
                 mThinking = false;
-                mThreads[thread_id]->searching = false;
+                sthread.searching = false;
             }
         }
-        if (!mStopThreads && !mThreads[thread_id]->searching) {
+        if (!mStopThreads && !sthread.searching) {
             GetWork(thread_id, master_sp);
         }
-        if (!mStopThreads && mThreads[thread_id]->searching) {
-            SplitPoint* sp = mThreads[thread_id]->activeSplitPoint; // this is correctly located, don't move this, else bug
-            CEngine.searchFromIdleLoop(*sp, ThreadFromIdx(thread_id));
+        if (!mStopThreads && sthread.searching) {
+            SplitPoint* sp = sthread.activeSplitPoint; // this is correctly located, don't move this, else bug
+            CEngine.searchFromIdleLoop(*sp, sthread);
             std::lock_guard<Spinlock> lck(sp->updatelock);
             sp->workersBitMask &= ~((uint64)1 << thread_id);
-            mThreads[thread_id]->searching = false;
+            sthread.searching = false;
         }
         if (master_sp != NULL && (!master_sp->workersBitMask || mStopThreads)) return;
     }

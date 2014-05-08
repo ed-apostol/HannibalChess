@@ -156,7 +156,8 @@ int DiffColor(const position_t& pos, uint32 sq, int color) {
 }
 /* returns time in milli-seconds */
 uint64 getTime(void) {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    using namespace std::chrono;
+    return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 }
 
 /* parse the move from string and returns a move from the
