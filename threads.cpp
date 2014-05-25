@@ -58,7 +58,7 @@ void ThreadsManager::GetWork(const int thread_id, SplitPoint* master_sp) {
     for (Thread* th : mThreads) {
         if (th->thread_id == thread_id) continue; // no need to help self
         if (master_sp != NULL && !(master_sp->workersBitMask & ((uint64)1 << th->thread_id))) continue; // helpful master: looking to help threads still actively working for it
-        for (int splitIdx = 0; splitIdx < th->num_sp; splitIdx++) {
+        for (int splitIdx = 0, num_splits = th->num_sp; splitIdx < num_splits; ++splitIdx) {
             SplitPoint* sp = &th->sptable[splitIdx];
             if (sp->cutoff) continue; // if it already has cutoff, move on
             if (sp->workersBitMask != sp->allWorkersBitMask) continue; // only search those with all threads still searching
@@ -155,14 +155,14 @@ void ThreadsManager::SearchSplitPoint(const position_t& pos, SearchStack* ss, Se
     sthread.activeSplitPoint = active_sp;
     sthread.searching = true;
     sthread.stop = false;
-    sthread.num_sp++;
-    sthread.numsplits++;
+    ++sthread.num_sp;
+    ++sthread.numsplits;
     active_sp->updatelock.unlock();
 
     IdleLoop(sthread.thread_id);
 
     active_sp->updatelock.lock();
-    sthread.num_sp--;
+    --sthread.num_sp;
     ss->bestvalue = active_sp->bestvalue;
     ss->bestmove = active_sp->bestmove;
     ss->playedMoves = active_sp->played;
