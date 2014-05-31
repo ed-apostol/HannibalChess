@@ -235,8 +235,7 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     initNode(sthread);
     if (sthread.stop) return 0;
 
-    int t = 0;
-    for (TransEntry* entry = mTransTable.Entry(pos.posStore.hash); t < mTransTable.BucketSize(); t++, entry++) {
+    for (TransEntry *entry = mTransTable.Entry(pos.posStore.hash), *end = entry + mTransTable.BucketSize(); entry != end; ++entry) {
         if (entry->HashLock() == LOCK(pos.posStore.hash)) {
             entry->SetAge(mTransTable.Date());
             if (!inPv) { // TODO: re-use values from here to evalvalue?
@@ -360,14 +359,13 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     if (sthread.stop) return 0;
 
     if (!inRoot && !inSingular && !inSplitPoint) {
-        int t = 0;
         int evalDepth = 0;
 
         alpha = MAX(-INF + pos.ply, alpha);
         beta = MIN(INF - pos.ply - 1, beta);
         if (alpha >= beta) return alpha;
 
-        for (TransEntry * entry = mTransTable.Entry(pos.posStore.hash); t < mTransTable.BucketSize(); t++, entry++) {
+        for (TransEntry *entry = mTransTable.Entry(pos.posStore.hash), *end = entry + mTransTable.BucketSize(); entry != end; ++entry) {
             if (entry->HashLock() == LOCK(pos.posStore.hash)) {
                 entry->SetAge(mTransTable.Date());
                 if (entry->Mask() & MNoMoves) {
