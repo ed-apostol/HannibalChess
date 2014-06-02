@@ -23,7 +23,7 @@
 #endif
 
 #define MAXPLY              128
-#define MAX_HASH_STORE      (MAXPLY+102)
+#define MAX_HASH_STORE      1024
 #define MAXMOVES            256
 #define INF                 32500
 #define MAXEVAL             32000

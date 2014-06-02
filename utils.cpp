@@ -228,7 +228,7 @@ int anyRepNoMove(const position_t& pos, const int m) {//assumes no castle and no
     fromSq = moveFrom(m);
     toSq = moveTo(m);
     compareTo = pos.posStore.hash ^ ZobColor ^ ZobPiece[pos.side][moved][fromSq] ^ ZobPiece[pos.side][moved][toSq];
-    int plyForRep = 4, pliesToCheck = MIN(pos.posStore.pliesFromNull, pos.posStore.fifty);
+    int plyForRep = 3, pliesToCheck = MIN(pos.posStore.pliesFromNull, pos.posStore.fifty);
     if (plyForRep <= pliesToCheck) {
         pos_store_t* psp = pos.posStore.previous;
         do {
