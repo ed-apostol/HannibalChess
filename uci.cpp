@@ -27,8 +27,44 @@
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
 const std::string Interface::year = "2014";
-const std::string Interface::version = "1.5beta_x5";
+const std::string Interface::version = "1.5x5";
 const std::string Interface::arch = "x64";
+
+static const int MinHash = 1;
+static const int MaxHash = 65536;
+static const int DefaultHash = 64;
+
+static const int MinPHash = 1;
+static const int MaxPHash = 1024;
+static const int DefaultPHash = 4;
+
+static const int MinEvalCache = 1;
+static const int MaxEvalCache = 1024;
+static const int DefaultEvalCache = 4;
+
+static const int MinMultiPV = 1;
+static const int MaxMultiPV = 128;
+static const int DefaultMultiPV = 1;
+
+static const int MinTimeBuffer = 0;
+static const int MaxTimeBuffer = 10000;
+static const int DefaultTimeBuffer = 1000;
+
+static const int MinThreads = 1;
+static const int MaxThreads = 64;
+static const int DefaultThreads = 6;
+
+static const int MinSplitDepth = 1;
+static const int MaxSplitDepth = 12;
+static const int DefaultSplitDepth = 4;
+
+static const int MinActiveSplit = 1;
+static const int MaxActiveSplit = 8;
+static const int DefaultActiveSplit = 4;
+
+static const int MinContempt = -100;
+static const int MaxContempt = 100;
+static const int DefaultContempt = 0;
 
 UCIOptions UCIOptionsMap;
 
@@ -71,19 +107,19 @@ void on_bookfile(const Options& o) {
 void on_dummy(const Options& o) {}
 
 void Interface::InitUCIOptions(UCIOptions& uci_opt) {
-    uci_opt["Hash"] = Options(64, 1, 65536, on_hash);
-    uci_opt["Pawn Hash"] = Options(4, 1, 1024, on_pawn_hash);
-    uci_opt["Eval Cache"] = Options(4, 1, 1024, on_eval_hash);
-    uci_opt["MultiPV"] = Options(1, 1, 128, on_multi_pv);
+    uci_opt["Hash"] = Options(DefaultHash, MinHash, MaxHash, on_hash);
+    uci_opt["Pawn Hash"] = Options(DefaultPHash, MinPHash, MaxPHash, on_pawn_hash);
+    uci_opt["Eval Cache"] = Options(DefaultEvalCache, MinEvalCache, MaxEvalCache, on_eval_hash);
+    uci_opt["MultiPV"] = Options(DefaultMultiPV, MinMultiPV, MaxMultiPV, on_multi_pv);
     uci_opt["Clear Hash"] = Options(on_clear_hash);
     uci_opt["OwnBook"] = Options(false, on_dummy);
     uci_opt["Book File"] = Options("Hannibal.bin", on_bookfile);
     uci_opt["Ponder"] = Options(false, on_dummy);
-    uci_opt["Time Buffer"] = Options(1000, 0, 10000, on_time_buffer);
-    uci_opt["Threads"] = Options(6, 1, MaxNumOfThreads, on_threads);
-    uci_opt["Min Split Depth"] = Options(4, 1, 12, on_splits);
-    uci_opt["Max Active Splits/Thread"] = Options(4, 1, 8, on_active_splits);
-    uci_opt["Contempt"] = Options(0, -100, 100, on_contempt);
+    uci_opt["Time Buffer"] = Options(DefaultTimeBuffer, MinTimeBuffer, MaxTimeBuffer, on_time_buffer);
+    uci_opt["Threads"] = Options(DefaultThreads, MinThreads, MaxThreads, on_threads);
+    uci_opt["Min Split Depth"] = Options(DefaultSplitDepth, MinSplitDepth, MaxSplitDepth, on_splits);
+    uci_opt["Max Active Splits/Thread"] = Options(DefaultActiveSplit, MinActiveSplit, MaxActiveSplit, on_active_splits);
+    uci_opt["Contempt"] = Options(DefaultContempt, MinContempt, MaxContempt, on_contempt);
 }
 
 void Interface::PrintUCIOptions(UCIOptions& uci_opt) {

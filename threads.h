@@ -132,6 +132,8 @@ private:
 
 class Thread : public ThreadBase {
 public:
+    static const int MaxNumSplitPointsPerThread = 8;
+
     Thread(int _thread_id) : ThreadBase(_thread_id) {
         Init();
     }
@@ -154,6 +156,7 @@ public:
         memset(history, 0, sizeof(history));
         memset(evalgains, 0, sizeof(evalgains));
     }
+
     uint64 nodes;
     uint64 nodes_since_poll;
     uint64 nodes_between_polls;

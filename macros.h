@@ -106,5 +106,4 @@ enum ThinkingStatus {
 #define KEY(x)              (uint32)(x)
 //#define SETHASH(l,k)        (uint64)(((l)<<32)|(k))
 
-const int MaxNumOfThreads = 64;
-const int MaxNumSplitPointsPerThread = 8;
+
