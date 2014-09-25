@@ -444,7 +444,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             }
         }
 
-        if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt) ? 6 : 8)) { // IID
+        if (/*!inAllNode(nt) && */!inCheck && depth >= (inPvNode(nt) ? 6 : 8)) { // IID
             int newdepth = inPvNode(nt) ? depth - 2 : depth / 2;
             if (ss.hashMove == EMPTY || ss.hashDepth < newdepth) {
                 int score = searchNode<false, false, false>(pos, alpha, beta, newdepth, ssprev, sthread, nt);
@@ -456,7 +456,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 }
             }
         }
-        if (/*!inAllNode(nt) && !inCheck && */ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8)) { // singular extension
+        if (/*!inAllNode(nt) && */!inCheck && ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8)) { // singular extension
             int newdepth = depth / 2;
             if (ss.hashDepth >= newdepth) {
                 int targetScore = ss.evalvalue - EXPLORE_CUTOFF;

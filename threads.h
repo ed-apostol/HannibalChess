@@ -158,8 +158,8 @@ public:
     }
 
     uint64 nodes;
-    uint64 nodes_since_poll;
-    uint64 nodes_between_polls;
+    uint64 nodes_since_poll; // transfer to ThreadsManager
+    uint64 nodes_between_polls; // transfer to ThreadsManager
     uint64 numsplits; // DEBUG
     uint64 numsplits2; // DEBUG
     uint64 workers2; // DEBUG

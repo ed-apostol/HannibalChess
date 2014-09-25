@@ -66,7 +66,6 @@ void ThreadsManager::GetWork(const int thread_id, SplitPoint* master_sp) {
                 best_split_point = sp;
                 best_depth = sp->depth;
                 thread_to_help = th;
-                break; // best split found on this thread, break
             }
             break; // only check the first valid split in every thread, it is always the deepest, saves time
         }
