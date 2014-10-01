@@ -203,39 +203,30 @@ uint32 parseMove(movelist_t *mvlist, const char *s) {
 
 int anyRep(const position_t& pos) {//this is used for book repetition detection, but should not be used in search
     if (pos.posStore.fifty >= 100) return true;
-    ASSERT(pos.sp >= pos.posStore.fifty);
-    int plyForRep = 4, pliesToCheck = MIN(pos.posStore.pliesFromNull, pos.posStore.fifty);
-    if (plyForRep <= pliesToCheck) {
-        pos_store_t* psp = pos.posStore.previous->previous;
-        do {
-            psp = psp->previous->previous;
-            if (psp->hash == pos.posStore.hash) return true;
-            plyForRep += 2;
-        } while (plyForRep <= pliesToCheck);
+    pos_store_t* psp;
+    if (!pos.posStore.previous || !pos.posStore.previous->previous) return false;
+    psp = pos.posStore.previous->previous;
+    for (int plyForRep = 4, pliesToCheck = MIN(pos.posStore.pliesFromNull, pos.posStore.fifty); plyForRep <= pliesToCheck; plyForRep += 2) {
+        if (!psp->previous || !psp->previous->previous) return false;
+        psp = psp->previous->previous;
+        if (psp->hash == pos.posStore.hash) return true;
     }
     return false;
 }
 
-int anyRepNoMove(const position_t& pos, const int m) {//assumes no castle and no capture
-    int moved, fromSq, toSq;
-    uint64 compareTo;
+int anyRepNoMove(const position_t& pos, const int m) {
+    if (moveCapture(m) || isCastle(m) || pos.posStore.fifty < 3 || movePiece(m) == PAWN) return false;
+    if (pos.posStore.fifty >= 99) return true;
 
-    if (moveCapture(m) || isCastle(m) || pos.posStore.fifty < 3) return false;
-    moved = movePiece(m);
-    if (moved == PAWN) return false;
-    if (pos.posStore.fifty > 99) return true;
-    //TODO consider  castle check in here
-    fromSq = moveFrom(m);
-    toSq = moveTo(m);
-    compareTo = pos.posStore.hash ^ ZobColor ^ ZobPiece[pos.side][moved][fromSq] ^ ZobPiece[pos.side][moved][toSq];
-    int plyForRep = 3, pliesToCheck = MIN(pos.posStore.pliesFromNull, pos.posStore.fifty);
-    if (plyForRep <= pliesToCheck) {
-        pos_store_t* psp = pos.posStore.previous;
-        do {
-            psp = psp->previous->previous;
-            if (psp->hash == compareTo) return true;
-            plyForRep += 2;
-        } while (plyForRep <= pliesToCheck);
+    uint64 compareTo = pos.posStore.hash ^ ZobColor ^ ZobPiece[pos.side][movePiece(m)][moveFrom(m)] ^ ZobPiece[pos.side][movePiece(m)][moveTo(m)];
+    pos_store_t* psp;
+    if (!pos.posStore.previous) return false;
+    psp = pos.posStore.previous;
+
+    for (int plyForRep = 3, pliesToCheck = MIN(pos.posStore.pliesFromNull, pos.posStore.fifty); plyForRep <= pliesToCheck; plyForRep += 2) {
+        if (!psp->previous || !psp->previous->previous) return false;
+        psp = psp->previous->previous;
+        if (psp->hash == compareTo) return true;
     }
     return false;
 }
