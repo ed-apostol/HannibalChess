@@ -519,7 +519,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 newdepth = depth - 1;
                 //only reduce or prune some types of moves
                 int partialReduction = 0;
-                int fullReduction = 0;
                 if (MoveGenPhase[ss.mvlist_phase] == PH_QUIET_MOVES && !ss.moveGivesCheck) { //never happens when in check
                     bool goodMove = (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsPassedPawn(pos, move->m);
                     if (!inRoot && !inPvNode(nt)) {
@@ -530,25 +529,23 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
 
                         if (scoreAprox < beta) {
                             if (predictedDepth < 8 && !goodMove) continue;
-                            fullReduction++;
+                            partialReduction++;
                         }
                         if (swap(pos, move->m) < 0) {
                             if (predictedDepth < 2) continue;
-                            fullReduction++;
+                            partialReduction++;
                         }
                     }
                     if (depth >= MIN_REDUCTION_DEPTH) {
                         int reduction = ReductionTable[(inPvNode(nt) ? 0 : 1)][MIN(depth, 63)][MIN(ss.playedMoves, 63)];
                         partialReduction += goodMove ? (reduction + 1) / 2 : reduction;
                     }
-                } else if ((MoveGenPhase[ss.mvlist_phase] == PH_BAD_CAPTURES || (MoveGenPhase[ss.mvlist_phase] == PH_QUIET_MOVES
-                    && swap(pos, move->m) < 0)) && !inRoot && !inPvNode(nt)) fullReduction++;  //never happens when in check
-                newdepth -= fullReduction;
+                }
                 int newdepthclone = newdepth - partialReduction;
                 makeMove(pos, undo, move->m);
                 ++sthread.nodes;
                 if (inSplitPoint) alpha = sp->alpha;
-                ss.reducedMove = (newdepthclone < newdepth); //TODO consider taking into account full reductions
+                ss.reducedMove = (newdepthclone < newdepth); 
                 score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepthclone, ss, sthread, inCutNode(nt) ? AllNode : CutNode);
                 if (!sthread.stop && ss.reducedMove && score > alpha) {
                     if (partialReduction >= 4) {
