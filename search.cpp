@@ -27,7 +27,7 @@
 
 Engine CEngine;
 
-int moveIsTactical(uint32 m) { // TODO
+bool moveIsTactical(uint32 m) { // TODO
     ASSERT(moveIsOk(m));
     return (m & 0x01fe0000UL);
 }
@@ -43,7 +43,7 @@ public:
         mTransTable(_tt),
         mPVHashTable(_pvt) {}
     void initNode(Thread& sthread);
-    int simpleStalemate(const position_t& pos);
+    bool simpleStalemate(const position_t& pos);
     void displayPV(continuation_t *pv, int multipvIdx, int depth, int alpha, int beta, int score);
     bool prevMoveAllowsThreat(const position_t& pos, basic_move_t first, basic_move_t second);
     bool moveRefutesThreat(const position_t& pos, basic_move_t first, basic_move_t second);
@@ -129,7 +129,7 @@ void Search::initNode(Thread& sthread) {
     }
 }
 
-int Search::simpleStalemate(const position_t& pos) {
+bool Search::simpleStalemate(const position_t& pos) {
     uint32 kpos, to;
     uint64 mv_bits;
     if (MinTwoBits(pos.color[pos.side] & ~pos.pawns)) return false;

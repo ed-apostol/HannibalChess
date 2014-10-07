@@ -120,5 +120,5 @@ public:
 
 extern Engine CEngine;
 
-extern inline int moveIsTactical(uint32 m);
+extern inline bool moveIsTactical(uint32 m);
 extern inline int historyIndex(uint32 side, uint32 move);

@@ -33,7 +33,7 @@ struct eval_info_t {
     int phase;
     int MLindex[2];
     int flags;
-    int queening;
+    bool queening;
     uint8 endFlags[2];
     PawnEntry* pawn_entry;
 };

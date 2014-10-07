@@ -17,7 +17,7 @@
 #include "movepicker.h"
 #include "search.h"
 
-extern int moveIsTactical(uint32 m);
+extern bool moveIsTactical(uint32 m);
 extern int historyIndex(uint32 side, uint32 move);
 
 void sortInit(const position_t& pos, movelist_t *mvlist, uint64 pinned, uint32 hashmove, int scout, int eval, int depth, int type, Thread& sthread) {
@@ -65,7 +65,7 @@ bool moveIsPassedPawn(const position_t& pos, uint32 move) {
     return false;
 }
 
-uint32 captureIsGood(const position_t& pos, const basic_move_t m) {
+bool captureIsGood(const position_t& pos, const basic_move_t m) {
     uint32 prom = movePromote(m);
     uint32 capt = moveCapture(m);
     uint32 pc = movePiece(m);

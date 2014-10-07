@@ -722,7 +722,7 @@ void genQChecks(const position_t& pos, movelist_t *mvlist) {
 /* this determines if a not necessarily pseudo move is legal or not,
 this must not be called when the position is in check,  */
 //SAM consider rewriting to ensure no crash, but not really check legality well
-uint32 genMoveIfLegal(const position_t& pos, uint32 move, uint64 pinned) {
+bool genMoveIfLegal(const position_t& pos, uint32 move, uint64 pinned) {
     int from, to, pc, capt, prom, me, opp;
     int inc, delta;
     uint64 occupied;

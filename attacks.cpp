@@ -41,7 +41,7 @@ uint64 queenAttacksBB(uint32 from, uint64 occ) {
 /* this is the attack routine, capable of multiple targets,
 can be used to determine if the bits on the 64 bit parameter
 is being attacked by the side color */
-uint32 isAtt(const position_t& pos, uint32 color, uint64 target) {
+bool isAtt(const position_t& pos, uint32 color, uint64 target) {
     int from;
 
     ASSERT(target);
@@ -85,32 +85,32 @@ bool kingIsInCheck(const position_t& pos) {
     //    return isAtt(pos, pos.side^1, pos.kings & pos.color[pos.side]);
 }
 /* checks if the move attacks the target */
-uint32 isMoveDefence(const position_t& pos, uint32 move, uint64 target) {
+bool isMoveDefence(const position_t& pos, uint32 move, uint64 target) {
     int from, to, piece;//, sq, dir;
 
     if (!target) return 0;
     from = moveFrom(move);
-    if (BitMask[from] & target) return 1;
+    if (BitMask[from] & target) return true;
     to = moveTo(move);
     piece = pos.pieces[from];
     switch (piece) {
     case PAWN:
-        if (PawnCaps[to][pos.side] & target) return 1;
+        if (PawnCaps[to][pos.side] & target) return true;
         break;
     case KNIGHT:
-        if (KnightMoves[to] & target) return 1;
+        if (KnightMoves[to] & target) return true;
         break;
     case BISHOP:
-        if (bishopAttacksBB(to, pos.occupied&~BitMask[from]) & target) return 1;
+        if (bishopAttacksBB(to, pos.occupied&~BitMask[from]) & target) return true;
         break;
     case ROOK:
-        if (rookAttacksBB(to, pos.occupied&~BitMask[from]) & target) return 1;
+        if (rookAttacksBB(to, pos.occupied&~BitMask[from]) & target) return true;
         break;
     case QUEEN:
-        if (queenAttacksBB(to, pos.occupied&~BitMask[from]) & target) return 1;
+        if (queenAttacksBB(to, pos.occupied&~BitMask[from]) & target) return true;
         break;
     }
-    return 0;
+    return false;
 }
 /* this returns the pinned pieces to the King of the side Color */
 uint64 pinnedPieces(const position_t& pos, uint32 c) {
@@ -164,7 +164,7 @@ uint64 discoveredCheckCandidates(const position_t& pos, uint32 c) {
 
 /* this determines if a pseudo-legal move is legal without executing
 makeMove */
-uint32 moveIsLegal(const position_t& pos, uint32 move, uint64 pinned, uint32 incheck) {
+bool moveIsLegal(const position_t& pos, uint32 move, uint64 pinned, bool incheck) {
     int us, them, ksq, from, to, capsq;
     uint64 b;
 
