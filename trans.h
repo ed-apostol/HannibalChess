@@ -102,7 +102,6 @@ private:
     uint8 mAge;
 };
 
-class TranspositionTable;
 class PvHashTable : public BaseHashTable<PvHashEntry> {
 public:
     enum {

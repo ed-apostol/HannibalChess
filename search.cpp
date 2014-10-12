@@ -29,7 +29,7 @@ Engine CEngine;
 
 bool moveIsTactical(uint32 m) { // TODO
     ASSERT(moveIsOk(m));
-    return (m & 0x01fe0000UL);
+    return bool(m & 0x01fe0000UL);
 }
 
 int historyIndex(uint32 side, uint32 move) { // TODO
@@ -456,7 +456,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 }
             }
         }
-        if (/*!inAllNode(nt) && !inCheck && */ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8)) { // singular extension
+        if (/*!inAllNode(nt) && !inCheck && */ ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8)) { // singular extension
             int newdepth = depth / 2;
             if (ss.hashDepth >= newdepth) {
                 int targetScore = ss.evalvalue - EXPLORE_CUTOFF;

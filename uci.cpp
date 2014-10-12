@@ -27,7 +27,7 @@
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
 const std::string Interface::year = "2014";
-const std::string Interface::version = "1.5x8";
+const std::string Interface::version = "1.5x9";
 const std::string Interface::arch = "x64";
 
 static const int MinHash = 1;
