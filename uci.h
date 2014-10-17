@@ -94,6 +94,8 @@ private:
     void PrintUCIOptions(UCIOptions& uci_opt);
     void InitUCIOptions(UCIOptions& uci_opt);
 
+    void CheckSpeedup(std::istringstream& stream);
+
     static const std::string name;
     static const std::string author;
     static const std::string year;
