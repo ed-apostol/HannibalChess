@@ -383,7 +383,6 @@ void Interface::NewGame() {
 void Interface::CheckSpeedup(std::istringstream& stream) {
 
     const int NUMPOS = 5;
-    const int MAXTHREADS = 64;
     std::string fenPos[NUMPOS] = {
         "r3k2r/pbpnqp2/1p1ppn1p/6p1/2PP4/2PBPNB1/P4PPP/R2Q1RK1 w kq - 2 12",
         "2kr3r/pbpn1pq1/1p3n2/3p1R2/3P3p/2P2Q2/P1BN2PP/R3B2K w - - 4 22",
@@ -391,19 +390,16 @@ void Interface::CheckSpeedup(std::istringstream& stream) {
         "1r2r2k/1p4qp/p3bp2/4p2R/n3P3/2PB4/2PB1QPK/1R6 w - - 1 32",
         "1b3r1k/rb1q3p/pp2pppP/3n1n2/1P2N3/P2B1NPQ/1B3P2/2R1R1K1 b - - 1 32"
     };
-    double timeSpeedupSum[MAXTHREADS];
-    double nodesSpeedupSum[MAXTHREADS];
+    double timeSpeedupSumBase = 0.0;
+    double nodesSpeedupSumBase = 0.0;
+    double timeSpeedupSumMeas = 0.0;
+    double nodesSpeedupSumMeas = 0.0;
     int depth = 12;
     int threads = 1;
     std::istringstream streamcmd;
 
     stream >> threads;
     stream >> depth;
-
-    for (int j = 0; j < MAXTHREADS; ++j) {
-        timeSpeedupSum[j] = 0.0;
-        nodesSpeedupSum[j] = 0.0;
-    }
 
     for (int i = 0; i < NUMPOS; ++i) {
         streamcmd = std::istringstream("name Threads value 1\n");
@@ -425,42 +421,39 @@ void Interface::CheckSpeedup(std::istringstream& stream) {
         int64 spentTime1 = getTime() - startTime;
         uint64 nodes1 = ThreadsMgr.ComputeNodes() / spentTime1;
         double timeSpeedUp = (double)spentTime1 / 1000.0;
-        timeSpeedupSum[0] += timeSpeedUp;
+        timeSpeedupSumBase += timeSpeedUp;
         double nodesSpeedup = (double)nodes1;
-        nodesSpeedupSum[0] += nodesSpeedup;
+        nodesSpeedupSumBase += nodesSpeedup;
 
         LogAndPrintOutput() << "\nBase: " << std::to_string(timeSpeedUp) << "s " << std::to_string(nodes1) << "knps\n";
 
-        for (int j = 2; j <= threads; j += 2) {
-            streamcmd = std::istringstream("name Threads value " + std::to_string(j) + '\n');
-            SetOption(streamcmd);
-            NewGame();
+        streamcmd = std::istringstream("name Threads value " + std::to_string(threads) + '\n');
+        SetOption(streamcmd);
+        NewGame();
 
-            streamcmd = std::istringstream("fen " + fenPos[i] + '\n');
-            Position(streamcmd);
+        streamcmd = std::istringstream("fen " + fenPos[i] + '\n');
+        Position(streamcmd);
 
-            startTime = getTime();
+        startTime = getTime();
 
-            streamcmd = std::istringstream("depth " + std::to_string(depth) + '\n');
-            Go(streamcmd);
+        streamcmd = std::istringstream("depth " + std::to_string(depth) + '\n');
+        Go(streamcmd);
 
-            while (ThreadsMgr.StillThinking());
+        while (ThreadsMgr.StillThinking());
 
-            int64 spentTime = getTime() - startTime;
-            uint64 nodes = ThreadsMgr.ComputeNodes();
-            nodes /= spentTime;
-            timeSpeedUp = (double)spentTime1 / (double)spentTime;
-            timeSpeedupSum[j] += timeSpeedUp;
-            nodesSpeedup = (double)nodes / (double)nodes1;
-            nodesSpeedupSum[j] += nodesSpeedup;
-            LogAndPrintOutput() << "\nThread: " << std::to_string(j) << " time: " << std::to_string(timeSpeedUp) << " nodes: " << std::to_string(nodesSpeedup) << "\n";
-        }
+        int64 spentTime = getTime() - startTime;
+        uint64 nodes = ThreadsMgr.ComputeNodes();
+        nodes /= spentTime;
+        timeSpeedUp = (double)spentTime1 / (double)spentTime;
+        timeSpeedupSumMeas += timeSpeedUp;
+        nodesSpeedup = (double)nodes / (double)nodes1;
+        nodesSpeedupSumMeas += nodesSpeedup;
+        LogAndPrintOutput() << "\nThread: " << std::to_string(threads) << " time: " << std::to_string(timeSpeedUp) << " nodes: " << std::to_string(nodesSpeedup) << "\n";
     }
+
     LogAndPrintOutput() << "\n\n";
-    LogAndPrintOutput() << "\n\nAvg Base: " << std::to_string(timeSpeedupSum[0] / NUMPOS) << "s " << std::to_string(nodesSpeedupSum[0] / NUMPOS) << "knps\n";
-    for (int j = 2; j <= threads; j += 2) {
-        LogAndPrintOutput() << "Threads: " << std::to_string(j) << " time: " << std::to_string(timeSpeedupSum[j] / NUMPOS) << " nodes: " << std::to_string(nodesSpeedupSum[j] / NUMPOS) << "\n";
-    }
+    LogAndPrintOutput() << "\n\nAvg Base: " << std::to_string(timeSpeedupSumBase / NUMPOS) << "s " << std::to_string(nodesSpeedupSumBase / NUMPOS) << "knps\n";
+    LogAndPrintOutput() << "Threads: " << std::to_string(threads) << " time: " << std::to_string(timeSpeedupSumMeas / NUMPOS) << " nodes: " << std::to_string(nodesSpeedupSumMeas / NUMPOS) << "\n";
     LogAndPrintOutput() << "\n\n";
 }
 
