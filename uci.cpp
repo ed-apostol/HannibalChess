@@ -381,79 +381,66 @@ void Interface::NewGame() {
 }
 
 void Interface::CheckSpeedup(std::istringstream& stream) {
-
-    const int NUMPOS = 5;
-    std::string fenPos[NUMPOS] = {
-        "r3k2r/pbpnqp2/1p1ppn1p/6p1/2PP4/2PBPNB1/P4PPP/R2Q1RK1 w kq - 2 12",
-        "2kr3r/pbpn1pq1/1p3n2/3p1R2/3P3p/2P2Q2/P1BN2PP/R3B2K w - - 4 22",
-        "r2n1rk1/1pq2ppp/p2pbn2/8/P3Pp2/2PBB2P/2PNQ1P1/1R3RK1 w - - 0 17",
-        "1r2r2k/1p4qp/p3bp2/4p2R/n3P3/2PB4/2PB1QPK/1R6 w - - 1 32",
-        "1b3r1k/rb1q3p/pp2pppP/3n1n2/1P2N3/P2B1NPQ/1B3P2/2R1R1K1 b - - 1 32"
-    };
-    double timeSpeedupSumBase = 0.0;
-    double nodesSpeedupSumBase = 0.0;
-    double timeSpeedupSumMeas = 0.0;
-    double nodesSpeedupSumMeas = 0.0;
-    int depth = 12;
-    int threads = 1;
     std::istringstream streamcmd;
+    std::vector<std::string> fenPos;
+    fenPos.push_back("r3k2r/pbpnqp2/1p1ppn1p/6p1/2PP4/2PBPNB1/P4PPP/R2Q1RK1 w kq - 2 12");
+    fenPos.push_back("2kr3r/pbpn1pq1/1p3n2/3p1R2/3P3p/2P2Q2/P1BN2PP/R3B2K w - - 4 22");
+    fenPos.push_back("r2n1rk1/1pq2ppp/p2pbn2/8/P3Pp2/2PBB2P/2PNQ1P1/1R3RK1 w - - 0 17");
+    fenPos.push_back("1r2r2k/1p4qp/p3bp2/4p2R/n3P3/2PB4/2PB1QPK/1R6 w - - 1 32");
+    fenPos.push_back("1b3r1k/rb1q3p/pp2pppP/3n1n2/1P2N3/P2B1NPQ/1B3P2/2R1R1K1 b - - 1 32");
+    std::vector<double> timeSpeedupSum(2, 0.0);
+    std::vector<double> nodesSpeedupSum(2, 0.0);
+    std::vector<int> threads(2, 1);
+    int depth = 12;
 
-    stream >> threads;
+    stream >> threads[1];
     stream >> depth;
 
-    for (int i = 0; i < NUMPOS; ++i) {
-        streamcmd = std::istringstream("name Threads value 1\n");
-        SetOption(streamcmd);
-        NewGame();
+    for (int idxpos = 0; idxpos < fenPos.size(); ++idxpos) {
+        LogAndPrintOutput() << "\n\nPos#" << idxpos + 1 << ": " << fenPos[idxpos];
+        uint64 nodes1 = 0;
+        uint64 spentTime1 = 0;
+        for (int idxthread = 0; idxthread < threads.size(); ++idxthread) {
+            streamcmd = std::istringstream("name Threads value " + std::to_string(threads[idxthread]));
+            SetOption(streamcmd);
+            NewGame();
 
-        LogAndPrintOutput() << "\n\nPos#" << i + 1 << ": " << fenPos[i];
+            streamcmd = std::istringstream("fen " + fenPos[idxpos]);
+            Position(streamcmd);
 
-        streamcmd = std::istringstream("fen " + fenPos[i] + '\n');
-        Position(streamcmd);
+            int64 startTime = getTime();
 
-        int64 startTime = getTime();
+            streamcmd = std::istringstream("depth " + std::to_string(depth));
+            Go(streamcmd);
 
-        streamcmd = std::istringstream("depth " + std::to_string(depth) + '\n');
-        Go(streamcmd);
+            while (ThreadsMgr.StillThinking());
 
-        while (ThreadsMgr.StillThinking());
+            double timeSpeedUp;
+            double nodesSpeedup;
+            int64 spentTime = getTime() - startTime;
+            uint64 nodes = ThreadsMgr.ComputeNodes() / spentTime;
 
-        int64 spentTime1 = getTime() - startTime;
-        uint64 nodes1 = ThreadsMgr.ComputeNodes() / spentTime1;
-        double timeSpeedUp = (double)spentTime1 / 1000.0;
-        timeSpeedupSumBase += timeSpeedUp;
-        double nodesSpeedup = (double)nodes1;
-        nodesSpeedupSumBase += nodesSpeedup;
-
-        LogAndPrintOutput() << "\nBase: " << std::to_string(timeSpeedUp) << "s " << std::to_string(nodes1) << "knps\n";
-
-        streamcmd = std::istringstream("name Threads value " + std::to_string(threads) + '\n');
-        SetOption(streamcmd);
-        NewGame();
-
-        streamcmd = std::istringstream("fen " + fenPos[i] + '\n');
-        Position(streamcmd);
-
-        startTime = getTime();
-
-        streamcmd = std::istringstream("depth " + std::to_string(depth) + '\n');
-        Go(streamcmd);
-
-        while (ThreadsMgr.StillThinking());
-
-        int64 spentTime = getTime() - startTime;
-        uint64 nodes = ThreadsMgr.ComputeNodes();
-        nodes /= spentTime;
-        timeSpeedUp = (double)spentTime1 / (double)spentTime;
-        timeSpeedupSumMeas += timeSpeedUp;
-        nodesSpeedup = (double)nodes / (double)nodes1;
-        nodesSpeedupSumMeas += nodesSpeedup;
-        LogAndPrintOutput() << "\nThread: " << std::to_string(threads) << " time: " << std::to_string(timeSpeedUp) << " nodes: " << std::to_string(nodesSpeedup) << "\n";
+            if (0 == idxthread) {
+                nodes1 = nodes;
+                spentTime1 = spentTime;
+                timeSpeedUp = (double)spentTime / 1000.0;
+                timeSpeedupSum[idxthread] += timeSpeedUp;
+                nodesSpeedup = (double)nodes;
+                nodesSpeedupSum[idxthread] += nodesSpeedup;
+                LogAndPrintOutput() << "\nBase: " << std::to_string(timeSpeedUp) << "s " << std::to_string(nodes) << "knps\n";
+            } else {
+                timeSpeedUp = (double)spentTime1 / (double)spentTime;
+                timeSpeedupSum[idxthread] += timeSpeedUp;
+                nodesSpeedup = (double)nodes / (double)nodes1;
+                nodesSpeedupSum[idxthread] += nodesSpeedup;
+                LogAndPrintOutput() << "\nThread: " << std::to_string(threads[idxthread]) << " time: " << std::to_string(timeSpeedUp) << " nodes: " << std::to_string(nodesSpeedup) << "\n";
+            }
+        }
     }
 
     LogAndPrintOutput() << "\n\n";
-    LogAndPrintOutput() << "\n\nAvg Base: " << std::to_string(timeSpeedupSumBase / NUMPOS) << "s " << std::to_string(nodesSpeedupSumBase / NUMPOS) << "knps\n";
-    LogAndPrintOutput() << "Threads: " << std::to_string(threads) << " time: " << std::to_string(timeSpeedupSumMeas / NUMPOS) << " nodes: " << std::to_string(nodesSpeedupSumMeas / NUMPOS) << "\n";
+    LogAndPrintOutput() << "\n\nAvg Base: " << std::to_string(timeSpeedupSum[0] / fenPos.size()) << "s " << std::to_string(nodesSpeedupSum[0] / fenPos.size()) << "knps\n";
+    LogAndPrintOutput() << "Threads: " << std::to_string(threads[1]) << " time: " << std::to_string(timeSpeedupSum[1] / fenPos.size()) << " nodes: " << std::to_string(nodesSpeedupSum[1] / fenPos.size()) << "\n";
     LogAndPrintOutput() << "\n\n";
 }
 
