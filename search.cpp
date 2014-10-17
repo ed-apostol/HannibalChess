@@ -601,8 +601,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         }
         if (inSplitPoint) sp->updatelock.unlock();
         if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < ThreadsMgr.mMaxActiveSplitsPerThread
-            && ThreadsMgr.ThreadNum() > 1 && depth >= ThreadsMgr.mMinSplitDepth
-            && (!inCutNode(nt) || (MoveGenPhase[ss.mvlist_phase] != PH_GOOD_CAPTURES && MoveGenPhase[ss.mvlist_phase] != PH_KILLER_MOVES))) {
+            && ThreadsMgr.ThreadNum() > 1 && depth >= ThreadsMgr.mMinSplitDepth) {
             ThreadsMgr.SearchSplitPoint(pos, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, sthread);
             if (sthread.stop) return 0;
             break;

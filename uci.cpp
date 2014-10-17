@@ -27,7 +27,7 @@
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
 const std::string Interface::year = "2014";
-const std::string Interface::version = "1.5x9";
+const std::string Interface::version = "1.5x10";
 const std::string Interface::arch = "x64";
 
 static const int MinHash = 1;
@@ -55,8 +55,8 @@ static const int MaxThreads = 64;
 static const int DefaultThreads = 6;
 
 static const int MinSplitDepth = 1;
-static const int MaxSplitDepth = 12;
-static const int DefaultSplitDepth = 4;
+static const int MaxSplitDepth = 9;
+static const int DefaultSplitDepth = 2;
 
 static const int MinActiveSplit = 1;
 static const int MaxActiveSplit = 8;
@@ -185,6 +185,8 @@ bool Interface::Input(std::istringstream& stream) {
         return false;
     } else if (command == "speedup") {
         CheckSpeedup(stream);
+    } else if (command == "split") {
+        CheckBestSplit(stream);
     } else {
         LogAndPrintError() << "Unknown UCI command: " << command;
     }
@@ -380,6 +382,8 @@ void Interface::NewGame() {
     CEngine.ClearPVTTHash();
 }
 
+Interface::~Interface() {}
+
 void Interface::CheckSpeedup(std::istringstream& stream) {
     std::istringstream streamcmd;
     std::vector<std::string> fenPos;
@@ -444,4 +448,68 @@ void Interface::CheckSpeedup(std::istringstream& stream) {
     LogAndPrintOutput() << "\n\n";
 }
 
-Interface::~Interface() {}
+void Interface::CheckBestSplit(std::istringstream& stream) {
+    std::istringstream streamcmd;
+    std::vector<std::string> fenPos;
+    fenPos.push_back("r3k2r/pbpnqp2/1p1ppn1p/6p1/2PP4/2PBPNB1/P4PPP/R2Q1RK1 w kq - 2 12");
+    fenPos.push_back("2kr3r/pbpn1pq1/1p3n2/3p1R2/3P3p/2P2Q2/P1BN2PP/R3B2K w - - 4 22");
+    fenPos.push_back("r2n1rk1/1pq2ppp/p2pbn2/8/P3Pp2/2PBB2P/2PNQ1P1/1R3RK1 w - - 0 17");
+    fenPos.push_back("1r2r2k/1p4qp/p3bp2/4p2R/n3P3/2PB4/2PB1QPK/1R6 w - - 1 32");
+    fenPos.push_back("1b3r1k/rb1q3p/pp2pppP/3n1n2/1P2N3/P2B1NPQ/1B3P2/2R1R1K1 b - - 1 32");
+    std::vector<double> timeSum;
+    std::vector<double> nodesSum;
+    std::vector<int> splits;
+    int threads = 1;
+    int depth = 12;
+
+    stream >> threads;
+    stream >> depth;
+
+    for (int i = MinSplitDepth; i <= MaxSplitDepth; ++i) splits.push_back(i);
+
+    timeSum.resize(splits.size(), 0.0);
+    nodesSum.resize(splits.size(), 0.0);
+
+    streamcmd = std::istringstream("name Threads value " + std::to_string(threads));
+    SetOption(streamcmd);
+
+    for (int idxpos = 0; idxpos < fenPos.size(); ++idxpos) {
+        LogAndPrintOutput() << "\n\nPos#" << idxpos + 1 << ": " << fenPos[idxpos];
+        for (int idxsplit = 0; idxsplit < splits.size(); ++idxsplit) {
+            streamcmd = std::istringstream("name Min Split Depth value " + std::to_string(splits[idxsplit]));
+            SetOption(streamcmd);
+            NewGame();
+
+            streamcmd = std::istringstream("fen " + fenPos[idxpos]);
+            Position(streamcmd);
+
+            int64 startTime = getTime();
+
+            streamcmd = std::istringstream("depth " + std::to_string(depth));
+            Go(streamcmd);
+
+            while (ThreadsMgr.StillThinking());
+
+            int64 spentTime = getTime() - startTime;
+            uint64 nodes = ThreadsMgr.ComputeNodes() / spentTime;
+
+            timeSum[idxsplit] += spentTime;
+            nodesSum[idxsplit] += nodes;
+
+            LogAndPrintOutput() << "\nPos#" << idxpos + 1 << " splitdepth: " << splits[idxsplit] << " time: " << (double)spentTime/1000.0 << "s knps: " << nodes << "\n";
+        }
+    }
+
+    int bestIdx = 0;
+    double bestSplit = double(nodesSum[bestIdx]) / double(timeSum[bestIdx]);
+    LogAndPrintOutput() << "\n\nAverage Statistics (threads: " << threads << " depth: " << depth << ")\n";
+    for (int i = 0; i < splits.size(); ++i) {
+        if (double(nodesSum[i]) / double(timeSum[i]) > bestSplit) {
+            bestSplit = double(nodesSum[i]) / double(timeSum[i]);
+            bestIdx = i;
+        }
+        LogAndPrintOutput() << "splitdepth: " << splits[i] << " time: " << timeSum[i] / (fenPos.size() * 1000.0) << "s knps: " << nodesSum[i] / fenPos.size() << " ratio: " << nodesSum[i] / timeSum[i];
+    }
+    LogAndPrintOutput() << "\n\nThe best splitdepth is:\n";
+    LogAndPrintOutput() << "splitdepth: " << splits[bestIdx] << " time: " << timeSum[bestIdx] / (fenPos.size() * 1000.0) << "s knps: " << nodesSum[bestIdx] / fenPos.size() << " ratio: " << nodesSum[bestIdx] / timeSum[bestIdx] << "\n";
+}

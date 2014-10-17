@@ -95,6 +95,7 @@ private:
     void InitUCIOptions(UCIOptions& uci_opt);
 
     void CheckSpeedup(std::istringstream& stream);
+    void CheckBestSplit(std::istringstream& stream);
 
     static const std::string name;
     static const std::string author;
