@@ -636,18 +636,18 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 sthread.ts[pos.ply].killer1 = ss.bestmove;
             }
         }
+        if (ss.bestmove != EMPTY) {
+            ssprev.counterMove = ss.bestmove;
+            if (inPvNode(nt)) mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
+        }
         if (ss.bestvalue >= beta) {
             ASSERT(valueIsOk(ss.bestvalue));
-            ssprev.counterMove = ss.bestmove;
             if (inCutNode(nt)) mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
             else mTransTable.StoreAllLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
         } else {
             ASSERT(valueIsOk(bestvalue));
-            if (inPvNode(nt) && ss.bestmove != EMPTY) {
-                ssprev.counterMove = ss.bestmove;
-                mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
-                mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
-            } else if (inCutNode(nt)) mTransTable.StoreCutUpper(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
+            if (inPvNode(nt) && ss.bestmove != EMPTY) mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
+            else if (inCutNode(nt)) mTransTable.StoreCutUpper(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
             else mTransTable.StoreUpper(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
         }
     }
@@ -875,7 +875,8 @@ void Engine::getBestMove(Thread& sthread) {
 
                 if (!info.stop_search || info.best_value != -INF) {
                     if (info.best_value <= alpha || info.best_value >= beta) {
-                        search->extractPvMovesFromHash2(rootpos, info.rootPV, ss.counterMove);
+                        //search->extractPvMovesFromHash2(rootpos, info.rootPV, ss.counterMove);
+                        search->extractPvMovesFromHash(rootpos, info.rootPV, ss.counterMove);
                     } else {
                         search->extractPvMovesFromHash(rootpos, info.rootPV, ss.counterMove);
                         search->repopulateHash(rootpos, info.rootPV);

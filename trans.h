@@ -102,7 +102,7 @@ private:
     uint8 mAge;
 };
 
-class PvHashTable : public BaseHashTable<PvHashEntry> {
+class PvHashTable : public BaseHashTable<PvHashEntry> { // TODO: make bucket size const inside this class
 public:
     enum {
         DATESIZE = 16
@@ -142,7 +142,7 @@ struct PawnEntry {
     int8 qshelter[2];
 };
 
-class PawnHashTable : public BaseHashTable<PawnEntry> {};
+class PawnHashTable : public BaseHashTable<PawnEntry> {}; // TODO: make bucket size const inside this class
 
 struct EvalEntry {
     EvalEntry() :
@@ -154,7 +154,7 @@ struct EvalEntry {
     int16 pessimism;
 };
 
-class EvalHashTable : public BaseHashTable<EvalEntry> {};
+class EvalHashTable : public BaseHashTable<EvalEntry> {}; // TODO: make bucket size const inside this class
 
 struct TransEntry {
 public:
@@ -233,7 +233,7 @@ private:
     uint8 mLowerDepth;
 };
 
-class TranspositionTable : public BaseHashTable<TransEntry> {
+class TranspositionTable : public BaseHashTable<TransEntry> { // TODO: make bucket size const inside this class
 public:
     enum {
         DATESIZE = 16

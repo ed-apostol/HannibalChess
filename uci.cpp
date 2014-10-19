@@ -27,7 +27,7 @@
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
 const std::string Interface::year = "2014";
-const std::string Interface::version = "1.5x10";
+const std::string Interface::version = "1.5x11";
 const std::string Interface::arch = "x64";
 
 static const int MinHash = 1;
@@ -54,9 +54,9 @@ static const int MinThreads = 1;
 static const int MaxThreads = 64;
 static const int DefaultThreads = 6;
 
-static const int MinSplitDepth = 1;
-static const int MaxSplitDepth = 9;
-static const int DefaultSplitDepth = 2;
+static const int MinSplitDepth = 2;
+static const int MaxSplitDepth = 8;
+static const int DefaultSplitDepth = 4;
 
 static const int MinActiveSplit = 1;
 static const int MaxActiveSplit = 8;
@@ -140,7 +140,7 @@ Interface::Interface() {
     ThreadsMgr.InitVars();
     ThreadsMgr.SetNumThreads(UCIOptionsMap["Threads"].GetInt());
     CEngine.InitTTHash(UCIOptionsMap["Hash"].GetInt(), 4);
-    CEngine.InitPVTTHash(1, 8);
+    CEngine.InitPVTTHash(1, 4);
 
     initArr();
     initPST();
