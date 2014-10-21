@@ -299,17 +299,12 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
             score = -qSearch<inPv>(pos, -beta, -alpha, newdepth, ss, sthread);
             unmakeMove(pos, undo);
         }
-        if (sthread.stop) return ss.bestvalue;
+        if (sthread.stop) return 0;
         if (score > ss.bestvalue) {
             ss.bestvalue = score;
             if (score > alpha) {
                 ss.bestmove = move->m;
-                if (score >= beta) {
-                    mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
-                    ASSERT(valueIsOk(ss.bestvalue));
-                    ssprev.counterMove = ss.bestmove;
-                    return ss.bestvalue;
-                }
+                if (score >= beta) break;
                 alpha = score;
             }
         }
@@ -322,11 +317,16 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
 
     ASSERT(bestvalue != -INF);
 
-    if (inPv && ss.bestmove != EMPTY) {
+    if (ss.bestmove != EMPTY) {
         ssprev.counterMove = ss.bestmove;
-        mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
-        mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
-    } else mTransTable.StoreUpper(pos.posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos.ply));
+        if (inPv) mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
+    }
+    if (ss.bestvalue >= beta) {
+        mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
+    } else {
+        if (inPv && ss.bestmove != EMPTY) mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
+        else mTransTable.StoreUpper(pos.posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos.ply));
+    }
 
     ASSERT(valueIsOk(ss.bestvalue));
 
@@ -641,11 +641,9 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             if (inPvNode(nt)) mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
         }
         if (ss.bestvalue >= beta) {
-            ASSERT(valueIsOk(ss.bestvalue));
             if (inCutNode(nt)) mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
             else mTransTable.StoreAllLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
         } else {
-            ASSERT(valueIsOk(bestvalue));
             if (inPvNode(nt) && ss.bestmove != EMPTY) mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
             else if (inCutNode(nt)) mTransTable.StoreCutUpper(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
             else mTransTable.StoreUpper(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
@@ -875,8 +873,7 @@ void Engine::getBestMove(Thread& sthread) {
 
                 if (!info.stop_search || info.best_value != -INF) {
                     if (info.best_value <= alpha || info.best_value >= beta) {
-                        //search->extractPvMovesFromHash2(rootpos, info.rootPV, ss.counterMove);
-                        search->extractPvMovesFromHash(rootpos, info.rootPV, ss.counterMove);
+                        search->extractPvMovesFromHash2(rootpos, info.rootPV, ss.counterMove);
                     } else {
                         search->extractPvMovesFromHash(rootpos, info.rootPV, ss.counterMove);
                         search->repopulateHash(rootpos, info.rootPV);
