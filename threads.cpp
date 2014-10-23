@@ -21,6 +21,8 @@ ThreadsManager ThreadsMgr;
 
 void ThreadsManager::StartThinking() {
     mThinking = true;
+    nodes_since_poll = 0;
+    nodes_between_polls = 8192;
     ThreadFromIdx(0).TriggerCondition();
 }
 

@@ -140,8 +140,6 @@ public:
     void Init() {
         ThreadBase::Init();
         nodes = 0;
-        nodes_since_poll = 0;
-        nodes_between_polls = 8192;
         numsplits = 1;
         numsplits2 = 1;
         workers2 = 0;
@@ -158,8 +156,6 @@ public:
     }
 
     uint64 nodes;
-    uint64 nodes_since_poll; // transfer to ThreadsManager
-    uint64 nodes_between_polls; // transfer to ThreadsManager
     uint64 numsplits; // DEBUG
     uint64 numsplits2; // DEBUG
     uint64 workers2; // DEBUG
@@ -223,6 +219,9 @@ public:
 
     int mMinSplitDepth;
     int mMaxActiveSplitsPerThread;
+
+    uint64 nodes_since_poll;
+    uint64 nodes_between_polls;
 private:
     std::vector<Thread*> mThreads;
     volatile bool mThinking;

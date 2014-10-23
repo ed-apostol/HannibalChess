@@ -92,12 +92,11 @@ void Search::initNode(Thread& sthread) {
         return;
     }
 
-    //sthread.nodes++;
-    if (sthread.nodes >= mInfo.node_limit && mInfo.node_is_limited) {
+    if (mInfo.node_is_limited && ThreadsMgr.ComputeNodes() >= mInfo.node_limit) {
         stopSearch();
     }
-    if (sthread.thread_id == 0 && ++sthread.nodes_since_poll >= sthread.nodes_between_polls) {
-        sthread.nodes_since_poll = 0;
+    if (sthread.thread_id == 0 && ++ThreadsMgr.nodes_since_poll >= ThreadsMgr.nodes_between_polls) {
+        ThreadsMgr.nodes_since_poll = 0;
         time2 = getTime();
         if (time2 - mInfo.last_time > 1000) {
             int64 time = time2 - mInfo.start_time;
@@ -227,8 +226,6 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     int pes = 0;
     SearchStack ss;
 
-    ASSERT(valueIsOk(alpha));
-    ASSERT(valueIsOk(beta));
     ASSERT(alpha < beta);
     ASSERT(pos.ply > 0); // for ssprev above
 
@@ -314,9 +311,6 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
         mTransTable.StoreNoMoves(pos.posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos.ply));
         return ss.bestvalue;
     }
-
-    ASSERT(bestvalue != -INF);
-
     if (ss.bestmove != EMPTY) {
         ssprev.counterMove = ss.bestmove;
         if (inPv) mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
@@ -327,9 +321,6 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
         if (inPv && ss.bestmove != EMPTY) mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
         else mTransTable.StoreUpper(pos.posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos.ply));
     }
-
-    ASSERT(valueIsOk(ss.bestvalue));
-
     return ss.bestvalue;
 }
 
@@ -350,8 +341,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     SplitPoint* sp = NULL;
     SearchStack ss;
 
-    ASSERT(valueIsOk(alpha));
-    ASSERT(valueIsOk(beta));
     ASSERT(alpha < beta);
     ASSERT(depth >= 1);
 
@@ -649,7 +638,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             else mTransTable.StoreUpper(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
         }
     }
-    ASSERT(valueIsOk(ss.bestvalue));
     return ss.bestvalue;
 }
 
@@ -714,43 +702,41 @@ void Search::timeManagement(int depth) {
     static const int CHANGE_TIME_BONUS = 50; //what percentage of alloc to increase if the last move is a change move
     
     if (mInfo.best_value > INF - MAXPLY) mInfo.mate_found++;
-    if (mInfo.thinking_status == THINKING) {
-        if (mInfo.time_is_limited) {
-            int64 time = getTime();
-            bool gettingWorse = (mInfo.best_value + WORSE_SCORE_CUTOFF) <= mInfo.last_value;
+    if (mInfo.thinking_status == THINKING && mInfo.time_is_limited) {
+        int64 time = getTime();
 
-            if (mInfo.legalmoves == 1 || mInfo.mate_found >= 3) {
-                if (depth >= 8) {
-                    stopSearch();
-                    LogInfo() << "info string Aborting search: legalmove/mate found depth >= 8";
-                    return;
-                }
+        if (mInfo.legalmoves == 1 || mInfo.mate_found >= 3) {
+            if (depth >= 8) {
+                stopSearch();
+                LogInfo() << "info string Aborting search: legalmove/mate found depth >= 8";
+                return;
             }
-            if ((time - mInfo.start_time) > ((mInfo.time_limit_max - mInfo.start_time) * 60) / 100) {
-                int64 addTime = 0;
-                if (gettingWorse) {
-                    int amountWorse = mInfo.last_value - mInfo.best_value;
-                    addTime += ((amountWorse - (WORSE_SCORE_CUTOFF - 10)) * mInfo.alloc_time) / WORSE_TIME_BONUS;
-                    LogInfo() << "info string Extending time (root gettingWorse): " << addTime;
-                }
-                if (mInfo.change) {
-                    addTime += (mInfo.alloc_time * CHANGE_TIME_BONUS) / 100;
-                }
-                if (addTime > 0) {
-                    mInfo.time_limit_max += addTime;
-                    if (mInfo.time_limit_max > mInfo.time_limit_abs)
-                        mInfo.time_limit_max = mInfo.time_limit_abs;
-                } else { // if we are unlikely to get deeper, save our time
-                    stopSearch();
-                    LogInfo() << "info string Aborting search: root time limit 1: " << time - mInfo.start_time;
-                    return;
-                }
+        }
+        if ((time - mInfo.start_time) > ((mInfo.time_limit_max - mInfo.start_time) * 60) / 100) {
+            int64 addTime = 0;
+            if ((mInfo.best_value + WORSE_SCORE_CUTOFF) <= mInfo.last_value) {
+                int amountWorse = mInfo.last_value - mInfo.best_value;
+                addTime += ((amountWorse - (WORSE_SCORE_CUTOFF - 10)) * mInfo.alloc_time) / WORSE_TIME_BONUS;
+                LogInfo() << "info string Extending time (root gettingWorse): " << addTime;
+            }
+            if (mInfo.change) {
+                addTime += (mInfo.alloc_time * CHANGE_TIME_BONUS) / 100;
+                LogInfo() << "info string Extending time (root change): " << addTime;
+            }
+            if (addTime > 0) {
+                mInfo.time_limit_max += addTime;
+                if (mInfo.time_limit_max > mInfo.time_limit_abs)
+                    mInfo.time_limit_max = mInfo.time_limit_abs;
+            } else { // if we are unlikely to get deeper, save our time
+                stopSearch();
+                LogInfo() << "info string Aborting search: root time limit 1: " << time - mInfo.start_time;
+                return;
             }
         }
     }
     if (mInfo.depth_is_limited && depth >= mInfo.depth_limit) {
         stopSearch();
-        LogInfo() << "info string Aborting search: depth limit 1";
+        LogInfo() << "info string Aborting search: depth limit: " << depth;
         return;
     }
 }
@@ -830,7 +816,7 @@ void Engine::getBestMove(Thread& sthread) {
             info.bestmove = entry->pvMove();
             info.best_value = entry->pvScore();
             search->extractPvMovesFromHash(rootpos, info.rootPV, entry->pvMove());
-            if (info.rootPV.length > 1) info.pondermove = info.rootPV.moves[1];
+            if (info.rootPV.length > 3) info.pondermove = info.rootPV.moves[3];
             else info.pondermove = 0;
             search->displayPV(&info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
             stopSearch();
