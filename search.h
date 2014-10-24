@@ -98,11 +98,11 @@ public:
     void getBestMove(Thread& sthread);
     void stopSearch();
 
-    void InitTTHash(int size, int bucket) {
-        transtable.Init(size, bucket);
+    void InitTTHash(int size) {
+        transtable.Init(size, transtable.BUCKET);
     }
-    void InitPVTTHash(int size, int bucket) {
-        pvhashtable.Init(size, bucket);
+    void InitPVTTHash(int size) {
+        pvhashtable.Init(size, pvhashtable.BUCKET);
     }
     void ClearTTHash() {
         transtable.Clear();

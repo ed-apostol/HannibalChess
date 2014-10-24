@@ -190,11 +190,11 @@ public:
         return mThreads.size();
     }
 
-    void InitPawnHash(int size, int bucket) {
-        for (Thread* th : mThreads) th->pt.Init(size, bucket);
+    void InitPawnHash(int size) {
+        for (Thread* th : mThreads) th->pt.Init(size, th->pt.BUCKET);
     }
-    void InitEvalHash(int size, int bucket) {
-        for (Thread* th : mThreads) th->et.Init(size, bucket);
+    void InitEvalHash(int size) {
+        for (Thread* th : mThreads) th->et.Init(size, th->et.BUCKET);
     }
     void ClearPawnHash() {
         for (Thread* th : mThreads) th->pt.Clear();

@@ -75,13 +75,13 @@ void on_clear_hash(const Options& o) {
     CEngine.ClearPVTTHash();
 }
 void on_hash(const Options& o) {
-    CEngine.InitTTHash(o.GetInt(), 4);
+    CEngine.InitTTHash(o.GetInt());
 }
 void on_pawn_hash(const Options& o) {
-    ThreadsMgr.InitPawnHash(o.GetInt(), 1);
+    ThreadsMgr.InitPawnHash(o.GetInt());
 }
 void on_eval_hash(const Options& o) {
-    ThreadsMgr.InitEvalHash(o.GetInt(), 1);
+    ThreadsMgr.InitEvalHash(o.GetInt());
 }
 void on_multi_pv(const Options& o) {
     CEngine.info.multipv = o.GetInt();
@@ -139,8 +139,8 @@ Interface::Interface() {
     InitUCIOptions(UCIOptionsMap);
     ThreadsMgr.InitVars();
     ThreadsMgr.SetNumThreads(UCIOptionsMap["Threads"].GetInt());
-    CEngine.InitTTHash(UCIOptionsMap["Hash"].GetInt(), 4);
-    CEngine.InitPVTTHash(1, 4);
+    CEngine.InitTTHash(UCIOptionsMap["Hash"].GetInt());
+    CEngine.InitPVTTHash(1);
 
     initArr();
     initPST();

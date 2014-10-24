@@ -130,8 +130,8 @@ void ThreadsManager::SetNumThreads(int num) {
         delete mThreads.back();
         mThreads.pop_back();
     }
-    InitPawnHash(UCIOptionsMap["Pawn Hash"].GetInt(), 1);
-    InitEvalHash(UCIOptionsMap["Eval Cache"].GetInt(), 1);
+    InitPawnHash(UCIOptionsMap["Pawn Hash"].GetInt());
+    InitEvalHash(UCIOptionsMap["Eval Cache"].GetInt());
 }
 
 void ThreadsManager::SearchSplitPoint(const position_t& pos, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread) {

@@ -102,11 +102,11 @@ private:
     uint8 mAge;
 };
 
-class PvHashTable : public BaseHashTable<PvHashEntry> { // TODO: make bucket size const inside this class
+class PvHashTable : public BaseHashTable<PvHashEntry> {
 public:
-    enum {
-        DATESIZE = 16
-    };
+    static const int DATESIZE = 32;
+    static const int BUCKET = 8;
+
     virtual void Clear();
     void NewDate(int date);
     void pvStore(uint64 hash, basic_move_t move, uint8 depth, int16 value);
@@ -142,7 +142,10 @@ struct PawnEntry {
     int8 qshelter[2];
 };
 
-class PawnHashTable : public BaseHashTable<PawnEntry> {}; // TODO: make bucket size const inside this class
+class PawnHashTable : public BaseHashTable<PawnEntry> {
+public:
+    static const int BUCKET = 1;
+};
 
 struct EvalEntry {
     EvalEntry() :
@@ -154,7 +157,10 @@ struct EvalEntry {
     int16 pessimism;
 };
 
-class EvalHashTable : public BaseHashTable<EvalEntry> {}; // TODO: make bucket size const inside this class
+class EvalHashTable : public BaseHashTable<EvalEntry> {
+public:
+    static const int BUCKET = 1;
+};
 
 struct TransEntry {
 public:
@@ -233,11 +239,11 @@ private:
     uint8 mLowerDepth;
 };
 
-class TranspositionTable : public BaseHashTable<TransEntry> { // TODO: make bucket size const inside this class
+class TranspositionTable : public BaseHashTable<TransEntry> {
 public:
-    enum {
-        DATESIZE = 16
-    };
+    static const int DATESIZE = 32;
+    static const int BUCKET = 4;
+
     virtual void Clear();
     void NewDate(int date);
     void StoreLower(uint64 hash, basic_move_t move, int depth, int value);
