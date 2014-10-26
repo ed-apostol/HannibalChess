@@ -500,26 +500,30 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 newdepth = depth - 1;
                 //only reduce or prune some types of moves
                 int partialReduction = 0;
-                if (MoveGenPhase[ss.mvlist_phase] == PH_QUIET_MOVES && !ss.moveGivesCheck) { //never happens when in check
-                    bool goodMove = (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsPassedPawn(pos, move->m);
-                    if (!inRoot && !inPvNode(nt)) {
-                        if (ss.playedMoves > lateMove && !goodMove) continue;
+                bool pruneOrReduce = ((move->m != ss.mvlist->transmove)
+                    && (move->m != ss.mvlist->killer1)
+                    && (move->m != ss.mvlist->killer2)
+                    && !moveIsTactical(move->m)
+                    && !ss.moveGivesCheck);
+                if (pruneOrReduce) {
+                    bool skipFutility = (inCheck || (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsPassedPawn(pos, move->m));
+                    if (!inRoot && !inPvNode(nt) && !skipFutility) {
+                        if (ss.playedMoves > lateMove) continue;
                         int predictedDepth = MAX(0, newdepth - ReductionTable[1][MIN(depth, 63)][MIN(ss.playedMoves, 63)]);
                         int scoreAprox = ss.evalvalue + FutilityMarginTable[MIN(predictedDepth, MAX_FUT_MARGIN)][MIN(ss.playedMoves, 63)]
                             + sthread.evalgains[historyIndex(pos.side, move->m)];
-
                         if (scoreAprox < beta) {
-                            if (predictedDepth < 8 && !goodMove) continue;
+                            if (predictedDepth < 8) continue;
                             partialReduction++;
                         }
                         if (swap(pos, move->m) < 0) {
-                            if (predictedDepth < 2 && !goodMove) continue;
+                            if (predictedDepth < 2) continue;
                             partialReduction++;
                         }
                     }
                     if (depth >= MIN_REDUCTION_DEPTH) {
                         int reduction = ReductionTable[(inPvNode(nt) ? 0 : 1)][MIN(depth, 63)][MIN(ss.playedMoves, 63)];
-                        partialReduction += goodMove ? (reduction + 1) / 2 : reduction;
+                        partialReduction += skipFutility ? (reduction + 1) / 2 : reduction;
                     }
                 }
                 int newdepthclone = newdepth - partialReduction;
