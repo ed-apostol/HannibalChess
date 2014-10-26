@@ -417,18 +417,10 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (sthread.stop) return 0;
                 if (score >= beta) {
                     if (depth >= 12) {
-                        score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, ssprev, sthread, CutNode);
+                        score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, ssprev, sthread, nt);
                         if (sthread.stop) return 0;
                     }
-                    if (score >= beta) {
-                        if (ss.hashMove == EMPTY) {
-                            if (inCutNode(nt)) mTransTable.StoreLower(pos.posStore.hash, EMPTY, depth, scoreToTrans(score, pos.ply));
-                            else mTransTable.StoreAllLower(pos.posStore.hash, EMPTY, depth, scoreToTrans(score, pos.ply));
-                        }
-                        return score;
-                    }
-                } else if (depth < 5 && ssprev.reducedMove && ss.threatMove != EMPTY && prevMoveAllowsThreat(pos, pos.posStore.lastmove, ss.threatMove)) {
-                    return alpha;
+                    if (score >= beta) return score;
                 }
             }
         }
@@ -521,7 +513,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                             partialReduction++;
                         }
                         if (swap(pos, move->m) < 0) {
-                            if (predictedDepth < 2) continue;
+                            if (predictedDepth < 2 && !goodMove) continue;
                             partialReduction++;
                         }
                     }

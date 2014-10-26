@@ -33,6 +33,7 @@ void ThreadsManager::IdleLoop(const int thread_id) {
         if (master_sp == NULL && sthread.doSleep) {
             sthread.SleepAndWaitForCondition();
             if (mThinking && thread_id == 0) {
+                LogInfo() << "IdleLoop: Main thread waking up to start searching!";
                 CEngine.getBestMove(sthread);
                 mThinking = false;
                 sthread.searching = false;
