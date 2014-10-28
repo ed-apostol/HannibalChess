@@ -19,14 +19,6 @@
 #include "material.h"
 #include "threads.h"
 
-// TODO
-
-//add pawn is piece attacking king if queen is, and detect checkmate threats
-// rewrite moves generated into move stack
-// try reduced double pawn values?
-// use ei->pawns
-// consider multiplying all the positional values by 32, and then not dividing by phase
-
 //some castling comments
 const int KSC[2] = {WCKS, BCKS};
 const int QSC[2] = {WCQS, BCQS};
@@ -39,9 +31,6 @@ const uint64 KCSQ[2] = {(0x0000000000000020ULL | 0x0000000000000040ULL), (0x2000
 const uint64 QCSQ[2] = {(0x0000000000000004ULL | 0x0000000000000008ULL), (0x0400000000000000ULL | 0x0800000000000000ULL)};
 const int KScastleTo[2] = {g1, g8};
 const int QScastleTo[2] = {c1, c8};
-
-//constants
-#define NUM_GENOMES 3
 
 #define STUCK_END 5 //5
 #define STUCK_BISHOP 10 //10
@@ -122,22 +111,7 @@ const int EndgameQueen7th = 20;
 // knight specific evaluation
 #define N_ONE_SIDE 20
 
-//pawn specific
-#define KAW1 10 // 8
-#define KAW2 7 // 4
-#define KAW3 2 // 2
-#define KAW4 2 // 1
-#define KAW5 1 // 1
-#define KAW6 0 // 0
-#define KAW7 0 // 0
-const int kingAttackWeakness[8] = {0,
-KAW1 + KAW2 + KAW3 + KAW4 + KAW5 + KAW6 + KAW7,
-KAW2 + KAW3 + KAW4 + KAW5 + KAW6 + KAW7,
-KAW3 + KAW4 + KAW5 + KAW6 + KAW7,
-KAW4 + KAW5 + KAW6 + KAW7,
-KAW5 + KAW6 + KAW7,
-KAW6 + KAW7,
-KAW7};
+const int kingAttackWeakness[8] = {0, 22, 12, 5, 3, 1, 0, 0};
 
 #define DOUBLED_O 2
 #define DOUBLED_E 4
@@ -160,14 +134,14 @@ KAW7};
 
 //passed pawns
 const int UnstoppablePassedPawn = 700;
-#define EndgamePassedMin 10 // maybe needs to be higher
-const int EndgamePassedMax = 70 - EndgamePassedMin;
-#define MidgamePassedMin 20
-const int MidgamePassedMax = 140 - MidgamePassedMin;
-#define MidgameCandidatePawnMin 10
-const int MidgameCandidatePawnMax = 100 - MidgameCandidatePawnMin;
-#define EndgameCandidatePawnMin 5
-const int EndgameCandidatePawnMax = 50 - EndgameCandidatePawnMin; //50 WEIRD to have this less than middle, perhaps takes up space
+const int EndgamePassedMin = 10;
+const int EndgamePassedMax = 60;
+const int MidgamePassedMin = 20;
+const int MidgamePassedMax = 120;
+const int MidgameCandidatePawnMin = 10;
+const int MidgameCandidatePawnMax = 90;
+const int EndgameCandidatePawnMin = 5;
+const int EndgameCandidatePawnMax = 45;
 const int ProtectedPasser = 10;
 const int DuoPawnPasser = 15;
 const int kingDistImp[8] = {0, 20, 40, 55, 65, 70, 70, 70}; //best if this cannot get higher than EndgamePassedMax
@@ -208,71 +182,11 @@ const int PawnAttackPower = 4; //4
 const int PieceAttackMulMid = 4; //5
 const int PieceAttackMulEnd = 3; //3
 
-#define TB1 8
-#define TB2 80
+const int ThreatBonus[] = { 0, 8, 88, 108, 128, 138, 148, 178, 188 };
 
-const int sbonus[8] = {0, 0, 0, 13, 34, 77, 128, 0};
-#define scale(smax,sr) ((((smax))*sbonus[sr]) / sbonus[6])
-
-void judgeTrapped(const position_t& pos, eval_info_t *ei, const int color) {
-    uint64 targets, safeMoves;
-    int targetSq;
-    int penalty;
-    const int enemy = color ^ 1;
-    uint64 safe = ~(ei->atkpawns[enemy] | pos.color[enemy]); // occupied assumes we can capture our way out of trouble in search
-    uint64 beware = pos.color[color] & bewareTrapped[color] & ~(pos.pawns | pos.kings); // added if not guarded 1a21
-    uint64 safer = (Rank4BB | Rank5BB | ei->atkall[color]);
-
-    if (!beware) return;
-    targets = pos.knights & beware;
-    while (targets) {
-        targetSq = popFirstBit(&targets);
-        safeMoves = (KnightMoves[targetSq]) &
-            (safe & (~ei->atkall[enemy] | ei->atkpawns[color] | ei->atkbishops[color] | ei->atkrooks[color] | ei->atkqueens[color] | ei->atkkings[color]));
-
-        if (!(escapeTrapped[color] & safeMoves)) {
-            penalty = (BitMask[targetSq] & safer) != 0 ? personality(thread).TrappedMoves[bitCnt(safeMoves)] / 2 : personality(thread).TrappedMoves[bitCnt(safeMoves)];
-            ei->mid_score[color] -= penalty;
-        }
-    }
-    targets = pos.bishops & beware;
-    while (targets) {
-        targetSq = popFirstBit(&targets);
-        safeMoves = (bishopAttacksBB(targetSq, pos.occupied)) &
-            (safe & (~ei->atkall[enemy] | ei->atkpawns[color] | ei->atkknights[color] | ei->atkrooks[color] | ei->atkqueens[color] | ei->atkkings[color]));
-
-        if (!(escapeTrapped[color] & safeMoves)) {
-            penalty = (BitMask[targetSq] & safer) != 0 ? personality(thread).TrappedMoves[bitCnt(safeMoves)] / 2 : personality(thread).TrappedMoves[bitCnt(safeMoves)];
-            ei->mid_score[color] -= penalty;
-        }
-    }
-    safe &= ~(ei->atkknights[enemy] | ei->atkbishops[enemy]);
-    targets = pos.rooks & beware;
-    while (targets) {
-        targetSq = popFirstBit(&targets);
-        safeMoves = (rookAttacksBB(targetSq, pos.occupied)) &
-            (safe & (~ei->atkall[enemy] | ei->atkpawns[color] | ei->atkbishops[color] | ei->atkknights[color] | ei->atkqueens[color] | ei->atkkings[color]));
-
-        if (!(escapeTrapped[color] & safeMoves)) {
-            penalty = personality(thread).TrappedMoves[bitCnt(safeMoves)] / 2; //trapped rooks often get the exchange anyway
-            ei->mid_score[color] -= penalty;
-        }
-    }
-
-    safe &= ~(ei->atkrooks[enemy]);
-    targets = pos.queens & beware;
-    while (targets) {
-        targetSq = popFirstBit(&targets);
-        if (DISTANCE(targetSq, pos.kpos[enemy]) > 2) {
-            safeMoves = (queenAttacksBB(targetSq, pos.occupied)) &
-                (safe & (~ei->atkall[enemy] | ei->atkpawns[color] | ei->atkbishops[color] | ei->atkrooks[color] | ei->atkknights[color] | ei->atkkings[color]));
-
-            if (!(escapeTrapped[color] & safeMoves)) {
-                penalty = personality(thread).TrappedMoves[bitCnt(safeMoves)] / 2; //trapped queens are still dangerous
-                ei->mid_score[color] -= penalty;
-            }
-        }
-    }
+inline int scale(int smax, int sr) {
+    static const int sbonus[8] = { 0, 0, 0, 13, 34, 77, 128, 0 };
+    return ((((smax))*sbonus[sr]) / sbonus[6]);
 }
 
 // this is only called when there are more than 1 queen for a side
@@ -534,7 +448,6 @@ void evalPieces(const position_t& pos, eval_info_t *ei, const int color) {
     ei->kingatkbishops[color] = 0;
     while (pc_bits) {
         from = popFirstBit(&pc_bits);
-
         temp64 = bishopAttacksBB(from, pos.occupied);
         katemp64 = bishopAttacksBB(from, pos.occupied & ~pos.queens);
         ei->kingatkbishops[color] |= katemp64;
@@ -652,7 +565,6 @@ void evalPieces(const position_t& pos, eval_info_t *ei, const int color) {
     ei->end_score[color] += threatScore * PieceAttackMulEnd;
 }
 
-const int ThreatBonus[9] = {0, TB1, TB1 + TB2, TB1 + TB2 + 20, TB1 + TB2 + 40, TB1 + TB2 + 50, TB1 + TB2 + 60, TB1 + TB2 + 20 + 70, TB1 + TB2 + 20 + 80}; //021713 because of upside
 void evalThreats(const position_t& pos, eval_info_t *ei, const int color, int *upside) {
     uint64 temp64, not_guarded, enemy_pcs;
     int temp1;
@@ -1064,7 +976,6 @@ int eval(const position_t& pos, int thread_id, int *pessimism) {
         if (ei.flags & ATTACK_KING[BLACK]) {
             evalKingAttacks(pos, &ei, BLACK, &upside[WHITE]);
         }
-        judgeTrapped(pos, &ei, WHITE);
     } else {
         if (blackPassed) evalPassedvsKing(pos, &ei, BLACK, blackPassed);
     }
@@ -1075,7 +986,6 @@ int eval(const position_t& pos, int thread_id, int *pessimism) {
         if (ei.flags & ATTACK_KING[WHITE]) { // attacking the white king
             evalKingAttacks(pos, &ei, WHITE, &upside[BLACK]);
         }
-        judgeTrapped(pos, &ei, BLACK);
     } else {
         if (whitePassed) evalPassedvsKing(pos, &ei, WHITE, whitePassed);
     }
