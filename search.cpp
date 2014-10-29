@@ -796,6 +796,7 @@ void Engine::getBestMove(Thread& sthread) {
 
     if (info.thinking_status == THINKING && UCIOptionsMap["OwnBook"].GetInt() && !anyRep(rootpos)) {
         if ((info.bestmove = PolyBook.getBookMove(rootpos)) != 0) {
+            stopSearch();
             sendBestMove();
             return;
         }
@@ -805,15 +806,16 @@ void Engine::getBestMove(Thread& sthread) {
         PvHashEntry *entry = pvhashtable.pvEntry(rootpos.posStore.hash);
         if (NULL == entry) break;
         if (info.thinking_status == THINKING
-            && info.rootPV.moves[1] == rootpos.posStore.lastmove
-            && info.rootPV.moves[2] == entry->pvMove()
-            && ((moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(entry->pvMove())))
-            || (PcValSEE[moveCapture(entry->pvMove())] > PcValSEE[movePiece(entry->pvMove())]))) {
+        && info.rootPV.moves[1] == rootpos.posStore.lastmove
+        && info.rootPV.moves[2] == entry->pvMove()
+        && genMoveIfLegal(rootpos, info.rootPV.moves[2], pinnedPieces(rootpos, rootpos.side))
+        && ((moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(entry->pvMove())))
+        || (PcValSEE[moveCapture(entry->pvMove())] > PcValSEE[movePiece(entry->pvMove())]))) {
             info.bestmove = entry->pvMove();
             info.best_value = entry->pvScore();
-            search->extractPvMovesFromHash(rootpos, info.rootPV, entry->pvMove());
             if (info.rootPV.length > 3) info.pondermove = info.rootPV.moves[3];
             else info.pondermove = 0;
+            search->extractPvMovesFromHash(rootpos, info.rootPV, entry->pvMove());
             search->displayPV(&info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
             stopSearch();
             sendBestMove();

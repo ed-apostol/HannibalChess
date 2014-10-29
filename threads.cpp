@@ -28,22 +28,22 @@ void ThreadsManager::StartThinking() {
 
 void ThreadsManager::IdleLoop(const int thread_id) {
     Thread& sthread = *mThreads[thread_id];
-    SplitPoint* master_sp = sthread.activeSplitPoint;
+    const SplitPoint* const master_sp = sthread.activeSplitPoint;
     while (!sthread.exit_flag) {
         if (master_sp == NULL && sthread.doSleep) {
-            sthread.SleepAndWaitForCondition();
-            if (mThinking && thread_id == 0) {
-                LogInfo() << "IdleLoop: Main thread waking up to start searching!";
-                CEngine.getBestMove(sthread);
-                mThinking = false;
-                sthread.searching = false;
-            }
+            sthread.SleepAndWaitForCondition();            
+        }
+        if (master_sp == NULL && thread_id == 0 && mThinking) {
+            LogInfo() << "IdleLoop: Main thread waking up to start searching!";
+            CEngine.getBestMove(sthread);
+            mThinking = false;
+            sthread.searching = false;
         }
         if (!mStopThreads && !sthread.searching) {
             GetWork(thread_id, master_sp);
         }
         if (!mStopThreads && sthread.searching) {
-            SplitPoint* sp = sthread.activeSplitPoint; // this is correctly located, don't move this, else bug
+            SplitPoint* const sp = sthread.activeSplitPoint; // this is correctly located, don't move this, else bug
             CEngine.searchFromIdleLoop(*sp, sthread);
             std::lock_guard<Spinlock> lck(sp->updatelock);
             sp->workersBitMask &= ~((uint64)1 << thread_id);
@@ -53,7 +53,7 @@ void ThreadsManager::IdleLoop(const int thread_id) {
     }
 }
 
-void ThreadsManager::GetWork(const int thread_id, SplitPoint* master_sp) {
+void ThreadsManager::GetWork(const int thread_id, const SplitPoint* master_sp) {
     int best_depth = 0;
     Thread* thread_to_help = NULL;
     SplitPoint* best_split_point = NULL;
