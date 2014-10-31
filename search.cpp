@@ -889,7 +889,6 @@ void Engine::getBestMove(Thread& sthread) {
     }
     if (!info.stop_search) {
         if ((info.depth_is_limited || info.time_is_limited) && info.thinking_status == THINKING) {
-            info.stop_search = true;;
             stopSearch();
             LogInfo() << "info string Aborting search: end of getBestMove: id = " << id << ", best_value = " << info.best_value << " sp = " << rootpos.sp << ", ply = " << rootpos.ply;
         } else {

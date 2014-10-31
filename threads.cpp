@@ -28,7 +28,7 @@ void ThreadsManager::StartThinking() {
 
 void ThreadsManager::IdleLoop(const int thread_id) {
     Thread& sthread = *mThreads[thread_id];
-    const SplitPoint* const master_sp = sthread.activeSplitPoint;
+    SplitPoint* const master_sp = sthread.activeSplitPoint;
     while (!sthread.exit_flag) {
         if (master_sp == NULL && sthread.doSleep) {
             sthread.SleepAndWaitForCondition();            
@@ -53,7 +53,7 @@ void ThreadsManager::IdleLoop(const int thread_id) {
     }
 }
 
-void ThreadsManager::GetWork(const int thread_id, const SplitPoint* master_sp) {
+void ThreadsManager::GetWork(const int thread_id, SplitPoint* const master_sp) {
     int best_depth = 0;
     Thread* thread_to_help = NULL;
     SplitPoint* best_split_point = NULL;
