@@ -174,7 +174,7 @@ public:
     ThreadsManager() : mThinking(false) {}
     void StartThinking();
     void IdleLoop(const int thread_id);
-    void GetWork(const int thread_id, SplitPoint* const master_sp);
+    void GetWork(Thread& sthread, SplitPoint* const master_sp);
     void SetAllThreadsToStop();
     void SetAllThreadsToSleep();
     void SetAllThreadsToWork();
