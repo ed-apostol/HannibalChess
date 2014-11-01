@@ -708,7 +708,7 @@ void Search::timeManagement(int depth) {
                 return;
             }
         }
-        if ((time - mInfo.start_time) > ((mInfo.time_limit_max - mInfo.start_time) * 60) / 100) {
+        if ((time - mInfo.start_time) > ((mInfo.time_limit_max - mInfo.start_time) * 75) / 100) {
             int64 addTime = 0;
             if ((mInfo.best_value + WORSE_SCORE_CUTOFF) <= mInfo.last_value) {
                 int amountWorse = mInfo.last_value - mInfo.best_value;
