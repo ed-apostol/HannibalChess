@@ -102,8 +102,7 @@ public:
         nativeThread.join();
     }
     virtual void Init() {
-        searching = false;
-        stop = false;
+        stop = true;
         exit_flag = false;
     }
     void SleepAndWaitForCondition() {
@@ -122,7 +121,6 @@ public:
     int thread_id;
     volatile bool stop;
     volatile bool doSleep;
-    volatile bool searching;
     volatile bool exit_flag;
 private:
     std::thread nativeThread;

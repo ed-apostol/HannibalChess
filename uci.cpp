@@ -137,8 +137,8 @@ Interface::Interface() {
     std::cout.setf(std::ios::unitbuf);
 
     InitUCIOptions(UCIOptionsMap);
-    ThreadsMgr.InitVars();
     ThreadsMgr.SetNumThreads(UCIOptionsMap["Threads"].GetInt());
+    ThreadsMgr.InitVars();
     CEngine.InitTTHash(UCIOptionsMap["Hash"].GetInt());
     CEngine.InitPVTTHash(1);
 

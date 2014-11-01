@@ -34,20 +34,19 @@ void ThreadsManager::IdleLoop(const int thread_id) {
             sthread.SleepAndWaitForCondition();            
         }
         if (master_sp == NULL && sthread.thread_id == 0 && mThinking) {
-            LogInfo() << "IdleLoop: Main thread waking up to start searching!";
+            LogAndPrintInfo() << "IdleLoop: Main thread waking up to start searching!";
             CEngine.getBestMove(sthread);
             mThinking = false;
-            sthread.searching = false;
         }
-        if (!mStopThreads && !sthread.searching) {
+        if (!mStopThreads && sthread.stop) {
             GetWork(sthread, master_sp);
         }
-        if (!mStopThreads && sthread.searching) {
+        if (!mStopThreads && !sthread.stop) {
             SplitPoint* const sp = sthread.activeSplitPoint; // this is correctly located, don't move this, else bug
             CEngine.searchFromIdleLoop(*sp, sthread);
             std::lock_guard<Spinlock> lck(sp->updatelock);
             sp->workersBitMask &= ~((uint64)1 << sthread.thread_id);
-            sthread.searching = false;
+            sthread.stop = true;
         }
         if (master_sp != NULL && (!master_sp->workersBitMask || mStopThreads)) return;
     }
@@ -81,7 +80,6 @@ void ThreadsManager::GetWork(Thread& sthread, SplitPoint* const master_sp) {
             best_split_point->workersBitMask |= ((uint64)1 << sthread.thread_id);
             best_split_point->allWorkersBitMask |= ((uint64)1 << sthread.thread_id);
             sthread.activeSplitPoint = best_split_point;
-            sthread.searching = true;
             sthread.stop = false;
         }
     }
@@ -119,6 +117,7 @@ void ThreadsManager::InitVars() {
     for (Thread* th : mThreads) {
         th->Init();
     }
+    mThreads[0]->stop = false;
 }
 
 void ThreadsManager::SetNumThreads(int num) {
@@ -156,7 +155,6 @@ void ThreadsManager::SearchSplitPoint(const position_t& pos, SearchStack* ss, Se
     active_sp->workersBitMask = ((uint64)1 << sthread.thread_id);
     active_sp->allWorkersBitMask = ((uint64)1 << sthread.thread_id);
     sthread.activeSplitPoint = active_sp;
-    sthread.searching = true;
     sthread.stop = false;
     ++sthread.num_sp;
     ++sthread.numsplits;
@@ -172,7 +170,6 @@ void ThreadsManager::SearchSplitPoint(const position_t& pos, SearchStack* ss, Se
     sthread.activeSplitPoint = active_sp->parent;
     if (!mStopThreads) {
         sthread.stop = false;
-        sthread.searching = true;
     }
 
     int cnt = bitCnt(active_sp->allWorkersBitMask);
