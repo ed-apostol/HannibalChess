@@ -698,8 +698,7 @@ void Search::timeManagement(int depth) {
     
     if (mInfo.best_value > INF - MAXPLY) mInfo.mate_found++;
     if (mInfo.thinking_status == THINKING && mInfo.time_is_limited) {
-        int64 time = getTime();
-
+        int64 timeElapsed = getTime();
         if (mInfo.legalmoves == 1 || mInfo.mate_found >= 3) {
             if (depth >= 8) {
                 stopSearch();
@@ -707,16 +706,18 @@ void Search::timeManagement(int depth) {
                 return;
             }
         }
-        if ((time - mInfo.start_time) > ((mInfo.time_limit_max - mInfo.start_time) * 75) / 100) {
+        if (timeElapsed > (mInfo.start_time + (((mInfo.time_limit_max - mInfo.start_time) * 3) / 4))) { // 75%
             int64 addTime = 0;
-            if ((mInfo.best_value + WORSE_SCORE_CUTOFF) <= mInfo.last_value) {
-                int amountWorse = mInfo.last_value - mInfo.best_value;
-                addTime += ((amountWorse - (WORSE_SCORE_CUTOFF - 10)) * mInfo.alloc_time) / WORSE_TIME_BONUS;
-                LogInfo() << "info string Extending time (root gettingWorse): " << addTime;
-            }
-            if (mInfo.change) {
-                addTime += (mInfo.alloc_time * CHANGE_TIME_BONUS) / 100;
-                LogInfo() << "info string Extending time (root change): " << addTime;
+            if (timeElapsed < mInfo.time_limit_abs) {
+                if ((mInfo.best_value + WORSE_SCORE_CUTOFF) <= mInfo.last_value) {
+                    int amountWorse = mInfo.last_value - mInfo.best_value;
+                    addTime += ((amountWorse - (WORSE_SCORE_CUTOFF - 10)) * mInfo.alloc_time) / WORSE_TIME_BONUS;
+                    LogInfo() << "info string Extending time (root gettingWorse): " << addTime;
+                }
+                if (mInfo.change) {
+                    addTime += (mInfo.alloc_time * CHANGE_TIME_BONUS) / 100;
+                    LogInfo() << "info string Extending time (root change): " << addTime;
+                }
             }
             if (addTime > 0) {
                 mInfo.time_limit_max += addTime;
@@ -724,7 +725,7 @@ void Search::timeManagement(int depth) {
                     mInfo.time_limit_max = mInfo.time_limit_abs;
             } else { // if we are unlikely to get deeper, save our time
                 stopSearch();
-                LogInfo() << "info string Aborting search: root time limit 1: " << time - mInfo.start_time;
+                LogInfo() << "info string Aborting search: root time limit 1: " << timeElapsed - mInfo.start_time;
                 return;
             }
         }
