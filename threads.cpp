@@ -61,7 +61,7 @@ void ThreadsManager::GetWork(Thread& sthread, SplitPoint* const master_sp) {
         if (th->thread_id == sthread.thread_id) continue; // no need to help self
         if (master_sp != NULL && !(master_sp->workersBitMask & ((uint64)1 << th->thread_id))) continue; // helpful master: looking to help threads still actively working for it
         for (int splitIdx = 0, num_splits = th->num_sp; splitIdx < num_splits; ++splitIdx) {
-            SplitPoint* sp = &th->sptable[splitIdx];
+            SplitPoint* const sp = &th->sptable[splitIdx];
             if (sp->cutoff) continue; // if it already has cutoff, move on
             if (sp->workersBitMask != sp->allWorkersBitMask) continue; // only search those with all threads still searching
             if (sp->depth > best_depth) { // deeper is better

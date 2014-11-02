@@ -225,6 +225,7 @@ template<bool inPv>
 int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread) {
     int pes = 0;
     SearchStack ss;
+    pos_store_t undo;
 
     ASSERT(alpha < beta);
     ASSERT(pos.ply > 0); // for ssprev above
@@ -284,7 +285,6 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
         if (anyRepNoMove(pos, move->m)) {
             score = DrawValue[pos.side];
         } else {
-            pos_store_t undo;
             ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
             if (prunable && move->m != ss.hashMove && !ss.moveGivesCheck && !moveIsPassedPawn(pos, move->m)) {
                 int scoreAprox = ss.evalvalue + PawnValueEnd + MaxPieceValue[moveCapture(move->m)];
@@ -340,6 +340,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     int pes = 0;
     SplitPoint* sp = NULL;
     SearchStack ss;
+    pos_store_t undo;
 
     ASSERT(alpha < beta);
     ASSERT(depth >= 1);
@@ -407,7 +408,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (score < rvalue) return score;
             }
             if (depth >= 2 && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && ss.evalvalue >= beta) {
-                pos_store_t undo;
                 int nullDepth = depth - (4 + (depth / 5) + MIN(3, ((ss.evalvalue - beta) / PawnValue)));
                 makeNullMove(pos, undo);
                 ++sthread.nodes;
@@ -489,7 +489,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             score = DrawValue[pos.side];
         } else {
             int newdepth;
-            pos_store_t undo;
             ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
             if (ss.bestvalue == -INF) { //TODO remove this from loop and do it first
                 newdepth = depth - !ss.firstExtend;
