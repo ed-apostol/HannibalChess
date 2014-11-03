@@ -795,7 +795,7 @@ void Engine::getBestMove(Thread& sthread) {
     pvhashtable.NewDate(pvhashtable.Date());
 
     if (info.thinking_status == THINKING && UCIOptionsMap["OwnBook"].GetInt() && !anyRep(rootpos)) {
-        if ((info.bestmove = PolyBook.getBookMove(rootpos)) != 0) {
+        if ((info.bestmove = PolyBook.getBookMove(rootpos)) != EMPTY) {
             stopSearch();
             sendBestMove();
             return;
@@ -813,10 +813,10 @@ void Engine::getBestMove(Thread& sthread) {
         || (PcValSEE[moveCapture(entry->pvMove())] > PcValSEE[movePiece(entry->pvMove())]))) {
             info.bestmove = entry->pvMove();
             info.best_value = entry->pvScore();
-            if (info.rootPV.length > 3) info.pondermove = info.rootPV.moves[3];
-            else info.pondermove = 0;
             search->extractPvMovesFromHash(rootpos, info.rootPV, entry->pvMove());
             search->displayPV(&info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
+            if (info.rootPV.length > 1) info.pondermove = info.rootPV.moves[1];
+            else info.pondermove = 0;
             stopSearch();
             sendBestMove();
             return;

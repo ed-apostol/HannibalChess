@@ -169,8 +169,10 @@ bool Interface::Input(std::istringstream& stream) {
     } else if (command == "ponderhit") {
         Ponderhit();
     } else if (command == "go") {
+        while (ThreadsMgr.StillThinking()); // wait for current search to finish before accepting command
         Go(stream);
     } else if (command == "position") {
+        while (ThreadsMgr.StillThinking()); // wait for current search to finish before accepting command
         Position(stream);
     } else if (command == "setoption") {
         SetOption(stream);
