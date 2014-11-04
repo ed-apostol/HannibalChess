@@ -27,20 +27,20 @@
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
 const std::string Interface::year = "2014";
-const std::string Interface::version = "1.5x16";
+const std::string Interface::version = "1.5x18s";
 const std::string Interface::arch = "x64";
 
 static const int MinHash = 1;
 static const int MaxHash = 65536;
-static const int DefaultHash = 64;
+static const int DefaultHash = 128;
 
 static const int MinPHash = 1;
 static const int MaxPHash = 1024;
-static const int DefaultPHash = 4;
+static const int DefaultPHash = 32;
 
 static const int MinEvalCache = 1;
 static const int MaxEvalCache = 1024;
-static const int DefaultEvalCache = 4;
+static const int DefaultEvalCache = 64;
 
 static const int MinMultiPV = 1;
 static const int MaxMultiPV = 128;
@@ -49,10 +49,11 @@ static const int DefaultMultiPV = 1;
 static const int MinTimeBuffer = 0;
 static const int MaxTimeBuffer = 10000;
 static const int DefaultTimeBuffer = 1000;
+static const int MaxMovesToGo = 32; //was 20 NEWSAM s64
 
 static const int MinThreads = 1;
 static const int MaxThreads = 64;
-static const int DefaultThreads = 6;
+static const int DefaultThreads = 1;
 
 static const int MinSplitDepth = 2;
 static const int MaxSplitDepth = 8;
@@ -137,8 +138,8 @@ Interface::Interface() {
     std::cout.setf(std::ios::unitbuf);
 
     InitUCIOptions(UCIOptionsMap);
-    ThreadsMgr.InitVars();
     ThreadsMgr.SetNumThreads(UCIOptionsMap["Threads"].GetInt());
+    ThreadsMgr.InitVars();
     CEngine.InitTTHash(UCIOptionsMap["Hash"].GetInt());
     CEngine.InitPVTTHash(1);
 
@@ -169,8 +170,10 @@ bool Interface::Input(std::istringstream& stream) {
     } else if (command == "ponderhit") {
         Ponderhit();
     } else if (command == "go") {
+        while (ThreadsMgr.StillThinking()); // wait for current search to finish before accepting command
         Go(stream);
     } else if (command == "position") {
+        while (ThreadsMgr.StillThinking()); // wait for current search to finish before accepting command
         Position(stream);
     } else if (command == "setoption") {
         SetOption(stream);
@@ -300,14 +303,14 @@ void Interface::Go(std::istringstream& stream) {
     }
     if (mytime > 0) {
         info.time_is_limited = true;
-        mytime = ((mytime * 95) / 100) - info.time_buffer;
+        mytime = mytime - info.time_buffer;
         if (mytime  < 0) mytime = 0;
-        if (movestogo <= 0 || movestogo > 20) movestogo = 20;
+        if (movestogo <= 0 || movestogo > MaxMovesToGo) movestogo = MaxMovesToGo;
         info.time_limit_max = (mytime / movestogo) + ((t_inc * 4) / 5);
         if (ponder) info.time_limit_max += info.time_limit_max / 4;
 
         if (info.time_limit_max > mytime) info.time_limit_max = mytime;
-        info.time_limit_abs = ((mytime * 2) / 5) + ((t_inc * 4) / 5);
+        info.time_limit_abs = ((mytime * 3) / 10) + ((t_inc * 4) / 5);
         if (info.time_limit_abs < info.time_limit_max) info.time_limit_abs = info.time_limit_max;
         if (info.time_limit_abs > mytime) info.time_limit_abs = mytime;
 
@@ -337,7 +340,13 @@ void Interface::Go(std::istringstream& stream) {
 
     ThreadsMgr.StartThinking();
 }
-
+bool PredictedMove(basic_move_t m) {
+    PvHashEntry *entry = CEngine.pvhashtable.pvEntry(CEngine.rootpos.posStore.hash);
+    if (NULL != entry) {
+        if (entry->pvMove() == m) return true;
+    }
+    return false;
+}
 void Interface::Position(std::istringstream& stream) {
     basic_move_t m;
     std::string token, fen;
@@ -346,9 +355,12 @@ void Interface::Position(std::istringstream& stream) {
     if (token == "startpos") {
         fen = STARTPOS;
         stream >> token;
-    } else if (token == "fen") {
+        CEngine.info.predictedPosition = true; //no need to think a lot in start position
+    }
+    else if (token == "fen") {
         while (stream >> token && token != "moves")
             fen += token + " ";
+        CEngine.info.predictedPosition = false; //no need to think a lot in start position
     } else {
         LogWarning() << "Invalid position!";
         return;
@@ -359,7 +371,10 @@ void Interface::Position(std::istringstream& stream) {
         movelist_t ml;
         genLegal(CEngine.rootpos, &ml, true);
         m = parseMove(&ml, token.c_str());
-        if (m) makeMove(CEngine.rootpos, UndoStack[CEngine.rootpos.sp], m);
+        if (m) {
+            makeMove(CEngine.rootpos, UndoStack[CEngine.rootpos.sp], m);
+            CEngine.info.predictedPosition = PredictedMove(m);
+        }
         else break;
         if (CEngine.rootpos.posStore.fifty == 0) CEngine.rootpos.sp = 0;
     }

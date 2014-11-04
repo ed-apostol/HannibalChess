@@ -102,8 +102,7 @@ public:
         nativeThread.join();
     }
     virtual void Init() {
-        searching = false;
-        stop = false;
+        stop = true;
         exit_flag = false;
     }
     void SleepAndWaitForCondition() {
@@ -122,7 +121,6 @@ public:
     int thread_id;
     volatile bool stop;
     volatile bool doSleep;
-    volatile bool searching;
     volatile bool exit_flag;
 private:
     std::thread nativeThread;
@@ -159,7 +157,7 @@ public:
     uint64 numsplits; // DEBUG
     uint64 numsplits2; // DEBUG
     uint64 workers2; // DEBUG
-    int num_sp;
+    volatile int num_sp;
     SplitPoint *activeSplitPoint;
     SplitPoint sptable[MaxNumSplitPointsPerThread];
     ThreadStack ts[MAXPLY];
@@ -174,7 +172,7 @@ public:
     ThreadsManager() : mThinking(false) {}
     void StartThinking();
     void IdleLoop(const int thread_id);
-    void GetWork(const int thread_id, SplitPoint* master_sp);
+    void GetWork(Thread& sthread, SplitPoint* const master_sp);
     void SetAllThreadsToStop();
     void SetAllThreadsToSleep();
     void SetAllThreadsToWork();

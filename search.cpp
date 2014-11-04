@@ -26,6 +26,7 @@
 #include "init.h"
 
 Engine CEngine;
+static const int PREDICTED_TIME_REDUCTION = 25; //what percentage of alloc to increase if the last move is a change move
 
 bool moveIsTactical(uint32 m) { // TODO
     ASSERT(moveIsOk(m));
@@ -225,6 +226,7 @@ template<bool inPv>
 int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread) {
     int pes = 0;
     SearchStack ss;
+    pos_store_t undo;
 
     ASSERT(alpha < beta);
     ASSERT(pos.ply > 0); // for ssprev above
@@ -284,7 +286,6 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
         if (anyRepNoMove(pos, move->m)) {
             score = DrawValue[pos.side];
         } else {
-            pos_store_t undo;
             ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
             if (prunable && move->m != ss.hashMove && !ss.moveGivesCheck && !moveIsPassedPawn(pos, move->m)) {
                 int scoreAprox = ss.evalvalue + PawnValueEnd + MaxPieceValue[moveCapture(move->m)];
@@ -340,6 +341,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     int pes = 0;
     SplitPoint* sp = NULL;
     SearchStack ss;
+    pos_store_t undo;
 
     ASSERT(alpha < beta);
     ASSERT(depth >= 1);
@@ -407,7 +409,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (score < rvalue) return score;
             }
             if (depth >= 2 && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && ss.evalvalue >= beta) {
-                pos_store_t undo;
                 int nullDepth = depth - (4 + (depth / 5) + MIN(3, ((ss.evalvalue - beta) / PawnValue)));
                 makeNullMove(pos, undo);
                 ++sthread.nodes;
@@ -489,7 +490,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             score = DrawValue[pos.side];
         } else {
             int newdepth;
-            pos_store_t undo;
             ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
             if (ss.bestvalue == -INF) { //TODO remove this from loop and do it first
                 newdepth = depth - !ss.firstExtend;
@@ -699,8 +699,7 @@ void Search::timeManagement(int depth) {
     
     if (mInfo.best_value > INF - MAXPLY) mInfo.mate_found++;
     if (mInfo.thinking_status == THINKING && mInfo.time_is_limited) {
-        int64 time = getTime();
-
+        int64 timeElapsed = getTime();
         if (mInfo.legalmoves == 1 || mInfo.mate_found >= 3) {
             if (depth >= 8) {
                 stopSearch();
@@ -708,16 +707,18 @@ void Search::timeManagement(int depth) {
                 return;
             }
         }
-        if ((time - mInfo.start_time) > ((mInfo.time_limit_max - mInfo.start_time) * 60) / 100) {
+        if ((timeElapsed - mInfo.start_time) > ((mInfo.time_limit_max - mInfo.start_time) * 65) / 100) {
             int64 addTime = 0;
-            if ((mInfo.best_value + WORSE_SCORE_CUTOFF) <= mInfo.last_value) {
-                int amountWorse = mInfo.last_value - mInfo.best_value;
-                addTime += ((amountWorse - (WORSE_SCORE_CUTOFF - 10)) * mInfo.alloc_time) / WORSE_TIME_BONUS;
-                LogInfo() << "info string Extending time (root gettingWorse): " << addTime;
-            }
-            if (mInfo.change) {
-                addTime += (mInfo.alloc_time * CHANGE_TIME_BONUS) / 100;
-                LogInfo() << "info string Extending time (root change): " << addTime;
+            if (timeElapsed < mInfo.time_limit_abs) {
+                if ((mInfo.best_value + WORSE_SCORE_CUTOFF) <= mInfo.last_value) {
+                    int amountWorse = mInfo.last_value - mInfo.best_value;
+                    addTime += ((amountWorse - (WORSE_SCORE_CUTOFF - 10)) * mInfo.alloc_time) / WORSE_TIME_BONUS;
+                    LogInfo() << "info string Extending time (root gettingWorse): " << addTime;
+                }
+                if (mInfo.change) {
+                    addTime += (mInfo.alloc_time * CHANGE_TIME_BONUS) / 100;
+                    LogInfo() << "info string Extending time (root change): " << addTime;
+                }
             }
             if (addTime > 0) {
                 mInfo.time_limit_max += addTime;
@@ -725,7 +726,7 @@ void Search::timeManagement(int depth) {
                     mInfo.time_limit_max = mInfo.time_limit_abs;
             } else { // if we are unlikely to get deeper, save our time
                 stopSearch();
-                LogInfo() << "info string Aborting search: root time limit 1: " << time - mInfo.start_time;
+                LogInfo() << "info string Aborting search: root time limit 1: " << timeElapsed - mInfo.start_time;
                 return;
             }
         }
@@ -795,7 +796,8 @@ void Engine::getBestMove(Thread& sthread) {
     pvhashtable.NewDate(pvhashtable.Date());
 
     if (info.thinking_status == THINKING && UCIOptionsMap["OwnBook"].GetInt() && !anyRep(rootpos)) {
-        if ((info.bestmove = PolyBook.getBookMove(rootpos)) != 0) {
+        if ((info.bestmove = PolyBook.getBookMove(rootpos)) != EMPTY) {
+            stopSearch();
             sendBestMove();
             return;
         }
@@ -805,16 +807,17 @@ void Engine::getBestMove(Thread& sthread) {
         PvHashEntry *entry = pvhashtable.pvEntry(rootpos.posStore.hash);
         if (NULL == entry) break;
         if (info.thinking_status == THINKING
-            && info.rootPV.moves[1] == rootpos.posStore.lastmove
-            && info.rootPV.moves[2] == entry->pvMove()
-            && ((moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(entry->pvMove())))
-            || (PcValSEE[moveCapture(entry->pvMove())] > PcValSEE[movePiece(entry->pvMove())]))) {
+        && info.rootPV.moves[1] == rootpos.posStore.lastmove
+        && info.rootPV.moves[2] == entry->pvMove()
+        && genMoveIfLegal(rootpos, info.rootPV.moves[2], pinnedPieces(rootpos, rootpos.side))
+        && ((moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(entry->pvMove())))
+        || (PcValSEE[moveCapture(entry->pvMove())] > PcValSEE[movePiece(entry->pvMove())]))) {
             info.bestmove = entry->pvMove();
             info.best_value = entry->pvScore();
             search->extractPvMovesFromHash(rootpos, info.rootPV, entry->pvMove());
-            if (info.rootPV.length > 3) info.pondermove = info.rootPV.moves[3];
-            else info.pondermove = 0;
             search->displayPV(&info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
+            if (info.rootPV.length > 1) info.pondermove = info.rootPV.moves[1];
+            else info.pondermove = 0;
             stopSearch();
             sendBestMove();
             return;
@@ -822,11 +825,13 @@ void Engine::getBestMove(Thread& sthread) {
         ss.hashMove = entry->pvMove();
     } while (false);
 
-    // extend time when there is no hashmove from hashtable, this is useful when just out of the book
-    if (ss.hashMove == EMPTY) {
-        info.time_limit_max += info.alloc_time / 2;
-        if (info.time_limit_max > info.time_limit_abs)
-            info.time_limit_max = info.time_limit_abs;
+    if (!info.predictedPosition) { //if you did not predict this position spend more time (since you did not think as much as in a position you have seen before)
+        info.time_limit_max += (info.alloc_time * PREDICTED_TIME_REDUCTION) / 100;
+        /*
+        if (ss.hashMove == EMPTY) { //if you have never seen the position before spend even more time
+            info.time_limit_max += (info.alloc_time * PREDICTED_TIME_REDUCTION) / 100;
+        }*/
+        if (info.time_limit_max > info.time_limit_abs) info.time_limit_max = info.time_limit_abs;
     }
 
     // SMP
@@ -887,7 +892,6 @@ void Engine::getBestMove(Thread& sthread) {
     }
     if (!info.stop_search) {
         if ((info.depth_is_limited || info.time_is_limited) && info.thinking_status == THINKING) {
-            info.stop_search = true;;
             stopSearch();
             LogInfo() << "info string Aborting search: end of getBestMove: id = " << id << ", best_value = " << info.best_value << " sp = " << rootpos.sp << ", ply = " << rootpos.ply;
         } else {
