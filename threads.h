@@ -174,7 +174,6 @@ public:
     void IdleLoop(const int thread_id);
     void GetWork(Thread& sthread, SplitPoint* const master_sp);
     void SetAllThreadsToStop();
-    void SetAllThreadsToSleep();
     void SetAllThreadsToWork();
     void InitVars();
     void SetNumThreads(int num); // SetNumThreads(0) must be called for program to exit
@@ -223,7 +222,6 @@ public:
 private:
     std::vector<Thread*> mThreads;
     volatile bool mThinking;
-    volatile bool mStopThreads;
 };
 
 extern ThreadsManager ThreadsMgr;

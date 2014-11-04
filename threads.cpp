@@ -38,17 +38,17 @@ void ThreadsManager::IdleLoop(const int thread_id) {
             CEngine.getBestMove(sthread);
             mThinking = false;
         }
-        if (!mStopThreads && sthread.stop) {
+        if (!sthread.doSleep && sthread.stop) {
             GetWork(sthread, master_sp);
         }
-        if (!mStopThreads && !sthread.stop) {
+        if (!sthread.doSleep && !sthread.stop) {
             SplitPoint* const sp = sthread.activeSplitPoint; // this is correctly located, don't move this, else bug
             CEngine.searchFromIdleLoop(*sp, sthread);
             std::lock_guard<Spinlock> lck(sp->updatelock);
             sp->workersBitMask &= ~((uint64)1 << sthread.thread_id);
             sthread.stop = true;
         }
-        if (master_sp != NULL && (!master_sp->workersBitMask || mStopThreads)) return;
+        if (master_sp != NULL && (!master_sp->workersBitMask || sthread.doSleep)) return;
     }
 }
 
@@ -72,7 +72,7 @@ void ThreadsManager::GetWork(Thread& sthread, SplitPoint* const master_sp) {
             break; // only check the first valid split in every thread, it is always the deepest, saves time
         }
     }
-    if (!mStopThreads && best_split_point != NULL && thread_to_help != NULL) {
+    if (!sthread.doSleep && best_split_point != NULL && thread_to_help != NULL) {
         std::lock_guard<Spinlock> lck(best_split_point->updatelock);
         if (!best_split_point->cutoff // check if the splitpoint has not cutoff yet
             && (best_split_point->workersBitMask == best_split_point->allWorkersBitMask) // check if all helper threads are still searching this splitpoint
@@ -86,14 +86,8 @@ void ThreadsManager::GetWork(Thread& sthread, SplitPoint* const master_sp) {
 }
 
 void ThreadsManager::SetAllThreadsToStop() {
-    mStopThreads = true;
     for (Thread* th : mThreads) {
         th->stop = true;
-    }
-}
-
-void ThreadsManager::SetAllThreadsToSleep() {
-    for (Thread* th : mThreads) {
         th->doSleep = true;
     }
 }
@@ -111,7 +105,6 @@ uint64 ThreadsManager::ComputeNodes() {
 }
 
 void ThreadsManager::InitVars() {
-    mStopThreads = false;
     mMinSplitDepth = UCIOptionsMap["Min Split Depth"].GetInt();
     mMaxActiveSplitsPerThread = UCIOptionsMap["Max Active Splits/Thread"].GetInt();
     for (Thread* th : mThreads) {
@@ -168,7 +161,7 @@ void ThreadsManager::SearchSplitPoint(const position_t& pos, SearchStack* ss, Se
     ss->bestmove = active_sp->bestmove;
     ss->playedMoves = active_sp->played;
     sthread.activeSplitPoint = active_sp->parent;
-    if (!mStopThreads) {
+    if (!sthread.doSleep) {
         sthread.stop = false;
     }
 

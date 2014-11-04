@@ -779,7 +779,6 @@ void Engine::sendBestMove() {
         log << "bestmove " << move2Str(info.bestmove);
         if (info.pondermove) log << " ponder " << move2Str(info.pondermove);
     }
-    ThreadsMgr.SetAllThreadsToSleep();
     //ThreadsMgr.PrintDebugData();
 }
 
