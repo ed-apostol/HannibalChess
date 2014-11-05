@@ -27,7 +27,7 @@
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
 const std::string Interface::year = "2014";
-const std::string Interface::version = "1.5x18";
+const std::string Interface::version = "1.5x19";
 const std::string Interface::arch = "x64";
 
 static const int MinHash = 1;
@@ -302,7 +302,7 @@ void Interface::Go(std::istringstream& stream) {
     }
     if (mytime > 0) {
         info.time_is_limited = true;
-        mytime = ((mytime * 95) / 100) - info.time_buffer;
+        mytime = mytime - info.time_buffer;
         if (mytime  < 0) mytime = 0;
         if (movestogo <= 0 || movestogo > 30) movestogo = 30;
         info.time_limit_max = (mytime / movestogo) + ((t_inc * 4) / 5);
