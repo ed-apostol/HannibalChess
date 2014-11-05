@@ -92,17 +92,17 @@ void Search::initNode(Thread& sthread) {
         return;
     }
 
-    if (mInfo.node_is_limited && ThreadsMgr.ComputeNodes() >= mInfo.node_limit) {
+    if (mInfo.node_is_limited && CEngine.ComputeNodes() >= mInfo.node_limit) {
         stopSearch();
     }
-    if (sthread.thread_id == 0 && ++ThreadsMgr.nodes_since_poll >= ThreadsMgr.nodes_between_polls) {
-        ThreadsMgr.nodes_since_poll = 0;
+    if (sthread.thread_id == 0 && ++CEngine.nodes_since_poll >= CEngine.nodes_between_polls) {
+        CEngine.nodes_since_poll = 0;
         time2 = getTime();
         if (time2 - mInfo.last_time > 1000) {
             int64 time = time2 - mInfo.start_time;
             mInfo.last_time = time2;
             if (SHOW_SEARCH) {
-                uint64 sumnodes = ThreadsMgr.ComputeNodes();
+                uint64 sumnodes = CEngine.ComputeNodes();
                 PrintOutput() << "info time " << time
                     << " nodes " << sumnodes
                     << " hashfull " << (mTransTable.Used() * 1000) / mTransTable.HashSize()
@@ -165,7 +165,7 @@ void Search::displayPV(continuation_t *pv, int multipvIdx, int depth, int alpha,
     }
 
     log << " time " << time;
-    sumnodes = ThreadsMgr.ComputeNodes();
+    sumnodes = CEngine.ComputeNodes();
     log << " nodes " << sumnodes;
     log << " hashfull " << (mTransTable.Used() * 1000) / mTransTable.HashSize();
     if (time > 10) log << " nps " << (sumnodes * 1000) / (time);
@@ -584,9 +584,9 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             }
         }
         if (inSplitPoint) sp->updatelock.unlock();
-        if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < ThreadsMgr.mMaxActiveSplitsPerThread
-            && ThreadsMgr.ThreadNum() > 1 && depth >= ThreadsMgr.mMinSplitDepth) {
-            ThreadsMgr.SearchSplitPoint(pos, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot, sthread);
+        if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < CEngine.mMaxActiveSplitsPerThread
+            && CEngine.ThreadNum() > 1 && depth >= CEngine.mMinSplitDepth) {
+            sthread.SearchSplitPoint(pos, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot);
             if (sthread.stop) return 0;
             break;
         }
@@ -739,7 +739,7 @@ void Search::timeManagement(int depth) {
 
 void Search::stopSearch() {
     mInfo.stop_search = true;
-    ThreadsMgr.SetAllThreadsToStop();
+    CEngine.SetAllThreadsToStop();
 }
 
 Engine::Engine() {
@@ -779,7 +779,7 @@ void Engine::sendBestMove() {
         log << "bestmove " << move2Str(info.bestmove);
         if (info.pondermove) log << " ponder " << move2Str(info.pondermove);
     }
-    //ThreadsMgr.PrintDebugData();
+    //CEngine.PrintDebugData();
 }
 
 void Engine::getBestMove(Thread& sthread) {
@@ -831,8 +831,8 @@ void Engine::getBestMove(Thread& sthread) {
     }
 
     // SMP
-    ThreadsMgr.InitVars();
-    ThreadsMgr.SetAllThreadsToWork();
+    InitVars();
+    SetAllThreadsToWork();
 
     for (id = 1; id < MAXPLY; id++) {
         const int AspirationWindow = 24;
@@ -900,3 +900,4 @@ void Engine::getBestMove(Thread& sthread) {
 
     sendBestMove();
 }
+

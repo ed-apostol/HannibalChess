@@ -69,8 +69,8 @@ static const int DefaultContempt = 0;
 UCIOptions UCIOptionsMap;
 
 void on_clear_hash(const Options& o) {
-    ThreadsMgr.ClearPawnHash();
-    ThreadsMgr.ClearEvalHash();
+    CEngine.ClearPawnHash();
+    CEngine.ClearEvalHash();
     CEngine.ClearTTHash();
     CEngine.ClearPVTTHash();
 }
@@ -78,10 +78,10 @@ void on_hash(const Options& o) {
     CEngine.InitTTHash(o.GetInt());
 }
 void on_pawn_hash(const Options& o) {
-    ThreadsMgr.InitPawnHash(o.GetInt());
+    CEngine.InitPawnHash(o.GetInt());
 }
 void on_eval_hash(const Options& o) {
-    ThreadsMgr.InitEvalHash(o.GetInt());
+    CEngine.InitEvalHash(o.GetInt());
 }
 void on_multi_pv(const Options& o) {
     CEngine.info.multipv = o.GetInt();
@@ -90,13 +90,13 @@ void on_time_buffer(const Options& o) {
     CEngine.info.time_buffer = o.GetInt();
 }
 void on_threads(const Options& o) {
-    ThreadsMgr.SetNumThreads(o.GetInt());
+    CEngine.SetNumThreads(o.GetInt());
 }
 void on_splits(const Options& o) {
-    ThreadsMgr.mMinSplitDepth = o.GetInt();
+    CEngine.mMinSplitDepth = o.GetInt();
 }
 void on_active_splits(const Options& o) {
-    ThreadsMgr.mMaxActiveSplitsPerThread = o.GetInt();
+    CEngine.mMaxActiveSplitsPerThread = o.GetInt();
 }
 void on_contempt(const Options& o) {
     CEngine.info.contempt = o.GetInt();
@@ -137,8 +137,8 @@ Interface::Interface() {
     std::cout.setf(std::ios::unitbuf);
 
     InitUCIOptions(UCIOptionsMap);
-    ThreadsMgr.SetNumThreads(UCIOptionsMap["Threads"].GetInt());
-    ThreadsMgr.InitVars();
+    CEngine.SetNumThreads(UCIOptionsMap["Threads"].GetInt());
+    CEngine.InitVars();
     CEngine.InitTTHash(UCIOptionsMap["Hash"].GetInt());
     CEngine.InitPVTTHash(1);
 
@@ -169,10 +169,10 @@ bool Interface::Input(std::istringstream& stream) {
     } else if (command == "ponderhit") {
         Ponderhit();
     } else if (command == "go") {
-        while (ThreadsMgr.StillThinking()); // wait for current search to finish before accepting command
+        while (CEngine.StillThinking()); // wait for current search to finish before accepting command
         Go(stream);
     } else if (command == "position") {
-        while (ThreadsMgr.StillThinking()); // wait for current search to finish before accepting command
+        while (CEngine.StillThinking()); // wait for current search to finish before accepting command
         Position(stream);
     } else if (command == "setoption") {
         SetOption(stream);
@@ -197,11 +197,9 @@ bool Interface::Input(std::istringstream& stream) {
 }
 
 void Interface::Quit() {
-    if (ThreadsMgr.StillThinking()) {
-        Stop();
-        while (ThreadsMgr.StillThinking());
-    }
-    ThreadsMgr.SetNumThreads(0);
+    Stop();
+    CEngine.WaitForThreadsToSleep();
+    CEngine.SetNumThreads(0);
     LogInfo() << "Interface quit";
 }
 
@@ -337,7 +335,7 @@ void Interface::Go(std::istringstream& stream) {
     DrawValue[CEngine.rootpos.side] = -info.contempt;
     DrawValue[CEngine.rootpos.side ^ 1] = info.contempt;
 
-    ThreadsMgr.StartThinking();
+    CEngine.StartThinking();
 }
 
 void Interface::Position(std::istringstream& stream) {
@@ -378,8 +376,8 @@ void Interface::SetOption(std::istringstream& stream) {
 }
 
 void Interface::NewGame() {
-    ThreadsMgr.ClearPawnHash();
-    ThreadsMgr.ClearEvalHash();
+    CEngine.ClearPawnHash();
+    CEngine.ClearEvalHash();
     CEngine.ClearTTHash();
     CEngine.ClearPVTTHash();
 }
@@ -419,12 +417,12 @@ void Interface::CheckSpeedup(std::istringstream& stream) {
             streamcmd = std::istringstream("depth " + std::to_string(depth));
             Go(streamcmd);
 
-            while (ThreadsMgr.StillThinking());
+            while (CEngine.StillThinking());
 
             double timeSpeedUp;
             double nodesSpeedup;
             int64 spentTime = getTime() - startTime;
-            uint64 nodes = ThreadsMgr.ComputeNodes() / spentTime;
+            uint64 nodes = CEngine.ComputeNodes() / spentTime;
 
             if (0 == idxthread) {
                 nodes1 = nodes;
@@ -490,10 +488,10 @@ void Interface::CheckBestSplit(std::istringstream& stream) {
             streamcmd = std::istringstream("depth " + std::to_string(depth));
             Go(streamcmd);
 
-            while (ThreadsMgr.StillThinking());
+            while (CEngine.StillThinking());
 
             int64 spentTime = getTime() - startTime;
-            uint64 nodes = ThreadsMgr.ComputeNodes() / spentTime;
+            uint64 nodes = CEngine.ComputeNodes() / spentTime;
 
             timeSum[idxsplit] += spentTime;
             nodesSum[idxsplit] += nodes;

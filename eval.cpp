@@ -17,7 +17,7 @@
 #include "trans.h"
 #include "eval.h"
 #include "material.h"
-#include "threads.h"
+#include "search.h"
 
 //some castling comments
 const int KSC[2] = {WCKS, BCKS};
@@ -863,7 +863,7 @@ void evalPawns(const position_t& pos, eval_info_t *ei, int thread_id) {
     initPawnEvalByColor(pos, ei, WHITE);
     initPawnEvalByColor(pos, ei, BLACK);
 
-    ei->pawn_entry = ThreadsMgr.ThreadFromIdx(thread_id).pt.Entry(pos.posStore.phash);
+    ei->pawn_entry = CEngine.ThreadFromIdx(thread_id).pt.Entry(pos.posStore.phash);
     if (ei->pawn_entry->hashlock == LOCK(pos.posStore.phash)) {
         ei->mid_score[WHITE] += ei->pawn_entry->opn;
         ei->end_score[WHITE] += ei->pawn_entry->end;
@@ -890,7 +890,7 @@ int eval(const position_t& pos, int thread_id, int *pessimism) {
     uint64 whitePassed, blackPassed;
     int upside[2] = {0, 0}; //this should never be negative
 
-    entry = ThreadsMgr.ThreadFromIdx(thread_id).et.Entry(pos.posStore.hash);
+    entry = CEngine.ThreadFromIdx(thread_id).et.Entry(pos.posStore.hash);
     if (entry->hashlock == LOCK(pos.posStore.hash)) {
         *pessimism = entry->pessimism; //this was meant to be * 10
         return entry->value;

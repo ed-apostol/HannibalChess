@@ -111,11 +111,110 @@ public:
         pvhashtable.Clear();
     }
 
+    void SetAllThreadsToStop() {
+        for (Thread* th : mThreads) {
+            th->stop = true;
+            th->doSleep = true;
+        }
+    }
+
+    void SetAllThreadsToWork() {
+        for (Thread* th : mThreads) {
+            if (th->thread_id != 0) th->TriggerCondition(); // thread_id == 0 is triggered separately
+        }
+    }
+
+    uint64 ComputeNodes() {
+        uint64 nodes = 0;
+        for (Thread* th : mThreads) nodes += th->nodes;
+        return nodes;
+    }
+
+    void InitVars() {
+        mMinSplitDepth = UCIOptionsMap["Min Split Depth"].GetInt();
+        mMaxActiveSplitsPerThread = UCIOptionsMap["Max Active Splits/Thread"].GetInt();
+        for (Thread* th : mThreads) {
+            th->Init();
+        }
+        mThreads[0]->stop = false;
+    }
+
+    void SetNumThreads(int num) {
+        while (mThreads.size() < num) {
+            int id = (int)mThreads.size();
+            mThreads.push_back(new Thread(id));
+            mThreads[id]->threadgroup = &mThreads;
+            //mThreads[id]->NativeThread() = std::thread(mThreads[id]->IdleLoop, this);
+        }
+        while (mThreads.size() > num) {
+            delete mThreads.back();
+            mThreads.pop_back();
+        }
+        InitPawnHash(UCIOptionsMap["Pawn Hash"].GetInt());
+        InitEvalHash(UCIOptionsMap["Eval Cache"].GetInt());
+    }
+
+    void StartThinking() {
+        nodes_since_poll = 0;
+        nodes_between_polls = 8192;
+        ThreadFromIdx(0).stop = false;
+        ThreadFromIdx(0).TriggerCondition();
+    }
+
+    Thread& ThreadFromIdx(int thread_id) {
+        return *mThreads[thread_id];
+    }
+    size_t ThreadNum() const {
+        return mThreads.size();
+    }
+
+    void InitPawnHash(int size) {
+        for (Thread* th : mThreads) th->pt.Init(size, th->pt.BUCKET);
+    }
+    void InitEvalHash(int size) {
+        for (Thread* th : mThreads) th->et.Init(size, th->et.BUCKET);
+    }
+    void ClearPawnHash() {
+        for (Thread* th : mThreads) th->pt.Clear();
+    }
+    void ClearEvalHash() {
+        for (Thread* th : mThreads) th->et.Clear();
+    }
+
+    void PrintDebugData() {
+        LogInfo() << "================================================================";
+        for (Thread* th : mThreads) {
+            LogInfo() << "thread_id: " << th->thread_id
+                << " nodes: " << th->nodes
+                << " joined_split: " << double(th->numsplits2 * 100.0) / double(th->numsplits)
+                << " threads_per_split: " << double(th->workers2) / double(th->numsplits2);
+        }
+        LogInfo() << "================================================================";
+    }
+
+    volatile bool StillThinking() {
+        return !ThreadFromIdx(0).doSleep;
+    }
+
+    void WaitForThreadsToSleep() {
+        for (Thread* th : mThreads) {
+            while (!th->doSleep);
+        }
+    }
+
+    int mMinSplitDepth;
+    int mMaxActiveSplitsPerThread;
+
+    uint64 nodes_since_poll;
+    uint64 nodes_between_polls;
+
     Search* search;
     SearchInfo info;
     TranspositionTable transtable;
     PvHashTable pvhashtable;
     position_t rootpos;
+private:
+    std::vector<Thread*> mThreads;
 };
 
 extern Engine CEngine;
