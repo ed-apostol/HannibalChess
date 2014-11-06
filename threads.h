@@ -132,9 +132,9 @@ class Thread : public ThreadBase {
 public:
     static const int MaxNumSplitPointsPerThread = 8;
 
-    Thread(int _thread_id) : ThreadBase(_thread_id) {
+    Thread(int _thread_id, std::vector<Thread*>* const _thread_group) : ThreadBase(_thread_id) {
         Init();
-        threadgroup = NULL;
+        mThreadGroup = _thread_group;
         NativeThread() = std::thread(&Thread::IdleLoop, this);
     }
     ~Thread() {
@@ -157,7 +157,7 @@ public:
     int32 history[1024];
     EvalHashTable et;
     PawnHashTable pt;
-    std::vector<Thread*>* threadgroup;
+    std::vector<Thread*>* mThreadGroup;
 };
 
 

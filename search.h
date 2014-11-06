@@ -110,26 +110,22 @@ public:
     void ClearPVTTHash() {
         pvhashtable.Clear();
     }
-
     void SetAllThreadsToStop() {
         for (Thread* th : mThreads) {
             th->stop = true;
             th->doSleep = true;
         }
     }
-
     void SetAllThreadsToWork() {
         for (Thread* th : mThreads) {
             if (th->thread_id != 0) th->TriggerCondition(); // thread_id == 0 is triggered separately
         }
     }
-
     uint64 ComputeNodes() {
         uint64 nodes = 0;
         for (Thread* th : mThreads) nodes += th->nodes;
         return nodes;
     }
-
     void InitVars() {
         mMinSplitDepth = UCIOptionsMap["Min Split Depth"].GetInt();
         mMaxActiveSplitsPerThread = UCIOptionsMap["Max Active Splits/Thread"].GetInt();
@@ -138,12 +134,10 @@ public:
         }
         mThreads[0]->stop = false;
     }
-
     void SetNumThreads(int num) {
         while (mThreads.size() < num) {
             int id = (int)mThreads.size();
-            mThreads.push_back(new Thread(id));
-            mThreads[id]->threadgroup = &mThreads;
+            mThreads.push_back(new Thread(id, &mThreads));
             //mThreads[id]->NativeThread() = std::thread(mThreads[id]->IdleLoop, this);
         }
         while (mThreads.size() > num) {
@@ -153,21 +147,18 @@ public:
         InitPawnHash(UCIOptionsMap["Pawn Hash"].GetInt());
         InitEvalHash(UCIOptionsMap["Eval Cache"].GetInt());
     }
-
     void StartThinking() {
         nodes_since_poll = 0;
         nodes_between_polls = 8192;
         ThreadFromIdx(0).stop = false;
         ThreadFromIdx(0).TriggerCondition();
     }
-
     Thread& ThreadFromIdx(int thread_id) {
         return *mThreads[thread_id];
     }
     size_t ThreadNum() const {
         return mThreads.size();
     }
-
     void InitPawnHash(int size) {
         for (Thread* th : mThreads) th->pt.Init(size, th->pt.BUCKET);
     }
@@ -180,7 +171,6 @@ public:
     void ClearEvalHash() {
         for (Thread* th : mThreads) th->et.Clear();
     }
-
     void PrintDebugData() {
         LogInfo() << "================================================================";
         for (Thread* th : mThreads) {
@@ -191,11 +181,9 @@ public:
         }
         LogInfo() << "================================================================";
     }
-
     volatile bool StillThinking() {
         return !ThreadFromIdx(0).doSleep;
     }
-
     void WaitForThreadsToSleep() {
         for (Thread* th : mThreads) {
             while (!th->doSleep);
@@ -208,12 +196,12 @@ public:
     uint64 nodes_since_poll;
     uint64 nodes_between_polls;
 
-    Search* search;
+    position_t rootpos;
     SearchInfo info;
+private:
+    Search* search;
     TranspositionTable transtable;
     PvHashTable pvhashtable;
-    position_t rootpos;
-private:
     std::vector<Thread*> mThreads;
 };
 
