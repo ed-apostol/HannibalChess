@@ -179,22 +179,15 @@ void initPST() {
 
 void InitTrapped() {
     int i;
-    bewareTrapped[WHITE] = bewareTrapped[BLACK] = escapeTrapped[WHITE] = escapeTrapped[BLACK] = 0;
+
+    bewareTrapped[WHITE] = bewareTrapped[BLACK] = 0;
 
     for (i = 0; i < 64; i++) {
-        if (SQRANK(i) >= Rank4 && (SQFILE(i) >= FileG || SQFILE(i) <= FileB)) {
+        if (SQRANK(i) >= Rank6) {
             bewareTrapped[WHITE] |= BitMask[i];
         }
-        if (SQRANK(i) >= Rank5) {
-            bewareTrapped[WHITE] |= BitMask[i];
-            escapeTrapped[BLACK] |= BitMask[i];
-        }
-        if (SQRANK(i) <= Rank5 && (SQFILE(i) >= FileG || SQFILE(i) <= FileB)) {
+        if (SQRANK(i) <= Rank3) {
             bewareTrapped[BLACK] |= BitMask[i];
-        }
-        if (SQRANK(i) <= Rank4) {
-            bewareTrapped[BLACK] |= BitMask[i];
-            escapeTrapped[WHITE] |= BitMask[i];
         }
     }
 }

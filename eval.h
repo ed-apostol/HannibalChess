@@ -38,5 +38,5 @@ struct eval_info_t {
     PawnEntry* pawn_entry;
 };
 
-extern int eval(const position_t& pos, int thread_id, int *pessimism);
+extern int eval(const position_t& pos, int thread_id);
 extern void evalEndgame(int attacker, const position_t& pos, eval_info_t *ei, int *score, int *draw, int mover);

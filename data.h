@@ -9,6 +9,9 @@
 
 #pragma once
 
+//#define DEBUG_EVAL true
+#define RELEASE true
+
 /* the precomputed extern piece 64 bit attacks */
 extern uint64 KnightMoves[64];
 extern uint64 KingMoves[64];
@@ -19,7 +22,6 @@ extern uint64 PawnMoves2[64][2];
 extern uint64 MagicAttacks[107648];
 
 extern uint64 bewareTrapped[2];
-extern uint64 escapeTrapped[2];
 
 /* the precomputed material values table and the flags table */
 extern material_info_t MaterialTable[MAX_MATERIAL][MAX_MATERIAL];
