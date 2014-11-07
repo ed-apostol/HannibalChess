@@ -132,26 +132,18 @@ class Thread : public ThreadBase {
 public:
     static const int MaxNumSplitPointsPerThread = 8;
 
-    Thread(int _thread_id) : ThreadBase(_thread_id) {
+    Thread(int _thread_id, std::vector<Thread*>* const _thread_group) : ThreadBase(_thread_id) {
         Init();
+        mThreadGroup = _thread_group;
+        NativeThread() = std::thread(&Thread::IdleLoop, this);
     }
-    void Init() {
-        ThreadBase::Init();
-        nodes = 0;
-        numsplits = 1;
-        numsplits2 = 1;
-        workers2 = 0;
-        num_sp = 0;
-        activeSplitPoint = NULL;
-        for (int Idx = 0; Idx < MaxNumSplitPointsPerThread; ++Idx) {
-            sptable[Idx].Init();
-        }
-        for (int Idx = 0; Idx < MAXPLY; ++Idx) {
-            ts[Idx].Init();
-        }
-        memset(history, 0, sizeof(history));
-        memset(evalgains, 0, sizeof(evalgains));
+    ~Thread() {
+        //threadgroup = NULL;
     }
+    void Init();
+    void IdleLoop();
+    void GetWork(SplitPoint* const master_sp);
+    void SearchSplitPoint(const position_t& pos, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot);
 
     uint64 nodes;
     uint64 numsplits; // DEBUG
@@ -165,65 +157,7 @@ public:
     int32 history[1024];
     EvalHashTable et;
     PawnHashTable pt;
+    std::vector<Thread*>* mThreadGroup;
 };
 
-class ThreadsManager {
-public:
-    ThreadsManager() : mThinking(false) {}
-    void StartThinking();
-    void IdleLoop(const int thread_id);
-    void GetWork(Thread& sthread, SplitPoint* const master_sp);
-    void SetAllThreadsToStop();
-    void SetAllThreadsToSleep();
-    void SetAllThreadsToWork();
-    void InitVars();
-    void SetNumThreads(int num); // SetNumThreads(0) must be called for program to exit
-    uint64 ComputeNodes();
-    void SearchSplitPoint(const position_t& pos, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread);
 
-    Thread& ThreadFromIdx(int thread_id) {
-        return *mThreads[thread_id];
-    }
-    size_t ThreadNum() const {
-        return mThreads.size();
-    }
-
-    void InitPawnHash(int size) {
-        for (Thread* th : mThreads) th->pt.Init(size, th->pt.BUCKET);
-    }
-    void InitEvalHash(int size) {
-        for (Thread* th : mThreads) th->et.Init(size, th->et.BUCKET);
-    }
-    void ClearPawnHash() {
-        for (Thread* th : mThreads) th->pt.Clear();
-    }
-    void ClearEvalHash() {
-        for (Thread* th : mThreads) th->et.Clear();
-    }
-
-    void PrintDebugData() {
-        LogInfo() << "================================================================";
-        for (Thread* th : mThreads) {
-            LogInfo() << "thread_id: " << th->thread_id
-                << " nodes: " << th->nodes
-                << " joined_split: " << double(th->numsplits2 * 100.0) / double(th->numsplits)
-                << " threads_per_split: " << double(th->workers2) / double(th->numsplits2);
-        }
-        LogInfo() << "================================================================";
-    }
-    volatile bool StillThinking() {
-        return mThinking;
-    }
-
-    int mMinSplitDepth;
-    int mMaxActiveSplitsPerThread;
-
-    uint64 nodes_since_poll;
-    uint64 nodes_between_polls;
-private:
-    std::vector<Thread*> mThreads;
-    volatile bool mThinking;
-    volatile bool mStopThreads;
-};
-
-extern ThreadsManager ThreadsMgr;

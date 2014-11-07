@@ -104,7 +104,7 @@ private:
 
 class PvHashTable : public BaseHashTable<PvHashEntry> {
 public:
-    static const int DATESIZE = 32;
+    static const int DATESIZE = 256;
     static const int BUCKET = 8;
 
     virtual void Clear();
@@ -241,7 +241,7 @@ private:
 
 class TranspositionTable : public BaseHashTable<TransEntry> {
 public:
-    static const int DATESIZE = 32;
+    static const int DATESIZE = 256;
     static const int BUCKET = 4;
 
     virtual void Clear();

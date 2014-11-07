@@ -17,48 +17,57 @@
 #include "bitutils.h"
 #include "uci.h"
 
-ThreadsManager ThreadsMgr;
 
-void ThreadsManager::StartThinking() {
-    mThinking = true;
-    nodes_since_poll = 0;
-    nodes_between_polls = 8192;
-    ThreadFromIdx(0).TriggerCondition();
+void Thread::Init() {
+    ThreadBase::Init();
+    nodes = 0;
+    numsplits = 1;
+    numsplits2 = 1;
+    workers2 = 0;
+    num_sp = 0;
+    activeSplitPoint = NULL;
+    for (int Idx = 0; Idx < MaxNumSplitPointsPerThread; ++Idx) {
+        sptable[Idx].Init();
+    }
+    for (int Idx = 0; Idx < MAXPLY; ++Idx) {
+        ts[Idx].Init();
+    }
+    memset(history, 0, sizeof(history));
+    memset(evalgains, 0, sizeof(evalgains));
 }
 
-void ThreadsManager::IdleLoop(const int thread_id) {
-    Thread& sthread = *mThreads[thread_id];
-    SplitPoint* const master_sp = sthread.activeSplitPoint;
-    while (!sthread.exit_flag) {
-        if (master_sp == NULL && sthread.doSleep) {
-            sthread.SleepAndWaitForCondition();            
+void Thread::IdleLoop() {
+    SplitPoint* const master_sp = activeSplitPoint;
+    while (!exit_flag) {
+        if (!exit_flag && master_sp == NULL && doSleep) {
+            SleepAndWaitForCondition();            
         }
-        if (master_sp == NULL && sthread.thread_id == 0 && mThinking) {
+        if (!exit_flag && !doSleep && master_sp == NULL && thread_id == 0) {
             LogAndPrintInfo() << "IdleLoop: Main thread waking up to start searching!";
-            CEngine.getBestMove(sthread);
-            mThinking = false;
+            CEngine.getBestMove(*this);
+            doSleep = true;
         }
-        if (!mStopThreads && sthread.stop) {
-            GetWork(sthread, master_sp);
+        if (!exit_flag && !doSleep && stop) {
+            GetWork(master_sp);
         }
-        if (!mStopThreads && !sthread.stop) {
-            SplitPoint* const sp = sthread.activeSplitPoint; // this is correctly located, don't move this, else bug
-            CEngine.searchFromIdleLoop(*sp, sthread);
+        if (!exit_flag && !doSleep && !stop) {
+            SplitPoint* const sp = activeSplitPoint; // this is correctly located, don't move this, else bug
+            CEngine.searchFromIdleLoop(*sp, *this);
             std::lock_guard<Spinlock> lck(sp->updatelock);
-            sp->workersBitMask &= ~((uint64)1 << sthread.thread_id);
-            sthread.stop = true;
+            sp->workersBitMask &= ~((uint64)1 << thread_id);
+            stop = true;
         }
-        if (master_sp != NULL && (!master_sp->workersBitMask || mStopThreads)) return;
+        if (master_sp != NULL && (!master_sp->workersBitMask || doSleep)) return;
     }
 }
 
-void ThreadsManager::GetWork(Thread& sthread, SplitPoint* const master_sp) {
+void Thread::GetWork(SplitPoint* const master_sp) {
     int best_depth = 0;
     Thread* thread_to_help = NULL;
     SplitPoint* best_split_point = NULL;
 
-    for (Thread* th : mThreads) {
-        if (th->thread_id == sthread.thread_id) continue; // no need to help self
+    for (Thread* th : *mThreadGroup) {
+        if (th->thread_id == thread_id) continue; // no need to help self
         if (master_sp != NULL && !(master_sp->workersBitMask & ((uint64)1 << th->thread_id))) continue; // helpful master: looking to help threads still actively working for it
         for (int splitIdx = 0, num_splits = th->num_sp; splitIdx < num_splits; ++splitIdx) {
             SplitPoint* const sp = &th->sptable[splitIdx];
@@ -72,73 +81,24 @@ void ThreadsManager::GetWork(Thread& sthread, SplitPoint* const master_sp) {
             break; // only check the first valid split in every thread, it is always the deepest, saves time
         }
     }
-    if (!mStopThreads && best_split_point != NULL && thread_to_help != NULL) {
+    if (!doSleep && best_split_point != NULL && thread_to_help != NULL) {
         std::lock_guard<Spinlock> lck(best_split_point->updatelock);
         if (!best_split_point->cutoff // check if the splitpoint has not cutoff yet
             && (best_split_point->workersBitMask == best_split_point->allWorkersBitMask) // check if all helper threads are still searching this splitpoint
             && (master_sp == NULL || (master_sp->workersBitMask & ((uint64)1 << thread_to_help->thread_id)))) { // check if the helper thread is still working for master
-            best_split_point->workersBitMask |= ((uint64)1 << sthread.thread_id);
-            best_split_point->allWorkersBitMask |= ((uint64)1 << sthread.thread_id);
-            sthread.activeSplitPoint = best_split_point;
-            sthread.stop = false;
+            best_split_point->workersBitMask |= ((uint64)1 << thread_id);
+            best_split_point->allWorkersBitMask |= ((uint64)1 << thread_id);
+            activeSplitPoint = best_split_point;
+            stop = false;
         }
     }
 }
 
-void ThreadsManager::SetAllThreadsToStop() {
-    mStopThreads = true;
-    for (Thread* th : mThreads) {
-        th->stop = true;
-    }
-}
-
-void ThreadsManager::SetAllThreadsToSleep() {
-    for (Thread* th : mThreads) {
-        th->doSleep = true;
-    }
-}
-
-void ThreadsManager::SetAllThreadsToWork() {
-    for (Thread* th : mThreads) {
-        if (th->thread_id != 0) th->TriggerCondition(); // thread_id == 0 is triggered separately
-    }
-}
-
-uint64 ThreadsManager::ComputeNodes() {
-    uint64 nodes = 0;
-    for (Thread* th : mThreads) nodes += th->nodes;
-    return nodes;
-}
-
-void ThreadsManager::InitVars() {
-    mStopThreads = false;
-    mMinSplitDepth = UCIOptionsMap["Min Split Depth"].GetInt();
-    mMaxActiveSplitsPerThread = UCIOptionsMap["Max Active Splits/Thread"].GetInt();
-    for (Thread* th : mThreads) {
-        th->Init();
-    }
-    mThreads[0]->stop = false;
-}
-
-void ThreadsManager::SetNumThreads(int num) {
-    while (mThreads.size() < num) {
-        int id = (int)mThreads.size();
-        mThreads.push_back(new Thread(id));
-        mThreads[id]->NativeThread() = std::thread(&ThreadsManager::IdleLoop, this, id);
-    }
-    while (mThreads.size() > num) {
-        delete mThreads.back();
-        mThreads.pop_back();
-    }
-    InitPawnHash(UCIOptionsMap["Pawn Hash"].GetInt());
-    InitEvalHash(UCIOptionsMap["Eval Cache"].GetInt());
-}
-
-void ThreadsManager::SearchSplitPoint(const position_t& pos, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot, Thread& sthread) {
-    SplitPoint *active_sp = &sthread.sptable[sthread.num_sp];
+void Thread::SearchSplitPoint(const position_t& pos, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot) {
+    SplitPoint *active_sp = &sptable[num_sp];
 
     active_sp->updatelock.lock();
-    active_sp->parent = sthread.activeSplitPoint;
+    active_sp->parent = activeSplitPoint;
     active_sp->depth = depth;
     active_sp->alpha = alpha;
     active_sp->beta = beta;
@@ -152,30 +112,30 @@ void ThreadsManager::SearchSplitPoint(const position_t& pos, SearchStack* ss, Se
     active_sp->sscurr = ss;
     active_sp->ssprev = ssprev;
     active_sp->origpos = pos;
-    active_sp->workersBitMask = ((uint64)1 << sthread.thread_id);
-    active_sp->allWorkersBitMask = ((uint64)1 << sthread.thread_id);
-    sthread.activeSplitPoint = active_sp;
-    sthread.stop = false;
-    ++sthread.num_sp;
-    ++sthread.numsplits;
+    active_sp->workersBitMask = ((uint64)1 << thread_id);
+    active_sp->allWorkersBitMask = ((uint64)1 << thread_id);
+    activeSplitPoint = active_sp;
+    stop = false;
+    ++num_sp;
+    ++numsplits;
     active_sp->updatelock.unlock();
 
-    IdleLoop(sthread.thread_id);
+    IdleLoop();
 
     active_sp->updatelock.lock();
-    --sthread.num_sp;
+    --num_sp;
     ss->bestvalue = active_sp->bestvalue;
     ss->bestmove = active_sp->bestmove;
     ss->playedMoves = active_sp->played;
-    sthread.activeSplitPoint = active_sp->parent;
-    if (!mStopThreads) {
-        sthread.stop = false;
+    activeSplitPoint = active_sp->parent;
+    if (!doSleep) {
+        stop = false;
     }
 
     int cnt = bitCnt(active_sp->allWorkersBitMask);
     if (cnt > 1) {
-        sthread.numsplits2++;
-        sthread.workers2 += cnt;
+        numsplits2++;
+        workers2 += cnt;
     }
     active_sp->updatelock.unlock();
 }
