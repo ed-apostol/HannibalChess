@@ -24,8 +24,8 @@ extern int DiffColor(const position_t& pos, uint32 sq, int color);
 extern uint64 getTime(void);
 extern uint32 parseMove(movelist_t *mvlist, const char *s);
 extern int getDirIndex(int d);
-extern int anyRep(const position_t& pos);
-extern int anyRepNoMove(const position_t& pos, const int m);
+extern bool anyRep(const position_t& pos);
+extern bool anyRepNoMove(const position_t& pos, const int m);
 
 enum LogLevel {
     logNONE = 0, logOUT = 1, logERROR = 2, logWARNING = 3, logINFO = 4, logDEBUG = 5

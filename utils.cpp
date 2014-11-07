@@ -201,7 +201,7 @@ uint32 parseMove(movelist_t *mvlist, const char *s) {
     return 0;
 }
 
-int anyRep(const position_t& pos) {//this is used for book repetition detection, but should not be used in search
+bool anyRep(const position_t& pos) {//this is used for book repetition detection, but should not be used in search
     if (pos.posStore.fifty >= 100) return true;
     pos_store_t* psp;
     if (!pos.posStore.previous || !pos.posStore.previous->previous) return false;
@@ -214,8 +214,8 @@ int anyRep(const position_t& pos) {//this is used for book repetition detection,
     return false;
 }
 
-int anyRepNoMove(const position_t& pos, const int m) {
-    if (moveCapture(m) || isCastle(m) || pos.posStore.fifty < 3 || movePiece(m) == PAWN) return false;
+bool anyRepNoMove(const position_t& pos, const int m) {
+    if (moveCapture(m) || isCastle(m) || pos.posStore.fifty < 3 || pos.posStore.pliesFromNull < 3 || movePiece(m) == PAWN) return false;
     if (pos.posStore.fifty >= 99) return true;
 
     uint64 compareTo = pos.posStore.hash ^ ZobColor ^ ZobPiece[pos.side][movePiece(m)][moveFrom(m)] ^ ZobPiece[pos.side][movePiece(m)][moveTo(m)];

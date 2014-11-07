@@ -311,15 +311,15 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
         mTransTable.StoreNoMoves(pos.posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos.ply));
         return ss.bestvalue;
     }
-    if (ss.bestmove != EMPTY) {
-        ssprev.counterMove = ss.bestmove;
-        if (inPv) mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
-    }
     if (ss.bestvalue >= beta) {
+        ssprev.counterMove = ss.bestmove;
         mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
     } else {
-        if (inPv && ss.bestmove != EMPTY) mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
-        else mTransTable.StoreUpper(pos.posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos.ply));
+        if (inPv && ss.bestmove != EMPTY) {
+            ssprev.counterMove = ss.bestmove;
+            mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
+            mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
+        } else mTransTable.StoreUpper(pos.posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos.ply));
     }
     return ss.bestvalue;
 }
@@ -620,16 +620,16 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 sthread.ts[pos.ply].killer1 = ss.bestmove;
             }
         }
-        if (ss.bestmove != EMPTY) {
-            ssprev.counterMove = ss.bestmove;
-            if (inPvNode(nt)) mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
-        }
         if (ss.bestvalue >= beta) {
+            ssprev.counterMove = ss.bestmove;
             if (inCutNode(nt)) mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
             else mTransTable.StoreAllLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
         } else {
-            if (inPvNode(nt) && ss.bestmove != EMPTY) mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
-            else if (inCutNode(nt)) mTransTable.StoreCutUpper(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
+            if (inPvNode(nt) && ss.bestmove != EMPTY) {
+                ssprev.counterMove = ss.bestmove;
+                mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
+                mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
+            } else if (inCutNode(nt)) mTransTable.StoreCutUpper(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
             else mTransTable.StoreUpper(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
         }
     }

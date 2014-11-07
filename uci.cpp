@@ -52,7 +52,7 @@ static const int DefaultTimeBuffer = 1000;
 
 static const int MinThreads = 1;
 static const int MaxThreads = 64;
-static const int DefaultThreads = 6;
+static const int DefaultThreads = 1;
 
 static const int MinSplitDepth = 2;
 static const int MaxSplitDepth = 8;
