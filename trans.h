@@ -1,349 +1,277 @@
 /**************************************************/
 /*  Name: Hannibal						          */
-/*  Copyright: 2009                               */
+/*  Copyright: 2009-2014                          */
 /*  Author: Sam Hamilton, Edsel Apostol           */
-/*  Contact: shamilton@distributedinfinity.com    */
-/*  Contact: ed_apostol@yahoo.hom                 */
+/*  Contact: snhamilton@rocketmail.com            */
+/*  Contact: ed_apostol@yahoo.com                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
 
-inline const uint32 transHashLock(trans_entry_t * te) { return te->hashlock; }
-inline const basic_move_t transMove(trans_entry_t * te) { return te->move; }
-inline const int transAge(trans_entry_t * te) { return te->age; }
-inline const int transMask(trans_entry_t * te) { return te->mask; }
-inline const int transLowerDepth(trans_entry_t * te) { return te->lowerdepth; }
-inline const int transUpperDepth(trans_entry_t * te) { return te->upperdepth; }
-inline const int transLowerValue(trans_entry_t * te) { return te->lowervalue; }
-inline const int transUpperValue(trans_entry_t * te) { return te->uppervalue; }
+#pragma once
 
-inline void transSetHashLock(trans_entry_t * te, const uint32 hashlock) { te->hashlock = hashlock; }
-inline void transSetMove(trans_entry_t * te, const basic_move_t move) { te->move = move; }
-inline void transSetAge(trans_entry_t * te, const uint8 date) { te->age = date; }
-inline void transSetMask(trans_entry_t * te, const uint8 mask) { te->mask |= mask; }
-inline void transRemMask(trans_entry_t * te, const uint8 mask) { te->mask &= ~mask; }
-inline void transReplaceMask(trans_entry_t * te, const uint8 mask) { te->mask = mask; }
-inline void transSetLowerDepth(trans_entry_t * te, const uint8 lowerdepth) { te->lowerdepth = lowerdepth; }
-inline void transSetUpperDepth(trans_entry_t * te, const uint8 upperdepth) { te->upperdepth = upperdepth; }
-inline void transSetLowerValue(trans_entry_t * te, const int16 lowervalue) { te->lowervalue = lowervalue; }
-inline void transSetUpperValue(trans_entry_t * te, const int16 uppervalue) { te->uppervalue = uppervalue; }
-
-inline int scoreFromTrans(int score, int ply) { return (score > MAXEVAL) ? (score-ply) : ((score < MAXEVAL) ? (score+ply) : score); }
-inline int scoreToTrans(int score, int ply) { return (score > MAXEVAL) ? (score+ply) : ((score < MAXEVAL) ? (score-ply) : score); }
-
-basic_move_t transGetHashMove(const uint64 hash, const int thread) {
-    int hashDepth = 0;
-    basic_move_t hashMove = EMPTY;
-    trans_entry_t *entry;
-    entry = TransTable(thread).table + (KEY(hash) & TransTable(thread).mask);
-    for (int t = 0; t < 4; t++, entry++) {
-        if (transHashLock(entry) == LOCK(hash)) {
-            if (transMove(entry) != EMPTY && transLowerDepth(entry) > hashDepth) {
-                hashDepth = transLowerDepth(entry);
-                hashMove = transMove(entry);
-            }
+template <typename Entity>
+class BaseHashTable {
+public:
+    BaseHashTable() :
+        mpTable(NULL),
+        mSize(0),
+        mMask(0),
+        mBucketSize(0) {}
+    ~BaseHashTable() {
+        delete[] mpTable;
+    }
+    virtual void Clear() {
+        memset(mpTable, 0, mSize * sizeof (Entity));
+    }
+    Entity* Entry(const uint64 hash) const {
+        return &mpTable[KEY(hash) & mMask];
+    }
+    void Init(uint64 target, const int bucket_size) {
+        uint64 size = 2;
+        mBucketSize = bucket_size;
+        if (target < 1) target = 1;
+        target *= 1024 * 1024;
+        while (size * sizeof (Entity) <= target) size *= 2;
+        size = size / 2;
+        if (size + bucket_size - 1 == mSize) {
+            Clear();
+        } else {
+            mSize = size + bucket_size - 1;
+            mMask = size - 1;
+            delete[] mpTable;
+            mpTable = new Entity[mSize];
         }
     }
-    return hashMove;
+    uint64 HashSize() const {
+        return mSize;
+    }
+    uint64 BucketSize() const {
+        return mBucketSize;
+    }
+protected:
+    Entity* mpTable;
+    uint64 mSize;
+    uint64 mMask;
+    uint64 mBucketSize;
+};
+
+struct PvHashEntry {
+public:
+    PvHashEntry() :
+        mHashlock(0),
+        mMove(EMPTY),
+        mScore(0),
+        mDepth(0),
+        mAge(0) {}
+    inline uint32 pvHashLock() const {
+        return mHashlock;
+    }
+    inline basic_move_t pvMove() const {
+        return mMove;
+    }
+    inline int pvAge() const {
+        return mAge;
+    }
+    inline int pvDepth() const {
+        return mDepth;
+    }
+    inline int pvScore() const {
+        return mScore;
+    }
+
+    inline void pvSetHashLock(const uint32 hashlock) {
+        mHashlock = hashlock;
+    }
+    inline void pvSetMove(const basic_move_t move) {
+        mMove = move;
+    }
+    inline void pvSetAge(const uint8 age) {
+        mAge = age;
+    }
+    inline void pvSetDepth(const uint8 depth) {
+        mDepth = depth;
+    }
+    inline void pvSetValue(const int16 value) {
+        mScore = value;
+    }
+private:
+    uint32 mHashlock;
+    basic_move_t mMove;
+    int16 mScore;
+    uint8 mDepth;
+    uint8 mAge;
+};
+
+class PvHashTable : public BaseHashTable<PvHashEntry> {
+public:
+    static const int DATESIZE = 256;
+    static const int BUCKET = 8;
+
+    virtual void Clear();
+    void NewDate(int date);
+    void pvStore(uint64 hash, basic_move_t move, uint8 depth, int16 value);
+    PvHashEntry *pvEntry(const uint64 hash) const;
+    PvHashEntry *pvEntryFromMove(const uint64 hash, basic_move_t move) const;
+    int32 Date() const {
+        return mDate;
+    }
+    int32 Age(const int Idx) const {
+        return mAge[Idx];
+    }
+private:
+    int32 mDate;
+    int32 mAge[DATESIZE];
+};
+
+struct PawnEntry {
+    PawnEntry() :
+    hashlock(0),
+    passedbits(0),
+    opn(0),
+    end(0) {
+        shelter[0] = shelter[1] = 0;
+        kshelter[0] = kshelter[1] = 0;
+        qshelter[0] = qshelter[1] = 0;
+    }
+    uint32 hashlock;
+    uint64 passedbits;
+    int16 opn;
+    int16 end;
+    int8 shelter[2];
+    int8 kshelter[2];
+    int8 qshelter[2];
+};
+
+class PawnHashTable : public BaseHashTable<PawnEntry> {
+public:
+    static const int BUCKET = 1;
+};
+
+struct EvalEntry {
+    EvalEntry() :
+    hashlock(0),
+    value(0),
+    pessimism(0) {}
+    uint32 hashlock;
+    int16 value;
+    int16 pessimism;
+};
+
+class EvalHashTable : public BaseHashTable<EvalEntry> {
+public:
+    static const int BUCKET = 1;
+};
+
+struct TransEntry {
+public:
+    TransEntry() :
+        mHashlock(0),
+        mMove(0),
+        mUpperValue(0),
+        mLowerValue(0),
+        mMask(0),
+        mAge(0),
+        mUpperDepth(0),
+        mLowerDepth(0) {}
+    inline uint32 HashLock() const {
+        return mHashlock;
+    }
+    inline basic_move_t Move() const {
+        return mMove;
+    }
+    inline int Age() const {
+        return mAge;
+    }
+    inline int Mask() const {
+        return mMask;
+    }
+    inline int LowerDepth() const {
+        return mLowerDepth;
+    }
+    inline int UpperDepth() const {
+        return mUpperDepth;
+    }
+    inline int LowerValue() const {
+        return mLowerValue;
+    }
+    inline int UpperValue() const {
+        return mUpperValue;
+    }
+
+    inline void SetHashLock(const uint32 hashlock) {
+        mHashlock = hashlock;
+    }
+    inline void SetMove(const basic_move_t move) {
+        mMove = move;
+    }
+    inline void SetAge(const uint8 date) {
+        mAge = date;
+    }
+    inline void SetMask(const uint8 mask) {
+        mMask |= mask;
+    }
+    inline void RemMask(const uint8 mask) {
+        mMask &= ~mask;
+    }
+    inline void ReplaceMask(const uint8 mask) {
+        mMask = mask;
+    }
+    inline void SetLowerDepth(const uint8 lowerdepth) {
+        mLowerDepth = lowerdepth;
+    }
+    inline void SetUpperDepth(const uint8 upperdepth) {
+        mUpperDepth = upperdepth;
+    }
+    inline void SetLowerValue(const int16 lowervalue) {
+        mLowerValue = lowervalue;
+    }
+    inline void SetUpperValue(const int16 uppervalue) {
+        mUpperValue = uppervalue;
+    }
+private:
+    uint32 mHashlock;
+    uint32 mMove;
+    int16 mUpperValue;
+    int16 mLowerValue;
+    uint8 mMask;
+    uint8 mAge;
+    uint8 mUpperDepth;
+    uint8 mLowerDepth;
+};
+
+class TranspositionTable : public BaseHashTable<TransEntry> {
+public:
+    static const int DATESIZE = 256;
+    static const int BUCKET = 4;
+
+    virtual void Clear();
+    void NewDate(int date);
+    void StoreLower(uint64 hash, basic_move_t move, int depth, int value);
+    void StoreUpper(uint64 hash, basic_move_t move, int depth, int value);
+    void StoreCutUpper(uint64 hash, basic_move_t move, int depth, int value);
+    void StoreAllLower(uint64 hash, basic_move_t move, int depth, int value);
+    void StoreExact(uint64 hash, basic_move_t move, int depth, int value);
+    void StoreNoMoves(uint64 hash, basic_move_t move, int depth, int value);
+
+    basic_move_t TransMove(uint64 hash);
+    int32 Date() const {
+        return mDate;
+    }
+    uint64 Used() const {
+        return mUsed;
+    }
+    int32 Age(const int Idx) const {
+        return mAge[Idx];
+    }
+private:
+    int32 mDate;
+    uint64 mUsed;
+    int32 mAge[DATESIZE];
+};
+
+inline int scoreFromTrans(int score, int ply) { // TODO: make static inside TranspositionTable
+    return (score > MAXEVAL) ? (score - ply) : ((score < -MAXEVAL) ? (score + ply) : score);
 }
-
-template<HashType ht>
-void transStore(const uint64 hash, basic_move_t move, const int depth, const int value, const int thread) {
-    int worst = -INF, t, score;
-    trans_entry_t *replace, *entry;
-    
-    ASSERT(valueIsOk(value));
-    
-    replace = entry = TransTable(thread).table + (KEY(hash) & TransTable(thread).mask);
-
-    for (t = 0; t < 4; t++, entry++) {
-        if (transHashLock(entry) == LOCK(hash)) {
-            if (ht == HTLower && depth >= transLowerDepth(entry) && !(transMask(entry) & MExact)) {
-                transSetAge(entry, TransTable(thread).date);
-                transSetMove(entry, move);
-                transSetLowerDepth(entry, depth);
-                transSetLowerValue(entry, value);
-                transSetMask(entry, MLower);
-                transRemMask(entry, MAllLower);
-                return;
-            }
-            if (ht == HTAllLower && depth >= transLowerDepth(entry) && ((transLowerDepth(entry) == 0) || (transMask(entry) & MAllLower))) {
-                transSetAge(entry, TransTable(thread).date);
-                transSetMove(entry, move);
-                transSetLowerDepth(entry, depth);
-                transSetLowerValue(entry, value);
-                transSetMask(entry, MLower|MAllLower);
-                return;
-            }
-            if (ht == HTUpper && depth >= transUpperDepth(entry) && !(transMask(entry) & MExact)) {
-                transSetAge(entry, TransTable(thread).date);
-                transSetUpperDepth(entry, depth);
-                transSetUpperValue(entry, value);
-                transSetMask(entry, MUpper);
-                transRemMask(entry, MCutUpper);
-                return;
-            }
-            if (ht == HTCutUpper && depth >= transUpperDepth(entry) && ((transUpperDepth(entry) == 0) || (transMask(entry) & MCutUpper))) {
-                transSetAge(entry, TransTable(thread).date);
-                transSetUpperDepth(entry, depth);
-                transSetUpperValue(entry, value);
-                transSetMask(entry, MUpper|MCutUpper);
-                return;
-            }
-            if (ht == HTExact && depth >= MAX(transUpperDepth(entry), transLowerDepth(entry))) {
-                pvStore(hash, move, depth, value, thread);
-                transSetMove(entry, move);
-                transSetAge(entry, TransTable(thread).date);
-                transSetUpperDepth(entry, depth);
-                transSetUpperValue(entry, value);
-                transSetLowerDepth(entry, depth);
-                transSetLowerValue(entry, value);
-                transReplaceMask(entry, MExact);
-                for (int x = t + 1; x < 4; x++) {
-                    entry++;
-                    if (transHashLock(entry) == LOCK(hash)) {
-                        memset(entry, 0, sizeof(trans_entry_t));
-                        transSetAge(entry, (TransTable(thread).date+1) % DATESIZE);
-                    }
-                }
-                return;
-            }
-            TransTable(thread).used++;
-        }
-        score = (TransTable(thread).age[transAge(entry)] * 256) - MAX(transUpperDepth(entry), transLowerDepth(entry));
-        if (score > worst) {
-            worst = score;
-            replace = entry;
-        }
-    }
-
-    transSetHashLock(replace, LOCK(hash));
-    transSetAge(replace, TransTable(thread).date);
-    if (ht == HTLower) {
-        transSetMove(replace, move);
-        transSetUpperDepth(replace, 0);
-        transSetUpperValue(replace, 0);
-        transSetLowerDepth(replace, depth);
-        transSetLowerValue(replace, value);
-        transReplaceMask(replace, MLower);
-    }
-    if (ht == HTAllLower) {
-        transSetMove(replace, move);
-        transSetUpperDepth(replace, 0);
-        transSetUpperValue(replace, 0);
-        transSetLowerDepth(replace, depth);
-        transSetLowerValue(replace, value);
-        transReplaceMask(replace, MLower|MAllLower);
-    }
-    if (ht == HTUpper) {
-        transSetMove(replace, EMPTY);
-        transSetUpperDepth(replace, depth);
-        transSetUpperValue(replace, value);
-        transSetLowerDepth(replace, 0);
-        transSetLowerValue(replace, 0);
-        transReplaceMask(replace, MUpper);
-    }
-    if (ht == HTCutUpper) {
-        transSetMove(replace, EMPTY);
-        transSetUpperDepth(replace, depth);
-        transSetUpperValue(replace, value);
-        transSetLowerDepth(replace, 0);
-        transSetLowerValue(replace, 0);
-        transReplaceMask(replace, MUpper|MCutUpper);
-    }
-    if (ht == HTExact) {
-        pvStore(hash, move, depth, value, thread);
-        transSetMove(replace, move);
-        transSetUpperDepth(replace, depth);
-        transSetUpperValue(replace, value);
-        transSetLowerDepth(replace, depth);
-        transSetLowerValue(replace, value);
-        transReplaceMask(replace, MExact);
-    }
-    if (ht == HTNoMoves) {
-        transSetMove(replace, EMPTY);
-        transSetUpperDepth(replace, depth);
-        transSetUpperValue(replace, value);
-        transSetLowerDepth(replace, depth);
-        transSetLowerValue(replace, value);
-        transReplaceMask(replace, MExact|MNoMoves);
-    }
-}
-
-void transNewDate(int date, int thread) {
-    TransTable(thread).date = (date+1)%DATESIZE;
-    for (date = 0; date < DATESIZE; date++) {
-        TransTable(thread).age[date] = TransTable(thread).date - date + ((TransTable(thread).date < date) ? DATESIZE:0);
-    }
-    TransTable(thread).used = 1;
-}
-
-void transClear(int thread) {
-    transNewDate(-1,thread);
-    if (TransTable(thread).table != NULL) {
-        memset(TransTable(thread).table, 0, (TransTable(thread).size * sizeof(trans_entry_t)));
-    }
-}
-
-void initTrans(uint64 target, int thread) {
-    uint64 size=2;
-
-    if (target < MIN_TRANS_SIZE) target = MIN_TRANS_SIZE;
-
-    target *= 1024 * 1024;
-
-    //	size should be a factor of 2 for size - 1 to work well I think -SAM
-    while (size * sizeof(trans_entry_t) <= target) size*=2;
-    size = size/2;
-    if (TransTable(thread).table != NULL) {
-        if (size==TransTable(thread).size) {
-            Print(3,"info string no change in transition table\n");
-            return; //don't reallocate if there is not change
-        }
-        free(TransTable(thread).table);
-    }
-    TransTable(thread).size = size;
-    TransTable(thread).mask = TransTable(thread).size - 4; //size needs to be a power of 2 for the masking to work
-    TransTable(thread).table = (trans_entry_t*) malloc((TransTable(thread).size) * sizeof(trans_entry_t)); //associativity of 4 means we need the +3 in theory
-    if (TransTable(thread).table == NULL) {
-        Print(3, "info string Not enough memory to allocate transposition table.\n");
-    }
-    transClear(thread);
-}
-
-inline uint32 pvGetHashLock (pvhash_entry_t * pve)      { return pve->hashlock; }
-inline basic_move_t pvGetMove (pvhash_entry_t * pve)    { return pve->move; }
-inline int pvGetAge (pvhash_entry_t * pve)              { return pve->age; }
-inline int pvGetDepth (pvhash_entry_t * pve)            { return pve->depth; }
-inline int pvGetValue (pvhash_entry_t * pve)            { return pve->score; }
-
-inline void pvSetHashLock (pvhash_entry_t * pve, uint32 hashlock)  { pve->hashlock = hashlock; }
-inline void pvSetMove (pvhash_entry_t * pve, basic_move_t move)    { pve->move = move; }
-inline void pvSetAge (pvhash_entry_t * pve, uint8 age)             { pve->age = age; }
-inline void pvSetDepth (pvhash_entry_t * pve, uint8 depth)         { pve->depth = depth; }
-inline void pvSetValue (pvhash_entry_t * pve, int16 value)         { pve->score = value; }
-
-pvhash_entry_t *pvHashProbe(const uint64 hash) {
-    pvhash_entry_t *entry = PVHashTable.table + (KEY(hash) & PVHashTable.mask);
-    uint32 locked = LOCK(hash);
-    for (int t = 0; t < 8; t++, entry++) {
-        if (pvGetHashLock(entry) == locked) {
-            return entry;
-        }
-    }
-    return NULL;
-}
-
-pvhash_entry_t *getPvEntryFromMove(const uint64 hash, basic_move_t move) {
-    pvhash_entry_t *entry = PVHashTable.table + (KEY(hash) & PVHashTable.mask);
-    uint32 locked = LOCK(hash);
-    for (int t = 0; t < 8; t++, entry++) {
-        if (pvGetHashLock(entry) == locked && pvGetMove(entry) == move) {
-            return entry;
-        }
-    }
-    return NULL;
-}
-
-void pvStore(const uint64 hash, const basic_move_t move, const uint8 depth, const int16 value, const int thread) {
-    int worst = -INF, t, score;
-    pvhash_entry_t *replace, *entry;
-
-    replace = entry = PVHashTable.table + (KEY(hash) & PVHashTable.mask);
-    for (t = 0; t < 8; t++, entry++) {
-        if (pvGetHashLock(entry) == LOCK(hash)) {
-            pvSetAge(entry, TransTable(thread).date);
-            pvSetMove(entry, move);
-            pvSetDepth(entry, depth);
-            pvSetValue(entry, value);
-            return;
-        }
-        score = (TransTable(thread).age[pvGetAge(entry)] * 256) - pvGetDepth(entry);
-        if (score > worst) {
-            worst = score;
-            replace = entry;
-        }
-    }
-    pvSetHashLock(replace, LOCK(hash));
-    pvSetAge(replace, TransTable(thread).date);
-    pvSetMove(replace, move);
-    pvSetDepth(replace, depth);
-    pvSetValue(replace, value);
-}
-
-void pvHashTableClear(pvhashtable_t* pvt) {
-    memset(pvt->table, 0, (pvt->size * sizeof(pvhash_entry_t)));
-}
-
-void initPVHashTab(pvhashtable_t* pvt, uint64 target) {
-    uint64 size=2;
-
-    if (target < 1) target = 1;
-
-    target *= 1024 * 1024;
-
-    while (size * sizeof(pvhash_entry_t) <= target) size*=2;
-    size = size/2;
-    if (pvt->table != NULL) {
-        if (size==pvt->size) {
-            Print(3,"info string no change in PV transition table\n");
-            return; //don't reallocate if there is not change
-        }
-        free(pvt->table);
-    }
-    pvt->size = size;
-    pvt->mask = pvt->size - 8; //size needs to be a power of 2 for the masking to work
-    pvt->table = (pvhash_entry_t*) malloc((pvt->size) * sizeof(pvhash_entry_t)); 
-    if (pvt->table == NULL) {
-        Print(3, "info string Not enough memory to allocate PV transposition table.\n");
-    }
-    pvHashTableClear(pvt);
-}
-
-void evalTableClear(evaltable_t* et) {
-    memset(et->table, 0, (et->size * sizeof(eval_entry_t)));
-}
-
-void initEvalTab(evaltable_t* et, uint64 target) {
-    uint64 size=2;
-
-    if (target < 1) target = 1;
-    target *= (1024 * 1024);
-
-    while (size * sizeof(eval_entry_t) <= target) size*=2;
-    size = size/2;
-	if (et->table != NULL) {
-        if (size==et->size) {
-            Print(3,"info string no change in eval table\n");
-            return; //don't reallocate if there is not change
-        }
-        free(et->table);
-    }
-    et->size = size;
-    et->mask = et->size - 1;
-    et->table = (eval_entry_t*) malloc(et->size * sizeof(eval_entry_t));
-    evalTableClear(et);
-}
-
-void pawnTableClear(pawntable_t* pt) {
-    memset(pt->table, 0, (pt->size * sizeof(pawntable_t)));
-}
-void initPawnTab(pawntable_t* pt, uint64 target) {
-    uint64 size=2;
-
-    if (target < 1) target = 1;
-    target *= 1024 * 1024;
-
-    while (size * sizeof(pawn_entry_t) <= target) size*=2;
-    size = size/2;
-    if (pt->table != NULL) {
-        if (size==pt->size) {
-            Print(3,"info string no change in pawn table\n");
-            return; //don't reallocate if there is not change
-        }
-        free(pt->table);
-    }
-    pt->size = size;
-    pt->mask = pt->size - 1;
-    pt->table = (pawn_entry_t*) malloc(pt->size * sizeof(pawn_entry_t));
-    pawnTableClear(pt);
+inline int scoreToTrans(int score, int ply) { // TODO: make static inside TranspositionTable
+    return (score > MAXEVAL) ? (score + ply) : ((score < -MAXEVAL) ? (score - ply) : score);
 }

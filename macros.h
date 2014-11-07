@@ -1,15 +1,17 @@
 /**************************************************/
 /*  Name: Hannibal						          */
-/*  Copyright: 2009                               */
+/*  Copyright: 2009-2014                          */
 /*  Author: Sam Hamilton, Edsel Apostol           */
-/*  Contact: shamilton@distributedinfinity.com    */
-/*  Contact: ed_apostol@yahoo.hom                 */
+/*  Contact: snhamilton@rocketmail.com            */
+/*  Contact: ed_apostol@yahoo.com                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
 
+#pragma once
+
 #ifdef DEBUG
 #define ASSERT(a) { if (!(a)) \
-    Print(4, "file \"%s\", line %d, assertion \"" #a "\" failed\n",__FILE__,__LINE__);}
+    Print(4, "file \"%s\", line %d, assertion \"" #a "\" failed\n", __FILE__, __LINE__); }
 #else
 #define ASSERT(a)
 #endif
@@ -20,13 +22,8 @@
 #  define CACHE_LINE_ALIGNMENT  __attribute__ ((aligned(64)))
 #endif
 
-//#define BOOL                unsigned int
-#define BOOL                bool
-#define TRUE                1
-#define FALSE               0
-
 #define MAXPLY              128
-#define MAX_HASH_STORE      (MAXPLY+102)
+#define MAX_HASH_STORE      1024
 #define MAXMOVES            256
 #define INF                 32500
 #define MAXEVAL             32000
@@ -98,13 +95,10 @@ enum PieceTypes {
 #define ENDGAME 1
 
 enum ThinkingStatus {
-    STOPPED = 0,
-    THINKING,
+    THINKING = 0,
     PONDERING,
     ANALYSING
 };
-
-#define DATESIZE            16
 
 #define REDUCED             4
 
@@ -113,10 +107,3 @@ enum ThinkingStatus {
 //#define SETHASH(l,k)        (uint64)(((l)<<32)|(k))
 
 
-const int MaxNumOfThreads = 32;
-const int MaxNumSplitPointsPerThread = 8;
-
-#define MutexInit(x, y) InitializeCriticalSection(x)
-#define MutexLock(x) EnterCriticalSection(x)
-#define MutexUnlock(x) LeaveCriticalSection(x)
-#define MutexDestroy(x) DeleteCriticalSection(x)
