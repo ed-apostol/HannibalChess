@@ -223,7 +223,6 @@ const int MaxPieceValue[] = {0, PawnValueEnd, KnightValueEnd, BishopValueEnd, Ro
 
 template<bool inPv>
 int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread) {
-    int pes = 0;
     SearchStack ss;
     pos_store_t undo;
 
@@ -255,12 +254,12 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
             }
         }
     }
-    if (pos.ply >= MAXPLY - 1) return eval(pos, sthread.thread_id, &pes);
+    if (pos.ply >= MAXPLY - 1) return eval(pos, sthread.thread_id);
     if (!ssprev.moveGivesCheck) {
         if (simpleStalemate(pos)) {
             return DrawValue[pos.side];
         }
-        ss.evalvalue = ss.bestvalue = eval(pos, sthread.thread_id, &pes);
+        ss.evalvalue = ss.bestvalue = eval(pos, sthread.thread_id);
         updateEvalgains(pos, pos.posStore.lastmove, ssprev.evalvalue, ss.evalvalue, sthread);
         if (ss.bestvalue > alpha) {
             if (ss.bestvalue >= beta) {
@@ -337,7 +336,6 @@ int Search::searchNode(position_t& pos, int alpha, int beta, const int depth, Se
 
 template<bool inRoot, bool inSplitPoint, bool inCheck, bool inSingular>
 int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt) {
-    int pes = 0;
     SplitPoint* sp = NULL;
     SearchStack ss;
     pos_store_t undo;
@@ -390,7 +388,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 }
             }
         }
-        if (ss.evalvalue == -INF) ss.evalvalue = eval(pos, sthread.thread_id, &pes);
+        if (ss.evalvalue == -INF) ss.evalvalue = eval(pos, sthread.thread_id);
 
         if (pos.ply >= MAXPLY - 1) return ss.evalvalue;
         updateEvalgains(pos, pos.posStore.lastmove, ssprev.evalvalue, ss.evalvalue, sthread);

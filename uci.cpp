@@ -27,7 +27,7 @@
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
 const std::string Interface::year = "2014";
-const std::string Interface::version = "1.5x19";
+const std::string Interface::version = "1.5x20";
 const std::string Interface::arch = "x64";
 
 static const int MinHash = 1;
@@ -36,11 +36,11 @@ static const int DefaultHash = 64;
 
 static const int MinPHash = 1;
 static const int MaxPHash = 1024;
-static const int DefaultPHash = 4;
+static const int DefaultPHash = 32;
 
 static const int MinEvalCache = 1;
 static const int MaxEvalCache = 1024;
-static const int DefaultEvalCache = 4;
+static const int DefaultEvalCache = 64;
 
 static const int MinMultiPV = 1;
 static const int MaxMultiPV = 128;
@@ -185,8 +185,10 @@ bool Interface::Input(std::istringstream& stream) {
     } else if (command == "quit") {
         Quit();
         return false;
+#ifndef RELEASE
     } else if (command == "speedup") {
         CheckSpeedup(stream);
+#endif
     } else if (command == "split") {
         CheckBestSplit(stream);
     } else {
@@ -302,7 +304,7 @@ void Interface::Go(std::istringstream& stream) {
         info.time_is_limited = true;
         mytime = mytime - info.time_buffer;
         if (mytime  < 0) mytime = 0;
-        if (movestogo <= 0 || movestogo > 30) movestogo = 30;
+        if (movestogo <= 0 || movestogo > 32) movestogo = 32;
         info.time_limit_max = (mytime / movestogo) + ((t_inc * 4) / 5);
         if (ponder) info.time_limit_max += info.time_limit_max / 4;
 
@@ -383,7 +385,7 @@ void Interface::NewGame() {
 }
 
 Interface::~Interface() {}
-
+#ifndef RELEASE
 void Interface::CheckSpeedup(std::istringstream& stream) {
     std::istringstream streamcmd;
     std::vector<std::string> fenPos;
@@ -447,7 +449,7 @@ void Interface::CheckSpeedup(std::istringstream& stream) {
     LogAndPrintOutput() << "Threads: " << std::to_string(threads[1]) << " time: " << std::to_string(timeSpeedupSum[1] / fenPos.size()) << " nodes: " << std::to_string(nodesSpeedupSum[1] / fenPos.size()) << "\n";
     LogAndPrintOutput() << "\n\n";
 }
-
+#endif
 void Interface::CheckBestSplit(std::istringstream& stream) {
     std::istringstream streamcmd;
     std::vector<std::string> fenPos;
