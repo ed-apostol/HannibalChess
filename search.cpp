@@ -704,7 +704,7 @@ void Search::timeManagement(int depth) {
                 return;
             }
         }
-        if (timeElapsed > (mInfo.start_time + (((mInfo.time_limit_max - mInfo.start_time) * 65) / 100))) { // 65%
+        if (timeElapsed > (mInfo.start_time + (((mInfo.time_limit_max - mInfo.start_time) * 3) / 4))) { // 75%
             int64 addTime = 0;
             if (timeElapsed < mInfo.time_limit_abs) {
                 if ((mInfo.best_value + WORSE_SCORE_CUTOFF) <= mInfo.last_value) {
@@ -787,12 +787,6 @@ void Engine::getBestMove(Thread& sthread) {
     SplitPoint rootsp;
     ss.moveGivesCheck = kingIsInCheck(rootpos);
     ss.dcc = discoveredCheckCandidates(rootpos, rootpos.side);
-
-#ifdef DEBUG_EVAL
-    showeval = true;
-    eval(rootpos, 0);
-    showeval = false;
-#endif
 
     transtable.NewDate(transtable.Date());
     pvhashtable.NewDate(pvhashtable.Date());

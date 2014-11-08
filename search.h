@@ -38,6 +38,7 @@ struct SearchInfo {
         mate_found = 0;
         multipvIdx = 0;
         mvlist_initialized = false;
+        predictedPosition = false;
         memset(moves, 0, sizeof(moves));
         time_buffer = UCIOptionsMap["Time Buffer"].GetInt();
         contempt = UCIOptionsMap["Contempt"].GetInt();
@@ -58,6 +59,7 @@ struct SearchInfo {
     int64 time_limit_max;
     int64 time_limit_abs;
     bool node_is_limited;
+    bool predictedPosition;
     uint64 node_limit;
 
     int64 start_time;
@@ -198,11 +200,6 @@ public:
 
     position_t rootpos;
     SearchInfo info;
-#ifdef DEBUG_EVAL
-    bool showeval = false;
-#else
-    const bool showeval = false;
-#endif
 private:
     Search* search;
     TranspositionTable transtable;

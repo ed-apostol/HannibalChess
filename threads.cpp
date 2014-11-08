@@ -43,7 +43,7 @@ void Thread::IdleLoop() {
             SleepAndWaitForCondition();            
         }
         if (!exit_flag && !doSleep && master_sp == NULL && thread_id == 0) {
-            LogAndPrintInfo() << "IdleLoop: Main thread waking up to start searching!";
+            LogInfo() << "IdleLoop: Main thread waking up to start searching!";
             CEngine.getBestMove(*this);
             doSleep = true;
         }
