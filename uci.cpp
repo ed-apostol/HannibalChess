@@ -32,7 +32,7 @@ const std::string Interface::arch = "x64";
 
 static const int MinHash = 1;
 static const int MaxHash = 65536;
-static const int DefaultHash = 64;
+static const int DefaultHash = 128;
 
 static const int MinPHash = 1;
 static const int MaxPHash = 1024;

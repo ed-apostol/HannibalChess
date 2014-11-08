@@ -40,6 +40,8 @@ const int QScastleTo[2] = {c1, c8};
 #define TEMPO_OPEN 20 //20
 #define TEMPO_END 10 //10
 
+#define TRAPPED 80
+
 #define TM1 64
 #define TM2 54
 #define TM3 25
@@ -440,7 +442,7 @@ void evalPieces(const position_t& pos, eval_info_t *ei, const int color) {
             ei->end_score[color] += temp1;
         }
         if ((bewareTrapped[color] & fromMask) && temp1 < 2 && (fromMask & safer) == 0) { //trapped piece if you are in opponent area and you have very few safe moves
-            ei->mid_score[color] -= 125;
+            ei->mid_score[color] -= TRAPPED;
         }
     }
     pc_bits = pos.bishops & pos.color[color];
@@ -459,7 +461,7 @@ void evalPieces(const position_t& pos, eval_info_t *ei, const int color) {
         uint64 fromMask = BitMask[from];
 
         if ((bewareTrapped[color] & fromMask) && temp1 < 2 && (fromMask & safer) == 0) { //trapped piece if you are in opponent area and you have very few safe moves
-            ei->mid_score[color] -= 125;
+            ei->mid_score[color] -= TRAPPED;
         }
         xtemp64 = bishopAttacksBB(from, boardSkeleton) & notOwnSkeleton;
 
