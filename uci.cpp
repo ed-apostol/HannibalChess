@@ -185,10 +185,8 @@ bool Interface::Input(std::istringstream& stream) {
     } else if (command == "quit") {
         Quit();
         return false;
-#ifndef RELEASE
     } else if (command == "speedup") {
         CheckSpeedup(stream);
-#endif
     } else if (command == "split") {
         CheckBestSplit(stream);
     } else {
@@ -385,7 +383,6 @@ void Interface::NewGame() {
 }
 
 Interface::~Interface() {}
-#ifndef RELEASE
 void Interface::CheckSpeedup(std::istringstream& stream) {
     std::istringstream streamcmd;
     std::vector<std::string> fenPos;
@@ -449,7 +446,6 @@ void Interface::CheckSpeedup(std::istringstream& stream) {
     LogAndPrintOutput() << "Threads: " << std::to_string(threads[1]) << " time: " << std::to_string(timeSpeedupSum[1] / fenPos.size()) << " nodes: " << std::to_string(nodesSpeedupSum[1] / fenPos.size()) << "\n";
     LogAndPrintOutput() << "\n\n";
 }
-#endif
 void Interface::CheckBestSplit(std::istringstream& stream) {
     std::istringstream streamcmd;
     std::vector<std::string> fenPos;
