@@ -44,7 +44,7 @@ struct SearchInfo {
         contempt = UCIOptionsMap["Contempt"].GetInt();
         multipv = UCIOptionsMap["MultiPV"].GetInt();
     }
-    int thinking_status;
+    volatile int thinking_status;
     volatile bool stop_search;
 
     int time_buffer;

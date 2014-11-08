@@ -752,15 +752,8 @@ void Engine::stopSearch() {
 }
 
 void Engine::ponderHit() { //no pondering in tuning
-    int64 time = getTime() - info.start_time;
-
-    if ((info.iteration >= 8 && (info.legalmoves == 1 || info.mate_found >= 3)) || (time > info.time_limit_abs)) {
-        stopSearch();
-        LogInfo() << "info string Has searched enough the ponder move: aborting";
-    } else {
-        info.thinking_status = THINKING;
-        LogInfo() << "info string Switch from pondering to thinking";
-    }
+    info.thinking_status = THINKING;
+    LogInfo() << "info string Switch from pondering to thinking";
 }
 
 void Engine::searchFromIdleLoop(SplitPoint& sp, Thread& sthread) {
