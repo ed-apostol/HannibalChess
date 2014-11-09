@@ -434,8 +434,11 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     ss.hashDepth = newdepth;
                 }
             }
-        }
-        if (/*!inAllNode(nt) && !inCheck && */ ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8)) { // singular extension
+        }/*
+        if (ss.hashMove != EMPTY && moveIsCheck(pos, ss.hashMove, ss.dcc) && swap(pos, ss.hashMove) >= 0)
+            ss.firstExtend = true;
+        else*/
+        if (ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8)) { // singular extension
             int newdepth = depth / 2;
             if (ss.hashDepth >= newdepth) {
                 int targetScore = ss.evalvalue - EXPLORE_CUTOFF;
@@ -446,6 +449,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (score <= targetScore) ss.firstExtend = true;
             }
         }
+        
     }
 
     if (inSplitPoint) {
@@ -880,16 +884,14 @@ void Engine::getBestMove(Thread& sthread) {
     }
     if (!info.stop_search) {
         if ((info.depth_is_limited || info.time_is_limited) && info.thinking_status == THINKING) {
-            stopSearch();
             LogInfo() << "info string Aborting search: end of getBestMove: id = " << id << ", best_value = " << info.best_value << " sp = " << rootpos.sp << ", ply = " << rootpos.ply;
         } else {
             LogAndPrintInfo() << "info string Waiting for stop, quit, or ponderhit";
-            while (!info.stop_search);
-            stopSearch();
+            while (!info.stop_search && (info.thinking_status != THINKING || !info.time_is_limited));
             LogInfo() << "info string Aborting search: end of waiting for stop/quit/ponderhit";
         }
+        stopSearch();
     }
-
     sendBestMove();
 }
 

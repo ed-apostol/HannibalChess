@@ -150,6 +150,7 @@ public:
         InitEvalHash(UCIOptionsMap["Eval Cache"].GetInt());
     }
     void StartThinking() {
+        while (!mThreads[0]->doSleep); 
         nodes_since_poll = 0;
         nodes_between_polls = 8192;
         ThreadFromIdx(0).stop = false;
