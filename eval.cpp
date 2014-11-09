@@ -17,7 +17,7 @@
 #include "trans.h"
 #include "eval.h"
 #include "material.h"
-#include "search.h"
+#include "threads.h"
 
 //some castling comments
 const int KSC[2] = {WCKS, BCKS};
@@ -860,13 +860,13 @@ void evalPassed(const position_t& pos, eval_info_t *ei, const int allied, uint64
     } while (passedpawn_mask);
 }
 
-void evalPawns(const position_t& pos, eval_info_t *ei, int thread_id) {
+void evalPawns(const position_t& pos, eval_info_t *ei, Thread& sthread) {
     ASSERT(ei != NULL);
 
     initPawnEvalByColor(pos, ei, WHITE);
     initPawnEvalByColor(pos, ei, BLACK);
 
-    ei->pawn_entry = CEngine.ThreadFromIdx(thread_id).pt.Entry(pos.posStore.phash);
+    ei->pawn_entry = sthread.pt.Entry(pos.posStore.phash);
     if (ei->pawn_entry->hashlock == LOCK(pos.posStore.phash)) {
         ei->mid_score[WHITE] += ei->pawn_entry->opn;
         ei->end_score[WHITE] += ei->pawn_entry->end;
@@ -884,7 +884,7 @@ void evalPawns(const position_t& pos, eval_info_t *ei, int thread_id) {
     }
 }
 
-int eval(const position_t& pos, int thread_id) {
+int eval(const position_t& pos, Thread& sthread) {
     eval_info_t ei;
     material_info_t *mat;
     int open, end, score;
@@ -892,7 +892,7 @@ int eval(const position_t& pos, int thread_id) {
     EvalEntry *entry;
     uint64 whitePassed, blackPassed;
 
-    entry = CEngine.ThreadFromIdx(thread_id).et.Entry(pos.posStore.hash);
+    entry = sthread.et.Entry(pos.posStore.hash);
     if (entry->hashlock == LOCK(pos.posStore.hash)) {
         return entry->value;
     }
@@ -937,7 +937,7 @@ int eval(const position_t& pos, int thread_id) {
     ei.mid_score[pos.side] += personality(thread_id).tempo_open;
     ei.end_score[pos.side] += personality(thread_id).tempo_end;
 
-    evalPawns(pos, &ei, thread_id);
+    evalPawns(pos, &ei, sthread);
     {
         int oneSided = ((QUEENSIDE & pos.pawns) == 0 ||
             (KINGSIDE & pos.pawns) == 0);

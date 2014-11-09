@@ -17,6 +17,7 @@
 /* the search data structure */
 struct SearchInfo {
     void Init() {
+        thinking_status = THINKING;
         stop_search = false;
         depth_is_limited = false;
         depth_limit = MAXPLY;
@@ -33,19 +34,21 @@ struct SearchInfo {
         last_last_value = -INF;
         change = 0;
         research = 0;
+        iteration = 0;
         bestmove = 0;
         pondermove = 0;
         mate_found = 0;
+        currmovenumber = 0;
         multipvIdx = 0;
+        legalmoves = 0;
         mvlist_initialized = false;
-        predictedPosition = false;
         memset(moves, 0, sizeof(moves));
-        time_buffer = UCIOptionsMap["Time Buffer"].GetInt();
-        contempt = UCIOptionsMap["Contempt"].GetInt();
-        multipv = UCIOptionsMap["MultiPV"].GetInt();
+        time_buffer = 0;
+        contempt = 0;
+        multipv = 0;
     }
     volatile int thinking_status;
-    volatile bool stop_search;
+    volatile bool stop_search; // TODO: replace with sthread.stop?
 
     int time_buffer;
     int contempt;
@@ -59,7 +62,6 @@ struct SearchInfo {
     int64 time_limit_max;
     int64 time_limit_abs;
     bool node_is_limited;
-    bool predictedPosition;
     uint64 node_limit;
 
     int64 start_time;
@@ -94,11 +96,12 @@ class Engine {
 public:
     Engine();
     ~Engine();
-    void ponderHit();
-    void sendBestMove();
-    void searchFromIdleLoop(SplitPoint& sp, Thread& sthread);
-    void getBestMove(Thread& sthread);
-    void stopSearch();
+    void PonderHit();
+    void SendBestMove();
+    void SearchFromIdleLoop(SplitPoint& sp, Thread& sthread);
+    void GetBestMove(Thread& sthread);
+    void StopSearch();
+    void StartThinking(GoCmdData& data, position_t& pos);
 
     void InitTTHash(int size) {
         transtable.Init(size, transtable.BUCKET);
@@ -112,17 +115,19 @@ public:
     void ClearPVTTHash() {
         pvhashtable.Clear();
     }
-    void SetAllThreadsToStop() {
-        for (Thread* th : mThreads) {
-            th->stop = true;
-            th->doSleep = true;
-        }
+    void InitPawnHash(int size) {
+        for (Thread* th : mThreads) th->pt.Init(size, th->pt.BUCKET);
     }
-    void SetAllThreadsToWork() {
-        for (Thread* th : mThreads) {
-            if (th->thread_id != 0) th->TriggerCondition(); // thread_id == 0 is triggered separately
-        }
+    void InitEvalHash(int size) {
+        for (Thread* th : mThreads) th->et.Init(size, th->et.BUCKET);
     }
+    void ClearPawnHash() {
+        for (Thread* th : mThreads) th->pt.Clear();
+    }
+    void ClearEvalHash() {
+        for (Thread* th : mThreads) th->et.Clear();
+    }
+    
     uint64 ComputeNodes() {
         uint64 nodes = 0;
         for (Thread* th : mThreads) nodes += th->nodes;
@@ -140,7 +145,6 @@ public:
         while (mThreads.size() < num) {
             int id = (int)mThreads.size();
             mThreads.push_back(new Thread(id, &mThreads));
-            //mThreads[id]->NativeThread() = std::thread(mThreads[id]->IdleLoop, this);
         }
         while (mThreads.size() > num) {
             delete mThreads.back();
@@ -149,31 +153,7 @@ public:
         InitPawnHash(UCIOptionsMap["Pawn Hash"].GetInt());
         InitEvalHash(UCIOptionsMap["Eval Cache"].GetInt());
     }
-    void StartThinking() {
-        nodes_since_poll = 0;
-        nodes_between_polls = 8192;
-        ThreadFromIdx(0).stop = false;
-        ThreadFromIdx(0).TriggerCondition();
-    }
-    Thread& ThreadFromIdx(int thread_id) {
-        return *mThreads[thread_id];
-    }
-    size_t ThreadNum() const {
-        return mThreads.size();
-    }
-    void InitPawnHash(int size) {
-        for (Thread* th : mThreads) th->pt.Init(size, th->pt.BUCKET);
-    }
-    void InitEvalHash(int size) {
-        for (Thread* th : mThreads) th->et.Init(size, th->et.BUCKET);
-    }
-    void ClearPawnHash() {
-        for (Thread* th : mThreads) th->pt.Clear();
-    }
-    void ClearEvalHash() {
-        for (Thread* th : mThreads) th->et.Clear();
-    }
-    void PrintDebugData() {
+    void PrintThreadStats() {
         LogInfo() << "================================================================";
         for (Thread* th : mThreads) {
             LogInfo() << "thread_id: " << th->thread_id
@@ -184,12 +164,29 @@ public:
         LogInfo() << "================================================================";
     }
     volatile bool StillThinking() {
-        return !ThreadFromIdx(0).doSleep;
+        return mThinking;
     }
     void WaitForThreadsToSleep() {
         for (Thread* th : mThreads) {
             while (!th->doSleep);
         }
+    }
+    void SetAllThreadsToStop() {
+        for (Thread* th : mThreads) {
+            th->stop = true;
+            th->doSleep = true;
+        }
+    }
+    void SetAllThreadsToWork() {
+        for (Thread* th : mThreads) {
+            if (th->thread_id != 0) th->TriggerCondition(); // thread_id == 0 is triggered separately
+        }
+    }
+    Thread& ThreadFromIdx(int thread_id) {
+        return *mThreads[thread_id];
+    }
+    size_t ThreadNum() const {
+        return mThreads.size();
     }
 
     int mMinSplitDepth;
@@ -201,13 +198,14 @@ public:
     position_t rootpos;
     SearchInfo info;
 private:
+    volatile bool mThinking;
     Search* search;
     TranspositionTable transtable;
     PvHashTable pvhashtable;
     std::vector<Thread*> mThreads;
 };
 
-extern Engine CEngine;
+extern Engine CEngine; // TODO: move this inside Interface class
 
 extern inline bool moveIsTactical(uint32 m);
 extern inline int historyIndex(uint32 side, uint32 move);

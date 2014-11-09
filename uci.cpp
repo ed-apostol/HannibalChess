@@ -148,7 +148,7 @@ Interface::Interface() {
     initMaterial();
     InitMateBoost();
 
-    setPosition(CEngine.rootpos, STARTPOS);
+    setPosition(input_pos, STARTPOS);
 }
 
 void Interface::Run() {
@@ -167,12 +167,10 @@ bool Interface::Input(std::istringstream& stream) {
     if (command == "stop") {
         Stop();
     } else if (command == "ponderhit") {
-        Ponderhit();
+        PonderHit();
     } else if (command == "go") {
-        while (CEngine.StillThinking()); // wait for current search to finish before accepting command
         Go(stream);
     } else if (command == "position") {
-        while (CEngine.StillThinking()); // wait for current search to finish before accepting command
         Position(stream);
     } else if (command == "setoption") {
         SetOption(stream);
@@ -211,47 +209,42 @@ void Interface::Id() {
 }
 
 void Interface::Stop() {
-    CEngine.stopSearch();
+    CEngine.StopSearch();
     LogInfo() << "info string Aborting search: stop";
 }
 
-void Interface::Ponderhit() {
-    CEngine.ponderHit();
+void Interface::PonderHit() {
+    CEngine.PonderHit();
 }
 
 void Interface::Go(std::istringstream& stream) {
     std::string command;
-    int64 mytime = 0, t_inc = 0;
-    int wtime = 0, btime = 0, winc = 0, binc = 0, movestogo = 0, upperdepth = 0, nodes = 0, mate = 0, movetime = 0;
-    bool infinite = false, ponder = false;
-    SearchInfo& info = CEngine.info;
-
-    info.Init();
+    GoCmdData data;
 
     stream >> command;
     while (command != "") {
         if (command == "wtime") {
-            stream >> wtime;
+            stream >> data.wtime;
         } else if (command == "btime") {
-            stream >> btime;
+            stream >> data.btime;
         } else if (command == "winc") {
-            stream >> winc;
+            stream >> data.winc;
         } else if (command == "binc") {
-            stream >> binc;
+            stream >> data.binc;
         } else if (command == "movestogo") {
-            stream >> movestogo;
+            stream >> data.movestogo;
         } else if (command == "ponder") {
-            ponder = true;
+            data.ponder = true;
         } else if (command == "depth") {
-            stream >> upperdepth;
+            stream >> data.depth;
         } else if (command == "movetime") {
-            stream >> movetime;
+            stream >> data.movetime;
         } else if (command == "infinite") {
-            infinite = true;
+            data.infinite = true;
         } else if (command == "nodes") {
-            stream >> nodes;
+            stream >> data.nodes;
         } else if (command == "mate") {
-            stream >> mate;
+            stream >> data.mate;
         } else {
             LogAndPrintError() << "Wrong go command: " << command;
             return;
@@ -259,83 +252,7 @@ void Interface::Go(std::istringstream& stream) {
         command = "";
         stream >> command;
     }
-    if (infinite) {
-        info.depth_is_limited = true;
-        info.depth_limit = MAXPLY;
-        LogInfo() << "info string Infinite";
-    }
-    if (upperdepth > 0) {
-        info.depth_is_limited = true;
-        info.depth_limit = upperdepth;
-        LogInfo() << "info string Depth is limited to " << info.depth_limit << " half moves";
-    }
-    if (mate > 0) {
-        info.depth_is_limited = true;
-        info.depth_limit = mate * 2 - 1;
-        LogInfo() << "info string Mate in " << info.depth_limit << " half moves";
-    }
-    if (nodes > 0) {
-        info.node_is_limited = true;
-        info.node_limit = nodes;
-        LogInfo() << "info string Nodes is limited to " << info.node_limit << " positions";
-    }
-    if (info.moves[0]) {
-        info.moves_is_limited = true;
-        LogInfo() << "info string Moves is limited";
-    }
-
-    if (movetime > 0) {
-        info.time_is_limited = true;
-        info.alloc_time = movetime;
-        info.time_limit_max = info.start_time + movetime;
-        info.time_limit_abs = info.start_time + movetime;
-        LogInfo() << "info string Fixed time per move: " << movetime << " ms";
-    }
-    if (CEngine.rootpos.side == WHITE) {
-        mytime = wtime;
-        t_inc = winc;
-    } else {
-        mytime = btime;
-        t_inc = binc;
-    }
-    if (mytime > 0) {
-        info.time_is_limited = true;
-        mytime = mytime - info.time_buffer;
-        if (mytime  < 0) mytime = 0;
-        if (movestogo <= 0 || movestogo > 32) movestogo = 32;
-        info.time_limit_max = (mytime / movestogo) + ((t_inc * 4) / 5);
-        if (ponder) info.time_limit_max += info.time_limit_max / 4;
-
-        if (info.time_limit_max > mytime) info.time_limit_max = mytime;
-        info.time_limit_abs = ((mytime * 3) / 10) + ((t_inc * 4) / 5);
-        if (info.time_limit_abs < info.time_limit_max) info.time_limit_abs = info.time_limit_max;
-        if (info.time_limit_abs > mytime) info.time_limit_abs = mytime;
-
-        if (info.time_limit_max < 2) info.time_limit_max = 2;
-        if (info.time_limit_abs < 2) info.time_limit_abs = 2;
-
-        LogInfo() << "info string Time is limited: ";
-        LogInfo() << "max = " << info.time_limit_max;
-        LogInfo() << "abs = " << info.time_limit_abs;
-        info.alloc_time = info.time_limit_max;
-        info.time_limit_max += info.start_time;
-        info.time_limit_abs += info.start_time;
-    }
-    if (infinite) {
-        info.thinking_status = ANALYSING;
-        LogInfo() << "info string Search status is ANALYSING";
-    } else if (ponder) {
-        info.thinking_status = PONDERING;
-        LogInfo() << "info string Search status is PONDERING";
-    } else {
-        info.thinking_status = THINKING;
-        LogInfo() << "info string Search status is THINKING";
-    }
-
-    DrawValue[CEngine.rootpos.side] = -info.contempt;
-    DrawValue[CEngine.rootpos.side ^ 1] = info.contempt;
-
-    CEngine.StartThinking();
+    CEngine.StartThinking(data, input_pos);
 }
 
 void Interface::Position(std::istringstream& stream) {
@@ -354,16 +271,16 @@ void Interface::Position(std::istringstream& stream) {
         return;
     }
 
-    setPosition(CEngine.rootpos, fen.c_str());
+    setPosition(input_pos, fen.c_str());
     while (stream >> token) {
         movelist_t ml;
-        genLegal(CEngine.rootpos, &ml, true);
+        genLegal(input_pos, &ml, true);
         m = parseMove(&ml, token.c_str());
-        if (m) makeMove(CEngine.rootpos, UndoStack[CEngine.rootpos.sp], m);
+        if (m) makeMove(input_pos, UndoStack[input_pos.sp], m);
         else break;
-        if (CEngine.rootpos.posStore.fifty == 0) CEngine.rootpos.sp = 0;
+        if (input_pos.posStore.fifty == 0) input_pos.sp = 0;
     }
-    CEngine.rootpos.ply = 0;
+    input_pos.ply = 0;
 }
 
 void Interface::SetOption(std::istringstream& stream) {

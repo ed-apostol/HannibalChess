@@ -132,31 +132,30 @@ class Thread : public ThreadBase {
 public:
     static const int MaxNumSplitPointsPerThread = 8;
 
-    Thread(int _thread_id, std::vector<Thread*>* const _thread_group) : ThreadBase(_thread_id) {
+    Thread(int _thread_id, std::vector<Thread*>* const _thread_group) : ThreadBase(_thread_id), mThreadGroup(_thread_group) {
         Init();
-        mThreadGroup = _thread_group;
         NativeThread() = std::thread(&Thread::IdleLoop, this);
     }
-    ~Thread() {
-        //threadgroup = NULL;
-    }
+
     void Init();
     void IdleLoop();
     void GetWork(SplitPoint* const master_sp);
     void SearchSplitPoint(const position_t& pos, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot);
 
-    uint64 nodes;
     uint64 numsplits; // DEBUG
     uint64 numsplits2; // DEBUG
     uint64 workers2; // DEBUG
+    uint64 nodes;
+    
     volatile int num_sp;
     SplitPoint *activeSplitPoint;
-    SplitPoint sptable[MaxNumSplitPointsPerThread];
     ThreadStack ts[MAXPLY];
     int32 evalgains[1024];
     int32 history[1024];
     EvalHashTable et;
     PawnHashTable pt;
+private:
+    SplitPoint sptable[MaxNumSplitPointsPerThread];
     std::vector<Thread*>* mThreadGroup;
 };
 
