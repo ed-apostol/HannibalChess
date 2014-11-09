@@ -333,7 +333,24 @@ int Search::searchNode(position_t& pos, int alpha, int beta, const int depth, Se
         else return searchGeneric<inRoot, inSplitPoint, false, inSingular>(pos, alpha, beta, depth, ssprev, sthread, nt);
     }
 }
-
+void UpdateSearch(position_t& pos, SearchStack& ss, Thread& sthread, const int depth) {
+    if (ss.bestmove != EMPTY && !moveIsTactical(ss.bestmove)) { //> alpha account for pv better maybe? Sam
+        static const int MAX_HDEPTH = 20;
+        static const int NEW_HISTORY = (10 + MAX_HDEPTH);
+        int index = historyIndex(pos.side, ss.bestmove);
+        int hisDepth = MIN(depth, MAX_HDEPTH);
+        sthread.history[index] += hisDepth * hisDepth;
+        for (int i = 0; i < ss.hisCnt; ++i) {
+            if (ss.hisMoves[i] == ss.bestmove) continue;
+            index = historyIndex(pos.side, ss.hisMoves[i]);
+            sthread.history[index] -= sthread.history[index] / (NEW_HISTORY - hisDepth);
+        }
+        if (sthread.ts[pos.ply].killer1 != ss.bestmove) {
+            sthread.ts[pos.ply].killer2 = sthread.ts[pos.ply].killer1;
+            sthread.ts[pos.ply].killer1 = ss.bestmove;
+        }
+    }
+}
 template<bool inRoot, bool inSplitPoint, bool inCheck, bool inSingular>
 int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt) {
     SplitPoint* sp = NULL;
@@ -364,7 +381,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     if ((!inCutNode(nt) || !(entry->Mask() & MAllLower)) && entry->LowerDepth() >= depth && (entry->Move() != EMPTY || pos.posStore.lastmove == EMPTY)) {
                         int score = scoreFromTrans(entry->LowerValue(), pos.ply);
                         if (score > alpha) {
-                            ssprev.counterMove = entry->Move();
+                            ss.bestmove = ssprev.counterMove = entry->Move();
+                            UpdateSearch(pos, ss, sthread, depth);
                             return score;
                         }
                     }
@@ -434,10 +452,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     ss.hashDepth = newdepth;
                 }
             }
-        }/*
-        if (ss.hashMove != EMPTY && moveIsCheck(pos, ss.hashMove, ss.dcc) && swap(pos, ss.hashMove) >= 0)
-            ss.firstExtend = true;
-        else*/
+        }
         if (ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8)) { // singular extension
             int newdepth = depth / 2;
             if (ss.hashDepth >= newdepth) {
@@ -606,23 +621,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             mTransTable.StoreNoMoves(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
             return ss.bestvalue;
         }
-        if (ss.bestmove != EMPTY && !moveIsTactical(ss.bestmove) && ss.bestvalue >= beta) { //> alpha account for pv better maybe? Sam
-            static const int MAX_HDEPTH = 20;
-            static const int NEW_HISTORY = (10 + MAX_HDEPTH);
-            int index = historyIndex(pos.side, ss.bestmove);
-            int hisDepth = MIN(depth, MAX_HDEPTH);
-            sthread.history[index] += hisDepth * hisDepth;
-            for (int i = 0; i < ss.hisCnt; ++i) {
-                if (ss.hisMoves[i] == ss.bestmove) continue;
-                index = historyIndex(pos.side, ss.hisMoves[i]);
-                sthread.history[index] -= sthread.history[index] / (NEW_HISTORY - hisDepth);
-            }
-            if (sthread.ts[pos.ply].killer1 != ss.bestmove) {
-                sthread.ts[pos.ply].killer2 = sthread.ts[pos.ply].killer1;
-                sthread.ts[pos.ply].killer1 = ss.bestmove;
-            }
-        }
         if (ss.bestvalue >= beta) {
+            UpdateSearch(pos, ss, sthread, depth);
             ssprev.counterMove = ss.bestmove;
             if (inCutNode(nt)) mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
             else mTransTable.StoreAllLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
