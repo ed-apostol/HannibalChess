@@ -44,19 +44,18 @@ void Thread::IdleLoop() {
         }
         if (!exit_flag && !doSleep && master_sp == NULL && thread_id == 0) {
             LogInfo() << "IdleLoop: Main thread waking up to start searching!";
-            CEngine.getBestMove(*this);
+            CEngine.GetBestMove(*this);
             doSleep = true;
         }
         if (!exit_flag && !doSleep && stop) {
             GetWork(master_sp);
         }
         if (!exit_flag && !doSleep && !stop) {
-            SplitPoint* const sp = activeSplitPoint; // this is correctly located, don't move this, else bug
-            CEngine.searchFromIdleLoop(*sp, *this);
+            SplitPoint* const sp = activeSplitPoint;
+            CEngine.SearchFromIdleLoop(*sp, *this);
             std::lock_guard<Spinlock> lck(sp->updatelock);
             sp->workersBitMask &= ~((uint64)1 << thread_id);
             stop = true;
-            doSleep = true;
         }
         if (master_sp != NULL && (!master_sp->workersBitMask || doSleep)) return;
     }
@@ -96,7 +95,7 @@ void Thread::GetWork(SplitPoint* const master_sp) {
 }
 
 void Thread::SearchSplitPoint(const position_t& pos, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot) {
-    SplitPoint *active_sp = &sptable[num_sp];
+    SplitPoint* const active_sp = &sptable[num_sp];
 
     active_sp->updatelock.lock();
     active_sp->parent = activeSplitPoint;
@@ -129,10 +128,10 @@ void Thread::SearchSplitPoint(const position_t& pos, SearchStack* ss, SearchStac
     ss->bestmove = active_sp->bestmove;
     ss->playedMoves = active_sp->played;
     activeSplitPoint = active_sp->parent;
-    if (!doSleep) {
-        stop = false;
-    }
+    
+    if (!doSleep) stop = false;
 
+    // threads statistics
     int cnt = bitCnt(active_sp->allWorkersBitMask);
     if (cnt > 1) {
         numsplits2++;

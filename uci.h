@@ -84,7 +84,7 @@ public:
 private:
     bool Input(std::istringstream& stream);
     void Stop();
-    void Ponderhit();
+    void PonderHit();
     void Go(std::istringstream& stream);
     void Position(std::istringstream& stream);
     void SetOption(std::istringstream& stream);
@@ -102,4 +102,6 @@ private:
     static const std::string year;
     static const std::string version;
     static const std::string arch;
+
+    position_t input_pos;
 };

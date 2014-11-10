@@ -252,7 +252,7 @@ move_t* sortNext(SplitPoint* sp, position_t& pos, movelist_t *mvlist, int& phase
                 genLegal(pos, mvlist, true);
             }
             scoreRoot(mvlist);
-            CEngine.info.mvlist_initialized = true;
+            CEngine.info.mvlist_initialized = true; // TODO: refactor all CEngine calls here
             CEngine.info.legalmoves = mvlist->size;
             break;
         case PH_EVASION:

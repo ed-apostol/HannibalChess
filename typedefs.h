@@ -186,6 +186,34 @@ struct SearchStack {
     int mvlist_phase;
 };
 
+struct GoCmdData {
+    GoCmdData() {
+        wtime = 0;
+        btime = 0;
+        winc = 0;
+        binc = 0;
+        movestogo = 0;
+        ponder = 0;
+        depth = 0;
+        movetime = 0;
+        mate = 0;
+        infinite = false;
+        ponder = false;
+        nodes = 0;
+    }
+    int wtime;
+    int btime;
+    int winc;
+    int binc;
+    int movestogo;
+    int depth;
+    int movetime;
+    int mate;
+    bool infinite;
+    bool ponder;
+    uint64 nodes;
+};
+
 enum directions {
     SW, W, NW, N, NE, E, SE, S, NO_DIR
 };//{-9, -1, 7, 8, 9, 1, -7, -8};

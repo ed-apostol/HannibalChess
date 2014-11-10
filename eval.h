@@ -10,6 +10,7 @@
 #pragma once
 
 #include "trans.h"
+#include "threads.h"
 
 /* the eval info structure */
 struct eval_info_t {
@@ -38,5 +39,5 @@ struct eval_info_t {
     PawnEntry* pawn_entry;
 };
 
-extern int eval(const position_t& pos, int thread_id);
+extern int eval(const position_t& pos, Thread& sthread);
 extern void evalEndgame(int attacker, const position_t& pos, eval_info_t *ei, int *score, int *draw, int mover);

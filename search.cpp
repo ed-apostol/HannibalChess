@@ -92,7 +92,7 @@ void Search::initNode(Thread& sthread) {
         return;
     }
 
-    if (mInfo.node_is_limited && CEngine.ComputeNodes() >= mInfo.node_limit) {
+    if (mInfo.node_is_limited && CEngine.ComputeNodes() >= mInfo.node_limit) { // TODO: refactor all CEngine calls here
         stopSearch();
     }
     if (sthread.thread_id == 0 && ++CEngine.nodes_since_poll >= CEngine.nodes_between_polls) {
@@ -254,12 +254,12 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
             }
         }
     }
-    if (pos.ply >= MAXPLY - 1) return eval(pos, sthread.thread_id);
+    if (pos.ply >= MAXPLY - 1) return eval(pos, sthread);
     if (!ssprev.moveGivesCheck) {
         if (simpleStalemate(pos)) {
             return DrawValue[pos.side];
         }
-        ss.evalvalue = ss.bestvalue = eval(pos, sthread.thread_id);
+        ss.evalvalue = ss.bestvalue = eval(pos, sthread);
         updateEvalgains(pos, pos.posStore.lastmove, ssprev.evalvalue, ss.evalvalue, sthread);
         if (ss.bestvalue > alpha) {
             if (ss.bestvalue >= beta) {
@@ -406,7 +406,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 }
             }
         }
-        if (ss.evalvalue == -INF) ss.evalvalue = eval(pos, sthread.thread_id);
+        if (ss.evalvalue == -INF) ss.evalvalue = eval(pos, sthread);
 
         if (pos.ply >= MAXPLY - 1) return ss.evalvalue;
         updateEvalgains(pos, pos.posStore.lastmove, ssprev.evalvalue, ss.evalvalue, sthread);
@@ -453,7 +453,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 }
             }
         }
-        if (ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8)) { // singular extension
+        if (/*!inAllNode(nt) && !inCheck && */ ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8)) { // singular extension
             int newdepth = depth / 2;
             if (ss.hashDepth >= newdepth) {
                 int targetScore = ss.evalvalue - EXPLORE_CUTOFF;
@@ -464,7 +464,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (score <= targetScore) ss.firstExtend = true;
             }
         }
-        
     }
 
     if (inSplitPoint) {
@@ -708,7 +707,7 @@ void Search::timeManagement(int depth) {
                 return;
             }
         }
-        if (timeElapsed > (mInfo.start_time + (((mInfo.time_limit_max - mInfo.start_time) * 65) / 100))) { // 75%
+        if (timeElapsed > (mInfo.start_time + (((mInfo.time_limit_max - mInfo.start_time) * 65) / 100))) {
             int64 addTime = 0;
             if (timeElapsed < mInfo.time_limit_abs) {
                 if ((mInfo.best_value + WORSE_SCORE_CUTOFF) <= mInfo.last_value) {
@@ -745,29 +744,29 @@ void Search::stopSearch() {
 }
 
 Engine::Engine() {
+    mThinking.clear(std::memory_order_release);
     search = new Search(info, transtable, pvhashtable);
 }
 Engine::~Engine() {
     delete search;
 }
 
-void Engine::stopSearch() {
+void Engine::StopSearch() {
     search->stopSearch();
 }
 
-void Engine::ponderHit() { //no pondering in tuning
+void Engine::PonderHit() { //no pondering in tuning
     info.thinking_status = THINKING;
-    if (info.iteration >= 8 && info.legalmoves == 1) stopSearch();
     LogInfo() << "info string Switch from pondering to thinking";
 }
 
-void Engine::searchFromIdleLoop(SplitPoint& sp, Thread& sthread) {
+void Engine::SearchFromIdleLoop(SplitPoint& sp, Thread& sthread) {
     position_t pos = sp.origpos;
     if (sp.inRoot) search->searchNode<true, true, false>(pos, sp.alpha, sp.beta, sp.depth, *sp.ssprev, sthread, sp.nodeType);
     else search->searchNode<false, true, false>(pos, sp.alpha, sp.beta, sp.depth, *sp.ssprev, sthread, sp.nodeType);
 }
 
-void Engine::sendBestMove() {
+void Engine::SendBestMove() {
     if (!info.bestmove) {
         LogAndPrintOutput() << "info string No legal move found. Start a new game.";
     } else {
@@ -775,10 +774,11 @@ void Engine::sendBestMove() {
         log << "bestmove " << move2Str(info.bestmove);
         if (info.pondermove) log << " ponder " << move2Str(info.pondermove);
     }
-    //CEngine.PrintDebugData();
+    //CEngine.PrintThreadStats();
+    SetThinkFinished();
 }
 
-void Engine::getBestMove(Thread& sthread) {
+void Engine::GetBestMove(Thread& sthread) {
     int id;
     int alpha, beta;
     SearchStack ss;
@@ -791,8 +791,8 @@ void Engine::getBestMove(Thread& sthread) {
 
     if (info.thinking_status == THINKING && UCIOptionsMap["OwnBook"].GetInt() && !anyRep(rootpos)) {
         if ((info.bestmove = PolyBook.getBookMove(rootpos)) != EMPTY) {
-            stopSearch();
-            sendBestMove();
+            StopSearch();
+            SendBestMove();
             return;
         }
     }
@@ -812,8 +812,8 @@ void Engine::getBestMove(Thread& sthread) {
             search->displayPV(&info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
             if (info.rootPV.length > 1) info.pondermove = info.rootPV.moves[1];
             else info.pondermove = 0;
-            stopSearch();
-            sendBestMove();
+            StopSearch();
+            SendBestMove();
             return;
         }
         ss.hashMove = entry->pvMove();
@@ -884,14 +884,111 @@ void Engine::getBestMove(Thread& sthread) {
     }
     if (!info.stop_search) {
         if ((info.depth_is_limited || info.time_is_limited) && info.thinking_status == THINKING) {
-            LogInfo() << "info string Aborting search: end of getBestMove: id = " << id << ", best_value = " << info.best_value << " sp = " << rootpos.sp << ", ply = " << rootpos.ply;
+            LogInfo() << "info string Aborting search: end of GetBestMove: id = " << id << ", best_value = " << info.best_value << " sp = " << rootpos.sp << ", ply = " << rootpos.ply;
         } else {
-            LogAndPrintInfo() << "info string Waiting for stop, quit, or ponderhit";
-            while (!info.stop_search && (info.thinking_status != THINKING || !info.time_is_limited));
-            LogInfo() << "info string Aborting search: end of waiting for stop/quit/ponderhit";
+            LogAndPrintInfo() << "info string Waiting for stop, quit, or PonderHit";
+            while (!info.stop_search && info.thinking_status != THINKING);
+            LogInfo() << "info string Aborting search: end of waiting for stop/quit/PonderHit";
         }
-        stopSearch();
+        StopSearch();
     }
-    sendBestMove();
+
+    SendBestMove();
 }
 
+void Engine::StartThinking(GoCmdData& data, position_t& pos) {
+    WaitForThinkFinished();
+
+    rootpos = pos;
+    info.Init();
+
+    info.time_buffer = UCIOptionsMap["Time Buffer"].GetInt(); // TODO: refactor this out
+    info.contempt = UCIOptionsMap["Contempt"].GetInt(); // TODO: refactor this out
+    info.multipv = UCIOptionsMap["MultiPV"].GetInt(); // TODO: refactor this out
+
+    int mytime = 0, t_inc = 0;
+
+    if (data.infinite) {
+        info.depth_is_limited = true;
+        info.depth_limit = MAXPLY;
+        LogInfo() << "info string Infinite";
+    }
+    if (data.depth > 0) {
+        info.depth_is_limited = true;
+        info.depth_limit = data.depth;
+        LogInfo() << "info string Depth is limited to " << info.depth_limit << " half moves";
+    }
+    if (data.mate > 0) {
+        info.depth_is_limited = true;
+        info.depth_limit = data.mate * 2 - 1;
+        LogInfo() << "info string Mate in " << info.depth_limit << " half moves";
+    }
+    if (data.nodes > 0) {
+        info.node_is_limited = true;
+        info.node_limit = data.nodes;
+        LogInfo() << "info string Nodes is limited to " << info.node_limit << " positions";
+    }
+    if (info.moves[0]) {
+        info.moves_is_limited = true;
+        LogInfo() << "info string Moves is limited";
+    }
+
+    if (data.movetime > 0) {
+        info.time_is_limited = true;
+        info.alloc_time = data.movetime;
+        info.time_limit_max = info.start_time + data.movetime;
+        info.time_limit_abs = info.start_time + data.movetime;
+        LogInfo() << "info string Fixed time per move: " << data.movetime << " ms";
+    }
+    if (rootpos.side == WHITE) {
+        mytime = data.wtime;
+        t_inc = data.winc;
+    }
+    else {
+        mytime = data.btime;
+        t_inc = data.binc;
+    }
+    if (mytime > 0) {
+        info.time_is_limited = true;
+        mytime = mytime - info.time_buffer;
+        if (mytime  < 0) mytime = 0;
+        if (data.movestogo <= 0 || data.movestogo > 32) data.movestogo = 32;
+        info.time_limit_max = (mytime / data.movestogo) + ((t_inc * 4) / 5);
+        if (data.ponder) info.time_limit_max += info.time_limit_max / 4;
+
+        if (info.time_limit_max > mytime) info.time_limit_max = mytime;
+        info.time_limit_abs = ((mytime * 3) / 10) + ((t_inc * 4) / 5);
+        if (info.time_limit_abs < info.time_limit_max) info.time_limit_abs = info.time_limit_max;
+        if (info.time_limit_abs > mytime) info.time_limit_abs = mytime;
+
+        if (info.time_limit_max < 2) info.time_limit_max = 2;
+        if (info.time_limit_abs < 2) info.time_limit_abs = 2;
+
+        LogInfo() << "info string Time is limited: ";
+        LogInfo() << "max = " << info.time_limit_max;
+        LogInfo() << "abs = " << info.time_limit_abs;
+        info.alloc_time = info.time_limit_max;
+        info.time_limit_max += info.start_time;
+        info.time_limit_abs += info.start_time;
+    }
+    if (data.infinite) {
+        info.thinking_status = ANALYSING;
+        LogInfo() << "info string Search status is ANALYSING";
+    }
+    else if (data.ponder) {
+        info.thinking_status = PONDERING;
+        LogInfo() << "info string Search status is PONDERING";
+    }
+    else {
+        info.thinking_status = THINKING;
+        LogInfo() << "info string Search status is THINKING";
+    }
+
+    DrawValue[rootpos.side] = -info.contempt;
+    DrawValue[rootpos.side ^ 1] = info.contempt;
+
+    nodes_since_poll = 0;
+    nodes_between_polls = 8192;
+    ThreadFromIdx(0).stop = false;
+    ThreadFromIdx(0).TriggerCondition();
+}
