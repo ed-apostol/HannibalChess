@@ -27,7 +27,7 @@
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
 const std::string Interface::year = "2014";
-const std::string Interface::version = "1.5x21";
+const std::string Interface::version = "1.5x21s";
 const std::string Interface::arch = "x64";
 
 static const int MinHash = 1;
@@ -307,7 +307,7 @@ void Interface::Go(std::istringstream& stream) {
         if (ponder) info.time_limit_max += info.time_limit_max / 4;
 
         if (info.time_limit_max > mytime) info.time_limit_max = mytime;
-        info.time_limit_abs = ((mytime * 3) / 10) + ((t_inc * 4) / 5);
+        info.time_limit_abs = ((mytime * 3) / 10) + ((t_inc * 4) / 5); //Sam if there is only 1 or 2 moves before time control this is not great
         if (info.time_limit_abs < info.time_limit_max) info.time_limit_abs = info.time_limit_max;
         if (info.time_limit_abs > mytime) info.time_limit_abs = mytime;
 

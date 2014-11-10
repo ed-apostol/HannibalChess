@@ -56,6 +56,7 @@ void Thread::IdleLoop() {
             std::lock_guard<Spinlock> lck(sp->updatelock);
             sp->workersBitMask &= ~((uint64)1 << thread_id);
             stop = true;
+            doSleep = true;
         }
         if (master_sp != NULL && (!master_sp->workersBitMask || doSleep)) return;
     }

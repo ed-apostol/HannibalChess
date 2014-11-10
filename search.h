@@ -115,7 +115,6 @@ public:
     void SetAllThreadsToStop() {
         for (Thread* th : mThreads) {
             th->stop = true;
-            th->doSleep = true;
         }
     }
     void SetAllThreadsToWork() {
@@ -150,7 +149,7 @@ public:
         InitEvalHash(UCIOptionsMap["Eval Cache"].GetInt());
     }
     void StartThinking() {
-        while (!mThreads[0]->doSleep); 
+//NEWSAM 25        while (!mThreads[0]->doSleep && mThreads[0]->stop); //sam added the stop condition as there still seemed to be some issues with instant moves
         nodes_since_poll = 0;
         nodes_between_polls = 8192;
         ThreadFromIdx(0).stop = false;

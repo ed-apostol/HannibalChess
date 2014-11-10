@@ -40,7 +40,7 @@ const int QScastleTo[2] = {c1, c8};
 #define TEMPO_OPEN 20 //20
 #define TEMPO_END 10 //10
 
-#define TRAPPED 80
+#define TRAPPED 125
 
 #define TM1 64
 #define TM2 54
