@@ -741,7 +741,7 @@ void Search::stopSearch() {
 }
 
 Engine::Engine() {
-    mThinking = false;
+    mThinking.clear(std::memory_order_release);
     search = new Search(info, transtable, pvhashtable);
 }
 Engine::~Engine() {
@@ -772,7 +772,7 @@ void Engine::SendBestMove() {
         if (info.pondermove) log << " ponder " << move2Str(info.pondermove);
     }
     //CEngine.PrintThreadStats();
-    mThinking = false;
+    SetThinkFinished();
 }
 
 void Engine::GetBestMove(Thread& sthread) {
@@ -894,9 +894,8 @@ void Engine::GetBestMove(Thread& sthread) {
 }
 
 void Engine::StartThinking(GoCmdData& data, position_t& pos) {
-    while (StillThinking()); // wait for the previous search to finish
+    WaitForThinkFinished();
 
-    mThinking = true;
     rootpos = pos;
     info.Init();
 

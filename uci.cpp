@@ -32,7 +32,7 @@ const std::string Interface::arch = "x64";
 
 static const int MinHash = 1;
 static const int MaxHash = 65536;
-static const int DefaultHash = 64;
+static const int DefaultHash = 128;
 
 static const int MinPHash = 1;
 static const int MaxPHash = 1024;
@@ -196,7 +196,7 @@ bool Interface::Input(std::istringstream& stream) {
 
 void Interface::Quit() {
     Stop();
-    CEngine.WaitForThreadsToSleep();
+    CEngine.WaitForThinkFinished();
     CEngine.SetNumThreads(0);
     LogInfo() << "Interface quit";
 }
@@ -332,8 +332,8 @@ void Interface::CheckSpeedup(std::istringstream& stream) {
 
             streamcmd = std::istringstream("depth " + std::to_string(depth));
             Go(streamcmd);
-
-            while (CEngine.StillThinking());
+            
+            CEngine.WaitForThinkFinished();
 
             double timeSpeedUp;
             double nodesSpeedup;
@@ -402,8 +402,8 @@ void Interface::CheckBestSplit(std::istringstream& stream) {
 
             streamcmd = std::istringstream("depth " + std::to_string(depth));
             Go(streamcmd);
-
-            while (CEngine.StillThinking());
+            
+            CEngine.WaitForThinkFinished();
 
             int64 spentTime = getTime() - startTime;
             uint64 nodes = CEngine.ComputeNodes() / spentTime;

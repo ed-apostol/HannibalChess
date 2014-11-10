@@ -163,8 +163,11 @@ public:
         }
         LogInfo() << "================================================================";
     }
-    volatile bool StillThinking() {
-        return mThinking;
+    void WaitForThinkFinished() {
+        while (mThinking.test_and_set(std::memory_order_acquire));
+    }
+    void SetThinkFinished() {
+        mThinking.clear(std::memory_order_release);
     }
     void WaitForThreadsToSleep() {
         for (Thread* th : mThreads) {
@@ -198,7 +201,7 @@ public:
     position_t rootpos;
     SearchInfo info;
 private:
-    volatile bool mThinking;
+    std::atomic_flag mThinking;
     Search* search;
     TranspositionTable transtable;
     PvHashTable pvhashtable;
