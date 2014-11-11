@@ -172,13 +172,7 @@ move_t* sortNext(SplitPoint* sp, position_t& pos, movelist_t *mvlist, int& phase
                 ASSERT(kingIsInCheck(pos));
                 break;
             case PH_TRANS:
-                if (!genMoveIfLegal(pos, move->m, mvlist->pinned)) {
-                    continue;
-                }
-                if (mvlist->depth <= 0 && !moveIsTactical(mvlist->transmove)) { // TODO: test this
-                    mvlist->transmove = EMPTY;
-                    continue;
-                }
+                if (!genMoveIfLegal(pos, move->m, mvlist->pinned)) continue;
                 break;
             case PH_ALL_CAPTURES:
                 if (move->m == mvlist->transmove) continue;

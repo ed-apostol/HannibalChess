@@ -27,7 +27,7 @@
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
 const std::string Interface::year = "2014";
-const std::string Interface::version = "1.5x20";
+const std::string Interface::version = "1.5x21";
 const std::string Interface::arch = "x64";
 
 static const int MinHash = 1;
@@ -334,6 +334,7 @@ void Interface::CheckSpeedup(std::istringstream& stream) {
             Go(streamcmd);
             
             CEngine.WaitForThinkFinished();
+            CEngine.SetThinkFinished();
 
             double timeSpeedUp;
             double nodesSpeedup;
@@ -404,6 +405,7 @@ void Interface::CheckBestSplit(std::istringstream& stream) {
             Go(streamcmd);
             
             CEngine.WaitForThinkFinished();
+            CEngine.SetThinkFinished();
 
             int64 spentTime = getTime() - startTime;
             uint64 nodes = CEngine.ComputeNodes() / spentTime;

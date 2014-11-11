@@ -48,6 +48,7 @@ public:
     bool prevMoveAllowsThreat(const position_t& pos, basic_move_t first, basic_move_t second);
     bool moveRefutesThreat(const position_t& pos, basic_move_t first, basic_move_t second);
     void updateEvalgains(const position_t& pos, uint32 move, int before, int after, Thread& sthread);
+    void UpdateHistory(position_t& pos, SearchStack& ss, Thread& sthread, const int depth);
     template<bool inPv>
     int qSearch(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread);
     template <bool inRoot, bool inSplitPoint, bool inSingular>
@@ -219,6 +220,25 @@ void Search::updateEvalgains(const position_t& pos, uint32 move, int before, int
     }
 }
 
+void Search::UpdateHistory(position_t& pos, SearchStack& ss, Thread& sthread, const int depth) {
+    if (ss.bestmove != EMPTY && !moveIsTactical(ss.bestmove)) { //> alpha account for pv better maybe? Sam
+        static const int MAX_HDEPTH = 20;
+        static const int NEW_HISTORY = (10 + MAX_HDEPTH);
+        int index = historyIndex(pos.side, ss.bestmove);
+        int hisDepth = MIN(depth, MAX_HDEPTH);
+        sthread.history[index] += hisDepth * hisDepth;
+        for (int i = 0; i < ss.hisCnt; ++i) {
+            if (ss.hisMoves[i] == ss.bestmove) continue;
+            index = historyIndex(pos.side, ss.hisMoves[i]);
+            sthread.history[index] -= sthread.history[index] / (NEW_HISTORY - hisDepth);
+        }
+        if (sthread.ts[pos.ply].killer1 != ss.bestmove) {
+            sthread.ts[pos.ply].killer2 = sthread.ts[pos.ply].killer1;
+            sthread.ts[pos.ply].killer1 = ss.bestmove;
+        }
+    }
+}
+
 const int MaxPieceValue[] = {0, PawnValueEnd, KnightValueEnd, BishopValueEnd, RookValueEnd, QueenValueEnd, 10000};
 
 template<bool inPv>
@@ -364,7 +384,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     if ((!inCutNode(nt) || !(entry->Mask() & MAllLower)) && entry->LowerDepth() >= depth && (entry->Move() != EMPTY || pos.posStore.lastmove == EMPTY)) {
                         int score = scoreFromTrans(entry->LowerValue(), pos.ply);
                         if (score > alpha) {
-                            ssprev.counterMove = entry->Move();
+                            ss.bestmove = ssprev.counterMove = entry->Move();
+                            UpdateHistory(pos, ss, sthread, depth);
                             return score;
                         }
                     }
@@ -602,24 +623,9 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             mTransTable.StoreNoMoves(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
             return ss.bestvalue;
         }
-        if (ss.bestmove != EMPTY && !moveIsTactical(ss.bestmove) && ss.bestvalue >= beta) { //> alpha account for pv better maybe? Sam
-            static const int MAX_HDEPTH = 20;
-            static const int NEW_HISTORY = (10 + MAX_HDEPTH);
-            int index = historyIndex(pos.side, ss.bestmove);
-            int hisDepth = MIN(depth, MAX_HDEPTH);
-            sthread.history[index] += hisDepth * hisDepth;
-            for (int i = 0; i < ss.hisCnt; ++i) {
-                if (ss.hisMoves[i] == ss.bestmove) continue;
-                index = historyIndex(pos.side, ss.hisMoves[i]);
-                sthread.history[index] -= sthread.history[index] / (NEW_HISTORY - hisDepth);
-            }
-            if (sthread.ts[pos.ply].killer1 != ss.bestmove) {
-                sthread.ts[pos.ply].killer2 = sthread.ts[pos.ply].killer1;
-                sthread.ts[pos.ply].killer1 = ss.bestmove;
-            }
-        }
         if (ss.bestvalue >= beta) {
             ssprev.counterMove = ss.bestmove;
+            UpdateHistory(pos, ss, sthread, depth);
             if (inCutNode(nt)) mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
             else mTransTable.StoreAllLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
         } else {
@@ -704,7 +710,7 @@ void Search::timeManagement(int depth) {
                 return;
             }
         }
-        if (timeElapsed > (mInfo.start_time + (((mInfo.time_limit_max - mInfo.start_time) * 3) / 4))) { // 75%
+        if (timeElapsed > (mInfo.start_time + (((mInfo.time_limit_max - mInfo.start_time) * 65) / 100))) {
             int64 addTime = 0;
             if (timeElapsed < mInfo.time_limit_abs) {
                 if ((mInfo.best_value + WORSE_SCORE_CUTOFF) <= mInfo.last_value) {
