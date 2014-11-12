@@ -347,8 +347,6 @@ void initArr(void) {
     memset(FileMask, 0, sizeof(FileMask));
     memset(InBetween, 0, sizeof(InBetween));
     memset(PassedMask, 0, sizeof(PassedMask));
-    //    memset(FutilityMarginTable, 0, sizeof(FutilityMarginTable));
-    //    memset(ReductionTable, 0, sizeof(ReductionTable));
 
     for (i = 0; i < 0x40; i++) CastleMask[i] = 0xF;
 

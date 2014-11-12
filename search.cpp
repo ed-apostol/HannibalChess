@@ -420,8 +420,13 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             }
             if (depth < MaxRazorDepth && pos.posStore.lastmove != EMPTY
                 && ss.evalvalue < (rvalue = beta - FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
-                int score = searchNode<false, false, false>(pos, rvalue - 1, rvalue, 0, ssprev, sthread, nt);
-                if (score < rvalue) return score;
+                if (depth <= 2 && ss.evalvalue < rvalue - 100) { 
+                    return searchNode<false, false, false>(pos, alpha, beta, 0, ssprev, sthread, nt);
+                }
+                else {
+                    int score = searchNode<false, false, false>(pos, rvalue - 1, rvalue, 0, ssprev, sthread, nt);
+                    if (score < rvalue) return score; 
+                }
             }
             if (depth >= 2 && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && ss.evalvalue >= beta) {
                 int nullDepth = depth - (4 + (depth / 5) + MIN(3, ((ss.evalvalue - beta) / PawnValue)));
@@ -453,7 +458,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 }
             }
         }
-        if (/*!inAllNode(nt) && !inCheck && */ ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8)) { // singular extension
+        if (ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8)) { // singular extension
             int newdepth = depth / 2;
             if (ss.hashDepth >= newdepth) {
                 int targetScore = ss.evalvalue - EXPLORE_CUTOFF;
@@ -647,6 +652,7 @@ void Search::extractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_m
     while ((entry = mPVHashTable.pvEntry(pos.posStore.hash)) != NULL) {
         basic_move_t hashMove = entry->pvMove();
         if (hashMove == EMPTY) break;
+        //genmoveiflegal is bad if in check, consider doing a real check for legality
         if (!genMoveIfLegal(pos, hashMove, pinnedPieces(pos, pos.side))) break;
         if (anyRep(pos)) break; // break on repetition to avoid long pv display
         pv.moves[pv.length++] = hashMove;
@@ -803,6 +809,7 @@ void Engine::GetBestMove(Thread& sthread) {
         if (info.thinking_status == THINKING
         && info.rootPV.moves[1] == rootpos.posStore.lastmove
         && info.rootPV.moves[2] == entry->pvMove()
+        //genmoveiflegal is bad if in check, consider doing a real check for legality
         && genMoveIfLegal(rootpos, info.rootPV.moves[2], pinnedPieces(rootpos, rootpos.side))
         && ((moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(entry->pvMove())))
         || (PcValSEE[moveCapture(entry->pvMove())] > PcValSEE[movePiece(entry->pvMove())]))) {
