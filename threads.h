@@ -128,11 +128,16 @@ private:
     std::mutex threadLock;
 };
 
+class Engine; // HACK: forward declare
+
 class Thread : public ThreadBase {
 public:
     static const int MaxNumSplitPointsPerThread = 8;
 
-    Thread(int _thread_id, std::vector<Thread*>* const _thread_group) : ThreadBase(_thread_id), mThreadGroup(_thread_group) {
+    Thread(int _thread_id, std::vector<Thread*>* const _thread_group, Engine& _engine) :
+        ThreadBase(_thread_id),
+        mThreadGroup(_thread_group),
+        mEngine(_engine) {
         Init();
         NativeThread() = std::thread(&Thread::IdleLoop, this);
     }
@@ -146,7 +151,7 @@ public:
     uint64 numsplits2; // DEBUG
     uint64 workers2; // DEBUG
     uint64 nodes;
-    
+
     volatile int num_sp;
     SplitPoint *activeSplitPoint;
     ThreadStack ts[MAXPLY];
@@ -157,6 +162,6 @@ public:
 private:
     SplitPoint sptable[MaxNumSplitPointsPerThread];
     std::vector<Thread*>* mThreadGroup;
+    Engine& mEngine;
 };
-
 

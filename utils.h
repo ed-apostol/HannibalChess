@@ -50,7 +50,7 @@ public:
     }
     ~Log() {
         if (level > logNONE && level <= ClearanceLevel) {
-            static const std::string LevelText[6] = {"NONE", "OUT", "ERROR", "WARNING", "INFO", "DEBUG"};
+            static const std::string LevelText[6] = { "NONE", "OUT", "ERROR", "WARNING", "INFO", "DEBUG" };
             _buffer << std::endl;
             if (out) {
                 if (level == logOUT) std::cout << _buffer.str();

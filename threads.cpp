@@ -17,7 +17,6 @@
 #include "bitutils.h"
 #include "uci.h"
 
-
 void Thread::Init() {
     ThreadBase::Init();
     nodes = 0;
@@ -40,11 +39,11 @@ void Thread::IdleLoop() {
     SplitPoint* const master_sp = activeSplitPoint;
     while (!exit_flag) {
         if (!exit_flag && master_sp == NULL && doSleep) {
-            SleepAndWaitForCondition();            
+            SleepAndWaitForCondition();
         }
         if (!exit_flag && !doSleep && master_sp == NULL && thread_id == 0) {
             LogInfo() << "IdleLoop: Main thread waking up to start searching!";
-            CEngine.GetBestMove(*this);
+            mEngine.GetBestMove(*this);
             doSleep = true;
         }
         if (!exit_flag && !doSleep && stop) {
@@ -52,7 +51,7 @@ void Thread::IdleLoop() {
         }
         if (!exit_flag && !doSleep && !stop) {
             SplitPoint* const sp = activeSplitPoint;
-            CEngine.SearchFromIdleLoop(*sp, *this);
+            mEngine.SearchFromIdleLoop(*sp, *this);
             std::lock_guard<Spinlock> lck(sp->updatelock);
             sp->workersBitMask &= ~((uint64)1 << thread_id);
             stop = true;
@@ -128,7 +127,7 @@ void Thread::SearchSplitPoint(const position_t& pos, SearchStack* ss, SearchStac
     ss->bestmove = active_sp->bestmove;
     ss->playedMoves = active_sp->played;
     activeSplitPoint = active_sp->parent;
-    
+
     if (!doSleep) stop = false;
 
     // threads statistics

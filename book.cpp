@@ -18,8 +18,6 @@
 #include <iostream>
 #include <string>
 
-Book PolyBook;
-
 #define NO_MOVE 0
 const int MAX_MOVES = 256;
 const int Polyglot_Entry_Size = 16;
@@ -67,7 +65,8 @@ basic_move_t polyglot_move_to_move(uint16 move, position_t& pos) {
     if (promotePiece) {
         if (capturedPiece) {
             return GenPromote(from, to, promotePiece, capturedPiece);
-        } else {
+        }
+        else {
             return GenPromoteStraight(from, to, promotePiece);
         }
     }
@@ -123,7 +122,8 @@ long Book::find_polyglot_key(uint64 key, PolyglotBookEntry *entry, position_t& p
         if (key <= middle_entry.key) {
             last = middle;
             last_entry = middle_entry;
-        } else {
+        }
+        else {
             first = middle;
             first_entry = middle_entry;
         }
@@ -184,7 +184,7 @@ basic_move_t Book::getBookMove(position_t& pos) {
     // chose here the move from the array and verify if it exists in the movelist
     uint64 bookRandom = rand() % totalWeight; //TODO do a real randomization
     uint64 bookIndex = 0;
-    for (int i = 0; i<numMoves; i++) {
+    for (int i = 0; i < numMoves; i++) {
         bookIndex += entries[i].weight;
         if (bookIndex > bookRandom) {
             return entries[i].move;

@@ -14,8 +14,8 @@
 #include "attacks.h"
 #include "movegen.h"
 #include "threads.h"
-#include "movepicker.h"
 #include "search.h"
+#include "movepicker.h"
 
 extern bool moveIsTactical(uint32 m);
 extern int historyIndex(uint32 side, uint32 move);
@@ -123,7 +123,8 @@ void scoreAll(const position_t& pos, movelist_t *mvlist, Thread& sthread) {
             m->s = (moveCapture(m->m) * 6) + movePromote(m->m) - movePiece(m->m);
             if (captureIsGood(pos, m->m)) m->s += MAXHIST * 2;
             else m->s -= MAXHIST;
-        } else if (m->m == mvlist->killer1) m->s = MAXHIST + 4;
+        }
+        else if (m->m == mvlist->killer1) m->s = MAXHIST + 4;
         else if (m->m == mvlist->killer2) m->s = MAXHIST + 2;
         else {
             m->s = scoreNonTactical(mvlist->side, m->m, sthread);
@@ -154,7 +155,7 @@ void scoreRoot(movelist_t *mvlist) {
     }
 }
 
-move_t* sortNext(SplitPoint* sp, position_t& pos, movelist_t *mvlist, int& phase, Thread& sthread) {
+move_t* sortNext(SplitPoint* sp, SearchInfo& info, position_t& pos, movelist_t *mvlist, int& phase, Thread& sthread) {
     move_t* move;
     if (sp != NULL) sp->movelistlock.lock();
     phase = mvlist->phase;
@@ -236,18 +237,19 @@ move_t* sortNext(SplitPoint* sp, position_t& pos, movelist_t *mvlist, int& phase
 
         switch (MoveGenPhase[mvlist->phase]) {
         case PH_ROOT:
-            if (CEngine.info.mvlist_initialized) break;
-            if (CEngine.info.moves_is_limited == true) {
-                for (mvlist->size = 0; CEngine.info.moves[mvlist->size] != EMPTY; mvlist->size++) {
-                    mvlist->list[mvlist->size].m = CEngine.info.moves[mvlist->size];
+            if (info.mvlist_initialized) break;
+            if (info.moves_is_limited == true) {
+                for (mvlist->size = 0; info.moves[mvlist->size] != EMPTY; mvlist->size++) {
+                    mvlist->list[mvlist->size].m = info.moves[mvlist->size];
                 }
-            } else {
+            }
+            else {
                 // generate all legal moves at least in the root
                 genLegal(pos, mvlist, true);
             }
             scoreRoot(mvlist);
-            CEngine.info.mvlist_initialized = true; // TODO: refactor all CEngine calls here
-            CEngine.info.legalmoves = mvlist->size;
+            info.mvlist_initialized = true;
+            info.legalmoves = mvlist->size;
             break;
         case PH_EVASION:
             genEvasions(pos, mvlist);

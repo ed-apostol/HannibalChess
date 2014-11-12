@@ -43,7 +43,7 @@ void genLegal(const position_t& pos, movelist_t *mvlist, int promoteAll) {
         mvlist->pos = 0;
         genEvasions(pos, mvlist);
         if (promoteAll)
-        for (mlt.pos = 0; mlt.pos < mvlist->size; mlt.pos++) {
+            for (mlt.pos = 0; mlt.pos < mvlist->size; mlt.pos++) {
             int mv = mvlist->list[mlt.pos].m;
             if (movePromote(mv) == QUEEN) { // makes up for not generating ROOK and BISHOP promotes
                 int from = moveFrom(mv);
@@ -51,13 +51,15 @@ void genLegal(const position_t& pos, movelist_t *mvlist, int promoteAll) {
                 if (moveCapture(mv)) {
                     mvlist->list[mvlist->size++].m = GenPromote(from, to, ROOK, getPiece(pos, to));
                     mvlist->list[mvlist->size++].m = GenPromote(from, to, BISHOP, getPiece(pos, to));
-                } else {
+                }
+                else {
                     mvlist->list[mvlist->size++].m = GenPromoteStraight(from, to, ROOK);
                     mvlist->list[mvlist->size++].m = GenPromoteStraight(from, to, BISHOP);
                 }
             }
-        }
-    } else {
+            }
+    }
+    else {
         pinned = pinnedPieces(pos, pos.side);
         mvlist->size = 0;
         mlt.pos = 0;
@@ -72,7 +74,8 @@ void genLegal(const position_t& pos, movelist_t *mvlist, int promoteAll) {
                 if (moveCapture(mv)) {
                     mvlist->list[mvlist->size++].m = GenPromote(from, to, ROOK, getPiece(pos, to));
                     mvlist->list[mvlist->size++].m = GenPromote(from, to, BISHOP, getPiece(pos, to));
-                } else {
+                }
+                else {
                     mvlist->list[mvlist->size++].m = GenPromoteStraight(from, to, ROOK);
                     mvlist->list[mvlist->size++].m = GenPromoteStraight(from, to, BISHOP);
                 }
@@ -110,7 +113,8 @@ void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, Threa
         }
         pc_bits_p1 = (pos.pawns & allies & ~Rank2BB) & ((~occupied) << 8);
         pc_bits_p2 = (pos.pawns & allies & Rank7BB) & ((~occupied) << 8) & ((~occupied) << 16);
-    } else {
+    }
+    else {
         if (sthread.evalgains[historyIndex(pos.side, GenWhiteOO())] >= delta && (pos.posStore.castle&WCKS) && (!(occupied&(F1 | G1)))) {
             if (!isAtt(pos, pos.side ^ 1, E1 | F1 | G1))
                 mvlist->list[mvlist->size++].m = GenWhiteOO();
@@ -219,7 +223,8 @@ void genNonCaptures(const position_t& pos, movelist_t *mvlist) {
         }
         pc_bits_1 = (pos.pawns & allies & ~Rank2BB) & ((~occupied) << 8);
         pc_bits_2 = (pos.pawns & allies & Rank7BB) & ((~occupied) << 8) & ((~occupied) << 16);
-    } else {
+    }
+    else {
         if ((pos.posStore.castle&WCKS) && (!(occupied&(F1 | G1)))) {
             if (!isAtt(pos, pos.side ^ 1, E1 | F1 | G1))
                 mvlist->list[mvlist->size++].m = GenWhiteOO();
@@ -437,7 +442,8 @@ void genEvasions(const position_t& pos, movelist_t *mvlist) {
             mvlist->list[mvlist->size++].m = GenPromote(from, sqchecker, KNIGHT, getPiece(pos, sqchecker));
             mvlist->list[mvlist->size++].m = GenPromote(from, sqchecker, ROOK, getPiece(pos, sqchecker));
             mvlist->list[mvlist->size++].m = GenPromote(from, sqchecker, BISHOP, getPiece(pos, sqchecker));
-        } else
+        }
+        else
             mvlist->list[mvlist->size++].m = GenPawnMove(from, sqchecker, getPiece(pos, sqchecker));
     }
     if ((BitMask[sqchecker] & pos.pawns & enemies) &&
@@ -485,7 +491,8 @@ void genEvasions(const position_t& pos, movelist_t *mvlist) {
             mvlist->list[mvlist->size++].m = GenPromoteStraight(from, to, KNIGHT);
             //            mvlist->list[mvlist->size++].m = GenPromoteStraight(from, to, ROOK);
             //            mvlist->list[mvlist->size++].m = GenPromoteStraight(from, to, BISHOP);
-        } else
+        }
+        else
             mvlist->list[mvlist->size++].m = GenOneForward(from, to);
     }
     if (side == WHITE) mv_bits = (((pc_bits << 8) & ~pos.occupied & Rank3BB) << 8) & temp;
@@ -587,7 +594,8 @@ void genQChecks(const position_t& pos, movelist_t *mvlist) {
             to = popFirstBit(&bit3);
             mvlist->list[mvlist->size++].m = GenTwoForward(to - 16, to);
         }
-    } else {
+    }
+    else {
         bit1 = pos.pawns & pos.color[us] & ~FileBB[SQFILE(ksq)];
         bit2 = bit3 = ((bit1 & dc) >> 8) & ~Rank1BB & empty;
         while (bit3) {
@@ -757,7 +765,8 @@ bool genMoveIfLegal(const position_t& pos, uint32 move, uint64 pinned) {
                     (!(rookAttacksBB(ksq, b) & (pos.queens | pos.rooks) & pos.color[opp]) &&
                     !(bishopAttacksBB(ksq, b) & (pos.queens | pos.bishops) & pos.color[opp]));
             }
-        } else {
+        }
+        else {
             if (prom > QUEEN || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp)) return false;
             inc = ((me == WHITE) ? 8 : -8);
             delta = to - from;
@@ -765,7 +774,8 @@ bool genMoveIfLegal(const position_t& pos, uint32 move, uint64 pinned) {
                 if (!(delta == inc) && !(delta == (2 * inc)
                     && PAWN_RANK(from, me) == Rank2
                     && getPiece(pos, from + inc) == EMPTY)) return false;
-            } else {
+            }
+            else {
                 if (!(delta == (inc - 1)) && !(delta == (inc + 1))) return false;
             }
             return ((prom != 0) == (PAWN_RANK(to, me) == Rank8));
@@ -798,16 +808,21 @@ bool genMoveIfLegal(const position_t& pos, uint32 move, uint64 pinned) {
                 if (from != e1) return false;
                 if (to == g1) {
                     if (!(pos.posStore.castle & WCKS) || (occupied&(F1 | G1)) || isAtt(pos, opp, E1 | F1 | G1)) return false;
-                } else if (to == c1) {
+                }
+                else if (to == c1) {
                     if (!(pos.posStore.castle & WCQS) || (occupied&(B1 | C1 | D1)) || isAtt(pos, opp, C1 | D1 | E1)) return false;
-                } else return false;
-            } else {
+                }
+                else return false;
+            }
+            else {
                 if (from != e8) return false;
                 if (to == g8) {
                     if (!(pos.posStore.castle & BCKS) || (occupied&(F8 | G8)) || isAtt(pos, opp, E8 | F8 | G8)) return false;
-                } else if (to == c8) {
+                }
+                else if (to == c8) {
                     if (!(pos.posStore.castle & BCQS) || (occupied&(B8 | C8 | D8)) || isAtt(pos, opp, C8 | D8 | E8)) return false;
-                } else return false;
+                }
+                else return false;
             }
             return true;
         }//isSqAtt(const position_t& pos, uint64 occ, int sq,int color) {

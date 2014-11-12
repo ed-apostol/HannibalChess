@@ -34,5 +34,3 @@ private:
     int64 size;
     std::string name;
 };
-
-extern Book PolyBook;

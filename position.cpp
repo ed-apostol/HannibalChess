@@ -17,7 +17,6 @@
 
 /* this undos the null move done */
 void unmakeNullMove(position_t& pos, pos_store_t& undo) {
-
     --pos.ply;
     --pos.sp;
     pos.side ^= 1;
@@ -277,7 +276,8 @@ void makeMove(position_t& pos, pos_store_t& undo, basic_move_t m) {
         pos.posStore.epsq = (from + to) / 2;
         if (pos.pawns & pos.color[xside] & PawnCaps[pos.posStore.epsq][side]) {
             pos.posStore.hash ^= ZobEpsq[SQFILE(pos.posStore.epsq)];
-        } else pos.posStore.epsq = -1;
+        }
+        else pos.posStore.epsq = -1;
         pos.posStore.hash ^= ZobPiece[side][PAWN][from];
         pos.posStore.hash ^= ZobPiece[side][PAWN][to];
         pos.posStore.phash ^= ZobPiece[side][PAWN][from];
@@ -614,11 +614,14 @@ void setPosition(position_t& pos, const char *fen) {
     while (*fen != '\0' && !isspace(*fen)) {
         if (*fen == 'K') {
             pos.posStore.castle |= WCKS;
-        } else if (*fen == 'Q') {
+        }
+        else if (*fen == 'Q') {
             pos.posStore.castle |= WCQS;
-        } else if (*fen == 'k') {
+        }
+        else if (*fen == 'k') {
             pos.posStore.castle |= BCKS;
-        } else if (*fen == 'q') {
+        }
+        else if (*fen == 'q') {
             pos.posStore.castle |= BCQS;
         }
         fen++;
@@ -685,7 +688,8 @@ char *positionToFEN(const position_t& pos) {
                 if (empty > 0) fen[c++] = (char)empty + '0';
                 fen[c++] = pcstr[pc + (color == WHITE ? 0 : 7)];
                 empty = 0;
-            } else empty++;
+            }
+            else empty++;
         }
         if (empty > 0) fen[c++] = (char)empty + '0';
         fen[c++] = (rank > Rank1) ? '/' : ' ';

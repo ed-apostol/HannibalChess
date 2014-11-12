@@ -18,12 +18,11 @@
 #define VERSION64BIT
 #endif
 
-#define _CRT_SECURE_NO_WARNINGS 
+#define _CRT_SECURE_NO_WARNINGS
 #pragma warning(disable: 4127) // Conditional expression is constant
 #pragma warning(disable: 4244) // Possible loss of data
 
 #include "macros.h"
-
 
 #ifndef INLINE
 #ifdef _MSC_VER
@@ -34,7 +33,6 @@
 #define INLINE inline
 #endif
 #endif
-
 
 #ifndef _MSC_VER
 #include <inttypes.h>
@@ -148,22 +146,22 @@ struct material_info_t {
 
 struct SearchStack {
     SearchStack() :
-    firstExtend(false),
-    reducedMove(false),
-    moveGivesCheck(false),
-    playedMoves(0),
-    hisCnt(0),
-    evalvalue(-INF),
-    bestvalue(-INF),
-    bestmove(EMPTY),
-    dcc(0),
-    counterMove(EMPTY),
-    threatMove(EMPTY),
-    bannedMove(EMPTY),
-    hashMove(EMPTY),
-    hashDepth(0),
-    mvlist(&movelist),
-    mvlist_phase(0) {}
+        firstExtend(false),
+        reducedMove(false),
+        moveGivesCheck(false),
+        playedMoves(0),
+        hisCnt(0),
+        evalvalue(-INF),
+        bestvalue(-INF),
+        bestmove(EMPTY),
+        dcc(0),
+        counterMove(EMPTY),
+        threatMove(EMPTY),
+        bannedMove(EMPTY),
+        hashMove(EMPTY),
+        hashDepth(0),
+        mvlist(&movelist),
+        mvlist_phase(0) {}
     int playedMoves;
     int hisCnt;
     basic_move_t hisMoves[64];

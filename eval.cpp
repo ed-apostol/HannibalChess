@@ -20,17 +20,17 @@
 #include "threads.h"
 
 //some castling comments
-const int KSC[2] = {WCKS, BCKS};
-const int QSC[2] = {WCQS, BCQS};
-const int Castle[2] = {WCQS + WCKS, BCQS + BCKS};
+const int KSC[2] = { WCKS, BCKS };
+const int QSC[2] = { WCQS, BCQS };
+const int Castle[2] = { WCQS + WCKS, BCQS + BCKS };
 #define KS(c)			(WCKS+c*3)
 #define QS(c)			(WCQS+c*6)
 // F1 | G1, F8 | G8
-const uint64 KCSQ[2] = {(0x0000000000000020ULL | 0x0000000000000040ULL), (0x2000000000000000ULL | 0x4000000000000000ULL)};
+const uint64 KCSQ[2] = { (0x0000000000000020ULL | 0x0000000000000040ULL), (0x2000000000000000ULL | 0x4000000000000000ULL) };
 // C1 | D1, C8 | D8
-const uint64 QCSQ[2] = {(0x0000000000000004ULL | 0x0000000000000008ULL), (0x0400000000000000ULL | 0x0800000000000000ULL)};
-const int KScastleTo[2] = {g1, g8};
-const int QScastleTo[2] = {c1, c8};
+const uint64 QCSQ[2] = { (0x0000000000000004ULL | 0x0000000000000008ULL), (0x0400000000000000ULL | 0x0800000000000000ULL) };
+const int KScastleTo[2] = { g1, g8 };
+const int QScastleTo[2] = { c1, c8 };
 
 #define STUCK_END 5 //5
 #define STUCK_BISHOP 10 //10
@@ -104,7 +104,7 @@ const int EndgameQueen7th = 20;
 // knight specific evaluation
 #define N_ONE_SIDE 20
 
-const int kingAttackWeakness[8] = {0, 22, 12, 5, 3, 1, 0, 0};
+const int kingAttackWeakness[8] = { 0, 22, 12, 5, 3, 1, 0, 0 };
 
 #define DOUBLED_O 2
 #define DOUBLED_E 4
@@ -137,7 +137,7 @@ const int EndgameCandidatePawnMin = 5;
 const int EndgameCandidatePawnMax = 45;
 const int ProtectedPasser = 10;
 const int DuoPawnPasser = 15;
-const int kingDistImp[8] = {0, 20, 40, 55, 65, 70, 70, 70}; //best if this cannot get higher than EndgamePassedMax
+const int kingDistImp[8] = { 0, 20, 40, 55, 65, 70, 70, 70 }; //best if this cannot get higher than EndgamePassedMax
 const int PathFreeFriendPasser = 10;
 const int DefendedByPawnPasser = 10;
 const int PathFreeNotAttackedDefAllPasser = 80;
@@ -229,7 +229,7 @@ int computeMaterial(eval_info_t *ei) {
 }
 
 void initPawnEvalByColor(const position_t& pos, eval_info_t *ei, const int color) {
-    static const int Shift[] = {9, 7};
+    static const int Shift[] = { 9, 7 };
     uint64 temp64;
 
     ei->pawns[color] = (pos.pawns & pos.color[color]);
@@ -260,7 +260,8 @@ void evalShelter(const int color, eval_info_t *ei, const position_t& pos) {
         indirectShelter ^= doubledShelter;
         // remember, shelter is also indirect shelter so it is counted twice
         ei->pawn_entry->kshelter[color] = bitCnt(shelter) + bitCnt(indirectShelter);
-    } else ei->pawn_entry->kshelter[color] = 0;
+    }
+    else ei->pawn_entry->kshelter[color] = 0;
     if (pos.posStore.castle&QS(color)) {
         shelter = kingShelter[color][QScastleTo[color]] & pawns;
         indirectShelter = kingIndirectShelter[color][QScastleTo[color]] & pawns;
@@ -269,13 +270,14 @@ void evalShelter(const int color, eval_info_t *ei, const position_t& pos) {
         indirectShelter ^= doubledShelter;
         // remember, shelter is also indirect shelter so it is counted twice
         ei->pawn_entry->qshelter[color] = bitCnt(shelter) + bitCnt(indirectShelter);
-    } else ei->pawn_entry->qshelter[color] = 0;
+    }
+    else ei->pawn_entry->qshelter[color] = 0;
 }
 
 void evalPawnsByColor(const position_t& pos, eval_info_t *ei, int mid_score[], int end_score[], const int color) {
-    static const int Shift[2][3][4] = {{{23, 18, 13, 8}, {26, 21, 16, 11}, {28, 23, 18, 13}}, {{15, 26, 37, 48}, {18, 29, 40, 51}, {20, 31, 42, 53}}};
-    static const int weakFile[8] = {0, 2, 3, 3, 3, 3, 2, 0};
-    static const int weakRank[8] = {0, 0, 2, 4, 6, 8, 10, 0};
+    static const int Shift[2][3][4] = { { { 23, 18, 13, 8 }, { 26, 21, 16, 11 }, { 28, 23, 18, 13 } }, { { 15, 26, 37, 48 }, { 18, 29, 40, 51 }, { 20, 31, 42, 53 } } };
+    static const int weakFile[8] = { 0, 2, 3, 3, 3, 3, 2, 0 };
+    static const int weakRank[8] = { 0, 0, 2, 4, 6, 8, 10, 0 };
     uint64 openBitMap, isolatedBitMap, doubledBitMap, passedBitMap, backwardBitMap, targetBitMap, temp64;
 
     int count, sq, rank;
@@ -482,7 +484,6 @@ void evalPieces(const position_t& pos, eval_info_t *ei, const int color) {
             ei->mid_score[color] += temp1;
             ei->end_score[color] += temp1;
         }
-
     }
     pc_bits = pos.rooks & pos.color[color];
     ei->kingatkrooks[color] = 0;
@@ -703,7 +704,8 @@ void evalKingAttacks(const position_t& pos, eval_info_t *ei, const int color) {
                         if (pos.side == (color ^ 1)) {
                             ei->mid_score[color] -= 10000;
                             ei->end_score[color] -= 10000; //CHECKMATE
-                        } else {
+                        }
+                        else {
                             penalty += MATE_CODE;
                         }
                     }
@@ -725,7 +727,8 @@ void evalKingAttacks(const position_t& pos, eval_info_t *ei, const int color) {
         pc_atkrs_mask = discoveredCheckCandidates(pos, color ^ 1) & ~pos.pawns;
         if (pc_atkrs_mask) penalty += bitCnt(pc_atkrs_mask) * DiscoveredCheckValue;
         ei->mid_score[color] -= (penalty * (penalty - EXP_PENALTY) * KING_ATT_W) / 20;
-    } else if (PARTIAL_ATTACK) { //if there is a maximum of 1 active attacker
+    }
+    else if (PARTIAL_ATTACK) { //if there is a maximum of 1 active attacker
         ei->mid_score[color] -= kzone_atkcnt*PARTIAL_ATTACK;
     }
 }
@@ -752,7 +755,8 @@ void evalPassedvsKing(const position_t& pos, eval_info_t *ei, const int allied, 
         if (!(prom_path & pos.color[enemy])) {
             if (!path_attkd) score += (prom_path == path_dfndd) ? PathFreeNotAttackedDefAllPasser : PathFreeNotAttackedDefPasser;
             else score += ((path_attkd & path_dfndd) == path_attkd) ? PathFreeAttackedDefAllPasser : PathFreeAttackedDefPasser;
-        } else if (((path_attkd | (prom_path & pos.color[enemy])) & ~path_dfndd) == EmptyBoardBB) score += PathNotFreeAttackedDefPasser;
+        }
+        else if (((path_attkd | (prom_path & pos.color[enemy])) & ~path_dfndd) == EmptyBoardBB) score += PathNotFreeAttackedDefPasser;
         if ((prom_path & pos.color[allied]) == EmptyBoardBB) score += PathFreeFriendPasser;
         if (ei->atkpawns[allied] & BitMask[from]) score += DefendedByPawnPasser;
         if (ei->atkpawns[allied] & BitMask[from + PAWN_MOVE_INC(allied)]) {
@@ -808,7 +812,8 @@ void evalPassedvsKing(const position_t& pos, eval_info_t *ei, const int allied, 
             ei->end_score[allied] += scale(UnstoppablePassedPawn, 7 - leftBestToQueen);
             ei->queening = true;
         }
-    } else if (fileDist > rightBestToQueen) {
+    }
+    else if (fileDist > rightBestToQueen) {
         ei->end_score[allied] += scale(UnstoppablePassedPawn, 7 - rightBestToQueen);
         ei->queening = true;
     }
@@ -838,7 +843,8 @@ void evalPassed(const position_t& pos, eval_info_t *ei, const int allied, uint64
         if ((prom_path & pos.color[enemy]) == EmptyBoardBB) {
             if (path_attkd == EmptyBoardBB) score += (prom_path == path_dfndd) ? PathFreeNotAttackedDefAllPasser : PathFreeNotAttackedDefPasser;
             else score += ((path_attkd & path_dfndd) == path_attkd) ? PathFreeAttackedDefAllPasser : PathFreeAttackedDefPasser;
-        } else if (((path_attkd | (prom_path & pos.color[enemy])) & ~path_dfndd) == EmptyBoardBB) score += PathNotFreeAttackedDefPasser;
+        }
+        else if (((path_attkd | (prom_path & pos.color[enemy])) & ~path_dfndd) == EmptyBoardBB) score += PathNotFreeAttackedDefPasser;
         if ((prom_path & pos.color[allied]) == EmptyBoardBB) score += PathFreeFriendPasser;
         if (ei->atkpawns[allied] & BitMask[from]) score += DefendedByPawnPasser;
         if (ei->atkpawns[allied] & BitMask[frontSq]) {
@@ -870,17 +876,18 @@ void evalPawns(const position_t& pos, eval_info_t *ei, Thread& sthread) {
     if (ei->pawn_entry->hashlock == LOCK(pos.posStore.phash)) {
         ei->mid_score[WHITE] += ei->pawn_entry->opn;
         ei->end_score[WHITE] += ei->pawn_entry->end;
-    } else {
-        {
-            int midpawnscore[2] = {0, 0};
-            int endpawnscore[2] = {0, 0};
-            ei->pawn_entry->passedbits = 0;
-            evalPawnsByColor(pos, ei, midpawnscore, endpawnscore, WHITE);
-            evalPawnsByColor(pos, ei, midpawnscore, endpawnscore, BLACK);
-            ei->pawn_entry->hashlock = LOCK(pos.posStore.phash);
-            ei->pawn_entry->opn = midpawnscore[WHITE] - midpawnscore[BLACK];
-            ei->pawn_entry->end = endpawnscore[WHITE] - endpawnscore[BLACK];
-        }
+    }
+    else {
+            {
+                int midpawnscore[2] = { 0, 0 };
+                int endpawnscore[2] = { 0, 0 };
+                ei->pawn_entry->passedbits = 0;
+                evalPawnsByColor(pos, ei, midpawnscore, endpawnscore, WHITE);
+                evalPawnsByColor(pos, ei, midpawnscore, endpawnscore, BLACK);
+                ei->pawn_entry->hashlock = LOCK(pos.posStore.phash);
+                ei->pawn_entry->opn = midpawnscore[WHITE] - midpawnscore[BLACK];
+                ei->pawn_entry->end = endpawnscore[WHITE] - endpawnscore[BLACK];
+            }
     }
 }
 
@@ -911,7 +918,8 @@ int eval(const position_t& pos, Thread& sthread) {
         ei.draw[BLACK] = mat->draw[BLACK];
         ei.endFlags[WHITE] = mat->flags[WHITE];
         ei.endFlags[BLACK] = mat->flags[BLACK];
-    } else {
+    }
+    else {
         score = computeMaterial(&ei);
     }
 
@@ -977,7 +985,8 @@ int eval(const position_t& pos, Thread& sthread) {
         if (ei.flags & ATTACK_KING[BLACK]) {
             evalKingAttacks(pos, &ei, BLACK);
         }
-    } else {
+    }
+    else {
         if (blackPassed) evalPassedvsKing(pos, &ei, BLACK, blackPassed);
     }
     whitePassed = ei.pawn_entry->passedbits & pos.color[WHITE];
@@ -987,7 +996,8 @@ int eval(const position_t& pos, Thread& sthread) {
         if (ei.flags & ATTACK_KING[WHITE]) { // attacking the white king
             evalKingAttacks(pos, &ei, WHITE);
         }
-    } else {
+    }
+    else {
         if (whitePassed) evalPassedvsKing(pos, &ei, WHITE, whitePassed);
     }
 

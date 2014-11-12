@@ -25,8 +25,6 @@
 #include "book.h"
 #include "init.h"
 
-Engine CEngine;
-
 bool moveIsTactical(uint32 m) { // TODO
     ASSERT(moveIsOk(m));
     return bool(m & 0x01fe0000UL);
@@ -38,7 +36,8 @@ int historyIndex(uint32 side, uint32 move) { // TODO
 
 class Search {
 public:
-    Search(SearchInfo& _info, TranspositionTable& _tt, PvHashTable& _pvt) :
+    Search(Engine& _engine, SearchInfo& _info, TranspositionTable& _tt, PvHashTable& _pvt) :
+        mEngine(_engine),
         mInfo(_info),
         mTransTable(_tt),
         mPVHashTable(_pvt) {}
@@ -83,6 +82,7 @@ private:
     SearchInfo& mInfo;
     TranspositionTable& mTransTable;
     PvHashTable& mPVHashTable;
+    Engine& mEngine;
 };
 
 void Search::initNode(Thread& sthread) {
@@ -93,17 +93,17 @@ void Search::initNode(Thread& sthread) {
         return;
     }
 
-    if (mInfo.node_is_limited && CEngine.ComputeNodes() >= mInfo.node_limit) { // TODO: refactor all CEngine calls here
+    if (mInfo.node_is_limited && mEngine.ComputeNodes() >= mInfo.node_limit) {
         stopSearch();
     }
-    if (sthread.thread_id == 0 && ++CEngine.nodes_since_poll >= CEngine.nodes_between_polls) {
-        CEngine.nodes_since_poll = 0;
+    if (sthread.thread_id == 0 && ++mEngine.nodes_since_poll >= mEngine.nodes_between_polls) {
+        mEngine.nodes_since_poll = 0;
         time2 = getTime();
         if (time2 - mInfo.last_time > 1000) {
             int64 time = time2 - mInfo.start_time;
             mInfo.last_time = time2;
             if (SHOW_SEARCH) {
-                uint64 sumnodes = CEngine.ComputeNodes();
+                uint64 sumnodes = mEngine.ComputeNodes();
                 PrintOutput() << "info time " << time
                     << " nodes " << sumnodes
                     << " hashfull " << (mTransTable.Used() * 1000) / mTransTable.HashSize()
@@ -120,7 +120,8 @@ void Search::initNode(Thread& sthread) {
                             LogInfo() << "info string Aborting search: time limit 2: " << time2 - mInfo.start_time;
                         }
                     }
-                } else {
+                }
+                else {
                     stopSearch();
                     LogInfo() << "info string Aborting search: time limit 1: " << time2 - mInfo.start_time;
                 }
@@ -160,13 +161,15 @@ void Search::displayPV(continuation_t *pv, int multipvIdx, int depth, int alpha,
         if (score < beta) {
             if (score <= alpha) log << " score cp " << score << " upperbound";
             else log << " score cp " << score;
-        } else log << " score cp " << score << " lowerbound";
-    } else {
-        log << " score mate " << ((score>0) ? (INF - score + 1) / 2 : -(INF + score) / 2);
+        }
+        else log << " score cp " << score << " lowerbound";
+    }
+    else {
+        log << " score mate " << ((score > 0) ? (INF - score + 1) / 2 : -(INF + score) / 2);
     }
 
     log << " time " << time;
-    sumnodes = CEngine.ComputeNodes();
+    sumnodes = mEngine.ComputeNodes();
     log << " nodes " << sumnodes;
     log << " hashfull " << (mTransTable.Used() * 1000) / mTransTable.HashSize();
     if (time > 10) log << " nps " << (sumnodes * 1000) / (time);
@@ -239,7 +242,7 @@ void Search::UpdateHistory(position_t& pos, SearchStack& ss, Thread& sthread, co
     }
 }
 
-const int MaxPieceValue[] = {0, PawnValueEnd, KnightValueEnd, BishopValueEnd, RookValueEnd, QueenValueEnd, 10000};
+const int MaxPieceValue[] = { 0, PawnValueEnd, KnightValueEnd, BishopValueEnd, RookValueEnd, QueenValueEnd, 10000 };
 
 template<bool inPv>
 int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread) {
@@ -293,17 +296,19 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     ss.dcc = discoveredCheckCandidates(pos, pos.side);
     if (ssprev.moveGivesCheck) {
         sortInit(pos, ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseEvasion, sthread);
-    } else {
+    }
+    else {
         if (inPv) sortInit(pos, ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_PVCHECK) ? MoveGenPhaseQuiescenceAndChecksPV : MoveGenPhaseQuiescencePV, sthread);
         else sortInit(pos, ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_CHECK) ? MoveGenPhaseQuiescenceAndChecks : MoveGenPhaseQuiescence, sthread);
     }
     bool prunable = !ssprev.moveGivesCheck && !inPv && MinTwoBits(pos.color[pos.side ^ 1] & pos.pawns) && MinTwoBits(pos.color[pos.side ^ 1] & ~(pos.pawns | pos.kings));
     move_t* move;
-    while ((move = sortNext(NULL, pos, ss.mvlist, ss.mvlist_phase, sthread)) != NULL) {
+    while ((move = sortNext(NULL, mInfo, pos, ss.mvlist, ss.mvlist_phase, sthread)) != NULL) {
         int score;
         if (anyRepNoMove(pos, move->m)) {
             score = DrawValue[pos.side];
-        } else {
+        }
+        else {
             ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
             if (prunable && move->m != ss.hashMove && !ss.moveGivesCheck && !moveIsPassedPawn(pos, move->m)) {
                 int scoreAprox = ss.evalvalue + PawnValueEnd + MaxPieceValue[moveCapture(move->m)];
@@ -333,12 +338,14 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     if (ss.bestvalue >= beta) {
         ssprev.counterMove = ss.bestmove;
         mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
-    } else {
+    }
+    else {
         if (inPv && ss.bestmove != EMPTY) {
             ssprev.counterMove = ss.bestmove;
             mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
             mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
-        } else mTransTable.StoreUpper(pos.posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos.ply));
+        }
+        else mTransTable.StoreUpper(pos.posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos.ply));
     }
     return ss.bestvalue;
 }
@@ -348,7 +355,8 @@ int Search::searchNode(position_t& pos, int alpha, int beta, const int depth, Se
     if (depth <= 0) {
         if (inPvNode(nt)) return qSearch<true>(pos, alpha, beta, 0, ssprev, sthread);
         else return qSearch<false>(pos, alpha, beta, 0, ssprev, sthread);
-    } else {
+    }
+    else {
         if (ssprev.moveGivesCheck) return searchGeneric<inRoot, inSplitPoint, true, inSingular>(pos, alpha, beta, depth, ssprev, sthread, nt);
         else return searchGeneric<inRoot, inSplitPoint, false, inSingular>(pos, alpha, beta, depth, ssprev, sthread, nt);
     }
@@ -472,19 +480,23 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     if (inSplitPoint) {
         sp = sthread.activeSplitPoint;
         ss = *sp->sscurr; // ss.mvlist points to master ss.mvlist, copied the entire searchstack also
-    } else {
+    }
+    else {
         if (inRoot) {
             ss = ssprev; // this is correct, ss.mvlist points to the ssprev.mvlist, at the same time, ssprev resets other member vars
             if (!mInfo.mvlist_initialized) {
                 sortInit(pos, ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseRoot, sthread);
-            } else {
+            }
+            else {
                 if (mInfo.multipvIdx > 0) {
                     ss.mvlist->pos = mInfo.multipvIdx - 1;
                     getMove(ss.mvlist);
-                } else ss.mvlist->pos = 0;
+                }
+                else ss.mvlist->pos = 0;
                 ss.mvlist->phase = MoveGenPhaseRoot + 1;
             }
-        } else {
+        }
+        else {
             ss.dcc = discoveredCheckCandidates(pos, pos.side);
             sortInit(pos, ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), sthread);
             ss.firstExtend = ss.firstExtend || (inCheck && ss.mvlist->size == 1);
@@ -493,20 +505,22 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
 
     int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 4) : (depth * depth));
     move_t* move;
-    while ((move = sortNext(sp, pos, ss.mvlist, ss.mvlist_phase, sthread)) != NULL) {
+    while ((move = sortNext(sp, mInfo, pos, ss.mvlist, ss.mvlist_phase, sthread)) != NULL) {
         int score = -INF;
         if (inSingular && move->m == ssprev.bannedMove) continue;
         if (inSplitPoint) {
             sp->updatelock.lock();
             ss.playedMoves = ++sp->played;
-        } else ++ss.playedMoves;
+        }
+        else ++ss.playedMoves;
         if (ss.hisCnt < 64 && !moveIsTactical(move->m)) {
             ss.hisMoves[ss.hisCnt++] = move->m;
         }
         if (inSplitPoint) sp->updatelock.unlock();
         if (anyRepNoMove(pos, move->m)) {
             score = DrawValue[pos.side];
-        } else {
+        }
+        else {
             int newdepth;
             ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
             if (ss.bestvalue == -INF) { //TODO remove this from loop and do it first
@@ -514,7 +528,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 makeMove(pos, undo, move->m);
                 ++sthread.nodes;
                 score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, sthread, invertNode(nt));
-            } else {
+            }
+            else {
                 newdepth = depth - 1;
                 //only reduce or prune some types of moves
                 int partialReduction = 0;
@@ -548,7 +563,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 makeMove(pos, undo, move->m);
                 ++sthread.nodes;
                 if (inSplitPoint) alpha = sp->alpha;
-                ss.reducedMove = (newdepthclone < newdepth); 
+                ss.reducedMove = (newdepthclone < newdepth);
                 score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepthclone, ss, sthread, inCutNode(nt) ? AllNode : CutNode);
                 if (!sthread.stop && ss.reducedMove && score > alpha) {
                     if (partialReduction >= 4) {
@@ -588,7 +603,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 }
                 if (inPvNode(nt) && ss.bestvalue < beta) {
                     alpha = inSplitPoint ? sp->alpha = ss.bestvalue : ss.bestvalue;
-                } else {
+                }
+                else {
                     if (inRoot) {
                         if (inSplitPoint) sp->movelistlock.lock();
                         for (int i = ss.mvlist->pos; i < ss.mvlist->size; ++i) ss.mvlist->list[i].s = -INF;
@@ -603,8 +619,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             }
         }
         if (inSplitPoint) sp->updatelock.unlock();
-        if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < CEngine.mMaxActiveSplitsPerThread
-            && CEngine.ThreadNum() > 1 && depth >= CEngine.mMinSplitDepth) {
+        if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < mEngine.mMaxActiveSplitsPerThread
+            && mEngine.ThreadNum() > 1 && depth >= mEngine.mMinSplitDepth) {
             sthread.SearchSplitPoint(pos, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot);
             if (sthread.stop) return 0;
             break;
@@ -628,12 +644,14 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             UpdateHistory(pos, ss, sthread, depth);
             if (inCutNode(nt)) mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
             else mTransTable.StoreAllLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
-        } else {
+        }
+        else {
             if (inPvNode(nt) && ss.bestmove != EMPTY) {
                 ssprev.counterMove = ss.bestmove;
                 mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
                 mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
-            } else if (inCutNode(nt)) mTransTable.StoreCutUpper(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
+            }
+            else if (inCutNode(nt)) mTransTable.StoreCutUpper(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
             else mTransTable.StoreUpper(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
         }
     }
@@ -699,7 +717,7 @@ void Search::repopulateHash(position_t& pos, continuation_t& rootPV) {
 void Search::timeManagement(int depth) {
     static const int WORSE_TIME_BONUS = 20; //how many points more than 20 it takes to increase time by alloc to a maximum of 2*alloc
     static const int CHANGE_TIME_BONUS = 50; //what percentage of alloc to increase if the last move is a change move
-    
+
     if (mInfo.best_value > INF - MAXPLY) mInfo.mate_found++;
     if (mInfo.thinking_status == THINKING && mInfo.time_is_limited) {
         int64 timeElapsed = getTime();
@@ -727,7 +745,8 @@ void Search::timeManagement(int depth) {
                 mInfo.time_limit_max += addTime;
                 if (mInfo.time_limit_max > mInfo.time_limit_abs)
                     mInfo.time_limit_max = mInfo.time_limit_abs;
-            } else { // if we are unlikely to get deeper, save our time
+            }
+            else { // if we are unlikely to get deeper, save our time
                 stopSearch();
                 LogInfo() << "info string Aborting search: root time limit 1: " << timeElapsed - mInfo.start_time;
                 return;
@@ -743,12 +762,12 @@ void Search::timeManagement(int depth) {
 
 void Search::stopSearch() {
     mInfo.stop_search = true;
-    CEngine.SetAllThreadsToStop();
+    mEngine.SetAllThreadsToStop();
 }
 
 Engine::Engine() {
     mThinking.clear(std::memory_order_release);
-    search = new Search(info, transtable, pvhashtable);
+    search = new Search(*this, info, transtable, pvhashtable);
 }
 Engine::~Engine() {
     delete search;
@@ -772,12 +791,13 @@ void Engine::SearchFromIdleLoop(SplitPoint& sp, Thread& sthread) {
 void Engine::SendBestMove() {
     if (!info.bestmove) {
         LogAndPrintOutput() << "info string No legal move found. Start a new game.";
-    } else {
+    }
+    else {
         LogAndPrintOutput log;
         log << "bestmove " << move2Str(info.bestmove);
         if (info.pondermove) log << " ponder " << move2Str(info.pondermove);
     }
-    //CEngine.PrintThreadStats();
+    //PrintThreadStats();
     SetThinkFinished();
 }
 
@@ -792,8 +812,8 @@ void Engine::GetBestMove(Thread& sthread) {
     transtable.NewDate(transtable.Date());
     pvhashtable.NewDate(pvhashtable.Date());
 
-    if (info.thinking_status == THINKING && UCIOptionsMap["OwnBook"].GetInt() && !anyRep(rootpos)) {
-        if ((info.bestmove = PolyBook.getBookMove(rootpos)) != EMPTY) {
+    if (info.thinking_status == THINKING && uci_opt["OwnBook"].GetInt() && !anyRep(rootpos)) {
+        if ((info.bestmove = mPolyBook.getBookMove(rootpos)) != EMPTY) {
             StopSearch();
             SendBestMove();
             return;
@@ -804,11 +824,11 @@ void Engine::GetBestMove(Thread& sthread) {
         PvHashEntry *entry = pvhashtable.pvEntry(rootpos.posStore.hash);
         if (NULL == entry) break;
         if (info.thinking_status == THINKING
-        && info.rootPV.moves[1] == rootpos.posStore.lastmove
-        && info.rootPV.moves[2] == entry->pvMove()
-        && genMoveIfLegal(rootpos, info.rootPV.moves[2], pinnedPieces(rootpos, rootpos.side))
-        && ((moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(entry->pvMove())))
-        || (PcValSEE[moveCapture(entry->pvMove())] > PcValSEE[movePiece(entry->pvMove())]))) {
+            && info.rootPV.moves[1] == rootpos.posStore.lastmove
+            && info.rootPV.moves[2] == entry->pvMove()
+            && genMoveIfLegal(rootpos, info.rootPV.moves[2], pinnedPieces(rootpos, rootpos.side))
+            && ((moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(entry->pvMove())))
+            || (PcValSEE[moveCapture(entry->pvMove())] > PcValSEE[movePiece(entry->pvMove())]))) {
             info.bestmove = entry->pvMove();
             info.best_value = entry->pvScore();
             search->extractPvMovesFromHash(rootpos, info.rootPV, entry->pvMove());
@@ -844,7 +864,8 @@ void Engine::GetBestMove(Thread& sthread) {
             if (id < 6) {
                 alpha = -INF;
                 beta = INF;
-            } else {
+            }
+            else {
                 alpha = info.last_value - AspirationWindow;
                 beta = info.last_value + AspirationWindow;
                 if (alpha < -QueenValue) alpha = -INF;
@@ -856,7 +877,8 @@ void Engine::GetBestMove(Thread& sthread) {
                 if (!info.stop_search || info.best_value != -INF) {
                     if (info.best_value <= alpha || info.best_value >= beta) {
                         search->extractPvMovesFromHash2(rootpos, info.rootPV, ss.counterMove);
-                    } else {
+                    }
+                    else {
                         search->extractPvMovesFromHash(rootpos, info.rootPV, ss.counterMove);
                         search->repopulateHash(rootpos, info.rootPV);
                     }
@@ -869,11 +891,13 @@ void Engine::GetBestMove(Thread& sthread) {
                     if (info.best_value <= alpha) alpha = info.best_value - (AspirationWindow << ++faillow);
                     if (alpha < -QueenValue) alpha = -INF;
                     info.research = 1;
-                } else if (info.best_value >= beta) {
+                }
+                else if (info.best_value >= beta) {
                     if (info.best_value >= beta)  beta = info.best_value + (AspirationWindow << ++failhigh);
                     if (beta > QueenValue) beta = INF;
                     info.research = 1;
-                } else break;
+                }
+                else break;
             }
             if (info.stop_search) break; // TODO: refactor this
         }
@@ -888,7 +912,8 @@ void Engine::GetBestMove(Thread& sthread) {
     if (!info.stop_search) {
         if ((info.depth_is_limited || info.time_is_limited) && info.thinking_status == THINKING) {
             LogInfo() << "info string Aborting search: end of GetBestMove: id = " << id << ", best_value = " << info.best_value << " sp = " << rootpos.sp << ", ply = " << rootpos.ply;
-        } else {
+        }
+        else {
             LogAndPrintInfo() << "info string Waiting for stop, quit, or PonderHit";
             while (!info.stop_search && info.thinking_status != THINKING);
             LogInfo() << "info string Aborting search: end of waiting for stop/quit/PonderHit";
@@ -905,9 +930,9 @@ void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     rootpos = pos;
     info.Init();
 
-    info.time_buffer = UCIOptionsMap["Time Buffer"].GetInt(); // TODO: refactor this out
-    info.contempt = UCIOptionsMap["Contempt"].GetInt(); // TODO: refactor this out
-    info.multipv = UCIOptionsMap["MultiPV"].GetInt(); // TODO: refactor this out
+    info.time_buffer = uci_opt["Time Buffer"].GetInt(); // TODO: refactor this out
+    info.contempt = uci_opt["Contempt"].GetInt(); // TODO: refactor this out
+    info.multipv = uci_opt["MultiPV"].GetInt(); // TODO: refactor this out
 
     int mytime = 0, t_inc = 0;
 
@@ -954,7 +979,7 @@ void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     if (mytime > 0) {
         info.time_is_limited = true;
         mytime = mytime - info.time_buffer;
-        if (mytime  < 0) mytime = 0;
+        if (mytime < 0) mytime = 0;
         if (data.movestogo <= 0 || data.movestogo > 32) data.movestogo = 32;
         info.time_limit_max = (mytime / data.movestogo) + ((t_inc * 4) / 5);
         if (data.ponder) info.time_limit_max += info.time_limit_max / 4;

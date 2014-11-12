@@ -59,7 +59,7 @@ int SetPhase(int minors, int rooks, int queens) {
     }
 
     if (p < 0) return 0;
-    if (p >32) return 32;
+    if (p > 32) return 32;
     else return p;
 }
 
@@ -86,7 +86,8 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
             if (wn == 2) {
                 if (bp == 0 || bminors || br || bq) drawn += DRAWN;
                 else drawn += DRAWN1;
-            } else if (wb == 2 && bq == 0 && br == 0 && bn == 1) drawn += DRAWN8;
+            }
+            else if (wb == 2 && bq == 0 && br == 0 && bn == 1) drawn += DRAWN8;
             else if (bq || br || bminors) drawn += DRAWN1;
         }
         // R and N against R (RB vs. R already taken care of
@@ -99,7 +100,8 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
         else if (wq == 1 && wr == 0 && wminors == 0 && bq >= 0 && br >= 1 && bminors >= 1) drawn += DRAWN2;
         // rook and minor against queen
         else if (wq == 0 && wr == 1 && wminors == 1 && bq == 1) drawn += DRAWN3;
-    } else {
+    }
+    else {
         // queen endgames are a little drawish
         if (wq == 1 && wr == 0 && wminors == 0 && bq) {
             drawn += DRAWN9;
@@ -109,7 +111,8 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
         else if (wq == 1 && wr == 1 && wminors == 0 && bq && br) {
             drawn += DRAWN10;
             if (wp == 1) drawn += DRAWN10;
-        } else if (wq == 1 && wr == 0 && wminors == 1 && bq && (br | bminors)) {
+        }
+        else if (wq == 1 && wr == 0 && wminors == 1 && bq && (br | bminors)) {
             drawn += DRAWN10;
             if (wp == 1) drawn += DRAWN10;
         }
@@ -126,7 +129,8 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
         else if (wq == 0 && wr == 1 && wminors == 1 && br && (br == 2 || bminors)) {
             drawn += DRAWN10;
             if (wp == 1) drawn += DRAWN10;
-        } else if (wq == 0 && wr == 2 && wminors == 0 && br == 2) {
+        }
+        else if (wq == 0 && wr == 2 && wminors == 0 && br == 2) {
             drawn += DRAWN10;
             if (wp == 1) drawn += DRAWN10;
         }
@@ -142,13 +146,16 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
             if (wq) {
                 int pGone = Drawish(wp, bp, wn, bn, wb, bb, wr, br, wq - 1, bq - 1, 0) - 5;
                 if (pGone > drawn) drawn = pGone;
-            } else if (wr) {
+            }
+            else if (wr) {
                 int pGone = Drawish(wp, bp, wn, bn, wb, bb, wr - 1, br, wq, bq - 1, 0) - 5;
                 if (pGone > drawn) drawn = pGone;
-            } else if (wb) {
+            }
+            else if (wb) {
                 int pGone = Drawish(wp, bp, wn, bn, wb - 1, bb, wr, br, wq, bq - 1, 0) - 5;
                 if (pGone > drawn) drawn = pGone;
-            } else if (wn) {
+            }
+            else if (wn) {
                 int pGone = Drawish(wp, bp, wn - 1, bn, wb, bb, wr, br, wq, bq - 1, 0) - 5;
                 if (pGone > drawn) drawn = pGone;
             }
@@ -159,10 +166,12 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
                 if (wr > 1 || br > 1) pGone = Drawish(wp, bp, wn, bn, wb, bb, wr - 1, br - 1, wq, bq, 0) - 5;
                 else pGone = Drawish(wp, bp, wn, bn, wb, bb, wr - 1, br - 1, wq, bq, 0) - 8;
                 if (pGone > drawn) drawn = pGone;
-            } else if (wb) {
+            }
+            else if (wb) {
                 int pGone = Drawish(wp, bp, wn, bn, wb - 1, bb, wr, br - 1, wq, bq, 0) - 10;
                 if (pGone > drawn) drawn = pGone;
-            } else if (wn) {
+            }
+            else if (wn) {
                 int pGone = Drawish(wp, bp, wn - 1, bn, wb, bb, wr, br - 1, wq, bq, 0) - 10;
                 if (pGone > drawn) drawn = pGone;
             }
@@ -172,13 +181,16 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
                 int pGone;
                 if (wminors > 1 || bminors > 1) {
                     pGone = Drawish(wp, bp, wn, bn, wb - 1, bb - 1, wr, br, wq, bq, 0) - 8;
-                } else pGone = Drawish(wp, bp, wn, bn, wb - 1, bb - 1, wr, br, wq, bq, 0) - 20;
+                }
+                else pGone = Drawish(wp, bp, wn, bn, wb - 1, bb - 1, wr, br, wq, bq, 0) - 20;
                 if (pGone > drawn) drawn = pGone;
-            } else if (wn) {
+            }
+            else if (wn) {
                 int pGone;
                 if (wminors > 1 || bminors > 1) {
                     pGone = Drawish(wp, bp, wn - 1, bn, wb, bb - 1, wr, br, wq, bq, 0) - 8;
-                } else pGone = Drawish(wp, bp, wn - 1, bn, wb, bb - 1, wr, br, wq, bq, 0) - 20;
+                }
+                else pGone = Drawish(wp, bp, wn - 1, bn, wb, bb - 1, wr, br, wq, bq, 0) - 20;
                 if (pGone > drawn) drawn = pGone;
             }
         }
@@ -187,14 +199,17 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
                 int pGone;
                 if (wminors > 1 || bminors > 1) {
                     pGone = Drawish(wp, bp, wn, bn - 1, wb - 1, bb, wr, br, wq, bq, 0) - 8;
-                } else
+                }
+                else
                     pGone = Drawish(wp, bp, wn, bn - 1, wb - 1, bb, wr, br, wq, bq, 0) - 20;
                 if (pGone > drawn) drawn = pGone;
-            } else if (wn) {
+            }
+            else if (wn) {
                 int pGone;
                 if (wminors > 1 || bminors > 1) {
                     pGone = Drawish(wp, bp, wn - 1, bn - 1, wb, bb, wr, br, wq, bq, 0) - 8;
-                } else
+                }
+                else
 
                     pGone = Drawish(wp, bp, wn - 1, bn - 1, wb, bb, wr, br, wq, bq, 0) - 20;
                 if (pGone > drawn) drawn = pGone;
@@ -228,7 +243,7 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
         int pGone;
         pGone = Drawish(wp - 1, bp - 1, wn, bn, wb, bb, wr, br, wq, bq, 0) / 2;
         if (bp < wp) pGone -= 10;
-        if (pGone>drawn) drawn = pGone;
+        if (pGone > drawn) drawn = pGone;
     }
 
     return originalDrawn + drawn;
@@ -240,15 +255,15 @@ void initMaterial(void) {
     int wdraw, bdraw;
 
     for (wq = 0; wq <= 1; wq++)
-    for (bq = 0; bq <= 1; bq++)
-    for (wr = 0; wr <= 2; wr++)
-    for (br = 0; br <= 2; br++)
-    for (wb = 0; wb <= 2; wb++)
-    for (bb = 0; bb <= 2; bb++)
-    for (wn = 0; wn <= 2; wn++)
-    for (bn = 0; bn <= 2; bn++)
-    for (wp = 0; wp <= 8; wp++)
-    for (bp = 0; bp <= 8; bp++) {
+        for (bq = 0; bq <= 1; bq++)
+            for (wr = 0; wr <= 2; wr++)
+                for (br = 0; br <= 2; br++)
+                    for (wb = 0; wb <= 2; wb++)
+                        for (bb = 0; bb <= 2; bb++)
+                            for (wn = 0; wn <= 2; wn++)
+                                for (bn = 0; bn <= 2; bn++)
+                                    for (wp = 0; wp <= 8; wp++)
+                                        for (bp = 0; bp <= 8; bp++) {
         int wminors = wn + wb;
         int bminors = bn + bb;
         int wnonQ = wminors + wr;
@@ -370,7 +385,8 @@ void initMaterial(void) {
                     midscore1 -= 25;
                     midscore2 -= 25;
                     endscore -= 25;
-                } else {
+                }
+                else {
                     openscore -= 19;
                     midscore1 -= 16;
                     midscore2 -= 13;
@@ -407,11 +423,13 @@ void initMaterial(void) {
                 endscore *= 8 - phase;
                 midscore2 *= phase;
                 win = (midscore2 + endscore) / 8;
-            } else if (phase < 24) {
+            }
+            else if (phase < 24) {
                 midscore2 *= 24 - phase;
                 midscore1 *= phase - 8;
                 win = (midscore1 + midscore2) / 16;
-            } else {
+            }
+            else {
                 midscore1 *= 32 - phase;
                 openscore *= phase - 24;
                 win = (openscore + midscore1) / 8;
@@ -538,5 +556,5 @@ void initMaterial(void) {
             MaterialTable[bindex][windex].tryDelta = tryDelta;
             */
         }
-    }
+                                        }
 }

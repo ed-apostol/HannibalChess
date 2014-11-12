@@ -49,7 +49,8 @@ void SinglePawnEnding(int attacker, const position_t& pos, eval_info_t *ei, int 
             if (PAWN_RANK(pawnSq, attacker) >= Rank5) {
                 if (ei->MLindex[defender] == 0) *score += 400 * sign[attacker];
                 else *score += 100 * sign[attacker];//sam3.13 small bug fix
-            } else {
+            }
+            else {
                 // otherwise if king has opposition he is safe
                 int oppSq = pos.kpos[attacker] + PAWN_MOVE_INC(attacker) * 2;
                 if ((oppSq == pos.kpos[defender]) && mover == attacker)
@@ -107,7 +108,8 @@ void SinglePawnEnding(int attacker, const position_t& pos, eval_info_t *ei, int 
                 (KingMoves[pos.kpos[attacker]] & BitMask[pawnSq]))
                 *draw = MAX_DRAW;
             else if (ei->MLindex[defender] == 0) *score += 400 * sign[attacker];
-        } else if ((PawnCaps[pos.kpos[defender]][attacker] & BitMask[targetSq]) &&
+        }
+        else if ((PawnCaps[pos.kpos[defender]][attacker] & BitMask[targetSq]) &&
             mover == defender && (PawnCaps[pos.kpos[attacker]][attacker] & BitMask[targetSq]) == 0)
             *draw = MAX_DRAW;
         else if (DISTANCE(pos.kpos[defender], pawnSq) - (mover == defender) < DISTANCE(pos.kpos[attacker], targetSq))
@@ -144,7 +146,8 @@ void DrawnRookPawn(int attacker, const position_t& pos, eval_info_t *ei, int *sc
         if (DISTANCE(pos.kpos[attacker], qs) > DISTANCE(pos.kpos[attacker ^ 1], qs) && (bishop == 0 ||
             ((bishop & WhiteSquaresBB) == 0) != ((BitMask[qs] & WhiteSquaresBB) == 0))) {
             *draw = MAX_DRAW;
-        } else if (bishop == 0 && ((SQFILE(pos.kpos[attacker]) == FileH &&
+        }
+        else if (bishop == 0 && ((SQFILE(pos.kpos[attacker]) == FileH &&
             (pos.kpos[defender] == pos.kpos[attacker] - 2 || (mover == defender && DISTANCE(pos.kpos[attacker] - 2, pos.kpos[defender]) == 1)
             || (SQFILE(pos.kpos[defender]) == FileF && (DISTANCE(pos.kpos[defender], qs - 2) < DISTANCE(pos.kpos[attacker], qs)
             || DISTANCE(pos.kpos[defender], PAWN_PROMOTE(SQFILE(pos.kpos[defender]), attacker)) - (mover == defender) <= 1)))) ||
@@ -158,7 +161,8 @@ void KnightBishopMate(int color, const position_t& pos, int *score, int *draw) {
     int defender = color ^ 1;
     if ((pos.bishops & WhiteSquaresBB & pos.color[color])) {
         cornerDist = MIN(DISTANCE(pos.kpos[defender], h1), DISTANCE(pos.kpos[defender], a8));
-    } else {
+    }
+    else {
         cornerDist = MIN(DISTANCE(pos.kpos[defender], a1), DISTANCE(pos.kpos[defender], h8));
     }
     *score += ((7 - cornerDist) * 50)*sign[color];
@@ -168,7 +172,7 @@ void KnightBishopMate(int color, const position_t& pos, int *score, int *draw) {
 static int mate_square[64];
 // this is useful for combatting high draw scores, which may obfiscate progress in hard to mate situations
 void InitMateBoost() {
-    int row[8] = {50, 30, 10, 0, 0, 10, 30, 50};
+    int row[8] = { 50, 30, 10, 0, 0, 10, 30, 50 };
     int i, j;
     for (i = 0; i < 8; i++) {
         for (j = 0; j < 8; j++) {
@@ -385,7 +389,8 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score
                     *draw = (DRAWN + DRAWN1) / 2;
                     return;
                 }
-            } else if ((ei->pawns[attacker] & ~(FileABB | FileGBB)) == 0 ||
+            }
+            else if ((ei->pawns[attacker] & ~(FileABB | FileGBB)) == 0 ||
                 (ei->pawns[attacker] & ~(FileABB | FileHBB)) == 0) {
                 int kdSq = pos.kpos[defender];
                 if (Q_DIST(kdSq, attacker) <= 1 && DISTANCE(kdSq, behindRook) >= 6) {
@@ -404,7 +409,8 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score
                     *draw = (DRAWN + DRAWN1) / 2;
                     return;
                 }
-            } else if ((ei->pawns[attacker] & ~(FileHBB | FileBBB)) == 0 ||
+            }
+            else if ((ei->pawns[attacker] & ~(FileHBB | FileBBB)) == 0 ||
                 (ei->pawns[attacker] & ~(FileHBB | FileABB)) == 0) {
                 int kdSq = pos.kpos[defender];
                 if (Q_DIST(kdSq, attacker) <= 1 && DISTANCE(kdSq, behindRook) >= 6) {
@@ -453,9 +459,11 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score
 
             if (unguarded == 0) {
                 *draw += pawnsTraded * 12;
-            } else if (unguarded == 1) {
+            }
+            else if (unguarded == 1) {
                 *draw += pawnsTraded * 8;
-            } else {
+            }
+            else {
                 *draw += pawnsTraded * 4;
             }
         }
