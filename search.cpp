@@ -96,8 +96,8 @@ void Search::initNode(Thread& sthread) {
     if (mInfo.node_is_limited && mEngine.ComputeNodes() >= mInfo.node_limit) {
         stopSearch();
     }
-    if (sthread.thread_id == 0 && ++mEngine.nodes_since_poll >= mEngine.nodes_between_polls) {
-        mEngine.nodes_since_poll = 0;
+    if (sthread.thread_id == 0 && ++mInfo.nodes_since_poll >= mInfo.nodes_between_polls) {
+        mInfo.nodes_since_poll = 0;
         time2 = getTime();
         if (time2 - mInfo.last_time > 1000) {
             int64 time = time2 - mInfo.start_time;
@@ -619,8 +619,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             }
         }
         if (inSplitPoint) sp->updatelock.unlock();
-        if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < mEngine.mMaxActiveSplitsPerThread
-            && mEngine.ThreadNum() > 1 && depth >= mEngine.mMinSplitDepth) {
+        if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < mInfo.mMaxActiveSplitsPerThread
+            && mEngine.ThreadNum() > 1 && depth >= mInfo.mMinSplitDepth) {
             sthread.SearchSplitPoint(pos, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot);
             if (sthread.stop) return 0;
             break;
@@ -930,9 +930,11 @@ void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     rootpos = pos;
     info.Init();
 
-    info.time_buffer = uci_opt["Time Buffer"].GetInt(); // TODO: refactor this out
-    info.contempt = uci_opt["Contempt"].GetInt(); // TODO: refactor this out
-    info.multipv = uci_opt["MultiPV"].GetInt(); // TODO: refactor this out
+    info.time_buffer = uci_opt["Time Buffer"].GetInt();
+    info.contempt = uci_opt["Contempt"].GetInt();
+    info.multipv = uci_opt["MultiPV"].GetInt();
+    info.mMinSplitDepth = uci_opt["Min Split Depth"].GetInt();
+    info.mMaxActiveSplitsPerThread = uci_opt["Max Active Splits/Thread"].GetInt();
 
     int mytime = 0, t_inc = 0;
 
@@ -1015,8 +1017,6 @@ void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     DrawValue[rootpos.side] = -info.contempt;
     DrawValue[rootpos.side ^ 1] = info.contempt;
 
-    nodes_since_poll = 0;
-    nodes_between_polls = 8192;
     ThreadFromIdx(0).stop = false;
     ThreadFromIdx(0).TriggerCondition();
 }

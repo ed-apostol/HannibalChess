@@ -143,6 +143,11 @@ struct SearchInfo {
         time_buffer = 0;
         contempt = 0;
         multipv = 0;
+        mMinSplitDepth = 0;
+        mMaxActiveSplitsPerThread = 0;
+        nodes_since_poll = 0;
+        nodes_between_polls = 8192;
+
     }
     volatile int thinking_status;
     volatile bool stop_search; // TODO: replace with sthread.stop?
@@ -150,6 +155,8 @@ struct SearchInfo {
     int time_buffer;
     int contempt;
     int multipv;
+    int mMinSplitDepth;
+    int mMaxActiveSplitsPerThread;
 
     bool depth_is_limited;
     int depth_limit;
@@ -176,6 +183,9 @@ struct SearchInfo {
     int iteration;
 
     int multipvIdx;
+
+    uint64 nodes_since_poll;
+    uint64 nodes_between_polls;
 
     int legalmoves;
     basic_move_t bestmove;
@@ -232,8 +242,6 @@ public:
         return nodes;
     }
     void InitVars() {
-        mMinSplitDepth = uci_opt["Min Split Depth"].GetInt();
-        mMaxActiveSplitsPerThread = uci_opt["Max Active Splits/Thread"].GetInt();
         for (Thread* th : mThreads) {
             th->Init();
         }
@@ -262,7 +270,9 @@ public:
         LogInfo() << "================================================================";
     }
     void WaitForThinkFinished() {
-        while (mThinking.test_and_set(std::memory_order_acquire));
+        while (mThinking.test_and_set(std::memory_order_acquire)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
     }
     void SetThinkFinished() {
         mThinking.clear(std::memory_order_release);
@@ -316,16 +326,16 @@ public:
         SetNumThreads(uci_opt[str].GetInt());
     }
     void OnSplitsChange(const std::string str) {
-        mMinSplitDepth = uci_opt[str].GetInt();
+        info.mMinSplitDepth = uci_opt[str].GetInt();
     }
     void OnActiveSplitsChange(const std::string str) {
-        mMaxActiveSplitsPerThread = uci_opt[str].GetInt();
+        info.mMaxActiveSplitsPerThread = uci_opt[str].GetInt();
     }
     void OnContemptChange(const std::string str) {
         info.contempt = uci_opt[str].GetInt();
     }
     void OnBookfileChange(const std::string str) {
-        mPolyBook.initBook(uci_opt["Book File"].GetStr());
+        mPolyBook.initBook(uci_opt[str].GetStr());
     }
     void OnDummyChange(const std::string str) {}
 
@@ -349,18 +359,11 @@ public:
         uci_opt.Print();
     }
 
-    int mMinSplitDepth;
-    int mMaxActiveSplitsPerThread;
-
-    uint64 nodes_since_poll;
-    uint64 nodes_between_polls;
-
-    position_t rootpos;
-    SearchInfo info;
-
     UCIOptions uci_opt;
 private:
     std::atomic_flag mThinking;
+    position_t rootpos;
+    SearchInfo info;
     Search* search;
     TranspositionTable transtable;
     PvHashTable pvhashtable;
