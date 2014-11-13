@@ -38,7 +38,7 @@ static const int DefaultTimeBuffer = 1000;
 
 static const int MinThreads = 1;
 static const int MaxThreads = 64;
-static const int DefaultThreads = 6;
+static const int DefaultThreads = 1;
 
 static const int MinSplitDepth = 2;
 static const int MaxSplitDepth = 8;
@@ -250,7 +250,7 @@ public:
     void SetNumThreads(int num) {
         while (mThreads.size() < num) {
             int id = (int)mThreads.size();
-            mThreads.push_back(new Thread(id, &mThreads, *this));
+            mThreads.push_back(new Thread(id, mThreads, *this));
         }
         while (mThreads.size() > num) {
             delete mThreads.back();

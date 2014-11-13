@@ -134,7 +134,7 @@ class Thread : public ThreadBase {
 public:
     static const int MaxNumSplitPointsPerThread = 8;
 
-    Thread(int _thread_id, std::vector<Thread*>* const _thread_group, Engine& _engine) :
+    Thread(int _thread_id, std::vector<Thread*>& _thread_group, Engine& _engine) :
         ThreadBase(_thread_id),
         mThreadGroup(_thread_group),
         mEngine(_engine) {
@@ -161,7 +161,7 @@ public:
     PawnHashTable pt;
 private:
     SplitPoint sptable[MaxNumSplitPointsPerThread];
-    std::vector<Thread*>* mThreadGroup;
+    std::vector<Thread*>& mThreadGroup;
     Engine& mEngine;
 };
 

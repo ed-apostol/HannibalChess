@@ -65,7 +65,7 @@ void Thread::GetWork(SplitPoint* const master_sp) {
     Thread* thread_to_help = NULL;
     SplitPoint* best_split_point = NULL;
 
-    for (Thread* th : *mThreadGroup) {
+    for (Thread* th : mThreadGroup) {
         if (th->thread_id == thread_id) continue; // no need to help self
         if (master_sp != NULL && !(master_sp->workersBitMask & ((uint64)1 << th->thread_id))) continue; // helpful master: looking to help threads still actively working for it
         for (int splitIdx = 0, num_splits = th->num_sp; splitIdx < num_splits; ++splitIdx) {
