@@ -68,43 +68,18 @@ bool Interface::Input(std::istringstream& stream) {
     std::string command;
     stream >> command;
 
-    if (command == "stop") {
-        Stop();
-    }
-    else if (command == "ponderhit") {
-        PonderHit();
-    }
-    else if (command == "go") {
-        Go(stream);
-    }
-    else if (command == "position") {
-        Position(stream);
-    }
-    else if (command == "setoption") {
-        SetOption(stream);
-    }
-    else if (command == "ucinewgame") {
-        NewGame();
-    }
-    else if (command == "isready") {
-        LogAndPrintOutput() << "readyok";
-    }
-    else if (command == "uci") {
-        Id();
-    }
-    else if (command == "quit") {
-        Quit();
-        return false;
-    }
-    else if (command == "speedup") {
-        CheckSpeedup(stream);
-    }
-    else if (command == "split") {
-        CheckBestSplit(stream);
-    }
-    else {
-        LogAndPrintError() << "Unknown UCI command: " << command;
-    }
+    if (command == "stop") Stop();
+    else if (command == "ponderhit") PonderHit();
+    else if (command == "go") Go(stream);
+    else if (command == "position") Position(stream);
+    else if (command == "setoption") SetOption(stream);
+    else if (command == "ucinewgame") NewGame();
+    else if (command == "isready") LogAndPrintOutput() << "readyok";
+    else if (command == "uci") Id();
+    else if (command == "quit") { Quit(); return false; }
+    else if (command == "speedup") CheckSpeedup(stream);
+    else if (command == "split") CheckBestSplit(stream);
+    else LogAndPrintError() << "Unknown UCI command: " << command;
 
     return true;
 }
@@ -138,43 +113,18 @@ void Interface::Go(std::istringstream& stream) {
 
     stream >> command;
     while (command != "") {
-        if (command == "wtime") {
-            stream >> data.wtime;
-        }
-        else if (command == "btime") {
-            stream >> data.btime;
-        }
-        else if (command == "winc") {
-            stream >> data.winc;
-        }
-        else if (command == "binc") {
-            stream >> data.binc;
-        }
-        else if (command == "movestogo") {
-            stream >> data.movestogo;
-        }
-        else if (command == "ponder") {
-            data.ponder = true;
-        }
-        else if (command == "depth") {
-            stream >> data.depth;
-        }
-        else if (command == "movetime") {
-            stream >> data.movetime;
-        }
-        else if (command == "infinite") {
-            data.infinite = true;
-        }
-        else if (command == "nodes") {
-            stream >> data.nodes;
-        }
-        else if (command == "mate") {
-            stream >> data.mate;
-        }
-        else {
-            LogAndPrintError() << "Wrong go command: " << command;
-            return;
-        }
+        if (command == "wtime") stream >> data.wtime;
+        else if (command == "btime") stream >> data.btime;
+        else if (command == "winc") stream >> data.winc;
+        else if (command == "binc") stream >> data.binc;
+        else if (command == "movestogo") stream >> data.movestogo;
+        else if (command == "ponder") data.ponder = true;
+        else if (command == "depth") stream >> data.depth;
+        else if (command == "movetime") stream >> data.movetime;
+        else if (command == "infinite") data.infinite = true;
+        else if (command == "nodes") stream >> data.nodes;
+        else if (command == "mate") stream >> data.mate;
+        else { LogAndPrintError() << "Wrong go command: " << command; return; }
         command = "";
         stream >> command;
     }
