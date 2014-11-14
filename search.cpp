@@ -825,7 +825,6 @@ void Engine::GetBestMove(Thread& sthread) {
         }
         ss.hashMove = entry->pvMove();
     } while (false);
-
     // extend time when there is no hashmove from hashtable, this is useful when just out of the book
     if (ss.hashMove == EMPTY || (info.rootPV.moves[1] != rootpos.posStore.lastmove)) {
         info.time_limit_max += info.alloc_time / 4; // 25%
@@ -899,7 +898,6 @@ void Engine::GetBestMove(Thread& sthread) {
         }
         StopSearch();
     }
-
     SendBestMove();
 }
 
