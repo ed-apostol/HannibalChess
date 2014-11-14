@@ -430,8 +430,13 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             }
             if (depth < MaxRazorDepth && pos.posStore.lastmove != EMPTY
                 && ss.evalvalue < (rvalue = beta - FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
-                int score = searchNode<false, false, false>(pos, rvalue - 1, rvalue, 0, ssprev, sthread, nt);
-                if (score < rvalue) return score;
+                if (depth <= 2 && ss.evalvalue < rvalue - 100) {
+                    return searchNode<false, false, false>(pos, alpha, beta, 0, ssprev, sthread, nt);
+                }
+                else {
+                    int score = searchNode<false, false, false>(pos, rvalue - 1, rvalue, 0, ssprev, sthread, nt);
+                    if (score < rvalue) return score;
+                }
             }
             if (depth >= 2 && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && ss.evalvalue >= beta) {
                 int nullDepth = depth - (4 + (depth / 5) + MIN(3, ((ss.evalvalue - beta) / PawnValue)));
@@ -463,7 +468,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 }
             }
         }
-        if (/*!inAllNode(nt) && !inCheck && */ ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8)) { // singular extension
+        if (ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8)) { // singular extension
             int newdepth = depth / 2;
             if (ss.hashDepth >= newdepth) {
                 int targetScore = ss.evalvalue - EXPLORE_CUTOFF;

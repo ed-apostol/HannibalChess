@@ -104,30 +104,29 @@ void scoreNonCaptures(const position_t& pos, movelist_t& mvlist, Thread& sthread
     }
 }
 
-void scoreAll(const position_t& pos, movelist_t& mvlist, Thread& sthread) {
+template<bool isQuiesc>
+void scoreEvasion(const position_t& pos, movelist_t& mvlist, Thread& sthread) {
     move_t *m;
 
+    ASSERT(mvlist != NULL);
     for (m = &mvlist.list[mvlist.pos]; m < &mvlist.list[mvlist.size]; m++) {
-        if (m->m == mvlist.transmove) m->s = MAXHIST * 3;
-        else if (moveIsTactical(m->m)) {
-            m->s = (moveCapture(m->m) * 6) + movePromote(m->m) - movePiece(m->m);
-            if (captureIsGood(pos, m->m)) m->s += MAXHIST * 2;
-            else m->s -= MAXHIST;
-        }
-        else if (m->m == mvlist.killer1) m->s = MAXHIST + 4;
-        else if (m->m == mvlist.killer2) m->s = MAXHIST + 2;
+        if (m->m == mvlist.transmove) m->s = MAXHIST * 3; //need trans to go first since there is no trans phase
         else {
-            m->s = scoreNonTactical(mvlist.side, m->m, sthread);
+            if (isQuiesc) {
+                if (moveIsTactical(m->m))  m->s = MAXHIST + (moveCapture(m->m) * 6) + movePromote(m->m) - movePiece(m->m);
+                else m->s = scoreNonTactical(mvlist.side, m->m, sthread);
+            }
+            else {
+                if (moveIsTactical(m->m)) {
+                    m->s = (moveCapture(m->m) * 6) + movePromote(m->m) - movePiece(m->m);
+                    if (captureIsGood(pos, m->m)) m->s += MAXHIST * 2;
+                    else m->s -= MAXHIST;
+                }
+                else if (m->m == mvlist.killer1) m->s = MAXHIST + 4;
+                else if (m->m == mvlist.killer2) m->s = MAXHIST + 2;
+                else m->s = scoreNonTactical(mvlist.side, m->m, sthread);
+            }
         }
-    }
-}
-
-void scoreAllQ(movelist_t& mvlist, Thread& sthread) {
-    move_t *m;
-
-    for (m = &mvlist.list[mvlist.pos]; m < &mvlist.list[mvlist.size]; m++) {
-        if (moveIsTactical(m->m))  m->s = MAXHIST + (moveCapture(m->m) * 6) + movePromote(m->m) - movePiece(m->m);
-        else m->s = scoreNonTactical(mvlist.side, m->m, sthread);
     }
 }
 
@@ -239,8 +238,8 @@ move_t* sortNext(SplitPoint* sp, SearchInfo& info, position_t& pos, movelist_t& 
             break;
         case PH_EVASION:
             genEvasions(pos, mvlist);
-            if (mvlist.depth <= 0) scoreAllQ(mvlist, sthread);
-            else scoreAll(pos, mvlist, sthread);
+            if (mvlist.depth <= 0) scoreEvasion<true>(pos, mvlist, sthread);
+            else scoreEvasion<false>(pos, mvlist, sthread);
             break;
         case PH_TRANS:
             if (mvlist.transmove != EMPTY) {

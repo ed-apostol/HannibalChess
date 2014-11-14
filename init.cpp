@@ -347,8 +347,6 @@ void initArr(void) {
     memset(FileMask, 0, sizeof(FileMask));
     memset(InBetween, 0, sizeof(InBetween));
     memset(PassedMask, 0, sizeof(PassedMask));
-    //    memset(FutilityMarginTable, 0, sizeof(FutilityMarginTable));
-    //    memset(ReductionTable, 0, sizeof(ReductionTable));
 
     for (i = 0; i < 0x40; i++) CastleMask[i] = 0xF;
 
@@ -465,13 +463,6 @@ void initArr(void) {
             // LogOutput() << "ReductionTable[NonPV][%d][%d] = %d\n", j, k, ReductionTable[1][j][k]);
         }
     }
-    /*
-    for (j = 0; j < 32; j++)
-    {
-    LateMovePruningTable[j] = LATE_PRUNE_MIN + ((j * j) / LATE_PRUNE_SCALE);
-    // LogOutput() << "LateMovePruningTable[%d] = %d\n", j, LateMovePruningTable[j]);
-    }
-    */
     for (i = 0; i < 64; i++) {
         int bits = 64 - BShift[i];
         uint64 u;
