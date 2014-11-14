@@ -16,46 +16,60 @@
 #include "utils.h"
 #include "book.h"
 
+static const std::string HashStr = "Hash";
 static const int MinHash = 1;
 static const int MaxHash = 65536;
 static const int DefaultHash = 128;
 
+static const std::string PawnHashStr = "Pawn Hash";
 static const int MinPHash = 1;
 static const int MaxPHash = 1024;
 static const int DefaultPHash = 32;
 
+static const std::string EvalCacheStr = "Eval Cache";
 static const int MinEvalCache = 1;
 static const int MaxEvalCache = 1024;
 static const int DefaultEvalCache = 64;
 
+static const std::string MultiPVStr = "MultiPV";
 static const int MinMultiPV = 1;
 static const int MaxMultiPV = 128;
 static const int DefaultMultiPV = 1;
 
+static const std::string TimeBufferStr = "Time Buffer";
 static const int MinTimeBuffer = 0;
 static const int MaxTimeBuffer = 10000;
 static const int DefaultTimeBuffer = 1000;
 
+static const std::string ThreadsStr = "Threads";
 static const int MinThreads = 1;
 static const int MaxThreads = 64;
 static const int DefaultThreads = 1;
 
+static const std::string MinSplitDepthStr = "Min Split Depth";
 static const int MinSplitDepth = 2;
 static const int MaxSplitDepth = 8;
 static const int DefaultSplitDepth = 4;
 
+static const std::string ActiveSplitsStr = "Max Active Splits/Thread";
 static const int MinActiveSplit = 1;
 static const int MaxActiveSplit = 8;
 static const int DefaultActiveSplit = 4;
 
+static const std::string ContemptStr = "Contempt";
 static const int MinContempt = -100;
 static const int MaxContempt = 100;
 static const int DefaultContempt = 0;
 
+static const std::string ClearHashStr = "Clear Hash";
+static const std::string OwnBookStr = "OwnBook";
+static const std::string BookFileStr = "Book File";
+static const std::string PonderStr = "Ponder";
+
 struct Options {
     typedef std::function<void()> CallbackFunc;
     Options() {}
-    Options(const std::string& v, CallbackFunc f) : mType("string"), mMin(0), mMax(0), OnChange(f) {
+    Options(const char* v, CallbackFunc f) : mType("string"), mMin(0), mMax(0), OnChange(f) {
         mDefVal = mCurVal = v;
     }
     Options(bool v, CallbackFunc f) : mType("check"), mMin(0), mMax(0), OnChange(f) {
@@ -215,17 +229,17 @@ public:
     void InitPVTTHash(int size) {
         pvhashtable.Init(size, pvhashtable.BUCKET);
     }
-    void ClearTTHash() {
-        transtable.Clear();
-    }
-    void ClearPVTTHash() {
-        pvhashtable.Clear();
-    }
     void InitPawnHash(int size) {
         for (Thread* th : mThreads) th->pt.Init(size, th->pt.BUCKET);
     }
     void InitEvalHash(int size) {
         for (Thread* th : mThreads) th->et.Init(size, th->et.BUCKET);
+    }
+    void ClearTTHash() {
+        transtable.Clear();
+    }
+    void ClearPVTTHash() {
+        pvhashtable.Clear();
     }
     void ClearPawnHash() {
         for (Thread* th : mThreads) th->pt.Clear();
@@ -255,8 +269,8 @@ public:
             delete mThreads.back();
             mThreads.pop_back();
         }
-        InitPawnHash(uci_opt["Pawn Hash"].GetInt());
-        InitEvalHash(uci_opt["Eval Cache"].GetInt());
+        InitPawnHash(uci_opt[PawnHashStr].GetInt());
+        InitEvalHash(uci_opt[EvalCacheStr].GetInt());
     }
     void PrintThreadStats() {
         LogInfo() << "================================================================";
@@ -300,58 +314,58 @@ public:
     }
 
     // uci options
-    void OnClearHash(const std::string& str) {
+    void OnClearHash() {
         ClearPawnHash();
         ClearEvalHash();
         ClearTTHash();
         ClearPVTTHash();
     }
-    void OnHashChange(const std::string& str) {
-        InitTTHash(uci_opt[str].GetInt());
+    void OnHashChange() {
+        InitTTHash(uci_opt[HashStr].GetInt());
     }
-    void OnPawnHashChange(const std::string& str) {
-        InitPawnHash(uci_opt[str].GetInt());
+    void OnPawnHashChange() {
+        InitPawnHash(uci_opt[PawnHashStr].GetInt());
     }
-    void OnEvalCacheChange(const std::string& str) {
-        InitEvalHash(uci_opt[str].GetInt());
+    void OnEvalCacheChange() {
+        InitEvalHash(uci_opt[EvalCacheStr].GetInt());
     }
-    void OnMultiPvChange(const std::string& str) {
-        info.multipv = uci_opt[str].GetInt();
+    void OnMultiPvChange() {
+        info.multipv = uci_opt[MultiPVStr].GetInt();
     }
-    void OnTimeBufferChange(const std::string& str) {
-        info.time_buffer = uci_opt[str].GetInt();
+    void OnTimeBufferChange() {
+        info.time_buffer = uci_opt[TimeBufferStr].GetInt();
     }
-    void OnThreadsChange(const std::string& str) {
-        SetNumThreads(uci_opt[str].GetInt());
+    void OnThreadsChange() {
+        SetNumThreads(uci_opt[ThreadsStr].GetInt());
     }
-    void OnSplitsChange(const std::string& str) {
-        info.mMinSplitDepth = uci_opt[str].GetInt();
+    void OnSplitsChange() {
+        info.mMinSplitDepth = uci_opt[MinSplitDepthStr].GetInt();
     }
-    void OnActiveSplitsChange(const std::string& str) {
-        info.mMaxActiveSplitsPerThread = uci_opt[str].GetInt();
+    void OnActiveSplitsChange() {
+        info.mMaxActiveSplitsPerThread = uci_opt[ActiveSplitsStr].GetInt();
     }
-    void OnContemptChange(const std::string& str) {
-        info.contempt = uci_opt[str].GetInt();
+    void OnContemptChange() {
+        info.contempt = uci_opt[ContemptStr].GetInt();
     }
-    void OnBookfileChange(const std::string& str) {
-        mPolyBook.initBook(uci_opt[str].GetStr());
+    void OnBookfileChange() {
+        mPolyBook.initBook(uci_opt[BookFileStr].GetStr());
     }
-    void OnDummyChange(const std::string& str) {}
+    void OnDummyChange() {}
 
     void InitUCIOptions() {
-        uci_opt["Hash"] = Options(DefaultHash, MinHash, MaxHash, std::bind(&Engine::OnHashChange, this, "Hash"));
-        uci_opt["Pawn Hash"] = Options(DefaultPHash, MinPHash, MaxPHash, std::bind(&Engine::OnPawnHashChange, this, "Pawn Hash"));
-        uci_opt["Eval Cache"] = Options(DefaultEvalCache, MinEvalCache, MaxEvalCache, std::bind(&Engine::OnEvalCacheChange, this, "Eval Cache"));
-        uci_opt["MultiPV"] = Options(DefaultMultiPV, MinMultiPV, MaxMultiPV, std::bind(&Engine::OnMultiPvChange, this, "MultiPV"));
-        uci_opt["Clear Hash"] = Options(std::bind(&Engine::OnClearHash, this, "Clear Hash"));
-        uci_opt["OwnBook"] = Options(false, std::bind(&Engine::OnDummyChange, this, "OwnBook"));
-        uci_opt["Book File"] = Options("Hannibal.bin", std::bind(&Engine::OnBookfileChange, this, "Book File"));
-        uci_opt["Ponder"] = Options(false, std::bind(&Engine::OnDummyChange, this, "Ponder"));
-        uci_opt["Time Buffer"] = Options(DefaultTimeBuffer, MinTimeBuffer, MaxTimeBuffer, std::bind(&Engine::OnTimeBufferChange, this, "Time Buffer"));
-        uci_opt["Threads"] = Options(DefaultThreads, MinThreads, MaxThreads, std::bind(&Engine::OnThreadsChange, this, "Threads"));
-        uci_opt["Min Split Depth"] = Options(DefaultSplitDepth, MinSplitDepth, MaxSplitDepth, std::bind(&Engine::OnSplitsChange, this, "Min Split Depth"));
-        uci_opt["Max Active Splits/Thread"] = Options(DefaultActiveSplit, MinActiveSplit, MaxActiveSplit, std::bind(&Engine::OnActiveSplitsChange, this, "Max Active Splits/Thread"));
-        uci_opt["Contempt"] = Options(DefaultContempt, MinContempt, MaxContempt, std::bind(&Engine::OnContemptChange, this, "Contempt"));
+        uci_opt[HashStr] = Options(DefaultHash, MinHash, MaxHash, std::bind(&Engine::OnHashChange, this));
+        uci_opt[PawnHashStr] = Options(DefaultPHash, MinPHash, MaxPHash, std::bind(&Engine::OnPawnHashChange, this));
+        uci_opt[EvalCacheStr] = Options(DefaultEvalCache, MinEvalCache, MaxEvalCache, std::bind(&Engine::OnEvalCacheChange, this));
+        uci_opt[MultiPVStr] = Options(DefaultMultiPV, MinMultiPV, MaxMultiPV, std::bind(&Engine::OnMultiPvChange, this));
+        uci_opt[ClearHashStr] = Options(std::bind(&Engine::OnClearHash, this));
+        uci_opt[OwnBookStr] = Options(false, std::bind(&Engine::OnDummyChange, this));
+        uci_opt[BookFileStr] = Options("Hannibal.bin", std::bind(&Engine::OnBookfileChange, this));
+        uci_opt[PonderStr] = Options(false, std::bind(&Engine::OnDummyChange, this));
+        uci_opt[TimeBufferStr] = Options(DefaultTimeBuffer, MinTimeBuffer, MaxTimeBuffer, std::bind(&Engine::OnTimeBufferChange, this));
+        uci_opt[ThreadsStr] = Options(DefaultThreads, MinThreads, MaxThreads, std::bind(&Engine::OnThreadsChange, this));
+        uci_opt[MinSplitDepthStr] = Options(DefaultSplitDepth, MinSplitDepth, MaxSplitDepth, std::bind(&Engine::OnSplitsChange, this));
+        uci_opt[ActiveSplitsStr] = Options(DefaultActiveSplit, MinActiveSplit, MaxActiveSplit, std::bind(&Engine::OnActiveSplitsChange, this));
+        uci_opt[ContemptStr] = Options(DefaultContempt, MinContempt, MaxContempt, std::bind(&Engine::OnContemptChange, this));
     }
 
     void PrintUCIOptions() {

@@ -41,9 +41,9 @@ Interface::Interface() {
     std::cout.setf(std::ios::unitbuf);
 
     cEngine.InitUCIOptions();
-    cEngine.SetNumThreads(cEngine.uci_opt["Threads"].GetInt());
+    cEngine.SetNumThreads(cEngine.uci_opt[ThreadsStr].GetInt());
     cEngine.InitVars();
-    cEngine.InitTTHash(cEngine.uci_opt["Hash"].GetInt());
+    cEngine.InitTTHash(cEngine.uci_opt[HashStr].GetInt());
     cEngine.InitPVTTHash(1);
 
     initArr();

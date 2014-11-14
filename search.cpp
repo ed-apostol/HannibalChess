@@ -811,7 +811,7 @@ void Engine::GetBestMove(Thread& sthread) {
     transtable.NewDate(transtable.Date());
     pvhashtable.NewDate(pvhashtable.Date());
 
-    if (info.thinking_status == THINKING && uci_opt["OwnBook"].GetInt() && !anyRep(rootpos)) {
+    if (info.thinking_status == THINKING && uci_opt[OwnBookStr].GetInt() && !anyRep(rootpos)) {
         if ((info.bestmove = mPolyBook.getBookMove(rootpos)) != EMPTY) {
             StopSearch();
             SendBestMove();
@@ -929,11 +929,11 @@ void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     rootpos = pos;
     info.Init();
 
-    info.time_buffer = uci_opt["Time Buffer"].GetInt();
-    info.contempt = uci_opt["Contempt"].GetInt();
-    info.multipv = uci_opt["MultiPV"].GetInt();
-    info.mMinSplitDepth = uci_opt["Min Split Depth"].GetInt();
-    info.mMaxActiveSplitsPerThread = uci_opt["Max Active Splits/Thread"].GetInt();
+    info.time_buffer = uci_opt[TimeBufferStr].GetInt();
+    info.contempt = uci_opt[ContemptStr].GetInt();
+    info.multipv = uci_opt[MultiPVStr].GetInt();
+    info.mMinSplitDepth = uci_opt[MinSplitDepthStr].GetInt();
+    info.mMaxActiveSplitsPerThread = uci_opt[ActiveSplitsStr].GetInt();
 
     int mytime = 0, t_inc = 0;
 
