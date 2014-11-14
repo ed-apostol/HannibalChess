@@ -202,8 +202,8 @@ void Interface::Position(std::istringstream& stream) {
     setPosition(input_pos, fen.c_str());
     while (stream >> token) {
         movelist_t ml;
-        genLegal(input_pos, &ml, true);
-        m = parseMove(&ml, token.c_str());
+        genLegal(input_pos, ml, true);
+        m = parseMove(ml, token.c_str());
         if (m) makeMove(input_pos, UndoStack[input_pos.sp], m);
         else break;
         if (input_pos.posStore.fifty == 0) input_pos.sp = 0;

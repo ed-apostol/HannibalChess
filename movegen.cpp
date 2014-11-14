@@ -33,83 +33,78 @@
 extern int historyIndex(uint32 side, uint32 move);
 
 /* the move generator, this generates all legal moves*/
-void genLegal(const position_t& pos, movelist_t *mvlist, int promoteAll) {
+void genLegal(const position_t& pos, movelist_t& mvlist, int promoteAll) {
     movelist_t mlt;
     uint64 pinned;
 
-    ASSERT(mvlist != NULL);
-
     if (kingIsInCheck(pos)) {
-        mvlist->pos = 0;
+        mvlist.pos = 0;
         genEvasions(pos, mvlist);
         if (promoteAll)
-            for (mlt.pos = 0; mlt.pos < mvlist->size; mlt.pos++) {
-            int mv = mvlist->list[mlt.pos].m;
+            for (mlt.pos = 0; mlt.pos < mvlist.size; mlt.pos++) {
+            int mv = mvlist.list[mlt.pos].m;
             if (movePromote(mv) == QUEEN) { // makes up for not generating ROOK and BISHOP promotes
                 int from = moveFrom(mv);
                 int to = moveTo(mv);
                 if (moveCapture(mv)) {
-                    mvlist->list[mvlist->size++].m = GenPromote(from, to, ROOK, getPiece(pos, to));
-                    mvlist->list[mvlist->size++].m = GenPromote(from, to, BISHOP, getPiece(pos, to));
+                    mvlist.list[mvlist.size++].m = GenPromote(from, to, ROOK, getPiece(pos, to));
+                    mvlist.list[mvlist.size++].m = GenPromote(from, to, BISHOP, getPiece(pos, to));
                 }
                 else {
-                    mvlist->list[mvlist->size++].m = GenPromoteStraight(from, to, ROOK);
-                    mvlist->list[mvlist->size++].m = GenPromoteStraight(from, to, BISHOP);
+                    mvlist.list[mvlist.size++].m = GenPromoteStraight(from, to, ROOK);
+                    mvlist.list[mvlist.size++].m = GenPromoteStraight(from, to, BISHOP);
                 }
             }
             }
     }
     else {
         pinned = pinnedPieces(pos, pos.side);
-        mvlist->size = 0;
+        mvlist.size = 0;
         mlt.pos = 0;
-        genCaptures(pos, &mlt);
+        genCaptures(pos, mlt);
         for (int i = 0; i < mlt.size; i++) {
             int mv = mlt.list[i].m;
             if (!moveIsLegal(pos, mv, pinned, false)) continue;
-            mvlist->list[mvlist->size++] = mlt.list[i];
+            mvlist.list[mvlist.size++] = mlt.list[i];
             if (promoteAll && movePromote(mv) == QUEEN) { // makes up for not generating ROOK and BISHOP promotes
                 int from = moveFrom(mv);
                 int to = moveTo(mv);
                 if (moveCapture(mv)) {
-                    mvlist->list[mvlist->size++].m = GenPromote(from, to, ROOK, getPiece(pos, to));
-                    mvlist->list[mvlist->size++].m = GenPromote(from, to, BISHOP, getPiece(pos, to));
+                    mvlist.list[mvlist.size++].m = GenPromote(from, to, ROOK, getPiece(pos, to));
+                    mvlist.list[mvlist.size++].m = GenPromote(from, to, BISHOP, getPiece(pos, to));
                 }
                 else {
-                    mvlist->list[mvlist->size++].m = GenPromoteStraight(from, to, ROOK);
-                    mvlist->list[mvlist->size++].m = GenPromoteStraight(from, to, BISHOP);
+                    mvlist.list[mvlist.size++].m = GenPromoteStraight(from, to, ROOK);
+                    mvlist.list[mvlist.size++].m = GenPromoteStraight(from, to, BISHOP);
                 }
             }
         }
         mlt.pos = mlt.size;
-        genNonCaptures(pos, &mlt);
+        genNonCaptures(pos, mlt);
         for (int i = mlt.pos; i < mlt.size; i++) {
             if (!moveIsLegal(pos, mlt.list[i].m, pinned, false)) continue;
-            mvlist->list[mvlist->size++] = mlt.list[i];
+            mvlist.list[mvlist.size++] = mlt.list[i];
         }
     }
 }
 
-void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, Thread& sthread) {
+void genGainingMoves(const position_t& pos, movelist_t& mvlist, int delta, Thread& sthread) {
     int from, to;
     uint64 pc_bits, pc_bits_p1, pc_bits_p2, mv_bits;
     uint64 occupied = pos.occupied;
     uint64 allies = pos.color[pos.side];
     uint64 mask = ~occupied;
 
-    ASSERT(mvlist != NULL);
-
-    //mvlist->size = 0;
-    mvlist->size = mvlist->pos;
+    mvlist.size = mvlist.pos;
 
     if (pos.side == BLACK) { //TODO consider writing so we don't need this expensive branch
         if (sthread.evalgains[historyIndex(pos.side, GenBlackOO())] >= delta && (pos.posStore.castle&BCKS) && (!(occupied&(F8 | G8)))) {
             if (!isAtt(pos, pos.side ^ 1, E8 | F8 | G8))
-                mvlist->list[mvlist->size++].m = GenBlackOO();
+                mvlist.list[mvlist.size++].m = GenBlackOO();
         }
         if (sthread.evalgains[historyIndex(pos.side, GenBlackOOO())] >= delta && (pos.posStore.castle&BCQS) && (!(occupied&(B8 | C8 | D8)))) {
             if (!isAtt(pos, pos.side ^ 1, E8 | D8 | C8))
-                mvlist->list[mvlist->size++].m = GenBlackOOO();
+                mvlist.list[mvlist.size++].m = GenBlackOOO();
         }
         pc_bits_p1 = (pos.pawns & allies & ~Rank2BB) & ((~occupied) << 8);
         pc_bits_p2 = (pos.pawns & allies & Rank7BB) & ((~occupied) << 8) & ((~occupied) << 16);
@@ -117,11 +112,11 @@ void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, Threa
     else {
         if (sthread.evalgains[historyIndex(pos.side, GenWhiteOO())] >= delta && (pos.posStore.castle&WCKS) && (!(occupied&(F1 | G1)))) {
             if (!isAtt(pos, pos.side ^ 1, E1 | F1 | G1))
-                mvlist->list[mvlist->size++].m = GenWhiteOO();
+                mvlist.list[mvlist.size++].m = GenWhiteOO();
         }
         if (sthread.evalgains[historyIndex(pos.side, GenWhiteOOO())] >= delta && (pos.posStore.castle&WCQS) && (!(occupied&(B1 | C1 | D1)))) {
             if (!isAtt(pos, pos.side ^ 1, E1 | D1 | C1))
-                mvlist->list[mvlist->size++].m = GenWhiteOOO();
+                mvlist.list[mvlist.size++].m = GenWhiteOOO();
         }
         pc_bits_p1 = (pos.pawns & allies & ~Rank7BB) & ((~occupied) >> 8);
         pc_bits_p2 = (pos.pawns & allies & Rank2BB) & ((~occupied) >> 8) & ((~occupied) >> 16);
@@ -133,7 +128,7 @@ void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, Threa
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
             if (sthread.evalgains[historyIndex(pos.side, GenOneForward(from, to))] >= delta)
-                mvlist->list[mvlist->size++].m = GenOneForward(from, to);
+                mvlist.list[mvlist.size++].m = GenOneForward(from, to);
         }
     }
     /* pawn moves 2 forward */
@@ -143,7 +138,7 @@ void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, Threa
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
             if (sthread.evalgains[historyIndex(pos.side, GenTwoForward(from, to))] >= delta)
-                mvlist->list[mvlist->size++].m = GenTwoForward(from, to);
+                mvlist.list[mvlist.size++].m = GenTwoForward(from, to);
         }
     }
     pc_bits = pos.knights & allies;
@@ -153,7 +148,7 @@ void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, Threa
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
             if (sthread.evalgains[historyIndex(pos.side, GenKnightMove(from, to, EMPTY))] >= delta)
-                mvlist->list[mvlist->size++].m = GenKnightMove(from, to, EMPTY);
+                mvlist.list[mvlist.size++].m = GenKnightMove(from, to, EMPTY);
         }
     }
     pc_bits = pos.bishops & allies;
@@ -163,7 +158,7 @@ void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, Threa
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
             if (sthread.evalgains[historyIndex(pos.side, GenBishopMove(from, to, EMPTY))] >= delta)
-                mvlist->list[mvlist->size++].m = GenBishopMove(from, to, EMPTY);
+                mvlist.list[mvlist.size++].m = GenBishopMove(from, to, EMPTY);
         }
     }
     pc_bits = pos.rooks & allies;
@@ -173,7 +168,7 @@ void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, Threa
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
             if (sthread.evalgains[historyIndex(pos.side, GenRookMove(from, to, EMPTY))] >= delta)
-                mvlist->list[mvlist->size++].m = GenRookMove(from, to, EMPTY);
+                mvlist.list[mvlist.size++].m = GenRookMove(from, to, EMPTY);
         }
     }
     pc_bits = pos.queens & allies;
@@ -183,7 +178,7 @@ void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, Threa
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
             if (sthread.evalgains[historyIndex(pos.side, GenQueenMove(from, to, EMPTY))] >= delta)
-                mvlist->list[mvlist->size++].m = GenQueenMove(from, to, EMPTY);
+                mvlist.list[mvlist.size++].m = GenQueenMove(from, to, EMPTY);
         }
     }
     pc_bits = pos.kings & allies;
@@ -193,33 +188,30 @@ void genGainingMoves(const position_t& pos, movelist_t *mvlist, int delta, Threa
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
             if (sthread.evalgains[historyIndex(pos.side, GenKingMove(from, to, EMPTY))] >= delta)
-                mvlist->list[mvlist->size++].m = GenKingMove(from, to, EMPTY);
+                mvlist.list[mvlist.size++].m = GenKingMove(from, to, EMPTY);
         }
     }
 }
 
 /* the move generator, this generates all pseudo-legal non tactical moves,
 castling is generated legally */
-void genNonCaptures(const position_t& pos, movelist_t *mvlist) {
+void genNonCaptures(const position_t& pos, movelist_t& mvlist) {
     int from, to;
     uint64 pc_bits, pc_bits_1, pc_bits_2, mv_bits;
     uint64 occupied = pos.occupied;
     uint64 allies = pos.color[pos.side];
     uint64 mask = ~occupied;
 
-    ASSERT(mvlist != NULL);
-
-    //mvlist->size = 0;
-    mvlist->size = mvlist->pos;
+    mvlist.size = mvlist.pos;
 
     if (pos.side == BLACK) { //TODO consider writing so we don't need this expensive branch
         if ((pos.posStore.castle&BCKS) && (!(occupied&(F8 | G8)))) {
             if (!isAtt(pos, pos.side ^ 1, E8 | F8 | G8))
-                mvlist->list[mvlist->size++].m = GenBlackOO();
+                mvlist.list[mvlist.size++].m = GenBlackOO();
         }
         if ((pos.posStore.castle&BCQS) && (!(occupied&(B8 | C8 | D8)))) {
             if (!isAtt(pos, pos.side ^ 1, E8 | D8 | C8))
-                mvlist->list[mvlist->size++].m = GenBlackOOO();
+                mvlist.list[mvlist.size++].m = GenBlackOOO();
         }
         pc_bits_1 = (pos.pawns & allies & ~Rank2BB) & ((~occupied) << 8);
         pc_bits_2 = (pos.pawns & allies & Rank7BB) & ((~occupied) << 8) & ((~occupied) << 16);
@@ -227,11 +219,11 @@ void genNonCaptures(const position_t& pos, movelist_t *mvlist) {
     else {
         if ((pos.posStore.castle&WCKS) && (!(occupied&(F1 | G1)))) {
             if (!isAtt(pos, pos.side ^ 1, E1 | F1 | G1))
-                mvlist->list[mvlist->size++].m = GenWhiteOO();
+                mvlist.list[mvlist.size++].m = GenWhiteOO();
         }
         if ((pos.posStore.castle&WCQS) && (!(occupied&(B1 | C1 | D1)))) {
             if (!isAtt(pos, pos.side ^ 1, E1 | D1 | C1))
-                mvlist->list[mvlist->size++].m = GenWhiteOOO();
+                mvlist.list[mvlist.size++].m = GenWhiteOOO();
         }
         pc_bits_1 = (pos.pawns & allies & ~Rank7BB) & ((~occupied) >> 8);
         pc_bits_2 = (pos.pawns & allies & Rank2BB) & ((~occupied) >> 8) & ((~occupied) >> 16);
@@ -242,7 +234,7 @@ void genNonCaptures(const position_t& pos, movelist_t *mvlist) {
         mv_bits = PawnMoves[from][pos.side];
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            mvlist->list[mvlist->size++].m = GenOneForward(from, to);
+            mvlist.list[mvlist.size++].m = GenOneForward(from, to);
         }
     }
     /* pawn moves 2 forward */
@@ -251,7 +243,7 @@ void genNonCaptures(const position_t& pos, movelist_t *mvlist) {
         mv_bits = PawnMoves2[from][pos.side];
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            mvlist->list[mvlist->size++].m = GenTwoForward(from, to);
+            mvlist.list[mvlist.size++].m = GenTwoForward(from, to);
         }
     }
     pc_bits = pos.knights & allies;
@@ -260,7 +252,7 @@ void genNonCaptures(const position_t& pos, movelist_t *mvlist) {
         mv_bits = KnightMoves[from] & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            mvlist->list[mvlist->size++].m = GenKnightMove(from, to, EMPTY);
+            mvlist.list[mvlist.size++].m = GenKnightMove(from, to, EMPTY);
         }
     }
     pc_bits = pos.bishops & allies;
@@ -269,7 +261,7 @@ void genNonCaptures(const position_t& pos, movelist_t *mvlist) {
         mv_bits = bishopAttacksBB(from, occupied) & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            mvlist->list[mvlist->size++].m = GenBishopMove(from, to, EMPTY);
+            mvlist.list[mvlist.size++].m = GenBishopMove(from, to, EMPTY);
         }
     }
     pc_bits = pos.rooks & allies;
@@ -278,7 +270,7 @@ void genNonCaptures(const position_t& pos, movelist_t *mvlist) {
         mv_bits = rookAttacksBB(from, occupied) & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            mvlist->list[mvlist->size++].m = GenRookMove(from, to, EMPTY);
+            mvlist.list[mvlist.size++].m = GenRookMove(from, to, EMPTY);
         }
     }
     pc_bits = pos.queens & allies;
@@ -287,7 +279,7 @@ void genNonCaptures(const position_t& pos, movelist_t *mvlist) {
         mv_bits = queenAttacksBB(from, occupied) & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            mvlist->list[mvlist->size++].m = GenQueenMove(from, to, EMPTY);
+            mvlist.list[mvlist.size++].m = GenQueenMove(from, to, EMPTY);
         }
     }
     pc_bits = pos.kings & allies;
@@ -296,22 +288,20 @@ void genNonCaptures(const position_t& pos, movelist_t *mvlist) {
         mv_bits = KingMoves[from] & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            mvlist->list[mvlist->size++].m = GenKingMove(from, to, EMPTY);
+            mvlist.list[mvlist.size++].m = GenKingMove(from, to, EMPTY);
         }
     }
 }
 
 /* this generate captures including en-passant captures, and promotions*/
-void genCaptures(const position_t& pos, movelist_t *mvlist) {
+void genCaptures(const position_t& pos, movelist_t& mvlist) {
     int from, to;
     uint64 pc_bits, mv_bits;
     uint64 occupied = pos.occupied;
     uint64 allies = pos.color[pos.side];
     const uint64 mask = pos.color[pos.side ^ 1] & ~pos.kings;
-    ASSERT(mvlist != NULL);
 
-    //mvlist->size = 0;
-    mvlist->size = mvlist->pos;
+    mvlist.size = mvlist.pos;
 
     /* promotions only */
     pc_bits = pos.pawns & allies & Rank7ByColorBB[pos.side];
@@ -320,18 +310,18 @@ void genCaptures(const position_t& pos, movelist_t *mvlist) {
         mv_bits = PawnMoves[from][pos.side] & ~occupied;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            mvlist->list[mvlist->size++].m = GenPromoteStraight(from, to, QUEEN);
-            mvlist->list[mvlist->size++].m = GenPromoteStraight(from, to, KNIGHT);
-            //            mvlist->list[mvlist->size++].m = GenPromoteStraight(from, to, ROOK);
-            //            mvlist->list[mvlist->size++].m = GenPromoteStraight(from, to, BISHOP);
+            mvlist.list[mvlist.size++].m = GenPromoteStraight(from, to, QUEEN);
+            mvlist.list[mvlist.size++].m = GenPromoteStraight(from, to, KNIGHT);
+            //            mvlist.list[mvlist.size++].m = GenPromoteStraight(from, to, ROOK);
+            //            mvlist.list[mvlist.size++].m = GenPromoteStraight(from, to, BISHOP);
         }
         mv_bits = PawnCaps[from][pos.side] & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            mvlist->list[mvlist->size++].m = GenPromote(from, to, QUEEN, getPiece(pos, to));
-            mvlist->list[mvlist->size++].m = GenPromote(from, to, KNIGHT, getPiece(pos, to));
-            //          mvlist->list[mvlist->size++].m = GenPromote(from, to, ROOK, getPiece(pos, to));
-            //          mvlist->list[mvlist->size++].m = GenPromote(from, to, BISHOP, getPiece(pos, to));
+            mvlist.list[mvlist.size++].m = GenPromote(from, to, QUEEN, getPiece(pos, to));
+            mvlist.list[mvlist.size++].m = GenPromote(from, to, KNIGHT, getPiece(pos, to));
+            //          mvlist.list[mvlist.size++].m = GenPromote(from, to, ROOK, getPiece(pos, to));
+            //          mvlist.list[mvlist.size++].m = GenPromote(from, to, BISHOP, getPiece(pos, to));
         }
     }
     /* pawn captures only */
@@ -341,7 +331,7 @@ void genCaptures(const position_t& pos, movelist_t *mvlist) {
         mv_bits = PawnCaps[from][pos.side] & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            mvlist->list[mvlist->size++].m = GenPawnMove(from, to, getPiece(pos, to));
+            mvlist.list[mvlist.size++].m = GenPawnMove(from, to, getPiece(pos, to));
         }
     }
     if ((pos.posStore.epsq != -1)) {
@@ -349,7 +339,7 @@ void genCaptures(const position_t& pos, movelist_t *mvlist) {
             & PawnCaps[pos.posStore.epsq][pos.side ^ 1];
         while (mv_bits) {
             from = popFirstBit(&mv_bits);
-            mvlist->list[mvlist->size++].m = GenEnPassant(from, pos.posStore.epsq);
+            mvlist.list[mvlist.size++].m = GenEnPassant(from, pos.posStore.epsq);
         }
     }
     pc_bits = pos.knights & allies;
@@ -358,7 +348,7 @@ void genCaptures(const position_t& pos, movelist_t *mvlist) {
         mv_bits = KnightMoves[from] & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            mvlist->list[mvlist->size++].m = GenKnightMove(from, to, getPiece(pos, to));
+            mvlist.list[mvlist.size++].m = GenKnightMove(from, to, getPiece(pos, to));
         }
     }
     pc_bits = pos.bishops & allies;
@@ -367,7 +357,7 @@ void genCaptures(const position_t& pos, movelist_t *mvlist) {
         mv_bits = bishopAttacksBB(from, occupied) & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            mvlist->list[mvlist->size++].m = GenBishopMove(from, to, getPiece(pos, to));
+            mvlist.list[mvlist.size++].m = GenBishopMove(from, to, getPiece(pos, to));
         }
     }
     pc_bits = pos.rooks & allies;
@@ -376,7 +366,7 @@ void genCaptures(const position_t& pos, movelist_t *mvlist) {
         mv_bits = rookAttacksBB(from, occupied) & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            mvlist->list[mvlist->size++].m = GenRookMove(from, to, getPiece(pos, to));
+            mvlist.list[mvlist.size++].m = GenRookMove(from, to, getPiece(pos, to));
         }
     }
     pc_bits = pos.queens & allies;
@@ -385,7 +375,7 @@ void genCaptures(const position_t& pos, movelist_t *mvlist) {
         mv_bits = queenAttacksBB(from, occupied) & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            mvlist->list[mvlist->size++].m = GenQueenMove(from, to, getPiece(pos, to));
+            mvlist.list[mvlist.size++].m = GenQueenMove(from, to, getPiece(pos, to));
         }
     }
     pc_bits = pos.kings & allies;
@@ -394,20 +384,17 @@ void genCaptures(const position_t& pos, movelist_t *mvlist) {
         mv_bits = KingMoves[from] & mask;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            mvlist->list[mvlist->size++].m = GenKingMove(from, to, getPiece(pos, to));
+            mvlist.list[mvlist.size++].m = GenKingMove(from, to, getPiece(pos, to));
         }
     }
 }
 
 /* this generate legal moves when in check */
-void genEvasions(const position_t& pos, movelist_t *mvlist) {
+void genEvasions(const position_t& pos, movelist_t& mvlist) {
     int sqchecker, from, to, ksq, side, xside;
     uint64  pc_bits, mv_bits, enemies, friends, temp, checkers, pinned;
 
-    ASSERT(mvlist != NULL);
-
-    //mvlist->size = 0;
-    mvlist->size = mvlist->pos;
+    mvlist.size = mvlist.pos;
 
     side = pos.side;
     xside = side ^ 1;
@@ -426,7 +413,7 @@ void genEvasions(const position_t& pos, movelist_t *mvlist) {
             ((bishopAttacksBB(to, temp) & pos.bishops & enemies) == EmptyBoardBB) &&
             ((rookAttacksBB(to, temp) & pos.rooks & enemies) == EmptyBoardBB) &&
             ((queenAttacksBB(to, temp) & pos.queens & enemies) == EmptyBoardBB))
-            mvlist->list[mvlist->size++].m = GenKingMove(ksq, to, getPiece(pos, to));
+            mvlist.list[mvlist.size++].m = GenKingMove(ksq, to, getPiece(pos, to));
     }
 
     if (checkers & (checkers - 1)) return;
@@ -438,41 +425,41 @@ void genEvasions(const position_t& pos, movelist_t *mvlist) {
     while (mv_bits) {
         from = popFirstBit(&mv_bits);
         if ((Rank7ByColorBB[side] & BitMask[from])) {
-            mvlist->list[mvlist->size++].m = GenPromote(from, sqchecker, QUEEN, getPiece(pos, sqchecker));
-            mvlist->list[mvlist->size++].m = GenPromote(from, sqchecker, KNIGHT, getPiece(pos, sqchecker));
-            mvlist->list[mvlist->size++].m = GenPromote(from, sqchecker, ROOK, getPiece(pos, sqchecker));
-            mvlist->list[mvlist->size++].m = GenPromote(from, sqchecker, BISHOP, getPiece(pos, sqchecker));
+            mvlist.list[mvlist.size++].m = GenPromote(from, sqchecker, QUEEN, getPiece(pos, sqchecker));
+            mvlist.list[mvlist.size++].m = GenPromote(from, sqchecker, KNIGHT, getPiece(pos, sqchecker));
+            mvlist.list[mvlist.size++].m = GenPromote(from, sqchecker, ROOK, getPiece(pos, sqchecker));
+            mvlist.list[mvlist.size++].m = GenPromote(from, sqchecker, BISHOP, getPiece(pos, sqchecker));
         }
         else
-            mvlist->list[mvlist->size++].m = GenPawnMove(from, sqchecker, getPiece(pos, sqchecker));
+            mvlist.list[mvlist.size++].m = GenPawnMove(from, sqchecker, getPiece(pos, sqchecker));
     }
     if ((BitMask[sqchecker] & pos.pawns & enemies) &&
         ((sqchecker + ((side == WHITE) ? (8) : (-8))) == pos.posStore.epsq)) {
         mv_bits = PawnCaps[pos.posStore.epsq][xside] & pos.pawns & friends & ~pinned;
         while (mv_bits) {
             from = popFirstBit(&mv_bits);
-            mvlist->list[mvlist->size++].m = GenEnPassant(from, pos.posStore.epsq);
+            mvlist.list[mvlist.size++].m = GenEnPassant(from, pos.posStore.epsq);
         }
     }
     mv_bits = KnightMoves[sqchecker] & pos.knights & friends & ~pinned;
     while (mv_bits) {
         from = popFirstBit(&mv_bits);
-        mvlist->list[mvlist->size++].m = GenKnightMove(from, sqchecker, getPiece(pos, sqchecker));
+        mvlist.list[mvlist.size++].m = GenKnightMove(from, sqchecker, getPiece(pos, sqchecker));
     }
     mv_bits = bishopAttacksBB(sqchecker, pos.occupied) & pos.bishops & friends & ~pinned;
     while (mv_bits) {
         from = popFirstBit(&mv_bits);
-        mvlist->list[mvlist->size++].m = GenBishopMove(from, sqchecker, getPiece(pos, sqchecker));
+        mvlist.list[mvlist.size++].m = GenBishopMove(from, sqchecker, getPiece(pos, sqchecker));
     }
     mv_bits = rookAttacksBB(sqchecker, pos.occupied) & pos.rooks & friends & ~pinned;
     while (mv_bits) {
         from = popFirstBit(&mv_bits);
-        mvlist->list[mvlist->size++].m = GenRookMove(from, sqchecker, getPiece(pos, sqchecker));
+        mvlist.list[mvlist.size++].m = GenRookMove(from, sqchecker, getPiece(pos, sqchecker));
     }
     mv_bits = queenAttacksBB(sqchecker, pos.occupied) & pos.queens & friends & ~pinned;
     while (mv_bits) {
         from = popFirstBit(&mv_bits);
-        mvlist->list[mvlist->size++].m = GenQueenMove(from, sqchecker, getPiece(pos, sqchecker));
+        mvlist.list[mvlist.size++].m = GenQueenMove(from, sqchecker, getPiece(pos, sqchecker));
     }
 
     if (!(checkers & (pos.queens | pos.rooks | pos.bishops) & pos.color[xside])) return;
@@ -487,13 +474,13 @@ void genEvasions(const position_t& pos, movelist_t *mvlist) {
         if (side == WHITE) from = to - 8;
         else from = to + 8;
         if ((Rank7ByColorBB[side] & BitMask[from])) {
-            mvlist->list[mvlist->size++].m = GenPromoteStraight(from, to, QUEEN);
-            mvlist->list[mvlist->size++].m = GenPromoteStraight(from, to, KNIGHT);
-            //            mvlist->list[mvlist->size++].m = GenPromoteStraight(from, to, ROOK);
-            //            mvlist->list[mvlist->size++].m = GenPromoteStraight(from, to, BISHOP);
+            mvlist.list[mvlist.size++].m = GenPromoteStraight(from, to, QUEEN);
+            mvlist.list[mvlist.size++].m = GenPromoteStraight(from, to, KNIGHT);
+            //            mvlist.list[mvlist.size++].m = GenPromoteStraight(from, to, ROOK);
+            //            mvlist.list[mvlist.size++].m = GenPromoteStraight(from, to, BISHOP);
         }
         else
-            mvlist->list[mvlist->size++].m = GenOneForward(from, to);
+            mvlist.list[mvlist.size++].m = GenOneForward(from, to);
     }
     if (side == WHITE) mv_bits = (((pc_bits << 8) & ~pos.occupied & Rank3BB) << 8) & temp;
     else mv_bits = (((pc_bits >> 8) & ~pos.occupied & Rank6BB) >> 8) & temp;
@@ -501,7 +488,7 @@ void genEvasions(const position_t& pos, movelist_t *mvlist) {
         to = popFirstBit(&mv_bits);
         if (side == WHITE) from = to - 16;
         else from = to + 16;
-        mvlist->list[mvlist->size++].m = GenTwoForward(from, to);
+        mvlist.list[mvlist.size++].m = GenTwoForward(from, to);
     }
     pc_bits = pos.knights & friends & ~pinned;
     while (pc_bits) {
@@ -509,7 +496,7 @@ void genEvasions(const position_t& pos, movelist_t *mvlist) {
         mv_bits = KnightMoves[from] & temp;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            mvlist->list[mvlist->size++].m = GenKnightMove(from, to, getPiece(pos, to));
+            mvlist.list[mvlist.size++].m = GenKnightMove(from, to, getPiece(pos, to));
         }
     }
     pc_bits = pos.bishops & friends & ~pinned;
@@ -518,7 +505,7 @@ void genEvasions(const position_t& pos, movelist_t *mvlist) {
         mv_bits = bishopAttacksBB(from, pos.occupied) & temp;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            mvlist->list[mvlist->size++].m = GenBishopMove(from, to, getPiece(pos, to));
+            mvlist.list[mvlist.size++].m = GenBishopMove(from, to, getPiece(pos, to));
         }
     }
     pc_bits = pos.rooks & friends & ~pinned;
@@ -527,7 +514,7 @@ void genEvasions(const position_t& pos, movelist_t *mvlist) {
         mv_bits = rookAttacksBB(from, pos.occupied) & temp;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            mvlist->list[mvlist->size++].m = GenRookMove(from, to, getPiece(pos, to));
+            mvlist.list[mvlist.size++].m = GenRookMove(from, to, getPiece(pos, to));
         }
     }
     pc_bits = pos.queens & friends & ~pinned;
@@ -536,7 +523,7 @@ void genEvasions(const position_t& pos, movelist_t *mvlist) {
         mv_bits = queenAttacksBB(from, pos.occupied) & temp;
         while (mv_bits) {
             to = popFirstBit(&mv_bits);
-            mvlist->list[mvlist->size++].m = GenQueenMove(from, to, getPiece(pos, to));
+            mvlist.list[mvlist.size++].m = GenQueenMove(from, to, getPiece(pos, to));
         }
     }
     if ((pos.posStore.epsq != -1) && (checkers & pos.pawns & pos.color[xside])) {
@@ -549,18 +536,18 @@ void genEvasions(const position_t& pos, movelist_t *mvlist) {
                 & pos.color[xside]) == EmptyBoardBB) &&
                 ((rookAttacksBB(ksq, temp) & (pos.queens | pos.rooks)
                 & pos.color[xside]) == EmptyBoardBB))
-                mvlist->list[mvlist->size++].m = GenEnPassant(from, to);
+                mvlist.list[mvlist.size++].m = GenEnPassant(from, to);
         }
     }
 }
 
 /* this generates all pseudo-legal non-capturing, non-promoting checks */
-void genQChecks(const position_t& pos, movelist_t *mvlist) {
+void genQChecks(const position_t& pos, movelist_t& mvlist) {
     int us, them, ksq, from, to;
     uint64 dc, empty, checkSqs, bit1, bit2, bit3;
 
-    //mvlist->size = 0;
-    mvlist->size = mvlist->pos;
+    //mvlist.size = 0;
+    mvlist.size = mvlist.pos;
 
     us = pos.side;
     them = us ^ 1;
@@ -573,12 +560,12 @@ void genQChecks(const position_t& pos, movelist_t *mvlist) {
         bit2 = bit3 = ((bit1 & dc) << 8) & ~Rank8BB & empty;
         while (bit3) {
             to = popFirstBit(&bit3);
-            mvlist->list[mvlist->size++].m = GenOneForward(to - 8, to);
+            mvlist.list[mvlist.size++].m = GenOneForward(to - 8, to);
         }
         bit3 = ((bit2 & Rank3BB) << 8) & empty;
         while (bit3) {
             to = popFirstBit(&bit3);
-            mvlist->list[mvlist->size++].m = GenTwoForward(to - 16, to);
+            mvlist.list[mvlist.size++].m = GenTwoForward(to - 16, to);
         }
         bit1 &= ~dc;
         if (SQFILE(ksq) > FileA) bit1 &= FileBB[SQFILE(ksq) - 1];
@@ -587,12 +574,12 @@ void genQChecks(const position_t& pos, movelist_t *mvlist) {
         bit3 = bit2 & PawnCaps[ksq][BLACK];
         while (bit3) {
             to = popFirstBit(&bit3);
-            mvlist->list[mvlist->size++].m = GenOneForward(to - 8, to);
+            mvlist.list[mvlist.size++].m = GenOneForward(to - 8, to);
         }
         bit3 = ((bit2 & Rank3BB) << 8) & empty & PawnCaps[ksq][BLACK];
         while (bit3) {
             to = popFirstBit(&bit3);
-            mvlist->list[mvlist->size++].m = GenTwoForward(to - 16, to);
+            mvlist.list[mvlist.size++].m = GenTwoForward(to - 16, to);
         }
     }
     else {
@@ -600,12 +587,12 @@ void genQChecks(const position_t& pos, movelist_t *mvlist) {
         bit2 = bit3 = ((bit1 & dc) >> 8) & ~Rank1BB & empty;
         while (bit3) {
             to = popFirstBit(&bit3);
-            mvlist->list[mvlist->size++].m = GenOneForward(to + 8, to);
+            mvlist.list[mvlist.size++].m = GenOneForward(to + 8, to);
         }
         bit3 = ((bit2 & Rank6BB) >> 8) & empty;
         while (bit3) {
             to = popFirstBit(&bit3);
-            mvlist->list[mvlist->size++].m = GenTwoForward(to + 16, to);
+            mvlist.list[mvlist.size++].m = GenTwoForward(to + 16, to);
         }
         bit1 &= ~dc;
         if (SQFILE(ksq) > FileA) bit1 &= FileBB[SQFILE(ksq) - 1];
@@ -614,12 +601,12 @@ void genQChecks(const position_t& pos, movelist_t *mvlist) {
         bit3 = bit2 & PawnCaps[ksq][WHITE];
         while (bit3) {
             to = popFirstBit(&bit3);
-            mvlist->list[mvlist->size++].m = GenOneForward(to + 8, to);
+            mvlist.list[mvlist.size++].m = GenOneForward(to + 8, to);
         }
         bit3 = ((bit2 & Rank6BB) >> 8) & empty & PawnCaps[ksq][WHITE];
         while (bit3) {
             to = popFirstBit(&bit3);
-            mvlist->list[mvlist->size++].m = GenTwoForward(to + 16, to);
+            mvlist.list[mvlist.size++].m = GenTwoForward(to + 16, to);
         }
     }
     bit1 = pos.knights & pos.color[us];
@@ -630,7 +617,7 @@ void genQChecks(const position_t& pos, movelist_t *mvlist) {
             bit3 = KnightMoves[from] & empty;
             while (bit3) {
                 to = popFirstBit(&bit3);
-                mvlist->list[mvlist->size++].m = GenKnightMove(from, to, getPiece(pos, to));
+                mvlist.list[mvlist.size++].m = GenKnightMove(from, to, getPiece(pos, to));
             }
         }
         bit2 = bit1 & ~dc;
@@ -640,7 +627,7 @@ void genQChecks(const position_t& pos, movelist_t *mvlist) {
             bit3 = KnightMoves[from] & checkSqs;
             while (bit3) {
                 to = popFirstBit(&bit3);
-                mvlist->list[mvlist->size++].m = GenKnightMove(from, to, getPiece(pos, to));
+                mvlist.list[mvlist.size++].m = GenKnightMove(from, to, getPiece(pos, to));
             }
         }
     }
@@ -652,7 +639,7 @@ void genQChecks(const position_t& pos, movelist_t *mvlist) {
             bit3 = bishopAttacksBB(from, pos.occupied) & empty;
             while (bit3) {
                 to = popFirstBit(&bit3);
-                mvlist->list[mvlist->size++].m = GenBishopMove(from, to, getPiece(pos, to));
+                mvlist.list[mvlist.size++].m = GenBishopMove(from, to, getPiece(pos, to));
             }
         }
         bit2 = bit1 & ~dc;
@@ -662,7 +649,7 @@ void genQChecks(const position_t& pos, movelist_t *mvlist) {
             bit3 = bishopAttacksBB(from, pos.occupied) & checkSqs;
             while (bit3) {
                 to = popFirstBit(&bit3);
-                mvlist->list[mvlist->size++].m = GenBishopMove(from, to, getPiece(pos, to));
+                mvlist.list[mvlist.size++].m = GenBishopMove(from, to, getPiece(pos, to));
             }
         }
     }
@@ -674,7 +661,7 @@ void genQChecks(const position_t& pos, movelist_t *mvlist) {
             bit3 = rookAttacksBB(from, pos.occupied) & empty;
             while (bit3) {
                 to = popFirstBit(&bit3);
-                mvlist->list[mvlist->size++].m = GenRookMove(from, to, getPiece(pos, to));
+                mvlist.list[mvlist.size++].m = GenRookMove(from, to, getPiece(pos, to));
             }
         }
 
@@ -685,7 +672,7 @@ void genQChecks(const position_t& pos, movelist_t *mvlist) {
             bit3 = rookAttacksBB(from, pos.occupied) & checkSqs;
             while (bit3) {
                 to = popFirstBit(&bit3);
-                mvlist->list[mvlist->size++].m = GenRookMove(from, to, getPiece(pos, to));
+                mvlist.list[mvlist.size++].m = GenRookMove(from, to, getPiece(pos, to));
             }
         }
     }
@@ -697,7 +684,7 @@ void genQChecks(const position_t& pos, movelist_t *mvlist) {
             bit2 = queenAttacksBB(from, pos.occupied) & checkSqs;
             while (bit2) {
                 to = popFirstBit(&bit2);
-                mvlist->list[mvlist->size++].m = GenQueenMove(from, to, getPiece(pos, to));
+                mvlist.list[mvlist.size++].m = GenQueenMove(from, to, getPiece(pos, to));
             }
         }
     }
@@ -706,7 +693,7 @@ void genQChecks(const position_t& pos, movelist_t *mvlist) {
         bit2 &= ~DirBitmap[/*getDirIndex(*/DirFromTo[ksq][pos.kpos[us]]/*)*/][ksq];
         while (bit2) {
             to = popFirstBit(&bit2);
-            mvlist->list[mvlist->size++].m = GenKingMove(pos.kpos[us], to, getPiece(pos, to));
+            mvlist.list[mvlist.size++].m = GenKingMove(pos.kpos[us], to, getPiece(pos, to));
         }
     }
     if (((us == WHITE) ? (pos.posStore.castle & WCKS) : (pos.posStore.castle & BCKS))
@@ -715,7 +702,7 @@ void genQChecks(const position_t& pos, movelist_t *mvlist) {
         bit1 = pos.occupied ^ BitMask[(us == WHITE) ? e1 : e8] ^
             BitMask[(us == WHITE) ? g1 : g8];
         if (rookAttacksBB(ksq, bit1) & BitMask[(us == WHITE) ? f1 : f8])
-            mvlist->list[mvlist->size++].m = (us == WHITE) ? GenWhiteOO() : GenBlackOO();
+            mvlist.list[mvlist.size++].m = (us == WHITE) ? GenWhiteOO() : GenBlackOO();
     }
     if (((us == WHITE) ? (pos.posStore.castle & WCQS) : (pos.posStore.castle & BCQS))
         && (!(pos.occupied & ((us == WHITE) ? (B1 | C1 | D1) : (B8 | C8 | D8))))
@@ -723,7 +710,7 @@ void genQChecks(const position_t& pos, movelist_t *mvlist) {
         bit1 = pos.occupied ^ BitMask[(us == WHITE) ? e1 : e8] ^
             BitMask[(us == WHITE) ? c1 : c8];
         if (rookAttacksBB(ksq, bit1) & BitMask[(us == WHITE) ? d1 : d8])
-            mvlist->list[mvlist->size++].m = (us == WHITE) ? GenWhiteOOO() : GenBlackOOO();
+            mvlist.list[mvlist.size++].m = (us == WHITE) ? GenWhiteOOO() : GenBlackOOO();
     }
 }
 

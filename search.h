@@ -55,7 +55,7 @@ static const int DefaultContempt = 0;
 struct Options {
     typedef std::function<void()> CallbackFunc;
     Options() {}
-    Options(const char* v, CallbackFunc f) : mType("string"), mMin(0), mMax(0), OnChange(f) {
+    Options(const std::string& v, CallbackFunc f) : mType("string"), mMin(0), mMax(0), OnChange(f) {
         mDefVal = mCurVal = v;
     }
     Options(bool v, CallbackFunc f) : mType("check"), mMin(0), mMax(0), OnChange(f) {
@@ -147,7 +147,6 @@ struct SearchInfo {
         mMaxActiveSplitsPerThread = 0;
         nodes_since_poll = 0;
         nodes_between_polls = 8192;
-
     }
     volatile int thinking_status;
     volatile bool stop_search; // TODO: replace with sthread.stop?
@@ -301,43 +300,43 @@ public:
     }
 
     // uci options
-    void OnClearHash(const std::string str) {
+    void OnClearHash(const std::string& str) {
         ClearPawnHash();
         ClearEvalHash();
         ClearTTHash();
         ClearPVTTHash();
     }
-    void OnHashChange(const std::string str) {
+    void OnHashChange(const std::string& str) {
         InitTTHash(uci_opt[str].GetInt());
     }
-    void OnPawnHashChange(const std::string str) {
+    void OnPawnHashChange(const std::string& str) {
         InitPawnHash(uci_opt[str].GetInt());
     }
-    void OnEvalCacheChange(const std::string str) {
+    void OnEvalCacheChange(const std::string& str) {
         InitEvalHash(uci_opt[str].GetInt());
     }
-    void OnMultiPvChange(const std::string str) {
+    void OnMultiPvChange(const std::string& str) {
         info.multipv = uci_opt[str].GetInt();
     }
-    void OnTimeBufferChange(const std::string str) {
+    void OnTimeBufferChange(const std::string& str) {
         info.time_buffer = uci_opt[str].GetInt();
     }
-    void OnThreadsChange(const std::string str) {
+    void OnThreadsChange(const std::string& str) {
         SetNumThreads(uci_opt[str].GetInt());
     }
-    void OnSplitsChange(const std::string str) {
+    void OnSplitsChange(const std::string& str) {
         info.mMinSplitDepth = uci_opt[str].GetInt();
     }
-    void OnActiveSplitsChange(const std::string str) {
+    void OnActiveSplitsChange(const std::string& str) {
         info.mMaxActiveSplitsPerThread = uci_opt[str].GetInt();
     }
-    void OnContemptChange(const std::string str) {
+    void OnContemptChange(const std::string& str) {
         info.contempt = uci_opt[str].GetInt();
     }
-    void OnBookfileChange(const std::string str) {
+    void OnBookfileChange(const std::string& str) {
         mPolyBook.initBook(uci_opt[str].GetStr());
     }
-    void OnDummyChange(const std::string str) {}
+    void OnDummyChange(const std::string& str) {}
 
     void InitUCIOptions() {
         uci_opt["Hash"] = Options(DefaultHash, MinHash, MaxHash, std::bind(&Engine::OnHashChange, this, "Hash"));

@@ -13,7 +13,7 @@ template <typename Entity>
 class BaseHashTable {
 public:
     BaseHashTable() :
-        mpTable(NULL),
+        mpTable(nullptr),
         mSize(0),
         mMask(0),
         mBucketSize(0) {}

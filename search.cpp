@@ -43,7 +43,7 @@ public:
         mPVHashTable(_pvt) {}
     void initNode(Thread& sthread);
     bool simpleStalemate(const position_t& pos);
-    void displayPV(continuation_t *pv, int multipvIdx, int depth, int alpha, int beta, int score);
+    void displayPV(continuation_t& pv, int multipvIdx, int depth, int alpha, int beta, int score);
     bool prevMoveAllowsThreat(const position_t& pos, basic_move_t first, basic_move_t second);
     bool moveRefutesThreat(const position_t& pos, basic_move_t first, basic_move_t second);
     void updateEvalgains(const position_t& pos, uint32 move, int before, int after, Thread& sthread);
@@ -144,12 +144,11 @@ bool Search::simpleStalemate(const position_t& pos) {
     return true;
 }
 
-void Search::displayPV(continuation_t *pv, int multipvIdx, int depth, int alpha, int beta, int score) {
+void Search::displayPV(continuation_t& pv, int multipvIdx, int depth, int alpha, int beta, int score) {
     uint64 time;
     uint64 sumnodes = 0;
     PrintOutput log;
 
-    ASSERT(pv != NULL);
     ASSERT(valueIsOk(score));
 
     time = getTime();
@@ -176,7 +175,7 @@ void Search::displayPV(continuation_t *pv, int multipvIdx, int depth, int alpha,
 
     if (multipvIdx > 0) log << " multipv " << multipvIdx + 1;
     log << " pv ";
-    for (int i = 0; i < pv->length; i++) log << move2Str(pv->moves[i]) << " ";
+    for (int i = 0; i < pv.length; i++) log << move2Str(pv.moves[i]) << " ";
 }
 
 bool Search::prevMoveAllowsThreat(const position_t& pos, basic_move_t first, basic_move_t second) {
@@ -295,15 +294,15 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
 
     ss.dcc = discoveredCheckCandidates(pos, pos.side);
     if (ssprev.moveGivesCheck) {
-        sortInit(pos, ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseEvasion, sthread);
+        sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseEvasion, sthread);
     }
     else {
-        if (inPv) sortInit(pos, ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_PVCHECK) ? MoveGenPhaseQuiescenceAndChecksPV : MoveGenPhaseQuiescencePV, sthread);
-        else sortInit(pos, ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_CHECK) ? MoveGenPhaseQuiescenceAndChecks : MoveGenPhaseQuiescence, sthread);
+        if (inPv) sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_PVCHECK) ? MoveGenPhaseQuiescenceAndChecksPV : MoveGenPhaseQuiescencePV, sthread);
+        else sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_CHECK) ? MoveGenPhaseQuiescenceAndChecks : MoveGenPhaseQuiescence, sthread);
     }
     bool prunable = !ssprev.moveGivesCheck && !inPv && MinTwoBits(pos.color[pos.side ^ 1] & pos.pawns) && MinTwoBits(pos.color[pos.side ^ 1] & ~(pos.pawns | pos.kings));
     move_t* move;
-    while ((move = sortNext(NULL, mInfo, pos, ss.mvlist, ss.mvlist_phase, sthread)) != NULL) {
+    while ((move = sortNext(nullptr, mInfo, pos, *ss.mvlist, ss.mvlist_phase, sthread)) != nullptr) {
         int score;
         if (anyRepNoMove(pos, move->m)) {
             score = DrawValue[pos.side];
@@ -364,7 +363,7 @@ int Search::searchNode(position_t& pos, int alpha, int beta, const int depth, Se
 
 template<bool inRoot, bool inSplitPoint, bool inCheck, bool inSingular>
 int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt) {
-    SplitPoint* sp = NULL;
+    SplitPoint* sp = nullptr;
     SearchStack ss;
     pos_store_t undo;
 
@@ -485,12 +484,12 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (inRoot) {
             ss = ssprev; // this is correct, ss.mvlist points to the ssprev.mvlist, at the same time, ssprev resets other member vars
             if (!mInfo.mvlist_initialized) {
-                sortInit(pos, ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseRoot, sthread);
+                sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseRoot, sthread);
             }
             else {
                 if (mInfo.multipvIdx > 0) {
                     ss.mvlist->pos = mInfo.multipvIdx - 1;
-                    getMove(ss.mvlist);
+                    getMove(*ss.mvlist);
                 }
                 else ss.mvlist->pos = 0;
                 ss.mvlist->phase = MoveGenPhaseRoot + 1;
@@ -498,14 +497,14 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         }
         else {
             ss.dcc = discoveredCheckCandidates(pos, pos.side);
-            sortInit(pos, ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), sthread);
+            sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), sthread);
             ss.firstExtend = ss.firstExtend || (inCheck && ss.mvlist->size == 1);
         }
     }
 
     int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 4) : (depth * depth));
     move_t* move;
-    while ((move = sortNext(sp, mInfo, pos, ss.mvlist, ss.mvlist_phase, sthread)) != NULL) {
+    while ((move = sortNext(sp, mInfo, pos, *ss.mvlist, ss.mvlist_phase, sthread)) != nullptr) {
         int score = -INF;
         if (inSingular && move->m == ssprev.bannedMove) continue;
         if (inSplitPoint) {
@@ -665,7 +664,7 @@ void Search::extractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_m
     pv.length = 0;
     pv.moves[pv.length++] = move;
     makeMove(pos, undo[ply++], move);
-    while ((entry = mPVHashTable.pvEntry(pos.posStore.hash)) != NULL) {
+    while ((entry = mPVHashTable.pvEntry(pos.posStore.hash)) != nullptr) {
         basic_move_t hashMove = entry->pvMove();
         if (hashMove == EMPTY) break;
         if (!genMoveIfLegal(pos, hashMove, pinnedPieces(pos, pos.side))) break;
@@ -705,7 +704,7 @@ void Search::repopulateHash(position_t& pos, continuation_t& rootPV) {
         basic_move_t move = rootPV.moves[moveOn];
         if (!move) break;
         PvHashEntry* entry = mPVHashTable.pvEntryFromMove(pos.posStore.hash, move);
-        if (NULL == entry) break;
+        if (nullptr == entry) break;
         mTransTable.StoreExact(pos.posStore.hash, entry->pvMove(), entry->pvDepth(), entry->pvScore());
         makeMove(pos, undo[moveOn], move);
     }
@@ -822,7 +821,7 @@ void Engine::GetBestMove(Thread& sthread) {
 
     do {
         PvHashEntry *entry = pvhashtable.pvEntry(rootpos.posStore.hash);
-        if (NULL == entry) break;
+        if (nullptr == entry) break;
         if (info.thinking_status == THINKING
             && info.rootPV.moves[1] == rootpos.posStore.lastmove
             && info.rootPV.moves[2] == entry->pvMove()
@@ -832,7 +831,7 @@ void Engine::GetBestMove(Thread& sthread) {
             info.bestmove = entry->pvMove();
             info.best_value = entry->pvScore();
             search->extractPvMovesFromHash(rootpos, info.rootPV, entry->pvMove());
-            search->displayPV(&info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
+            search->displayPV(info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
             if (info.rootPV.length > 1) info.pondermove = info.rootPV.moves[1];
             else info.pondermove = 0;
             StopSearch();
@@ -883,7 +882,7 @@ void Engine::GetBestMove(Thread& sthread) {
                         search->repopulateHash(rootpos, info.rootPV);
                     }
                     if (SHOW_SEARCH && id >= 8) {
-                        search->displayPV(&info.rootPV, info.multipvIdx, id, alpha, beta, info.best_value);
+                        search->displayPV(info.rootPV, info.multipvIdx, id, alpha, beta, info.best_value);
                     }
                 }
                 if (info.stop_search) break;

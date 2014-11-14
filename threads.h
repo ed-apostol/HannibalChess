@@ -36,9 +36,9 @@ struct SplitPoint {
         Init();
     }
     void Init() {
-        parent = NULL;
-        sscurr = NULL;
-        ssprev = NULL;
+        parent = nullptr;
+        sscurr = nullptr;
+        ssprev = nullptr;
         depth = 0;
         inCheck = false;
         inRoot = false;
@@ -164,4 +164,3 @@ private:
     std::vector<Thread*>& mThreadGroup;
     Engine& mEngine;
 };
-

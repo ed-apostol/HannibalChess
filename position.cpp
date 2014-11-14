@@ -457,8 +457,6 @@ void makeMove(position_t& pos, pos_store_t& undo, basic_move_t m) {
 void setPosition(position_t& pos, const char *fen) {
     int rank = 7, file = 0, pc = 0, color = 0, count = 0, i, sq;
 
-    ASSERT(fen != NULL);
-
     pos.pawns = EmptyBoardBB;
     pos.knights = EmptyBoardBB;
     pos.bishops = EmptyBoardBB;
@@ -474,7 +472,7 @@ void setPosition(position_t& pos, const char *fen) {
     pos.kpos[WHITE] = 0;
     pos.kpos[BLACK] = 0;
     for (sq = a1; sq <= h8; sq++) pos.pieces[sq] = EMPTY;
-    pos.posStore.previous = NULL;
+    pos.posStore.previous = nullptr;
     pos.posStore.lastmove = EMPTY;
     pos.posStore.epsq = -1;
     pos.posStore.castle = 0;

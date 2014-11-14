@@ -40,4 +40,4 @@ struct eval_info_t {
 };
 
 extern int eval(const position_t& pos, Thread& sthread);
-extern void evalEndgame(int attacker, const position_t& pos, eval_info_t *ei, int *score, int *draw, int mover);
+extern void evalEndgame(int attacker, const position_t& pos, eval_info_t& ei, int *score, int *draw, int mover);

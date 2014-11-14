@@ -281,7 +281,7 @@ PvHashEntry* PvHashTable::pvEntry(const uint64 hash) const {
             return entry;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 PvHashEntry* PvHashTable::pvEntryFromMove(const uint64 hash, basic_move_t move) const {
@@ -291,7 +291,7 @@ PvHashEntry* PvHashTable::pvEntryFromMove(const uint64 hash, basic_move_t move) 
             return entry;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 void PvHashTable::pvStore(const uint64 hash, const basic_move_t move, const uint8 depth, const int16 value) {

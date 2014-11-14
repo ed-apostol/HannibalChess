@@ -20,7 +20,7 @@ struct PolyglotBookEntry {
 
 class Book {
 public:
-    Book() : bookFile(NULL) {}
+    Book() : bookFile(nullptr) {}
     ~Book() {
         if (bookFile) fclose(bookFile);
     }

@@ -24,7 +24,7 @@ void Thread::Init() {
     numsplits2 = 1;
     workers2 = 0;
     num_sp = 0;
-    activeSplitPoint = NULL;
+    activeSplitPoint = nullptr;
     for (int Idx = 0; Idx < MaxNumSplitPointsPerThread; ++Idx) {
         sptable[Idx].Init();
     }
@@ -38,10 +38,10 @@ void Thread::Init() {
 void Thread::IdleLoop() {
     SplitPoint* const master_sp = activeSplitPoint;
     while (!exit_flag) {
-        if (!exit_flag && master_sp == NULL && doSleep) {
+        if (!exit_flag && master_sp == nullptr && doSleep) {
             SleepAndWaitForCondition();
         }
-        if (!exit_flag && !doSleep && master_sp == NULL && thread_id == 0) {
+        if (!exit_flag && !doSleep && master_sp == nullptr && thread_id == 0) {
             LogInfo() << "IdleLoop: Main thread waking up to start searching!";
             mEngine.GetBestMove(*this);
             doSleep = true;
@@ -56,18 +56,18 @@ void Thread::IdleLoop() {
             sp->workersBitMask &= ~((uint64)1 << thread_id);
             stop = true;
         }
-        if (master_sp != NULL && (!master_sp->workersBitMask || doSleep)) return;
+        if (master_sp != nullptr && (!master_sp->workersBitMask || doSleep)) return;
     }
 }
 
 void Thread::GetWork(SplitPoint* const master_sp) {
     int best_depth = 0;
-    Thread* thread_to_help = NULL;
-    SplitPoint* best_split_point = NULL;
+    Thread* thread_to_help = nullptr;
+    SplitPoint* best_split_point = nullptr;
 
     for (Thread* th : mThreadGroup) {
         if (th->thread_id == thread_id) continue; // no need to help self
-        if (master_sp != NULL && !(master_sp->workersBitMask & ((uint64)1 << th->thread_id))) continue; // helpful master: looking to help threads still actively working for it
+        if (master_sp != nullptr && !(master_sp->workersBitMask & ((uint64)1 << th->thread_id))) continue; // helpful master: looking to help threads still actively working for it
         for (int splitIdx = 0, num_splits = th->num_sp; splitIdx < num_splits; ++splitIdx) {
             SplitPoint* const sp = &th->sptable[splitIdx];
             if (sp->cutoff) continue; // if it already has cutoff, move on
@@ -80,11 +80,11 @@ void Thread::GetWork(SplitPoint* const master_sp) {
             break; // only check the first valid split in every thread, it is always the deepest, saves time
         }
     }
-    if (!doSleep && best_split_point != NULL && thread_to_help != NULL) {
+    if (!doSleep && best_split_point != nullptr && thread_to_help != nullptr) {
         std::lock_guard<Spinlock> lck(best_split_point->updatelock);
         if (!best_split_point->cutoff // check if the splitpoint has not cutoff yet
             && (best_split_point->workersBitMask == best_split_point->allWorkersBitMask) // check if all helper threads are still searching this splitpoint
-            && (master_sp == NULL || (master_sp->workersBitMask & ((uint64)1 << thread_to_help->thread_id)))) { // check if the helper thread is still working for master
+            && (master_sp == nullptr || (master_sp->workersBitMask & ((uint64)1 << thread_to_help->thread_id)))) { // check if the helper thread is still working for master
             best_split_point->workersBitMask |= ((uint64)1 << thread_id);
             best_split_point->allWorkersBitMask |= ((uint64)1 << thread_id);
             activeSplitPoint = best_split_point;

@@ -17,7 +17,7 @@
 #include "eval.h"
 #include "material.h"
 
-void RookvKnight(int attacker, const position_t& pos, eval_info_t *ei, int *score, int *draw, int mover) {
+void RookvKnight(int attacker, const position_t& pos, eval_info_t& ei, int *score, int *draw, int mover) {
     int nsq = GetOnlyBit(pos.knights);
     int penalty = DISTANCE(nsq, pos.kpos[attacker ^ 1]);
     penalty *= penalty;
@@ -25,7 +25,7 @@ void RookvKnight(int attacker, const position_t& pos, eval_info_t *ei, int *scor
     *draw -= penalty;
 }
 
-void SinglePawnEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score, int *draw, int mover) {
+void SinglePawnEnding(int attacker, const position_t& pos, eval_info_t& ei, int *score, int *draw, int mover) {
     int pawnSq = GetOnlyBit(pos.pawns & pos.color[attacker]);
     int targetSq = pawnSq + PAWN_MOVE_INC(attacker);
     int defender = attacker ^ 1;
@@ -39,7 +39,7 @@ void SinglePawnEnding(int attacker, const position_t& pos, eval_info_t *ei, int 
             (KingMoves[pos.kpos[attacker]] & BitMask[pastTarget]);
         // is you are 2 in front of pawn black has no draw
         if (IN_FRONT(SQRANK(pos.kpos[attacker]), SQRANK(targetSq), attacker) && supportAdvance) {
-            if (ei->MLindex[defender] == 0) *score += 400 * sign[attacker];
+            if (ei.MLindex[defender] == 0) *score += 400 * sign[attacker];
         }
         // if you control the square in front of pawn black must have
         // opposition
@@ -47,7 +47,7 @@ void SinglePawnEnding(int attacker, const position_t& pos, eval_info_t *ei, int 
             // if you are on 6th rank you got it
             // relying on rook pawns dealt with first elsewhere
             if (PAWN_RANK(pawnSq, attacker) >= Rank5) {
-                if (ei->MLindex[defender] == 0) *score += 400 * sign[attacker];
+                if (ei.MLindex[defender] == 0) *score += 400 * sign[attacker];
                 else *score += 100 * sign[attacker];//sam3.13 small bug fix
             }
             else {
@@ -58,7 +58,7 @@ void SinglePawnEnding(int attacker, const position_t& pos, eval_info_t *ei, int 
                 else if ((KingMoves[pos.kpos[defender]] & BitMask[oppSq])
                     && mover == defender)
                     *draw = MAX_DRAW;
-                else if (ei->MLindex[defender] == 0) *score += 400 * sign[attacker];
+                else if (ei.MLindex[defender] == 0) *score += 400 * sign[attacker];
             }
             return;
         }
@@ -77,13 +77,13 @@ void SinglePawnEnding(int attacker, const position_t& pos, eval_info_t *ei, int 
                     *draw = MAX_DRAW;
                     return;
                 }
-                if (ei->MLindex[defender] == 0) *score += 400 * sign[attacker];
+                if (ei.MLindex[defender] == 0) *score += 400 * sign[attacker];
                 return;
             }
             myDist = DISTANCE(pos.kpos[attacker], targetSq);
             defenderDist = DISTANCE(pos.kpos[defender], targetSq) - (mover == defender);
             if (defenderDist <= myDist) *draw = MAX_DRAW;
-            else if (ei->MLindex[defender] == 0) *score += 100 * sign[attacker];
+            else if (ei.MLindex[defender] == 0) *score += 100 * sign[attacker];
         }
     }
     // if king controls square 2 past pawn, black better have opposition
@@ -107,17 +107,17 @@ void SinglePawnEnding(int attacker, const position_t& pos, eval_info_t *ei, int 
             else if (mover == attacker && pos.kpos[attacker] != targetSq - PAWN_MOVE_INC(attacker) * 2 &&
                 (KingMoves[pos.kpos[attacker]] & BitMask[pawnSq]))
                 *draw = MAX_DRAW;
-            else if (ei->MLindex[defender] == 0) *score += 400 * sign[attacker];
+            else if (ei.MLindex[defender] == 0) *score += 400 * sign[attacker];
         }
         else if ((PawnCaps[pos.kpos[defender]][attacker] & BitMask[targetSq]) &&
             mover == defender && (PawnCaps[pos.kpos[attacker]][attacker] & BitMask[targetSq]) == 0)
             *draw = MAX_DRAW;
         else if (DISTANCE(pos.kpos[defender], pawnSq) - (mover == defender) < DISTANCE(pos.kpos[attacker], targetSq))
             *draw = MAX_DRAW;
-        else if (ei->MLindex[defender] == 0) *score += 400 * sign[attacker];
+        else if (ei.MLindex[defender] == 0) *score += 400 * sign[attacker];
     }
 }
-void DrawnRookPawn(int attacker, const position_t& pos, eval_info_t *ei, int *score, int *draw, int32 mover) {
+void DrawnRookPawn(int attacker, const position_t& pos, eval_info_t& ei, int *score, int *draw, int32 mover) {
     int qs;
     uint64 pawns = pos.pawns & pos.color[attacker];
     if ((pawns& (~FileABB)) == 0) {
@@ -187,25 +187,25 @@ void MateNoPawn(int attacker, const position_t& pos, int *score, int *draw) {
     *score += (boostKing + boostProx) * sign[attacker];
 }
 
-void RookBishopEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score, int *draw) {
+void RookBishopEnding(int attacker, const position_t& pos, eval_info_t& ei, int *score, int *draw) {
     // opposite bishop endgames
-    if (ei->flags & OPPOSITE_BISHOPS) {
+    if (ei.flags & OPPOSITE_BISHOPS) {
         *draw += 5;
-        if ((ei->pawn_entry->passedbits & pos.color[attacker]) == 0) *draw += 10; // ones without passed are really drawish
+        if ((ei.pawn_entry->passedbits & pos.color[attacker]) == 0) *draw += 10; // ones without passed are really drawish
         if (MaxOneBit(pos.pawns & pos.color[attacker])) *draw += 30; // can saq a bishop to get RB v. R endgame
     }
 }
-void BishopEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score, int *draw) {
+void BishopEnding(int attacker, const position_t& pos, eval_info_t& ei, int *score, int *draw) {
     int defender;
     int qs;
     uint64 passed;
     // opposite bishop endgames
 
-    if (ei->flags & OPPOSITE_BISHOPS) {
+    if (ei.flags & OPPOSITE_BISHOPS) {
         // all opposite bishop endgames are drawish
         // opposite bishop can saq for last pawn its drawn
         // this is not perfect, but search can catch exceptions
-        if (ei->MLindex[attacker] == MLB + MLP) {
+        if (ei.MLindex[attacker] == MLB + MLP) {
             *draw = MAX_DRAW;
             return;
         }
@@ -227,11 +227,11 @@ void BishopEnding(int attacker, const position_t& pos, eval_info_t *ei, int *sco
             return;
         }
 
-        passed = ei->pawn_entry->passedbits & pos.color[attacker];
+        passed = ei.pawn_entry->passedbits & pos.color[attacker];
         if (passed == 0) *draw += 30;
         else if (MaxOneBit(passed)) *draw += 20;
         {
-            int pUp = (ei->MLindex[attacker]) - (ei->MLindex[defender]);
+            int pUp = (ei.MLindex[attacker]) - (ei.MLindex[defender]);
             if (pUp == 1 || pUp == 2) {
                 *score = (attacker == WHITE) ? MAX(*score / 2, *score - 50 * pUp) : MIN(*score / 2, *score + 50 * pUp);
             }
@@ -253,7 +253,7 @@ void BishopEnding(int attacker, const position_t& pos, eval_info_t *ei, int *sco
     }
     // same color bishop
     else {
-        int pNum = ei->MLindex[attacker] - MLB;
+        int pNum = ei.MLindex[attacker] - MLB;
         if (pNum == 1) {
             int sq = GetOnlyBit(pos.pawns & pos.color[attacker]);
             defender = attacker ^ 1;
@@ -263,7 +263,7 @@ void BishopEnding(int attacker, const position_t& pos, eval_info_t *ei, int *sco
         }
     }
 }
-void DrawnNP(int attacker, const position_t& pos, eval_info_t *ei, int *score, int *draw) {
+void DrawnNP(int attacker, const position_t& pos, eval_info_t& ei, int *score, int *draw) {
     int defender = attacker ^ 1;
     uint64 pawn = (pos.pawns & pos.color[attacker]);
     if (((pawn ^ BitMask[(PAWN_PROMOTE(FileA, attacker) - PAWN_MOVE_INC(attacker))]) == 0
@@ -272,13 +272,13 @@ void DrawnNP(int attacker, const position_t& pos, eval_info_t *ei, int *score, i
         && DISTANCE(pos.kpos[defender], PAWN_PROMOTE(FileH, attacker)) <= 1))
         *draw = MAX_DRAW;
     // if opponent king is in front and they have a piece, darn drawn
-    if (ei->MLindex[defender] >= MLN) {
+    if (ei.MLindex[defender] >= MLN) {
         int sq = GetOnlyBit(pawn);
         if (abs(SQFILE(pos.kpos[defender]) - SQFILE(sq)) <= 1 && IN_FRONT(SQRANK(pos.kpos[defender]), SQRANK(sq), attacker))
             *draw = SUPER_DRAWISH;
     }
 }
-void PawnEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score, int *draw, int mover) {
+void PawnEnding(int attacker, const position_t& pos, eval_info_t& ei, int *score, int *draw, int mover) {
     int defender = attacker ^ 1;
     uint64 pawns[2], nonApawns, nonHpawns;
     pawns[WHITE] = pos.pawns & pos.color[attacker];
@@ -334,19 +334,19 @@ void PawnEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score
     }
 }
 
-void RookEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score, int *draw) {
+void RookEnding(int attacker, const position_t& pos, eval_info_t& ei, int *score, int *draw) {
     // if we can get in front of a single pawn we are safe
     // TODO address h and a pawn situations
     int defender = attacker ^ 1;
     // if I have not pawns, and my opponent has passed pawns, and his king
     // is not cut off and is closer to queening square, its probably won
-    uint64 passedA = (ei->pawn_entry->passedbits & pos.color[attacker]);
-    if (ei->MLindex[defender] == MLR && passedA != 0) {
+    uint64 passedA = (ei.pawn_entry->passedbits & pos.color[attacker]);
+    if (ei.MLindex[defender] == MLR && passedA != 0) {
         uint64 passed;
         int raSq = GetOnlyBit(pos.rooks & pos.color[attacker]);
         int raFile = SQFILE(raSq);
         int behindRook = raSq + PAWN_MOVE_INC(defender);
-        if (ei->MLindex[attacker] == MLR + MLP) {
+        if (ei.MLindex[attacker] == MLR + MLP) {
             int sq = GetOnlyBit(pos.pawns & pos.color[attacker]);
             int sqFile = SQFILE(sq);
             // if the defender is closer to attacking the queening square then the defender its probably drawn
@@ -380,9 +380,9 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score
         }
         // if we have a rook in front of a pawn on the 7th
         if (raSq == PAWN_PROMOTE(raSq, attacker) && (raFile == FileA) &&
-            (BitMask[behindRook] & ei->pawns[attacker])) {
+            (BitMask[behindRook] & ei.pawns[attacker])) {
             // if the king is in good defensive position
-            if (ei->MLindex[attacker] == MLR + MLP) {
+            if (ei.MLindex[attacker] == MLR + MLP) {
                 int kdSq = pos.kpos[defender];
                 if (Q_DIST(kdSq, attacker) <= 1 &&
                     (DISTANCE(kdSq, behindRook) <= 2 || DISTANCE(kdSq, behindRook) >= 6)) {
@@ -390,8 +390,8 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score
                     return;
                 }
             }
-            else if ((ei->pawns[attacker] & ~(FileABB | FileGBB)) == 0 ||
-                (ei->pawns[attacker] & ~(FileABB | FileHBB)) == 0) {
+            else if ((ei.pawns[attacker] & ~(FileABB | FileGBB)) == 0 ||
+                (ei.pawns[attacker] & ~(FileABB | FileHBB)) == 0) {
                 int kdSq = pos.kpos[defender];
                 if (Q_DIST(kdSq, attacker) <= 1 && DISTANCE(kdSq, behindRook) >= 6) {
                     *draw = (DRAWN + DRAWN1) / 2;
@@ -400,9 +400,9 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score
             }
         }
         if (raSq == PAWN_PROMOTE(raSq, attacker) && (raFile == FileH) &&
-            (BitMask[behindRook] & ei->pawns[attacker])) {
+            (BitMask[behindRook] & ei.pawns[attacker])) {
             // if the king is in good defensive position
-            if (ei->MLindex[attacker] == MLR + MLP) {
+            if (ei.MLindex[attacker] == MLR + MLP) {
                 int kdSq = pos.kpos[defender];
                 if (Q_DIST(kdSq, attacker) <= 1 &&
                     (DISTANCE(kdSq, behindRook) <= 2 || DISTANCE(kdSq, behindRook) >= 6)) {
@@ -410,8 +410,8 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score
                     return;
                 }
             }
-            else if ((ei->pawns[attacker] & ~(FileHBB | FileBBB)) == 0 ||
-                (ei->pawns[attacker] & ~(FileHBB | FileABB)) == 0) {
+            else if ((ei.pawns[attacker] & ~(FileHBB | FileBBB)) == 0 ||
+                (ei.pawns[attacker] & ~(FileHBB | FileABB)) == 0) {
                 int kdSq = pos.kpos[defender];
                 if (Q_DIST(kdSq, attacker) <= 1 && DISTANCE(kdSq, behindRook) >= 6) {
                     *draw = (DRAWN + DRAWN1) / 2;
@@ -436,7 +436,7 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score
             }
         }
     }
-    if (ei->MLindex[attacker] == MLR + MLP) {
+    if (ei.MLindex[attacker] == MLR + MLP) {
         int sq = GetOnlyBit(pos.pawns & pos.color[attacker]);
         // lets deal with rook pawn situations
         int sqFile = SQFILE(sq);
@@ -445,17 +445,17 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score
         return;
     }
     // if no more than one pawn down
-    else if (ei->MLindex[attacker] - ei->MLindex[defender] <= MLP  && passedA == 0) {
+    else if (ei.MLindex[attacker] - ei.MLindex[defender] <= MLP  && passedA == 0) {
         uint64 pawnking = pos.color[defender] & ~pos.rooks;
         // no passed pawn is drawish
         *draw += 10;
         // pawns on one side is more drawish assuming the defending king is on the same side
         if ((QUEENSIDE & pawnking) == 0 || (KINGSIDE & pawnking) == 0) {
-            int pawnsTraded = MAX(4, 8 - (ei->MLindex[attacker] - MLR));
+            int pawnsTraded = MAX(4, 8 - (ei.MLindex[attacker] - MLR));
             // the less unguarded pawns, the more drawish it is
 
-            int unguarded = bitCnt(ei->pawns[defender] & ~(ei->atkkings[defender] | ei->atkpawns[defender] | shiftLeft(ei->pawns[defender], 1) |
-                shiftRight(ei->pawns[defender], 1)));
+            int unguarded = bitCnt(ei.pawns[defender] & ~(ei.atkkings[defender] | ei.atkpawns[defender] | shiftLeft(ei.pawns[defender], 1) |
+                shiftRight(ei.pawns[defender], 1)));
 
             if (unguarded == 0) {
                 *draw += pawnsTraded * 12;
@@ -473,7 +473,7 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score
 // detect queen vs. rook pawn or bishop pawn draws
 // for now, just rely on search to find exceptions
 
-void QueenvPawn(int attacker, const position_t& pos, eval_info_t *ei, int *score, int *draw) {
+void QueenvPawn(int attacker, const position_t& pos, eval_info_t& ei, int *score, int *draw) {
     //find pawn
     int defender = attacker ^ 1;
     // if we are on the 7th rank and rook or bishop pawn
@@ -483,7 +483,7 @@ void QueenvPawn(int attacker, const position_t& pos, eval_info_t *ei, int *score
         // king should be somewhat near pawn I guess
         // there is one position where this is wrong
         if ((dDist == 1 && DISTANCE(pSq, (int)GetOnlyBit(pos.queens)) > 1) ||
-            ((ei->atkkings[defender] & Rank8ByColorBB[defender]) &&
+            ((ei.atkkings[defender] & Rank8ByColorBB[defender]) &&
             dDist <= 2)) {
             int eDist = DISTANCE(pos.kpos[attacker], pSq);
             *score /= 5;
@@ -493,7 +493,7 @@ void QueenvPawn(int attacker, const position_t& pos, eval_info_t *ei, int *score
     }
 }
 
-void RookvPawnsEnding(int attacker, const position_t& pos, eval_info_t *ei, int *score, int *draw, int mover) {
+void RookvPawnsEnding(int attacker, const position_t& pos, eval_info_t& ei, int *score, int *draw, int mover) {
     int defender = attacker ^ 1;
     int defenderMove = (mover != attacker);
     uint64 pawns = pos.pawns & pos.color[defender];
@@ -532,7 +532,7 @@ void RookvPawnsEnding(int attacker, const position_t& pos, eval_info_t *ei, int 
 }
 
 //SAMFIX does not do fortress with rook pawns correctly, perhaps can expand knight pawn fortresses
-void DrawnQvREnding(int attacker, const position_t& pos, eval_info_t *ei, int *score, int *draw, int mover) {
+void DrawnQvREnding(int attacker, const position_t& pos, eval_info_t& ei, int *score, int *draw, int mover) {
     // remember, only the defender has rooks or pawns
     int defender = attacker ^ 1;
     uint64 pawns = pos.pawns;
@@ -547,7 +547,7 @@ void DrawnQvREnding(int attacker, const position_t& pos, eval_info_t *ei, int *s
             *score /= 4;
         }
         // we also need to detect a fortress with the pawn on the 2nd
-        else if (qDist == 6 && (ei->atkpawns[defender] & pos.rooks)
+        else if (qDist == 6 && (ei.atkpawns[defender] & pos.rooks)
             && (0 == (pos.pawns & rRank))
             && DISTANCE(pSq, pos.kpos[defender]) == 1 &&
             IN_FRONT(SQRANK(pos.kpos[attacker]), SQRANK(pSq), defender)) {
@@ -557,9 +557,9 @@ void DrawnQvREnding(int attacker, const position_t& pos, eval_info_t *ei, int *s
     }
 }
 
-void evalEndgame(int attacker, const position_t& pos, eval_info_t *ei, int *score, int *draw, int mover) {
+void evalEndgame(int attacker, const position_t& pos, eval_info_t& ei, int *score, int *draw, int mover) {
     mflag_t endIndex;
-    endIndex = ei->endFlags[attacker];
+    endIndex = ei.endFlags[attacker];
 
     switch (endIndex) {
     case 1: // pawn endgames
