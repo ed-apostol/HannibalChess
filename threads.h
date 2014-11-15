@@ -122,7 +122,7 @@ public:
     volatile bool stop;
     volatile bool doSleep;
     volatile bool exit_flag;
-private:
+protected:
     std::thread nativeThread;
     std::condition_variable sleepCondition;
     std::mutex threadLock;
@@ -162,5 +162,16 @@ public:
 private:
     SplitPoint sptable[MaxNumSplitPointsPerThread];
     std::vector<Thread*>& mThreadGroup;
+    Engine& mEngine;
+};
+
+class TimerThread : public ThreadBase {
+public:
+    TimerThread(Engine& _engine) : ThreadBase(0), mEngine(_engine) {
+        Init();
+        NativeThread() = std::thread(&TimerThread::IdleLoop, this);
+    }
+    void IdleLoop();
+private:
     Engine& mEngine;
 };

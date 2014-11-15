@@ -57,8 +57,6 @@ public:
     void extractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_move_t move);
     void extractPvMovesFromHash2(position_t& pos, continuation_t& pv, basic_move_t move);
     void repopulateHash(position_t& pos, continuation_t& rootPV);
-    void timeManagement(int depth);
-    void stopSearch();
 private:
     inline bool inPvNode(NodeType nt) {
         return (nt == PVNode);
@@ -77,7 +75,6 @@ private:
     static const int Q_CHECK = 1; // implies 1 check
     static const int Q_PVCHECK = 2; // implies 2 checks
     static const int MIN_REDUCTION_DEPTH = 4; // default is false
-    static const int WORSE_SCORE_CUTOFF = 20;
 
     SearchInfo& mInfo;
     TranspositionTable& mTransTable;
@@ -86,47 +83,12 @@ private:
 };
 
 void Search::initNode(Thread& sthread) {
-    int64 time2;
-
     if (sthread.activeSplitPoint && sthread.activeSplitPoint->cutoffOccurred()) {
         sthread.stop = true;
         return;
     }
-
     if (mInfo.node_is_limited && mEngine.ComputeNodes() >= mInfo.node_limit) {
-        stopSearch();
-    }
-    if (sthread.thread_id == 0 && ++mInfo.nodes_since_poll >= mInfo.nodes_between_polls) {
-        mInfo.nodes_since_poll = 0;
-        time2 = getTime();
-        if (time2 - mInfo.last_time > 1000) {
-            int64 time = time2 - mInfo.start_time;
-            mInfo.last_time = time2;
-            if (SHOW_SEARCH) {
-                uint64 sumnodes = mEngine.ComputeNodes();
-                PrintOutput() << "info time " << time
-                    << " nodes " << sumnodes
-                    << " hashfull " << (mTransTable.Used() * 1000) / mTransTable.HashSize()
-                    << " nps " << (sumnodes * 1000ULL) / (time);
-            }
-        }
-        if (mInfo.thinking_status == THINKING && mInfo.time_is_limited) {
-            if (time2 > mInfo.time_limit_max) {
-                if (time2 < mInfo.time_limit_abs) {
-                    if (!mInfo.research && !mInfo.change) {
-                        bool gettingWorse = mInfo.best_value != -INF && mInfo.best_value + WORSE_SCORE_CUTOFF <= mInfo.last_value;
-                        if (!gettingWorse) {
-                            stopSearch();
-                            LogInfo() << "info string Aborting search: time limit 2: " << time2 - mInfo.start_time;
-                        }
-                    }
-                }
-                else {
-                    stopSearch();
-                    LogInfo() << "info string Aborting search: time limit 1: " << time2 - mInfo.start_time;
-                }
-            }
-        }
+        mEngine.StopSearch();
     }
 }
 
@@ -718,67 +680,27 @@ void Search::repopulateHash(position_t& pos, continuation_t& rootPV) {
     }
 }
 
-void Search::timeManagement(int depth) {
-    static const int WORSE_TIME_BONUS = 20; //how many points more than 20 it takes to increase time by alloc to a maximum of 2*alloc
-    static const int CHANGE_TIME_BONUS = 50; //what percentage of alloc to increase if the last move is a change move
-
-    if (mInfo.best_value > INF - MAXPLY) mInfo.mate_found++;
-    if (mInfo.thinking_status == THINKING && mInfo.time_is_limited) {
-        int64 timeElapsed = getTime();
-        if (mInfo.legalmoves == 1 || mInfo.mate_found >= 3) {
-            if (depth >= 8) {
-                stopSearch();
-                LogInfo() << "info string Aborting search: legalmove/mate found depth >= 8";
-                return;
-            }
-        }
-        if (timeElapsed > (mInfo.start_time + (((mInfo.time_limit_max - mInfo.start_time) * 65) / 100))) {
-            int64 addTime = 0;
-            if (timeElapsed < mInfo.time_limit_abs) {
-                if ((mInfo.best_value + WORSE_SCORE_CUTOFF) <= mInfo.last_value) {
-                    int amountWorse = mInfo.last_value - mInfo.best_value;
-                    addTime += ((amountWorse - (WORSE_SCORE_CUTOFF - 10)) * mInfo.alloc_time) / WORSE_TIME_BONUS;
-                    LogInfo() << "info string Extending time (root gettingWorse): " << addTime;
-                }
-                if (mInfo.change) {
-                    addTime += (mInfo.alloc_time * CHANGE_TIME_BONUS) / 100;
-                    LogInfo() << "info string Extending time (root change): " << addTime;
-                }
-            }
-            if (addTime > 0) {
-                mInfo.time_limit_max += addTime;
-                if (mInfo.time_limit_max > mInfo.time_limit_abs)
-                    mInfo.time_limit_max = mInfo.time_limit_abs;
-            }
-            else { // if we are unlikely to get deeper, save our time
-                stopSearch();
-                LogInfo() << "info string Aborting search: root time limit 1: " << timeElapsed - mInfo.start_time;
-                return;
-            }
-        }
-    }
-    if (mInfo.depth_is_limited && depth >= mInfo.depth_limit) {
-        stopSearch();
-        LogInfo() << "info string Aborting search: depth limit: " << depth;
-        return;
-    }
-}
-
-void Search::stopSearch() {
-    mInfo.stop_search = true;
-    mEngine.SetAllThreadsToStop();
-}
-
 Engine::Engine() {
     mThinking.clear(std::memory_order_release);
     search = new Search(*this, info, transtable, pvhashtable);
+    mTimerThread = new TimerThread(*this);
+
+    InitUCIOptions();
+    SetNumThreads(uci_opt[ThreadsStr].GetInt());
+    InitVars();
+    InitTTHash(uci_opt[HashStr].GetInt());
+    InitPVTTHash(1);
 }
+
 Engine::~Engine() {
     delete search;
+    SetNumThreads(0);
+    delete mTimerThread;
 }
 
 void Engine::StopSearch() {
-    search->stopSearch();
+    info.stop_search = true;
+    SetAllThreadsToStop();
 }
 
 void Engine::PonderHit() { //no pondering in tuning
@@ -790,6 +712,84 @@ void Engine::SearchFromIdleLoop(SplitPoint& sp, Thread& sthread) {
     position_t pos = sp.origpos;
     if (sp.inRoot) search->searchNode<true, true, false>(pos, sp.alpha, sp.beta, sp.depth, *sp.ssprev, sthread, sp.nodeType);
     else search->searchNode<false, true, false>(pos, sp.alpha, sp.beta, sp.depth, *sp.ssprev, sthread, sp.nodeType);
+}
+
+void Engine::TimeManagement(int depth) {
+    static const int WORSE_TIME_BONUS = 20; //how many points more than 20 it takes to increase time by alloc to a maximum of 2*alloc
+    static const int CHANGE_TIME_BONUS = 50; //what percentage of alloc to increase if the last move is a change move
+
+    if (info.best_value > INF - MAXPLY) info.mate_found++;
+    if (info.thinking_status == THINKING && info.time_is_limited) {
+        int64 timeElapsed = getTime();
+        if (info.legalmoves == 1 || info.mate_found >= 3) {
+            if (depth >= 8) {
+                StopSearch();
+                LogInfo() << "info string Aborting search: legalmove/mate found depth >= 8";
+                return;
+            }
+        }
+        if (timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * 65) / 100))) {
+            int64 addTime = 0;
+            if (timeElapsed < info.time_limit_abs) {
+                if ((info.best_value + WORSE_SCORE_CUTOFF) <= info.last_value) {
+                    int amountWorse = info.last_value - info.best_value;
+                    addTime += ((amountWorse - (WORSE_SCORE_CUTOFF - 10)) * info.alloc_time) / WORSE_TIME_BONUS;
+                    LogInfo() << "info string Extending time (root gettingWorse): " << addTime;
+                }
+                if (info.change) {
+                    addTime += (info.alloc_time * CHANGE_TIME_BONUS) / 100;
+                    LogInfo() << "info string Extending time (root change): " << addTime;
+                }
+            }
+            if (addTime > 0) {
+                info.time_limit_max += addTime;
+                if (info.time_limit_max > info.time_limit_abs)
+                    info.time_limit_max = info.time_limit_abs;
+            }
+            else { // if we are unlikely to get deeper, save our time
+                StopSearch();
+                LogInfo() << "info string Aborting search: root time limit 1: " << timeElapsed - info.start_time;
+                return;
+            }
+        }
+    }
+    if (info.depth_is_limited && depth >= info.depth_limit) {
+        StopSearch();
+        LogInfo() << "info string Aborting search: depth limit: " << depth;
+        return;
+    }
+}
+
+void Engine::CheckTime() {
+    int64 time2 = getTime();
+    if (time2 - info.last_time > 1000) {
+        int64 time = time2 - info.start_time;
+        info.last_time = time2;
+        if (SHOW_SEARCH) {
+            uint64 sumnodes = ComputeNodes();
+            PrintOutput() << "info time " << time
+                << " nodes " << sumnodes
+                << " hashfull " << (transtable.Used() * 1000) / transtable.HashSize()
+                << " nps " << (sumnodes * 1000ULL) / (time);
+        }
+    }
+    if (info.thinking_status == THINKING && info.time_is_limited) {
+        if (time2 > info.time_limit_max) {
+            if (time2 < info.time_limit_abs) {
+                if (!info.research && !info.change) {
+                    bool gettingWorse = info.best_value != -INF && info.best_value + WORSE_SCORE_CUTOFF <= info.last_value;
+                    if (!gettingWorse) {
+                        StopSearch();
+                        LogInfo() << "info string Aborting search: time limit 2: " << time2 - info.start_time;
+                    }
+                }
+            }
+            else {
+                StopSearch();
+                LogInfo() << "info string Aborting search: time limit 1: " << time2 - info.start_time;
+            }
+        }
+    }
 }
 
 void Engine::SendBestMove() {
@@ -906,7 +906,7 @@ void Engine::GetBestMove(Thread& sthread) {
             if (info.stop_search) break; // TODO: refactor this
         }
         if (info.stop_search) break; // TODO: refactor this
-        search->timeManagement(id);
+        TimeManagement(id);
         if (info.stop_search) break; // TODO: refactor this
         if (info.best_value != -INF) {
             info.last_last_value = info.last_value;

@@ -30,6 +30,8 @@ const std::string Interface::year = "2014";
 const std::string Interface::version = "1.5x23";
 const std::string Interface::arch = "x64";
 
+// TODO: add Engine class parameters to UCI commands
+
 void Interface::Info() {
     LogAndPrintOutput() << name << " " << version << " " << arch;
     LogAndPrintOutput() << "Copyright (C) " << year << " " << author;
@@ -39,12 +41,6 @@ void Interface::Info() {
 
 Interface::Interface() {
     std::cout.setf(std::ios::unitbuf);
-
-    cEngine.InitUCIOptions();
-    cEngine.SetNumThreads(cEngine.uci_opt[ThreadsStr].GetInt());
-    cEngine.InitVars();
-    cEngine.InitTTHash(cEngine.uci_opt[HashStr].GetInt());
-    cEngine.InitPVTTHash(1);
 
     initArr();
     initPST();
@@ -87,7 +83,6 @@ bool Interface::Input(std::istringstream& stream) {
 void Interface::Quit() {
     Stop();
     cEngine.WaitForThinkFinished();
-    cEngine.SetNumThreads(0);
     LogInfo() << "Interface quit";
 }
 

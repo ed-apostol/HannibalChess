@@ -159,8 +159,6 @@ struct SearchInfo {
         multipv = 0;
         mMinSplitDepth = 0;
         mMaxActiveSplitsPerThread = 0;
-        nodes_since_poll = 0;
-        nodes_between_polls = 8192;
     }
     volatile int thinking_status;
     volatile bool stop_search; // TODO: replace with sthread.stop?
@@ -176,13 +174,13 @@ struct SearchInfo {
     bool moves_is_limited;
     bool time_is_limited;
 
-    int64 time_limit_max;
+    volatile int64 time_limit_max;
     int64 time_limit_abs;
     bool node_is_limited;
     uint64 node_limit;
 
     int64 start_time;
-    int64 last_time;
+    volatile int64 last_time;
     int64 alloc_time;
 
     int last_last_value;
@@ -196,9 +194,6 @@ struct SearchInfo {
     int iteration;
 
     int multipvIdx;
-
-    uint64 nodes_since_poll;
-    uint64 nodes_between_polls;
 
     int legalmoves;
     basic_move_t bestmove;
@@ -215,11 +210,13 @@ class Engine {
 public:
     Engine();
     ~Engine();
+    void StopSearch();
     void PonderHit();
     void SendBestMove();
+    void TimeManagement(int depth);
+    void CheckTime();
     void SearchFromIdleLoop(SplitPoint& sp, Thread& sthread);
     void GetBestMove(Thread& sthread);
-    void StopSearch();
     void StartThinking(GoCmdData& data, position_t& pos);
 
     // hash
@@ -284,27 +281,26 @@ public:
     }
     void WaitForThinkFinished() {
         while (mThinking.test_and_set(std::memory_order_acquire)) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            std::this_thread::yield();
         }
     }
     void SetThinkFinished() {
         mThinking.clear(std::memory_order_release);
-    }
-    void WaitForThreadsToSleep() {
-        for (Thread* th : mThreads) {
-            while (!th->doSleep);
-        }
     }
     void SetAllThreadsToStop() {
         for (Thread* th : mThreads) {
             th->stop = true;
             th->doSleep = true;
         }
+        mTimerThread->stop = true;
+        mTimerThread->doSleep = true;
     }
     void SetAllThreadsToWork() {
         for (Thread* th : mThreads) {
             if (th->thread_id != 0) th->TriggerCondition(); // thread_id == 0 is triggered separately
         }
+        mTimerThread->stop = false;
+        mTimerThread->TriggerCondition();
     }
     Thread& ThreadFromIdx(int thread_id) {
         return *mThreads[thread_id];
@@ -313,7 +309,7 @@ public:
         return mThreads.size();
     }
 
-    // uci options
+    // UCI options
     void OnClearHash() {
         ClearPawnHash();
         ClearEvalHash();
@@ -374,6 +370,8 @@ public:
 
     UCIOptions uci_opt;
 private:
+    static const int WORSE_SCORE_CUTOFF = 20;
+
     std::atomic_flag mThinking;
     position_t rootpos;
     SearchInfo info;
@@ -381,6 +379,7 @@ private:
     TranspositionTable transtable;
     PvHashTable pvhashtable;
     std::vector<Thread*> mThreads;
+    TimerThread* mTimerThread;
     Book mPolyBook;
 };
 
