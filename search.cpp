@@ -43,7 +43,6 @@ public:
         mPVHashTable(_pvt) {}
     void initNode(Thread& sthread);
     bool simpleStalemate(const position_t& pos);
-    void displayPV(continuation_t& pv, int multipvIdx, int depth, int alpha, int beta, int score);
     bool prevMoveAllowsThreat(const position_t& pos, basic_move_t first, basic_move_t second);
     bool moveRefutesThreat(const position_t& pos, basic_move_t first, basic_move_t second);
     void updateEvalgains(const position_t& pos, uint32 move, int before, int after, Thread& sthread);
@@ -54,9 +53,6 @@ public:
     int searchNode(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt);
     template<bool inRoot, bool inSplitPoint, bool inCheck, bool inSingular>
     int searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt);
-    void extractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_move_t move);
-    void extractPvMovesFromHash2(position_t& pos, continuation_t& pv, basic_move_t move);
-    void repopulateHash(position_t& pos, continuation_t& rootPV);
 private:
     inline bool inPvNode(NodeType nt) {
         return (nt == PVNode);
@@ -104,40 +100,6 @@ bool Search::simpleStalemate(const position_t& pos) {
         if (!isSqAtt(pos, pos.occupied, to, pos.side ^ 1)) return false;
     }
     return true;
-}
-
-void Search::displayPV(continuation_t& pv, int multipvIdx, int depth, int alpha, int beta, int score) {
-    uint64 time;
-    uint64 sumnodes = 0;
-    PrintOutput log;
-
-    ASSERT(valueIsOk(score));
-
-    time = getTime();
-    mInfo.last_time = time;
-    time = mInfo.last_time - mInfo.start_time;
-
-    log << "info depth " << depth;
-    if (abs(score) < (INF - MAXPLY)) {
-        if (score < beta) {
-            if (score <= alpha) log << " score cp " << score << " upperbound";
-            else log << " score cp " << score;
-        }
-        else log << " score cp " << score << " lowerbound";
-    }
-    else {
-        log << " score mate " << ((score > 0) ? (INF - score + 1) / 2 : -(INF + score) / 2);
-    }
-
-    log << " time " << time;
-    sumnodes = mEngine.ComputeNodes();
-    log << " nodes " << sumnodes;
-    log << " hashfull " << (mTransTable.Used() * 1000) / mTransTable.HashSize();
-    if (time > 10) log << " nps " << (sumnodes * 1000) / (time);
-
-    if (multipvIdx > 0) log << " multipv " << multipvIdx + 1;
-    log << " pv ";
-    for (int i = 0; i < pv.length; i++) log << move2Str(pv.moves[i]) << " ";
 }
 
 bool Search::prevMoveAllowsThreat(const position_t& pos, basic_move_t first, basic_move_t second) {
@@ -624,61 +586,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     return ss.bestvalue;
 }
 
-void Search::extractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_move_t move) {
-    PvHashEntry *entry;
-    pos_store_t undo[MAXPLY];
-    int ply = 0;
-    pv.length = 0;
-    pv.moves[pv.length++] = move;
-    makeMove(pos, undo[ply++], move);
-    while ((entry = mPVHashTable.pvEntry(pos.posStore.hash)) != nullptr) {
-        basic_move_t hashMove = entry->pvMove();
-        if (hashMove == EMPTY) break;
-        if (!genMoveIfLegal(pos, hashMove, pinnedPieces(pos, pos.side))) break;
-        if (anyRep(pos)) break; // break on repetition to avoid long pv display
-        pv.moves[pv.length++] = hashMove;
-        makeMove(pos, undo[ply++], hashMove);
-        if (ply >= MAXPLY) break;
-    }
-    for (ply = ply - 1; ply >= 0; --ply) {
-        unmakeMove(pos, undo[ply]);
-    }
-}
-
-void Search::extractPvMovesFromHash2(position_t& pos, continuation_t& pv, basic_move_t move) {
-    basic_move_t hashMove;
-    pos_store_t undo[MAXPLY];
-    int ply = 0;
-    pv.length = 0;
-    pv.moves[pv.length++] = move;
-    makeMove(pos, undo[ply++], move);
-    while ((hashMove = mTransTable.TransMove(pos.posStore.hash)) != EMPTY) {
-        if (!genMoveIfLegal(pos, hashMove, pinnedPieces(pos, pos.side))) break;
-        if (anyRep(pos)) break; // break on repetition to avoid long pv display
-        pv.moves[pv.length++] = hashMove;
-        makeMove(pos, undo[ply++], hashMove);
-        if (ply >= MAXPLY) break;
-    }
-    for (ply = ply - 1; ply >= 0; --ply) {
-        unmakeMove(pos, undo[ply]);
-    }
-}
-
-void Search::repopulateHash(position_t& pos, continuation_t& rootPV) {
-    int moveOn;
-    pos_store_t undo[MAXPLY];
-    for (moveOn = 0; moveOn + 1 <= rootPV.length; moveOn++) {
-        basic_move_t move = rootPV.moves[moveOn];
-        if (!move) break;
-        PvHashEntry* entry = mPVHashTable.pvEntryFromMove(pos.posStore.hash, move);
-        if (nullptr == entry) break;
-        mTransTable.StoreExact(pos.posStore.hash, entry->pvMove(), entry->pvDepth(), entry->pvScore());
-        makeMove(pos, undo[moveOn], move);
-    }
-    for (moveOn = moveOn - 1; moveOn >= 0; moveOn--) {
-        unmakeMove(pos, undo[moveOn]);
-    }
-}
+/**************************************************************************************************/
+/**************************************************************************************************/
 
 Engine::Engine() {
     mThinking.clear(std::memory_order_release);
@@ -714,10 +623,80 @@ void Engine::SearchFromIdleLoop(SplitPoint& sp, Thread& sthread) {
     else search->searchNode<false, true, false>(pos, sp.alpha, sp.beta, sp.depth, *sp.ssprev, sthread, sp.nodeType);
 }
 
+void Engine::ExtractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_move_t move) {
+    PvHashEntry *entry;
+    pos_store_t undo[MAXPLY];
+    int ply = 0;
+    pv.length = 0;
+    pv.moves[pv.length++] = move;
+    makeMove(pos, undo[ply++], move);
+    while ((entry = pvhashtable.pvEntry(pos.posStore.hash)) != nullptr) {
+        basic_move_t hashMove = entry->pvMove();
+        if (hashMove == EMPTY) break;
+        if (!genMoveIfLegal(pos, hashMove, pinnedPieces(pos, pos.side))) break;
+        if (anyRep(pos)) break; // break on repetition to avoid long pv display
+        pv.moves[pv.length++] = hashMove;
+        makeMove(pos, undo[ply++], hashMove);
+        if (ply >= MAXPLY) break;
+    }
+    for (ply = ply - 1; ply >= 0; --ply) {
+        unmakeMove(pos, undo[ply]);
+    }
+}
+
+void Engine::RepopulateHash(position_t& pos, continuation_t& rootPV) {
+    int moveOn;
+    pos_store_t undo[MAXPLY];
+    for (moveOn = 0; moveOn + 1 <= rootPV.length; moveOn++) {
+        basic_move_t move = rootPV.moves[moveOn];
+        if (!move) break;
+        PvHashEntry* entry = pvhashtable.pvEntryFromMove(pos.posStore.hash, move);
+        if (nullptr == entry) break;
+        transtable.StoreExact(pos.posStore.hash, entry->pvMove(), entry->pvDepth(), entry->pvScore());
+        makeMove(pos, undo[moveOn], move);
+    }
+    for (moveOn = moveOn - 1; moveOn >= 0; moveOn--) {
+        unmakeMove(pos, undo[moveOn]);
+    }
+}
+
+void Engine::DisplayPV(continuation_t& pv, int multipvIdx, int depth, int alpha, int beta, int score) {
+    uint64 time;
+    uint64 sumnodes = 0;
+    PrintOutput log;
+
+    time = getTime();
+    info.last_time = time;
+    time = info.last_time - info.start_time;
+
+    log << "info depth " << depth;
+    if (abs(score) < (INF - MAXPLY)) {
+        if (score < beta) {
+            if (score <= alpha) log << " score cp " << score << " upperbound";
+            else log << " score cp " << score;
+        }
+        else log << " score cp " << score << " lowerbound";
+    }
+    else {
+        log << " score mate " << ((score > 0) ? (INF - score + 1) / 2 : -(INF + score) / 2);
+    }
+
+    log << " time " << time;
+    sumnodes = ComputeNodes();
+    log << " nodes " << sumnodes;
+    log << " hashfull " << (transtable.Used() * 1000) / transtable.HashSize();
+    if (time > 10) log << " nps " << (sumnodes * 1000) / (time);
+
+    if (multipvIdx > 0) log << " multipv " << multipvIdx + 1;
+    log << " pv ";
+    for (int i = 0; i < pv.length; i++) log << move2Str(pv.moves[i]) << " ";
+}
+
 void Engine::TimeManagement(int depth) {
     static const int WORSE_TIME_BONUS = 20; //how many points more than 20 it takes to increase time by alloc to a maximum of 2*alloc
     static const int CHANGE_TIME_BONUS = 50; //what percentage of alloc to increase if the last move is a change move
 
+    std::lock_guard<std::mutex>(info.mutex_key);
     if (info.best_value > INF - MAXPLY) info.mate_found++;
     if (info.thinking_status == THINKING && info.time_is_limited) {
         int64 timeElapsed = getTime();
@@ -761,6 +740,7 @@ void Engine::TimeManagement(int depth) {
 }
 
 void Engine::CheckTime() {
+    std::lock_guard<std::mutex>(info.mutex_key);
     int64 time2 = getTime();
     if (time2 - info.last_time > 1000) {
         int64 time = time2 - info.start_time;
@@ -835,8 +815,8 @@ void Engine::GetBestMove(Thread& sthread) {
             || (PcValSEE[moveCapture(entry->pvMove())] > PcValSEE[movePiece(entry->pvMove())]))) {
             info.bestmove = entry->pvMove();
             info.best_value = entry->pvScore();
-            search->extractPvMovesFromHash(rootpos, info.rootPV, entry->pvMove());
-            search->displayPV(info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
+            ExtractPvMovesFromHash(rootpos, info.rootPV, entry->pvMove());
+            DisplayPV(info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
             if (info.rootPV.length > 1) info.pondermove = info.rootPV.moves[1];
             else info.pondermove = 0;
             StopSearch();
@@ -879,15 +859,12 @@ void Engine::GetBestMove(Thread& sthread) {
                 search->searchNode<true, false, false>(rootpos, alpha, beta, id, ss, sthread, PVNode);
 
                 if (!info.stop_search || info.best_value != -INF) {
-                    if (info.best_value <= alpha || info.best_value >= beta) {
-                        search->extractPvMovesFromHash2(rootpos, info.rootPV, ss.counterMove);
-                    }
-                    else {
-                        search->extractPvMovesFromHash(rootpos, info.rootPV, ss.counterMove);
-                        search->repopulateHash(rootpos, info.rootPV);
+                    if (info.best_value > alpha && info.best_value < beta) {
+                        ExtractPvMovesFromHash(rootpos, info.rootPV, ss.counterMove);
+                        RepopulateHash(rootpos, info.rootPV);
                     }
                     if (SHOW_SEARCH && id >= 8) {
-                        search->displayPV(info.rootPV, info.multipvIdx, id, alpha, beta, info.best_value);
+                        DisplayPV(info.rootPV, info.multipvIdx, id, alpha, beta, info.best_value);
                     }
                 }
                 if (info.stop_search) break;
@@ -903,15 +880,11 @@ void Engine::GetBestMove(Thread& sthread) {
                 }
                 else break;
             }
-            if (info.stop_search) break; // TODO: refactor this
+            if (info.stop_search) break;
         }
-        if (info.stop_search) break; // TODO: refactor this
-        TimeManagement(id);
-        if (info.stop_search) break; // TODO: refactor this
-        if (info.best_value != -INF) {
-            info.last_last_value = info.last_value;
-            info.last_value = info.best_value;
-        }
+        if (!info.stop_search) TimeManagement(id);
+        if (info.stop_search) break;
+        if (info.best_value != -INF) info.last_value = info.best_value;
     }
     if (!info.stop_search) {
         if ((info.depth_is_limited || info.time_is_limited) && info.thinking_status == THINKING) {

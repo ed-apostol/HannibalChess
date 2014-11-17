@@ -142,7 +142,6 @@ struct SearchInfo {
         alloc_time = 0;
         best_value = -INF;
         last_value = -INF;
-        last_last_value = -INF;
         change = 0;
         research = 0;
         iteration = 0;
@@ -183,14 +182,13 @@ struct SearchInfo {
     volatile int64 last_time;
     int64 alloc_time;
 
-    int last_last_value;
-    int last_value;
-    int best_value;
+    volatile int last_value;
+    volatile int best_value;
 
     int mate_found;
     int currmovenumber;
-    int change;
-    int research;
+    volatile int change;
+    volatile int research;
     int iteration;
 
     int multipvIdx;
@@ -202,6 +200,8 @@ struct SearchInfo {
     basic_move_t moves[MAXMOVES];
     bool mvlist_initialized;
     continuation_t rootPV;
+
+    std::mutex mutex_key;
 };
 
 class Search;
@@ -213,6 +213,9 @@ public:
     void StopSearch();
     void PonderHit();
     void SendBestMove();
+    void ExtractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_move_t move);
+    void RepopulateHash(position_t& pos, continuation_t& rootPV);
+    void DisplayPV(continuation_t& pv, int multipvIdx, int depth, int alpha, int beta, int score);
     void TimeManagement(int depth);
     void CheckTime();
     void SearchFromIdleLoop(SplitPoint& sp, Thread& sthread);
