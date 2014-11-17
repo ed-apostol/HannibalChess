@@ -259,8 +259,9 @@ public:
     }
     void SetNumThreads(int num) {
         while (mThreads.size() < num) {
+            using namespace std::placeholders;
             int id = (int)mThreads.size();
-            mThreads.push_back(new Thread(id, mThreads, *this));
+            mThreads.push_back(new Thread(id, mThreads, std::bind(&Engine::GetBestMove, this, _1), std::bind(&Engine::SearchFromIdleLoop, this, _1, _2)));
         }
         while (mThreads.size() > num) {
             delete mThreads.back();

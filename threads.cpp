@@ -43,7 +43,7 @@ void Thread::IdleLoop() {
         }
         if (!exit_flag && !doSleep && master_sp == nullptr && thread_id == 0) {
             LogInfo() << "IdleLoop: Main thread waking up to start searching!";
-            mEngine.GetBestMove(*this);
+            CBGetBestMove(*this);
             doSleep = true;
         }
         if (!exit_flag && !doSleep && stop) {
@@ -51,7 +51,7 @@ void Thread::IdleLoop() {
         }
         if (!exit_flag && !doSleep && !stop) {
             SplitPoint* const sp = activeSplitPoint;
-            mEngine.SearchFromIdleLoop(*sp, *this);
+            CBSearchFromIdleLoop(*sp, *this);
             std::lock_guard<Spinlock> lck(sp->updatelock);
             sp->workersBitMask &= ~((uint64)1 << thread_id);
             stop = true;
@@ -147,6 +147,6 @@ void TimerThread::IdleLoop() {
             sleepCondition.wait_until(lk, stop ? now + std::chrono::hours(INT_MAX) : now + std::chrono::milliseconds(5));
             doSleep = true; // this is necessary
         }
-        if (!exit_flag && !stop) mEngine.CheckTime();
+        if (!exit_flag && !stop) CBFuncCheckTimer();
     }
 }

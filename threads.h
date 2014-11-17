@@ -133,11 +133,14 @@ class Engine; // HACK: forward declare
 class Thread : public ThreadBase {
 public:
     static const int MaxNumSplitPointsPerThread = 8;
+    typedef std::function<void(Thread&)> CBFuncThink;
+    typedef std::function<void(SplitPoint&, Thread&)> CBFuncSearch;
 
-    Thread(int _thread_id, std::vector<Thread*>& _thread_group, Engine& _engine) :
+    Thread(int _thread_id, std::vector<Thread*>& _thread_group, CBFuncThink _getbest, CBFuncSearch _searchfromidle) :
         ThreadBase(_thread_id),
         mThreadGroup(_thread_group),
-        mEngine(_engine) {
+        CBGetBestMove(_getbest),
+        CBSearchFromIdleLoop(_searchfromidle) {
         Init();
         NativeThread() = std::thread(&Thread::IdleLoop, this);
     }
@@ -162,16 +165,17 @@ public:
 private:
     SplitPoint sptable[MaxNumSplitPointsPerThread];
     std::vector<Thread*>& mThreadGroup;
-    Engine& mEngine;
+    CBFuncThink CBGetBestMove;
+    CBFuncSearch CBSearchFromIdleLoop;
 };
 
 class TimerThread : public ThreadBase {
 public:
-    TimerThread(Engine& _engine) : ThreadBase(0), mEngine(_engine) {
+    TimerThread(std::function<void()> _cbfunc) : ThreadBase(0), CBFuncCheckTimer(_cbfunc) {
         Init();
         NativeThread() = std::thread(&TimerThread::IdleLoop, this);
     }
     void IdleLoop();
 private:
-    Engine& mEngine;
+    std::function<void()> CBFuncCheckTimer;
 };

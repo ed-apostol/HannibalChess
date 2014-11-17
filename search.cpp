@@ -683,7 +683,7 @@ void Search::repopulateHash(position_t& pos, continuation_t& rootPV) {
 Engine::Engine() {
     mThinking.clear(std::memory_order_release);
     search = new Search(*this, info, transtable, pvhashtable);
-    mTimerThread = new TimerThread(*this);
+    mTimerThread = new TimerThread(std::bind(&Engine::CheckTime, this));
 
     InitUCIOptions();
     SetNumThreads(uci_opt[ThreadsStr].GetInt());
