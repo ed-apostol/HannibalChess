@@ -159,7 +159,7 @@ move_t* sortNext(SplitPoint* sp, SearchInfo& info, position_t& pos, movelist_t& 
                 break;
             case PH_TRANS:
                 if (!genMoveIfLegal(pos, move->m, mvlist.pinned)) continue;
-                if (mvlist.depth <= 0 && !moveIsTactical(move->m)/* && !moveIsCheck(pos, move->m, discoveredCheckCandidates(pos, pos.side))*/) {
+                if (mvlist.depth <= 0 && !moveIsTactical(move->m)) {
                     mvlist.transmove = EMPTY;
                     continue;
                 }
@@ -235,6 +235,7 @@ move_t* sortNext(SplitPoint* sp, SearchInfo& info, position_t& pos, movelist_t& 
             else {
                 // generate all legal moves at least in the root
                 genLegal(pos, mvlist, true);
+                info.bestmove = mvlist.list[0].m; // to avoid time losses on very fast TC
             }
             scoreRoot(mvlist);
             info.mvlist_initialized = true;

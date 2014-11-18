@@ -81,7 +81,7 @@ bool Interface::Input(std::istringstream& stream) {
 }
 
 void Interface::Quit() {
-    Stop();
+    cEngine.StopSearch();
     cEngine.WaitForThinkFinished();
     LogInfo() << "Interface quit";
 }

@@ -141,12 +141,9 @@ void Thread::SearchSplitPoint(const position_t& pos, SearchStack* ss, SearchStac
 
 void TimerThread::IdleLoop() {
     while (!exit_flag) {
-        if (!exit_flag && doSleep) {
-            std::unique_lock<std::mutex> lk(threadLock);
-            auto now = std::chrono::system_clock::now();
-            sleepCondition.wait_until(lk, stop ? now + std::chrono::hours(INT_MAX) : now + std::chrono::milliseconds(5));
-            doSleep = true; // this is necessary
-        }
+        std::unique_lock<std::mutex> lk(threadLock);
+        auto now = std::chrono::system_clock::now();
+        sleepCondition.wait_until(lk, stop ? now + std::chrono::hours(INT_MAX) : now + std::chrono::milliseconds(5));
         if (!exit_flag && !stop) CBFuncCheckTimer();
     }
 }

@@ -200,8 +200,6 @@ struct SearchInfo {
     basic_move_t moves[MAXMOVES];
     bool mvlist_initialized;
     continuation_t rootPV;
-
-    std::mutex mutex_key;
 };
 
 class Search;
@@ -297,7 +295,6 @@ public:
             th->doSleep = true;
         }
         mTimerThread->stop = true;
-        mTimerThread->doSleep = true;
     }
     void SetAllThreadsToWork() {
         for (Thread* th : mThreads) {

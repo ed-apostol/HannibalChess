@@ -696,7 +696,6 @@ void Engine::TimeManagement(int depth) {
     static const int WORSE_TIME_BONUS = 20; //how many points more than 20 it takes to increase time by alloc to a maximum of 2*alloc
     static const int CHANGE_TIME_BONUS = 50; //what percentage of alloc to increase if the last move is a change move
 
-    std::lock_guard<std::mutex>(info.mutex_key);
     if (info.best_value > INF - MAXPLY) info.mate_found++;
     if (info.thinking_status == THINKING && info.time_is_limited) {
         int64 timeElapsed = getTime();
@@ -740,7 +739,6 @@ void Engine::TimeManagement(int depth) {
 }
 
 void Engine::CheckTime() {
-    std::lock_guard<std::mutex>(info.mutex_key);
     int64 time2 = getTime();
     if (time2 - info.last_time > 1000) {
         int64 time = time2 - info.start_time;
@@ -957,7 +955,7 @@ void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     }
     if (mytime > 0) {
         info.time_is_limited = true;
-        mytime = mytime - info.time_buffer;
+        mytime -= info.time_buffer;
         if (mytime < 0) mytime = 0;
         if (data.movestogo <= 0 || data.movestogo > 32) data.movestogo = 32;
         info.time_limit_max = (mytime / data.movestogo) + ((t_inc * 4) / 5);
