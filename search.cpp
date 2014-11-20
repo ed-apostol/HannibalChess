@@ -492,8 +492,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             ss.firstExtend = ss.firstExtend || (inCheck && ss.mvlist->size == 1);
         }
     }
-
-    int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 4) : (depth * depth));
+    int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 2) : (depth * depth)); 
     move_t* move;
     while ((move = sortNext(sp, pos, ss.mvlist, ss.mvlist_phase, sthread)) != NULL) {
         int score = -INF;
@@ -527,7 +526,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     && !ss.moveGivesCheck);
                 if (pruneOrReduce) {
                     bool skipFutility = (inCheck || (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsPassedPawn(pos, move->m));
-                    if (!inRoot && !inPvNode(nt) && !skipFutility) {
+                    if (!inRoot && !inPvNode(nt) /*&& !skipFutility*/) {
                         if (ss.playedMoves > lateMove) continue;
                         int predictedDepth = MAX(0, newdepth - ReductionTable[1][MIN(depth, 63)][MIN(ss.playedMoves, 63)]);
                         int scoreAprox = ss.evalvalue + FutilityMarginTable[MIN(predictedDepth, MAX_FUT_MARGIN)][MIN(ss.playedMoves, 63)]
