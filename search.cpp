@@ -304,18 +304,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         beta = MIN(INF - pos.ply - 1, beta);
         if (alpha >= beta) return alpha;
 
-        if (inPvNode(nt)) {
-            PvHashEntry* entry = mPVHashTable.pvEntry(pos.posStore.hash);
-            if (entry != nullptr && entry->pvDepth() >= depth) {
-                int score = scoreFromTrans(entry->pvScore(), pos.ply);
-                if (score > alpha && score < beta) {
-                    ss.bestmove = ssprev.counterMove = entry->pvMove();
-                    UpdateHistory(pos, ss, sthread, depth);
-                    return score;
-                }
-            }
-        }
-
         for (TransEntry *entry = mTransTable.Entry(pos.posStore.hash), *end = entry + mTransTable.BucketSize(); entry != end; ++entry) {
             if (entry->HashLock() == LOCK(pos.posStore.hash)) {
                 entry->SetAge(mTransTable.Date());
