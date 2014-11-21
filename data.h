@@ -40,7 +40,7 @@ extern int ReductionTable[2][64][64];
 #define MoveGenPhaseEvasion 0
 #define MoveGenPhaseStandard (MoveGenPhaseEvasion+3)
 #define MoveGenPhaseQuiescenceAndChecksPV (MoveGenPhaseStandard+7)
-#define MoveGenPhaseQuiescence (MoveGenPhaseQuiescenceAndChecksPV+6)
+#define MoveGenPhaseQuiescence (MoveGenPhaseQuiescenceAndChecksPV+5)
 #define MoveGenPhaseQuiescenceAndChecks (MoveGenPhaseQuiescence+4)
 #define MoveGenPhaseQuiescencePV (MoveGenPhaseQuiescenceAndChecks+5)
 #define MoveGenPhaseRoot (MoveGenPhaseQuiescencePV+4)
