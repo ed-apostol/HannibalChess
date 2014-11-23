@@ -27,10 +27,9 @@
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
 const std::string Interface::year = "2014";
-const std::string Interface::version = "1.5x24";
+const std::string Interface::version = "1.5x24e2";
 const std::string Interface::arch = "x64";
 
-// TODO: add Engine class parameters to UCI commands
 
 void Interface::Info() {
     LogAndPrintOutput() << name << " " << version << " " << arch;
@@ -64,15 +63,15 @@ bool Interface::Input(std::istringstream& stream) {
     std::string command;
     stream >> command;
 
-    if (command == "stop") Stop();
-    else if (command == "ponderhit") PonderHit();
-    else if (command == "go") Go(stream);
-    else if (command == "position") Position(stream);
-    else if (command == "setoption") SetOption(stream);
-    else if (command == "ucinewgame") NewGame();
+    if (command == "stop") Stop(cEngine);
+    else if (command == "ponderhit") PonderHit(cEngine);
+    else if (command == "go") Go(cEngine, input_pos, stream);
+    else if (command == "position") Position(input_pos, stream);
+    else if (command == "setoption") SetOption(cEngine, stream);
+    else if (command == "ucinewgame") NewGame(cEngine);
     else if (command == "isready") LogAndPrintOutput() << "readyok";
-    else if (command == "uci") Id();
-    else if (command == "quit") { Quit(); return false; }
+    else if (command == "uci") Id(cEngine);
+    else if (command == "quit") { Quit(cEngine); return false; }
     else if (command == "speedup") CheckSpeedup(stream);
     else if (command == "split") CheckBestSplit(stream);
     else LogAndPrintError() << "Unknown UCI command: " << command;
@@ -80,29 +79,29 @@ bool Interface::Input(std::istringstream& stream) {
     return true;
 }
 
-void Interface::Quit() {
-    cEngine.StopSearch();
-    cEngine.WaitForThinkFinished();
+void Interface::Quit(Engine& engine) {
+    engine.StopSearch();
+    engine.WaitForThinkFinished();
     LogInfo() << "Interface quit";
 }
 
-void Interface::Id() {
+void Interface::Id(Engine& engine) {
     LogAndPrintOutput() << "id name " << name << " " << version << " " << arch;
     LogAndPrintOutput() << "id author " << author;
-    cEngine.PrintUCIOptions();
+    engine.PrintUCIOptions();
     LogAndPrintOutput() << "uciok";
 }
 
-void Interface::Stop() {
-    cEngine.StopSearch();
+void Interface::Stop(Engine& engine) {
+    engine.StopSearch();
     LogInfo() << "info string Aborting search: stop";
 }
 
-void Interface::PonderHit() {
-    cEngine.PonderHit();
+void Interface::PonderHit(Engine& engine) {
+    engine.PonderHit();
 }
 
-void Interface::Go(std::istringstream& stream) {
+void Interface::Go(Engine& engine, position_t& pos, std::istringstream& stream) {
     std::string command;
     GoCmdData data;
 
@@ -123,10 +122,10 @@ void Interface::Go(std::istringstream& stream) {
         command = "";
         stream >> command;
     }
-    cEngine.StartThinking(data, input_pos);
+    engine.StartThinking(data, pos);
 }
 
-void Interface::Position(std::istringstream& stream) {
+void Interface::Position(position_t& pos, std::istringstream& stream) {
     basic_move_t m;
     std::string token, fen;
 
@@ -144,32 +143,32 @@ void Interface::Position(std::istringstream& stream) {
         return;
     }
 
-    setPosition(input_pos, fen.c_str());
+    setPosition(pos, fen.c_str());
     while (stream >> token) {
         movelist_t ml;
-        genLegal(input_pos, ml, true);
+        genLegal(pos, ml, true);
         m = parseMove(ml, token.c_str());
-        if (m) makeMove(input_pos, UndoStack[input_pos.sp], m);
+        if (m) makeMove(pos, UndoStack[pos.sp], m);
         else break;
-        if (input_pos.posStore.fifty == 0) input_pos.sp = 0;
+        if (pos.posStore.fifty == 0) pos.sp = 0;
     }
-    input_pos.ply = 0;
+    pos.ply = 0;
 }
 
-void Interface::SetOption(std::istringstream& stream) {
+void Interface::SetOption(Engine& engine, std::istringstream& stream) {
     std::string token, name, value;
     stream >> token;
     while (stream >> token && token != "value") name += std::string(" ", !name.empty()) + token;
     while (stream >> token) value += std::string(" ", !value.empty()) + token;
-    if (cEngine.uci_opt.count(name)) cEngine.uci_opt[name] = value;
+    if (engine.uci_opt.count(name)) engine.uci_opt[name] = value;
     else LogAndPrintOutput() << "No such option: " << name;
 }
 
-void Interface::NewGame() {
-    cEngine.ClearPawnHash();
-    cEngine.ClearEvalHash();
-    cEngine.ClearTTHash();
-    cEngine.ClearPVTTHash();
+void Interface::NewGame(Engine& engine) {
+    engine.ClearPawnHash();
+    engine.ClearEvalHash();
+    engine.ClearTTHash();
+    engine.ClearPVTTHash();
 }
 
 Interface::~Interface() {}
@@ -196,16 +195,16 @@ void Interface::CheckSpeedup(std::istringstream& stream) {
         uint64 spentTime1 = 0;
         for (int idxthread = 0; idxthread < threads.size(); ++idxthread) {
             streamcmd = std::istringstream("name Threads value " + std::to_string(threads[idxthread]));
-            SetOption(streamcmd);
-            NewGame();
+            SetOption(cEngine, streamcmd);
+            NewGame(cEngine);
 
             streamcmd = std::istringstream("fen " + fenPos[idxpos]);
-            Position(streamcmd);
+            Position(input_pos, streamcmd);
 
             int64 startTime = getTime();
 
             streamcmd = std::istringstream("depth " + std::to_string(depth));
-            Go(streamcmd);
+            Go(cEngine, input_pos, streamcmd);
 
             cEngine.WaitForThinkFinished();
             cEngine.SetThinkFinished();
@@ -263,22 +262,22 @@ void Interface::CheckBestSplit(std::istringstream& stream) {
     nodesSum.resize(splits.size(), 0.0);
 
     streamcmd = std::istringstream("name Threads value " + std::to_string(threads));
-    SetOption(streamcmd);
+    SetOption(cEngine, streamcmd);
 
     for (int idxpos = 0; idxpos < fenPos.size(); ++idxpos) {
         LogAndPrintOutput() << "\n\nPos#" << idxpos + 1 << ": " << fenPos[idxpos];
         for (int idxsplit = 0; idxsplit < splits.size(); ++idxsplit) {
             streamcmd = std::istringstream("name Min Split Depth value " + std::to_string(splits[idxsplit]));
-            SetOption(streamcmd);
-            NewGame();
+            SetOption(cEngine, streamcmd);
+            NewGame(cEngine);
 
             streamcmd = std::istringstream("fen " + fenPos[idxpos]);
-            Position(streamcmd);
+            Position(input_pos, streamcmd);
 
             int64 startTime = getTime();
 
             streamcmd = std::istringstream("depth " + std::to_string(depth));
-            Go(streamcmd);
+            Go(cEngine, input_pos, streamcmd);
 
             cEngine.WaitForThinkFinished();
             cEngine.SetThinkFinished();
