@@ -18,8 +18,6 @@
 #include <iostream>
 #include <string>
 
-Book PolyBook;
-
 #define NO_MOVE 0
 const int MAX_MOVES = 256;
 const int Polyglot_Entry_Size = 16;
@@ -41,7 +39,7 @@ bool move_in_list(const basic_move_t m, const movelist_t *ml) {
 }
 
 int int_from_file(FILE *f, int l, uint64 *r) {
-    if (f == NULL) {
+    if (f == nullptr) {
         LogAndPrintWarning() << "info string NULL file int_from_file";
         return 0;
     }
@@ -67,7 +65,8 @@ basic_move_t polyglot_move_to_move(uint16 move, position_t& pos) {
     if (promotePiece) {
         if (capturedPiece) {
             return GenPromote(from, to, promotePiece, capturedPiece);
-        } else {
+        }
+        else {
             return GenPromoteStraight(from, to, promotePiece);
         }
     }
@@ -98,7 +97,7 @@ int Book::entry_from_polyglot_file(PolyglotBookEntry *entry, position_t& pos) {
 long Book::find_polyglot_key(uint64 key, PolyglotBookEntry *entry, position_t& pos) {
     long first, last, middle;
     PolyglotBookEntry first_entry = PolyglotBookEntryNone, last_entry, middle_entry;
-    if (bookFile == NULL) {
+    if (bookFile == nullptr) {
         *entry = PolyglotBookEntryNone;
         entry->key = key + 1; //hack, should not be necessary if no entry can be 0
         LogAndPrintWarning() << "info string NULL file find_polyglot_key";
@@ -123,7 +122,8 @@ long Book::find_polyglot_key(uint64 key, PolyglotBookEntry *entry, position_t& p
         if (key <= middle_entry.key) {
             last = middle;
             last_entry = middle_entry;
-        } else {
+        }
+        else {
             first = middle;
             first_entry = middle_entry;
         }
@@ -131,11 +131,11 @@ long Book::find_polyglot_key(uint64 key, PolyglotBookEntry *entry, position_t& p
 }
 
 void Book::initBook(std::string book_name) {
-    if (bookFile != NULL) fclose(bookFile);
+    if (bookFile != nullptr) fclose(bookFile);
     bookFile = fopen(book_name.c_str(), "rb");
     name = book_name;
 
-    if (bookFile != NULL) {
+    if (bookFile != nullptr) {
         fseek(bookFile, 0, SEEK_END);
         size = ftell(bookFile) / Polyglot_Entry_Size;
     }
@@ -147,7 +147,7 @@ basic_move_t Book::getBookMove(position_t& pos) {
     uint64 totalWeight = 0;
     long offset;
 
-    if (bookFile == NULL || size == 0) {
+    if (bookFile == nullptr || size == 0) {
         return NO_MOVE;
     }
     PolyglotBookEntry entry;
@@ -158,7 +158,7 @@ basic_move_t Book::getBookMove(position_t& pos) {
         return NO_MOVE;
     }
     movelist_t moves;
-    genLegal(pos, &moves, true);
+    genLegal(pos, moves, true);
     entries[numMoves] = entry;
     if (move_in_list(entry.move, &moves)) {
         totalWeight += entry.weight;
@@ -184,7 +184,7 @@ basic_move_t Book::getBookMove(position_t& pos) {
     // chose here the move from the array and verify if it exists in the movelist
     uint64 bookRandom = rand() % totalWeight; //TODO do a real randomization
     uint64 bookIndex = 0;
-    for (int i = 0; i<numMoves; i++) {
+    for (int i = 0; i < numMoves; i++) {
         bookIndex += entries[i].weight;
         if (bookIndex > bookRandom) {
             return entries[i].move;

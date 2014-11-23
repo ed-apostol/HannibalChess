@@ -22,7 +22,7 @@ extern int getPiece(const position_t& pos, uint32 sq);
 extern int getColor(const position_t& pos, uint32 sq);
 extern int DiffColor(const position_t& pos, uint32 sq, int color);
 extern uint64 getTime(void);
-extern uint32 parseMove(movelist_t *mvlist, const char *s);
+extern uint32 parseMove(movelist_t& mvlist, const char *s);
 extern int getDirIndex(int d);
 extern bool anyRep(const position_t& pos);
 extern bool anyRepNoMove(const position_t& pos, const int m);
@@ -50,7 +50,7 @@ public:
     }
     ~Log() {
         if (level > logNONE && level <= ClearanceLevel) {
-            static const std::string LevelText[6] = {"NONE", "OUT", "ERROR", "WARNING", "INFO", "DEBUG"};
+            static const std::string LevelText[6] = { "NONE", "OUT", "ERROR", "WARNING", "INFO", "DEBUG" };
             _buffer << std::endl;
             if (out) {
                 if (level == logOUT) std::cout << _buffer.str();

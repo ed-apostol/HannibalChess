@@ -105,5 +105,3 @@ enum ThinkingStatus {
 #define LOCK(x)             (uint32)((x)>>32)
 #define KEY(x)              (uint32)(x)
 //#define SETHASH(l,k)        (uint64)(((l)<<32)|(k))
-
-

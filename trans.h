@@ -13,7 +13,7 @@ template <typename Entity>
 class BaseHashTable {
 public:
     BaseHashTable() :
-        mpTable(NULL),
+        mpTable(nullptr),
         mSize(0),
         mMask(0),
         mBucketSize(0) {}
@@ -21,7 +21,7 @@ public:
         delete[] mpTable;
     }
     virtual void Clear() {
-        memset(mpTable, 0, mSize * sizeof (Entity));
+        memset(mpTable, 0, mSize * sizeof(Entity));
     }
     Entity* Entry(const uint64 hash) const {
         return &mpTable[KEY(hash) & mMask];
@@ -31,11 +31,12 @@ public:
         mBucketSize = bucket_size;
         if (target < 1) target = 1;
         target *= 1024 * 1024;
-        while (size * sizeof (Entity) <= target) size *= 2;
+        while (size * sizeof(Entity) <= target) size *= 2;
         size = size / 2;
         if (size + bucket_size - 1 == mSize) {
             Clear();
-        } else {
+        }
+        else {
             mSize = size + bucket_size - 1;
             mMask = size - 1;
             delete[] mpTable;
@@ -102,7 +103,7 @@ private:
     uint8 mAge;
 };
 
-class PvHashTable : public BaseHashTable<PvHashEntry> {
+class PvHashTable : public BaseHashTable < PvHashEntry > {
 public:
     static const int DATESIZE = 256;
     static const int BUCKET = 8;
@@ -125,10 +126,10 @@ private:
 
 struct PawnEntry {
     PawnEntry() :
-    hashlock(0),
-    passedbits(0),
-    opn(0),
-    end(0) {
+        hashlock(0),
+        passedbits(0),
+        opn(0),
+        end(0) {
         shelter[0] = shelter[1] = 0;
         kshelter[0] = kshelter[1] = 0;
         qshelter[0] = qshelter[1] = 0;
@@ -142,22 +143,22 @@ struct PawnEntry {
     int8 qshelter[2];
 };
 
-class PawnHashTable : public BaseHashTable<PawnEntry> {
+class PawnHashTable : public BaseHashTable < PawnEntry > {
 public:
     static const int BUCKET = 1;
 };
 
 struct EvalEntry {
     EvalEntry() :
-    hashlock(0),
-    value(0),
-    pessimism(0) {}
+        hashlock(0),
+        value(0),
+        pessimism(0) {}
     uint32 hashlock;
     int16 value;
     int16 pessimism;
 };
 
-class EvalHashTable : public BaseHashTable<EvalEntry> {
+class EvalHashTable : public BaseHashTable < EvalEntry > {
 public:
     static const int BUCKET = 1;
 };
@@ -239,7 +240,7 @@ private:
     uint8 mLowerDepth;
 };
 
-class TranspositionTable : public BaseHashTable<TransEntry> {
+class TranspositionTable : public BaseHashTable < TransEntry > {
 public:
     static const int DATESIZE = 256;
     static const int BUCKET = 4;

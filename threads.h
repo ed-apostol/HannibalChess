@@ -36,9 +36,9 @@ struct SplitPoint {
         Init();
     }
     void Init() {
-        parent = NULL;
-        sscurr = NULL;
-        ssprev = NULL;
+        parent = nullptr;
+        sscurr = nullptr;
+        ssprev = nullptr;
         depth = 0;
         inCheck = false;
         inRoot = false;
@@ -122,17 +122,25 @@ public:
     volatile bool stop;
     volatile bool doSleep;
     volatile bool exit_flag;
-private:
+protected:
     std::thread nativeThread;
     std::condition_variable sleepCondition;
     std::mutex threadLock;
 };
 
+class Engine; // HACK: forward declare
+
 class Thread : public ThreadBase {
 public:
     static const int MaxNumSplitPointsPerThread = 8;
+    typedef std::function<void(Thread&)> CBFuncThink;
+    typedef std::function<void(SplitPoint&, Thread&)> CBFuncSearch;
 
-    Thread(int _thread_id, std::vector<Thread*>* const _thread_group) : ThreadBase(_thread_id), mThreadGroup(_thread_group) {
+    Thread(int _thread_id, std::vector<Thread*>& _thread_group, CBFuncThink _getbest, CBFuncSearch _searchfromidle) :
+        ThreadBase(_thread_id),
+        mThreadGroup(_thread_group),
+        CBGetBestMove(_getbest),
+        CBSearchFromIdleLoop(_searchfromidle) {
         Init();
         NativeThread() = std::thread(&Thread::IdleLoop, this);
     }
@@ -146,7 +154,7 @@ public:
     uint64 numsplits2; // DEBUG
     uint64 workers2; // DEBUG
     uint64 nodes;
-    
+
     volatile int num_sp;
     SplitPoint *activeSplitPoint;
     ThreadStack ts[MAXPLY];
@@ -156,7 +164,18 @@ public:
     PawnHashTable pt;
 private:
     SplitPoint sptable[MaxNumSplitPointsPerThread];
-    std::vector<Thread*>* mThreadGroup;
+    std::vector<Thread*>& mThreadGroup;
+    CBFuncThink CBGetBestMove;
+    CBFuncSearch CBSearchFromIdleLoop;
 };
 
-
+class TimerThread : public ThreadBase {
+public:
+    TimerThread(std::function<void()> _cbfunc) : ThreadBase(0), CBFuncCheckTimer(_cbfunc) {
+        Init();
+        NativeThread() = std::thread(&TimerThread::IdleLoop, this);
+    }
+    void IdleLoop();
+private:
+    std::function<void()> CBFuncCheckTimer;
+};

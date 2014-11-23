@@ -17,25 +17,25 @@
 #include "bitutils.h"
 
 int mpawn(int sq) {
-    int central[8] = {2, 1, 0, -1, -1, -1, -1, -1};
-    int file[8] = {-16, -7, -1, 5, 5, -1, -7, -16};
-    int rank[8] = {0, -3, -2, 0, 1, 2, 0, 0};
+    int central[8] = { 2, 1, 0, -1, -1, -1, -1, -1 };
+    int file[8] = { -16, -7, -1, 5, 5, -1, -7, -16 };
+    int rank[8] = { 0, -3, -2, 0, 1, 2, 0, 0 };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
 }
 int epawn(int sq) {
-    int file[8] = {-4, -5, -7, -8, -8, -7, -5, -4};
-    int rank[8] = {0, -2, -3, 1, 4, 7, 1, 0};
+    int file[8] = { -4, -5, -7, -8, -8, -7, -5, -4 };
+    int rank[8] = { 0, -2, -3, 1, 4, 7, 1, 0 };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (file[f] + rank[r]);
 }
 
 int outpost(int sq) {
-    int central[8] = {7, 6, 5, 4, 3, 2, 1, 0};
-    int file[8] = {-20, -8, -2, 0, 0, -2, -8, -20};
-    int rank[8] = {-20, -20, -5, 1, 5, 1, -5, -10};
+    int central[8] = { 7, 6, 5, 4, 3, 2, 1, 0 };
+    int file[8] = { -20, -8, -2, 0, 0, -2, -8, -20 };
+    int rank[8] = { -20, -20, -5, 1, 5, 1, -5, -10 };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     int value = (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
@@ -44,37 +44,37 @@ int outpost(int sq) {
 }
 int mknight(int sq) {
     //    int central[8] = {2,1,0,-1,-1,-1,-1,-1};
-    int file[8] = {-26, -9, 2, 5, 5, 2, -9, -26};
-    int rank[8] = {-30, -9, 6, 16, 20, 19, 11, -11};
+    int file[8] = { -26, -9, 2, 5, 5, 2, -9, -26 };
+    int rank[8] = { -30, -9, 6, 16, 20, 19, 11, -11 };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (file[f] + rank[r]);
     //    return (central[abs(f-r)] + central[abs(f+r-7)] + file[f] + rank[r]); //CEN
 }
 int eknight(int sq) {
-    int central[8] = {3, 2, 1, 0, -2, -4, -6, -8};
-    int file[8] = {-10, -3, 0, 2, 2, 0, -3, -10};
-    int rank[8] = {-10, -4, -1, 2, 4, 6, 3, -5};
+    int central[8] = { 3, 2, 1, 0, -2, -4, -6, -8 };
+    int file[8] = { -10, -3, 0, 2, 2, 0, -3, -10 };
+    int rank[8] = { -10, -4, -1, 2, 4, 6, 3, -5 };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
 }
 int mbishop(int sq) {
-    int central[8] = {11, 6, 2, -2, -4, -6, -7, -11};
-    int rank[8] = {-7, 0, 0, 0, 0, 0, 0, -1};
+    int central[8] = { 11, 6, 2, -2, -4, -6, -7, -11 };
+    int rank[8] = { -7, 0, 0, 0, 0, 0, 0, -1 };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)] + rank[r]);
 }
 
 int ebishop(int sq) {
-    int central[8] = {5, 3, 1, 1, -2, -2, -3, -5};
+    int central[8] = { 5, 3, 1, 1, -2, -2, -3, -5 };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)]);
 }
 int mrook(int sq) {
-    int file[8] = {-2, 1, 4, 7, 7, 4, 1, -2};
+    int file[8] = { -2, 1, 4, 7, 7, 4, 1, -2 };
     int f = SQFILE(sq);
     return (file[f]);
 }
@@ -82,17 +82,17 @@ int erook(int sq) {
     return 0;
 }
 int mqueen(int sq) {
-    int central[8] = {4, 2, 0, -1, -2, -4, -6, -9};
-    int file[8] = {-3, 0, 1, 3, 3, 1, 0, -3};
-    int rank[8] = {-7, 0, 0, 1, 1, 0, 0, -1};
+    int central[8] = { 4, 2, 0, -1, -2, -4, -6, -9 };
+    int file[8] = { -3, 0, 1, 3, 3, 1, 0, -3 };
+    int rank[8] = { -7, 0, 0, 1, 1, 0, 0, -1 };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
 }
 int equeen(int sq) {
-    int central[8] = {3, 2, 1, -1, -3, -5, -7, -11};
-    int file[8] = {-3, 0, 1, 3, 3, 1, 0, -3};
-    int rank[8] = {-3, 0, 1, 3, 3, 1, 0, -3};
+    int central[8] = { 3, 2, 1, -1, -3, -5, -7, -11 };
+    int file[8] = { -3, 0, 1, 3, 3, 1, 0, -3 };
+    int rank[8] = { -3, 0, 1, 3, 3, 1, 0, -3 };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
@@ -108,8 +108,8 @@ int equeen(int sq) {
 #define MKR4 4 //4
 #define MKR5 4 //4
 int mking(int sq) {
-    int file[8] = {MKF2 - MKF1, MKF2, 0, -MKF3, -MKF3, 0, MKF2, MKF2 - MKF1};
-    int rank[8] = {MKR1, 0, -MKR2, -MKR2 - MKR3, -MKR2 - MKR3 - MKR4, -MKR2 - MKR3 - MKR4 - MKR5, -MKR2 - MKR3 - MKR4 - MKR5, -MKR2 - MKR3 - MKR4 - MKR5};
+    int file[8] = { MKF2 - MKF1, MKF2, 0, -MKF3, -MKF3, 0, MKF2, MKF2 - MKF1 };
+    int rank[8] = { MKR1, 0, -MKR2, -MKR2 - MKR3, -MKR2 - MKR3 - MKR4, -MKR2 - MKR3 - MKR4 - MKR5, -MKR2 - MKR3 - MKR4 - MKR5, -MKR2 - MKR3 - MKR4 - MKR5 };
 
     int f = SQFILE(sq);
     int r = SQRANK(sq);
@@ -117,9 +117,9 @@ int mking(int sq) {
 }
 
 int eking(int sq) {
-    int central[8] = {0, -2, -4, -7, -10, -14, -23, -32};
-    int file[8] = {-13, 1, 11, 16, 16, 11, 1, -13};
-    int rank[8] = {-29, -4, 1, 6, 10, 6, 1, -10};
+    int central[8] = { 0, -2, -4, -7, -10, -14, -23, -32 };
+    int file[8] = { -13, 1, 11, 16, 16, 11, 1, -13 };
+    int rank[8] = { -29, -4, 1, 6, 10, 6, 1, -10 };
 
     int f = SQFILE(sq);
     int r = SQRANK(sq);
@@ -323,14 +323,14 @@ uint64 RMagicHash(int i, uint64 occ) {
 /* this initializes the pseudo-constant variables used in the program */
 void initArr(void) {
     int i, j, m, k, n;
-    const int kingd[] = {-9, -1, 7, 8, 9, 1, -7, -8};
-    const int knightd[] = {-17, -10, 6, 15, 17, 10, -6, -15};
-    const int wpawnd[] = {8};
-    const int bpawnd[] = {-8};
-    const int wpawnc[] = {7, 9};
-    const int bpawnc[] = {-7, -9};
-    const int wpawn2mov[] = {16};
-    const int bpawn2mov[] = {-16};
+    const int kingd[] = { -9, -1, 7, 8, 9, 1, -7, -8 };
+    const int knightd[] = { -17, -10, 6, 15, 17, 10, -6, -15 };
+    const int wpawnd[] = { 8 };
+    const int bpawnd[] = { -8 };
+    const int wpawnc[] = { 7, 9 };
+    const int bpawnc[] = { -7, -9 };
+    const int wpawn2mov[] = { 16 };
+    const int bpawn2mov[] = { -16 };
 
     int bit_list[16];
     //memset(BMagicMask, 0, sizeof(BMagicMask));
@@ -463,13 +463,6 @@ void initArr(void) {
             // LogOutput() << "ReductionTable[NonPV][%d][%d] = %d\n", j, k, ReductionTable[1][j][k]);
         }
     }
-    /*
-    for (j = 0; j < 32; j++)
-    {
-    LateMovePruningTable[j] = LATE_PRUNE_MIN + ((j * j) / LATE_PRUNE_SCALE);
-    // LogOutput() << "LateMovePruningTable[%d] = %d\n", j, LateMovePruningTable[j]);
-    }
-    */
     for (i = 0; i < 64; i++) {
         int bits = 64 - BShift[i];
         uint64 u;

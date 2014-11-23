@@ -163,20 +163,17 @@ uint64 getTime(void) {
 /* parse the move from string and returns a move from the
 move list of generated moves if the move string matched
 one of them */
-uint32 parseMove(movelist_t *mvlist, const char *s) {
+uint32 parseMove(movelist_t& mvlist, const char *s) {
     uint32 m;
     uint32 from, to, p;
-
-    ASSERT(mvlist != NULL);
-    ASSERT(s != NULL);
 
     from = (s[0] - 'a') + (8 * (s[1] - '1'));
     to = (s[2] - 'a') + (8 * (s[3] - '1'));
     m = (from) | (to << 6);
-    for (mvlist->pos = 0; mvlist->pos < mvlist->size; mvlist->pos++) {
-        if (m == (mvlist->list[mvlist->pos].m & 0xfff)) {
+    for (mvlist.pos = 0; mvlist.pos < mvlist.size; mvlist.pos++) {
+        if (m == (mvlist.list[mvlist.pos].m & 0xfff)) {
             p = EMPTY;
-            if (movePromote(mvlist->list[mvlist->pos].m)) {
+            if (movePromote(mvlist.list[mvlist.pos].m)) {
                 switch (s[4]) {
                 case 'n':
                 case 'N':
@@ -195,7 +192,7 @@ uint32 parseMove(movelist_t *mvlist, const char *s) {
                     break;
                 }
             }
-            if (p == movePromote(mvlist->list[mvlist->pos].m)) return mvlist->list[mvlist->pos].m;
+            if (p == movePromote(mvlist.list[mvlist.pos].m)) return mvlist.list[mvlist.pos].m;
         }
     }
     return 0;

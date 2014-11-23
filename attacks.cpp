@@ -344,13 +344,15 @@ int swap(const position_t& pos, uint32 m) {
             lsb = getFirstBit(attack & pos.pawns & pos.color[c]);
             dir = DirFromTo[to][lsb];
             attack |= behindFigure(pos, lsb, dir);
-        } else if (attack & pos.knights & pos.color[c]) {
+        }
+        else if (attack & pos.knights & pos.color[c]) {
             slist[n] = -slist[n - 1] + lastvalue;
             if (lastvalue == PcValSEE[KING]) break;
             lastvalue = PcValSEE[KNIGHT];
 
             lsb = getFirstBit(attack & pos.knights & pos.color[c]);
-        } else if (attack & pos.bishops & pos.color[c]) {
+        }
+        else if (attack & pos.bishops & pos.color[c]) {
             slist[n] = -slist[n - 1] + lastvalue;
             if (lastvalue == PcValSEE[KING]) break;
             lastvalue = PcValSEE[BISHOP];
@@ -358,7 +360,8 @@ int swap(const position_t& pos, uint32 m) {
             lsb = getFirstBit(attack & pos.bishops & pos.color[c]);
             dir = DirFromTo[to][lsb];
             attack |= behindFigure(pos, lsb, dir);
-        } else if (attack & pos.rooks & pos.color[c]) {
+        }
+        else if (attack & pos.rooks & pos.color[c]) {
             slist[n] = -slist[n - 1] + lastvalue;
             if (lastvalue == PcValSEE[KING]) break;
             lastvalue = PcValSEE[ROOK];
@@ -366,19 +369,22 @@ int swap(const position_t& pos, uint32 m) {
             lsb = getFirstBit(attack & pos.rooks & pos.color[c]);
             dir = DirFromTo[to][lsb];
             attack |= behindFigure(pos, lsb, dir);
-        } else if (attack & pos.queens & pos.color[c]) {
+        }
+        else if (attack & pos.queens & pos.color[c]) {
             slist[n] = -slist[n - 1] + lastvalue;
             if (lastvalue == PcValSEE[KING]) break;
             lastvalue = PcValSEE[QUEEN];
             lsb = getFirstBit(attack & pos.queens & pos.color[c]);
             dir = DirFromTo[to][lsb];
             attack |= behindFigure(pos, lsb, dir);
-        } else if (attack & pos.kings & pos.color[c]) {
+        }
+        else if (attack & pos.kings & pos.color[c]) {
             slist[n] = -slist[n - 1] + lastvalue;
             if (lastvalue == PcValSEE[KING]) break;
             lastvalue = PcValSEE[KING];
             lsb = getFirstBit(attack & pos.kings & pos.color[c]);
-        } else break;
+        }
+        else break;
 
         attack ^= BitMask[lsb];
         n++;
@@ -423,13 +429,15 @@ int swapSquare(const position_t& pos, uint32 m) {
             lsb = getFirstBit(attack & pos.pawns & pos.color[c]);
             dir = DirFromTo[to][lsb];
             attack |= behindFigure(pos, lsb, dir);
-        } else if (attack & pos.knights & pos.color[c]) {
+        }
+        else if (attack & pos.knights & pos.color[c]) {
             slist[n] = -slist[n - 1] + lastvalue;
             if (lastvalue == PcValSEE[KING]) break;
             lastvalue = PcValSEE[KNIGHT];
 
             lsb = getFirstBit(attack & pos.knights & pos.color[c]);
-        } else if (attack & pos.bishops & pos.color[c]) {
+        }
+        else if (attack & pos.bishops & pos.color[c]) {
             slist[n] = -slist[n - 1] + lastvalue;
             if (lastvalue == PcValSEE[KING]) break;
             lastvalue = PcValSEE[BISHOP];
@@ -437,7 +445,8 @@ int swapSquare(const position_t& pos, uint32 m) {
             lsb = getFirstBit(attack & pos.bishops & pos.color[c]);
             dir = DirFromTo[to][lsb];
             attack |= behindFigure(pos, lsb, dir);
-        } else if (attack & pos.rooks & pos.color[c]) {
+        }
+        else if (attack & pos.rooks & pos.color[c]) {
             slist[n] = -slist[n - 1] + lastvalue;
             if (lastvalue == PcValSEE[KING]) break;
             lastvalue = PcValSEE[ROOK];
@@ -445,19 +454,22 @@ int swapSquare(const position_t& pos, uint32 m) {
             lsb = getFirstBit(attack & pos.rooks & pos.color[c]);
             dir = DirFromTo[to][lsb];
             attack |= behindFigure(pos, lsb, dir);
-        } else if (attack & pos.queens & pos.color[c]) {
+        }
+        else if (attack & pos.queens & pos.color[c]) {
             slist[n] = -slist[n - 1] + lastvalue;
             if (lastvalue == PcValSEE[KING]) break;
             lastvalue = PcValSEE[QUEEN];
             lsb = getFirstBit(attack & pos.queens & pos.color[c]);
             dir = DirFromTo[to][lsb];
             attack |= behindFigure(pos, lsb, dir);
-        } else if (attack & pos.kings & pos.color[c]) {
+        }
+        else if (attack & pos.kings & pos.color[c]) {
             slist[n] = -slist[n - 1] + lastvalue;
             if (lastvalue == PcValSEE[KING]) break;
             lastvalue = PcValSEE[KING];
             lsb = getFirstBit(attack & pos.kings & pos.color[c]);
-        } else break;
+        }
+        else break;
 
         attack ^= BitMask[lsb];
         n++;

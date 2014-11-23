@@ -11,7 +11,6 @@
 #include "data.h"
 #include "constants.h"
 #include "macros.h"
-#include "search.h"
 #include "threads.h"
 #include "trans.h"
 #include "movegen.h"
@@ -19,6 +18,7 @@
 #include "position.h"
 #include "utils.h"
 #include "uci.h"
+#include "search.h"
 #include "init.h"
 #include "material.h"
 #include "utils.h"
@@ -27,104 +27,10 @@
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
 const std::string Interface::year = "2014";
-const std::string Interface::version = "1.5x25s";
+const std::string Interface::version = "1.5x24";
 const std::string Interface::arch = "x64";
 
-static const int MinHash = 1;
-static const int MaxHash = 65536;
-static const int DefaultHash = 128;
-
-static const int MinPHash = 1;
-static const int MaxPHash = 1024;
-static const int DefaultPHash = 32;
-
-static const int MinEvalCache = 1;
-static const int MaxEvalCache = 1024;
-static const int DefaultEvalCache = 64;
-
-static const int MinMultiPV = 1;
-static const int MaxMultiPV = 128;
-static const int DefaultMultiPV = 1;
-
-static const int MinTimeBuffer = 0;
-static const int MaxTimeBuffer = 10000;
-static const int DefaultTimeBuffer = 1000;
-
-static const int MinThreads = 1;
-static const int MaxThreads = 64;
-static const int DefaultThreads = 1;
-
-static const int MinSplitDepth = 2;
-static const int MaxSplitDepth = 8;
-static const int DefaultSplitDepth = 4;
-
-static const int MinActiveSplit = 1;
-static const int MaxActiveSplit = 8;
-static const int DefaultActiveSplit = 4;
-
-static const int MinContempt = -100;
-static const int MaxContempt = 100;
-static const int DefaultContempt = 0;
-
-UCIOptions UCIOptionsMap;
-
-void on_clear_hash(const Options& o) {
-    CEngine.ClearPawnHash();
-    CEngine.ClearEvalHash();
-    CEngine.ClearTTHash();
-    CEngine.ClearPVTTHash();
-}
-void on_hash(const Options& o) {
-    CEngine.InitTTHash(o.GetInt());
-}
-void on_pawn_hash(const Options& o) {
-    CEngine.InitPawnHash(o.GetInt());
-}
-void on_eval_hash(const Options& o) {
-    CEngine.InitEvalHash(o.GetInt());
-}
-void on_multi_pv(const Options& o) {
-    CEngine.info.multipv = o.GetInt();
-}
-void on_time_buffer(const Options& o) {
-    CEngine.info.time_buffer = o.GetInt();
-}
-void on_threads(const Options& o) {
-    CEngine.SetNumThreads(o.GetInt());
-}
-void on_splits(const Options& o) {
-    CEngine.mMinSplitDepth = o.GetInt();
-}
-void on_active_splits(const Options& o) {
-    CEngine.mMaxActiveSplitsPerThread = o.GetInt();
-}
-void on_contempt(const Options& o) {
-    CEngine.info.contempt = o.GetInt();
-}
-void on_bookfile(const Options& o) {
-    PolyBook.initBook(UCIOptionsMap["Book File"].GetStr());
-}
-void on_dummy(const Options& o) {}
-
-void Interface::InitUCIOptions(UCIOptions& uci_opt) {
-    uci_opt["Hash"] = Options(DefaultHash, MinHash, MaxHash, on_hash);
-    uci_opt["Pawn Hash"] = Options(DefaultPHash, MinPHash, MaxPHash, on_pawn_hash);
-    uci_opt["Eval Cache"] = Options(DefaultEvalCache, MinEvalCache, MaxEvalCache, on_eval_hash);
-    uci_opt["MultiPV"] = Options(DefaultMultiPV, MinMultiPV, MaxMultiPV, on_multi_pv);
-    uci_opt["Clear Hash"] = Options(on_clear_hash);
-    uci_opt["OwnBook"] = Options(false, on_dummy);
-    uci_opt["Book File"] = Options("Hannibal.bin", on_bookfile);
-    uci_opt["Ponder"] = Options(false, on_dummy);
-    uci_opt["Time Buffer"] = Options(DefaultTimeBuffer, MinTimeBuffer, MaxTimeBuffer, on_time_buffer);
-    uci_opt["Threads"] = Options(DefaultThreads, MinThreads, MaxThreads, on_threads);
-    uci_opt["Min Split Depth"] = Options(DefaultSplitDepth, MinSplitDepth, MaxSplitDepth, on_splits);
-    uci_opt["Max Active Splits/Thread"] = Options(DefaultActiveSplit, MinActiveSplit, MaxActiveSplit, on_active_splits);
-    uci_opt["Contempt"] = Options(DefaultContempt, MinContempt, MaxContempt, on_contempt);
-}
-
-void Interface::PrintUCIOptions(UCIOptions& uci_opt) {
-    uci_opt.Print();
-}
+// TODO: add Engine class parameters to UCI commands
 
 void Interface::Info() {
     LogAndPrintOutput() << name << " " << version << " " << arch;
@@ -135,12 +41,6 @@ void Interface::Info() {
 
 Interface::Interface() {
     std::cout.setf(std::ios::unitbuf);
-
-    InitUCIOptions(UCIOptionsMap);
-    CEngine.SetNumThreads(UCIOptionsMap["Threads"].GetInt());
-    CEngine.InitVars();
-    CEngine.InitTTHash(UCIOptionsMap["Hash"].GetInt());
-    CEngine.InitPVTTHash(1);
 
     initArr();
     initPST();
@@ -164,57 +64,42 @@ bool Interface::Input(std::istringstream& stream) {
     std::string command;
     stream >> command;
 
-    if (command == "stop") {
-        Stop();
-    } else if (command == "ponderhit") {
-        PonderHit();
-    } else if (command == "go") {
-        Go(stream);
-    } else if (command == "position") {
-        Position(stream);
-    } else if (command == "setoption") {
-        SetOption(stream);
-    } else if (command == "ucinewgame") {
-        NewGame();
-    } else if (command == "isready") {
-        LogAndPrintOutput() << "readyok";
-    } else if (command == "uci") {
-        Id();
-    } else if (command == "quit") {
-        Quit();
-        return false;
-    } else if (command == "speedup") {
-        CheckSpeedup(stream);
-    } else if (command == "split") {
-        CheckBestSplit(stream);
-    } else {
-        LogAndPrintError() << "Unknown UCI command: " << command;
-    }
+    if (command == "stop") Stop();
+    else if (command == "ponderhit") PonderHit();
+    else if (command == "go") Go(stream);
+    else if (command == "position") Position(stream);
+    else if (command == "setoption") SetOption(stream);
+    else if (command == "ucinewgame") NewGame();
+    else if (command == "isready") LogAndPrintOutput() << "readyok";
+    else if (command == "uci") Id();
+    else if (command == "quit") { Quit(); return false; }
+    else if (command == "speedup") CheckSpeedup(stream);
+    else if (command == "split") CheckBestSplit(stream);
+    else LogAndPrintError() << "Unknown UCI command: " << command;
 
     return true;
 }
 
 void Interface::Quit() {
-    Stop();
-    CEngine.WaitForThinkFinished();
-    CEngine.SetNumThreads(0);
+    cEngine.StopSearch();
+    cEngine.WaitForThinkFinished();
     LogInfo() << "Interface quit";
 }
 
 void Interface::Id() {
     LogAndPrintOutput() << "id name " << name << " " << version << " " << arch;
     LogAndPrintOutput() << "id author " << author;
-    PrintUCIOptions(UCIOptionsMap);
+    cEngine.PrintUCIOptions();
     LogAndPrintOutput() << "uciok";
 }
 
 void Interface::Stop() {
-    CEngine.StopSearch();
+    cEngine.StopSearch();
     LogInfo() << "info string Aborting search: stop";
 }
 
 void Interface::PonderHit() {
-    CEngine.PonderHit();
+    cEngine.PonderHit();
 }
 
 void Interface::Go(std::istringstream& stream) {
@@ -223,36 +108,22 @@ void Interface::Go(std::istringstream& stream) {
 
     stream >> command;
     while (command != "") {
-        if (command == "wtime") {
-            stream >> data.wtime;
-        } else if (command == "btime") {
-            stream >> data.btime;
-        } else if (command == "winc") {
-            stream >> data.winc;
-        } else if (command == "binc") {
-            stream >> data.binc;
-        } else if (command == "movestogo") {
-            stream >> data.movestogo;
-        } else if (command == "ponder") {
-            data.ponder = true;
-        } else if (command == "depth") {
-            stream >> data.depth;
-        } else if (command == "movetime") {
-            stream >> data.movetime;
-        } else if (command == "infinite") {
-            data.infinite = true;
-        } else if (command == "nodes") {
-            stream >> data.nodes;
-        } else if (command == "mate") {
-            stream >> data.mate;
-        } else {
-            LogAndPrintError() << "Wrong go command: " << command;
-            return;
-        }
+        if (command == "wtime") stream >> data.wtime;
+        else if (command == "btime") stream >> data.btime;
+        else if (command == "winc") stream >> data.winc;
+        else if (command == "binc") stream >> data.binc;
+        else if (command == "movestogo") stream >> data.movestogo;
+        else if (command == "ponder") data.ponder = true;
+        else if (command == "depth") stream >> data.depth;
+        else if (command == "movetime") stream >> data.movetime;
+        else if (command == "infinite") data.infinite = true;
+        else if (command == "nodes") stream >> data.nodes;
+        else if (command == "mate") stream >> data.mate;
+        else { LogAndPrintError() << "Wrong go command: " << command; return; }
         command = "";
         stream >> command;
     }
-    CEngine.StartThinking(data, input_pos);
+    cEngine.StartThinking(data, input_pos);
 }
 
 void Interface::Position(std::istringstream& stream) {
@@ -263,10 +134,12 @@ void Interface::Position(std::istringstream& stream) {
     if (token == "startpos") {
         fen = STARTPOS;
         stream >> token;
-    } else if (token == "fen") {
+    }
+    else if (token == "fen") {
         while (stream >> token && token != "moves")
             fen += token + " ";
-    } else {
+    }
+    else {
         LogWarning() << "Invalid position!";
         return;
     }
@@ -274,8 +147,8 @@ void Interface::Position(std::istringstream& stream) {
     setPosition(input_pos, fen.c_str());
     while (stream >> token) {
         movelist_t ml;
-        genLegal(input_pos, &ml, true);
-        m = parseMove(&ml, token.c_str());
+        genLegal(input_pos, ml, true);
+        m = parseMove(ml, token.c_str());
         if (m) makeMove(input_pos, UndoStack[input_pos.sp], m);
         else break;
         if (input_pos.posStore.fifty == 0) input_pos.sp = 0;
@@ -288,18 +161,19 @@ void Interface::SetOption(std::istringstream& stream) {
     stream >> token;
     while (stream >> token && token != "value") name += std::string(" ", !name.empty()) + token;
     while (stream >> token) value += std::string(" ", !value.empty()) + token;
-    if (UCIOptionsMap.count(name)) UCIOptionsMap[name] = value;
+    if (cEngine.uci_opt.count(name)) cEngine.uci_opt[name] = value;
     else LogAndPrintOutput() << "No such option: " << name;
 }
 
 void Interface::NewGame() {
-    CEngine.ClearPawnHash();
-    CEngine.ClearEvalHash();
-    CEngine.ClearTTHash();
-    CEngine.ClearPVTTHash();
+    cEngine.ClearPawnHash();
+    cEngine.ClearEvalHash();
+    cEngine.ClearTTHash();
+    cEngine.ClearPVTTHash();
 }
 
 Interface::~Interface() {}
+
 void Interface::CheckSpeedup(std::istringstream& stream) {
     std::istringstream streamcmd;
     std::vector<std::string> fenPos;
@@ -332,13 +206,14 @@ void Interface::CheckSpeedup(std::istringstream& stream) {
 
             streamcmd = std::istringstream("depth " + std::to_string(depth));
             Go(streamcmd);
-            
-            CEngine.WaitForThinkFinished();
+
+            cEngine.WaitForThinkFinished();
+            cEngine.SetThinkFinished();
 
             double timeSpeedUp;
             double nodesSpeedup;
             int64 spentTime = getTime() - startTime;
-            uint64 nodes = CEngine.ComputeNodes() / spentTime;
+            uint64 nodes = cEngine.ComputeNodes() / spentTime;
 
             if (0 == idxthread) {
                 nodes1 = nodes;
@@ -348,7 +223,8 @@ void Interface::CheckSpeedup(std::istringstream& stream) {
                 nodesSpeedup = (double)nodes;
                 nodesSpeedupSum[idxthread] += nodesSpeedup;
                 LogAndPrintOutput() << "\nBase: " << std::to_string(timeSpeedUp) << "s " << std::to_string(nodes) << "knps\n";
-            } else {
+            }
+            else {
                 timeSpeedUp = (double)spentTime1 / (double)spentTime;
                 timeSpeedupSum[idxthread] += timeSpeedUp;
                 nodesSpeedup = (double)nodes / (double)nodes1;
@@ -363,6 +239,7 @@ void Interface::CheckSpeedup(std::istringstream& stream) {
     LogAndPrintOutput() << "Threads: " << std::to_string(threads[1]) << " time: " << std::to_string(timeSpeedupSum[1] / fenPos.size()) << " nodes: " << std::to_string(nodesSpeedupSum[1] / fenPos.size()) << "\n";
     LogAndPrintOutput() << "\n\n";
 }
+
 void Interface::CheckBestSplit(std::istringstream& stream) {
     std::istringstream streamcmd;
     std::vector<std::string> fenPos;
@@ -402,16 +279,17 @@ void Interface::CheckBestSplit(std::istringstream& stream) {
 
             streamcmd = std::istringstream("depth " + std::to_string(depth));
             Go(streamcmd);
-            
-            CEngine.WaitForThinkFinished();
+
+            cEngine.WaitForThinkFinished();
+            cEngine.SetThinkFinished();
 
             int64 spentTime = getTime() - startTime;
-            uint64 nodes = CEngine.ComputeNodes() / spentTime;
+            uint64 nodes = cEngine.ComputeNodes() / spentTime;
 
             timeSum[idxsplit] += spentTime;
             nodesSum[idxsplit] += nodes;
 
-            LogAndPrintOutput() << "\nPos#" << idxpos + 1 << " splitdepth: " << splits[idxsplit] << " time: " << (double)spentTime/1000.0 << "s knps: " << nodes << "\n";
+            LogAndPrintOutput() << "\nPos#" << idxpos + 1 << " splitdepth: " << splits[idxsplit] << " time: " << (double)spentTime / 1000.0 << "s knps: " << nodes << "\n";
         }
     }
 

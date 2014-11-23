@@ -44,7 +44,7 @@ int ReductionTable[2][64][64];
 const int MoveGenPhase[] = {
     PH_NONE, PH_EVASION, PH_END, //MoveGenPhaseEvasion
     PH_NONE, PH_TRANS, PH_GOOD_CAPTURES, PH_KILLER_MOVES, PH_QUIET_MOVES, PH_BAD_CAPTURES, PH_END, //MoveGenPhaseStandard
-    PH_NONE, PH_TRANS, PH_ALL_CAPTURES, PH_NONTACTICAL_CHECKS_PURE, PH_GAINING, PH_END, //MoveGenPhaseQuiescenceAndChecksPV
+    PH_NONE, PH_TRANS, PH_ALL_CAPTURES, PH_NONTACTICAL_CHECKS_PURE, PH_END, //MoveGenPhaseQuiescenceAndChecksPV
     PH_NONE, PH_TRANS, PH_GOOD_CAPTURES_PURE, PH_END, //MoveGenPhaseQuiescence
     PH_NONE, PH_TRANS, PH_GOOD_CAPTURES_PURE, PH_NONTACTICAL_CHECKS_WIN, PH_END, //MoveGenPhaseQuiescenceAndChecks
     PH_NONE, PH_TRANS, PH_GOOD_CAPTURES_PURE, PH_END, //MoveGenPhaseQuiescencePV
@@ -79,10 +79,10 @@ const char *FenString[] = {
     "rnbq1bnr/1pppkp1p/4p3/2P1P3/p5p1/8/PP1PKPPP/RNBQ1BNR w - - 0 1",
     "rn1q1bnr/1bP1kp1P/1p2p3/p7/8/8/PP1pKPpP/RNBQ1BNR w - - 0 1",
     "r6r/3qk3/2n1b3/7n/1bB5/2N2N2/1B2QK2/R6R w - - 0 1",
-    NULL
+    nullptr
 };
 
 /* used in fill algorithms */
-uint64(*FillPtr[])(uint64) = {&fillUp, &fillDown};
-uint64(*FillPtr2[])(uint64) = {&fillUp2, &fillDown2};
-uint64(*ShiftPtr[])(uint64, uint32) = {&shiftLeft, &shiftRight};
+uint64(*FillPtr[])(uint64) = { &fillUp, &fillDown };
+uint64(*FillPtr2[])(uint64) = { &fillUp2, &fillDown2 };
+uint64(*ShiftPtr[])(uint64, uint32) = { &shiftLeft, &shiftRight };

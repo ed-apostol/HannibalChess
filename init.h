@@ -10,7 +10,6 @@
 #pragma once
 
 #define FUTILITY_MOVE 64
-
 #define REDUCE_MIN 1.25
 #define REDUCE_SCALE 2.25
 #define PV_REDUCE_MIN 0.5
