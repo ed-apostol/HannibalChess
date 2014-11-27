@@ -194,7 +194,7 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
                     if (score < beta) return score;
                 }
             }
-            if (entry->Move() != EMPTY && entry->LowerDepth() > ss.hashDepth) {
+            if (entry->Move() != EMPTY && entry->LowerDepth() > ss.hashDepth && (ssprev.moveGivesCheck || moveIsTactical(entry->Move()))) {
                 ss.hashDepth = entry->LowerDepth();
                 ss.hashMove = entry->Move();
             }
@@ -431,7 +431,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         }
     }
 
-    int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 4) : (depth * depth));
+    int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 2) : (depth * depth));
     move_t* move;
     while ((move = sortNext(sp, mInfo, pos, *ss.mvlist, ss.mvlist_phase, sthread)) != nullptr) {
         int score = -INF;
@@ -461,13 +461,12 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 newdepth = depth - 1;
                 //only reduce or prune some types of moves
                 int partialReduction = 0;
-                bool pruneOrReduce = ((move->m != ss.mvlist->transmove)
+                if ((move->m != ss.mvlist->transmove)
                     && (move->m != ss.mvlist->killer1)
                     && (move->m != ss.mvlist->killer2)
                     && !moveIsTactical(move->m)
-                    && !ss.moveGivesCheck);
-                if (pruneOrReduce) {
-                    bool skipFutility = (inCheck || (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsPassedPawn(pos, move->m));
+                    && !ss.moveGivesCheck) {
+                    bool skipFutility = (inCheck || moveIsPassedPawn(pos, move->m));
                     if (!inRoot && !inPvNode(nt) && !skipFutility) {
                         if (ss.playedMoves > lateMove) continue;
                         int predictedDepth = MAX(0, newdepth - ReductionTable[1][MIN(depth, 63)][MIN(ss.playedMoves, 63)]);

@@ -159,10 +159,6 @@ move_t* sortNext(SplitPoint* sp, SearchInfo& info, position_t& pos, movelist_t& 
                 break;
             case PH_TRANS:
                 if (!genMoveIfLegal(pos, move->m, mvlist.pinned)) continue;
-                if (mvlist.depth <= 0 && !moveIsTactical(move->m)) {
-                    mvlist.transmove = EMPTY;
-                    continue;
-                }
                 break;
             case PH_ALL_CAPTURES:
                 if (move->m == mvlist.transmove) continue;
