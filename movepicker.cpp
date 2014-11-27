@@ -203,11 +203,6 @@ move_t* sortNext(SplitPoint* sp, SearchInfo& info, position_t& pos, movelist_t& 
                 if (move->m == mvlist.transmove) continue;
                 if (!moveIsLegal(pos, move->m, mvlist.pinned, false)) continue;
                 break;
-            case PH_GAINING:
-                if (move->m == mvlist.transmove) continue;
-                if (moveIsCheck(pos, move->m, discoveredCheckCandidates(pos, pos.side))) continue;
-                if (!moveIsLegal(pos, move->m, mvlist.pinned, false)) continue;
-                break;
             default:
                 // can't get here
                 if (sp != nullptr) sp->movelistlock.unlock();
@@ -283,11 +278,6 @@ move_t* sortNext(SplitPoint* sp, SearchInfo& info, position_t& pos, movelist_t& 
         case PH_NONTACTICAL_CHECKS_WIN:
         case PH_NONTACTICAL_CHECKS_PURE:
             genQChecks(pos, mvlist);
-            scoreNonCaptures(pos, mvlist, sthread);
-            break;
-        case PH_GAINING:
-            if (mvlist.scout - mvlist.evalvalue > 150) continue; // TODO: test other values
-            genGainingMoves(pos, mvlist, mvlist.scout - mvlist.evalvalue, sthread);
             scoreNonCaptures(pos, mvlist, sthread);
             break;
         default:

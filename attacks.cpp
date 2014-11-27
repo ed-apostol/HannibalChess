@@ -84,34 +84,7 @@ bool kingIsInCheck(const position_t& pos) {
     return isSqAtt(pos, pos.occupied, pos.kpos[pos.side], pos.side ^ 1);
     //    return isAtt(pos, pos.side^1, pos.kings & pos.color[pos.side]);
 }
-/* checks if the move attacks the target */
-bool isMoveDefence(const position_t& pos, uint32 move, uint64 target) {
-    int from, to, piece;//, sq, dir;
 
-    if (!target) return 0;
-    from = moveFrom(move);
-    if (BitMask[from] & target) return true;
-    to = moveTo(move);
-    piece = pos.pieces[from];
-    switch (piece) {
-    case PAWN:
-        if (PawnCaps[to][pos.side] & target) return true;
-        break;
-    case KNIGHT:
-        if (KnightMoves[to] & target) return true;
-        break;
-    case BISHOP:
-        if (bishopAttacksBB(to, pos.occupied&~BitMask[from]) & target) return true;
-        break;
-    case ROOK:
-        if (rookAttacksBB(to, pos.occupied&~BitMask[from]) & target) return true;
-        break;
-    case QUEEN:
-        if (queenAttacksBB(to, pos.occupied&~BitMask[from]) & target) return true;
-        break;
-    }
-    return false;
-}
 /* this returns the pinned pieces to the King of the side Color */
 uint64 pinnedPieces(const position_t& pos, uint32 c) {
     uint64 b, pin, pinners;

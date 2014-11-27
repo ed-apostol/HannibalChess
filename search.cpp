@@ -43,8 +43,6 @@ public:
         mPVHashTable(_pvt) {}
     void initNode(Thread& sthread);
     bool simpleStalemate(const position_t& pos);
-    bool prevMoveAllowsThreat(const position_t& pos, basic_move_t first, basic_move_t second);
-    bool moveRefutesThreat(const position_t& pos, basic_move_t first, basic_move_t second);
     void updateEvalgains(const position_t& pos, uint32 move, int before, int after, Thread& sthread);
     void UpdateHistory(position_t& pos, SearchStack& ss, Thread& sthread, const int depth);
     template<bool inPv>
@@ -100,38 +98,6 @@ bool Search::simpleStalemate(const position_t& pos) {
         if (!isSqAtt(pos, pos.occupied, to, pos.side ^ 1)) return false;
     }
     return true;
-}
-
-bool Search::prevMoveAllowsThreat(const position_t& pos, basic_move_t first, basic_move_t second) {
-    int m1from = moveFrom(first);
-    int m2from = moveFrom(second);
-    int m1to = moveTo(first);
-    int m2to = moveTo(second);
-
-    if (m1to == m2from || m2to == m1from) return true;
-    if (InBetween[m2from][m2to] & BitMask[m1from]) return true;
-    uint64 m1att = pieceAttacksFromBB(pos, movePiece(first), m1to, pos.occupied ^ BitMask[m2from]);
-    if (m1att & BitMask[m2to]) return true;
-    if (m1att & BitMask[pos.kpos[pos.side]]) return true;
-    return false;
-}
-
-bool Search::moveRefutesThreat(const position_t& pos, basic_move_t first, basic_move_t second) {
-    int m1from = moveFrom(first);
-    int m2from = moveFrom(second);
-    int m1to = moveTo(first);
-    int m2to = moveTo(second);
-
-    if (m1from == m2to) return true;
-    if (moveCapture(second) && (PcValSEE[movePiece(second)] >= PcValSEE[moveCapture(second)] || movePiece(second) == KING)) {
-        uint64 occ = pos.occupied ^ BitMask[m1from] ^ BitMask[m1to] ^ BitMask[m2from];
-        if (pieceAttacksFromBB(pos, movePiece(first), m1to, occ) & BitMask[m2to]) return true;
-        uint64 xray = rookAttacksBBX(m2to, occ) & (pos.queens | pos.rooks) & pos.color[pos.side];
-        xray |= bishopAttacksBBX(m2to, occ) & (pos.queens | pos.bishops) & pos.color[pos.side];
-        if (xray && (xray & ~queenAttacksBB(m2to, pos.occupied))) return true;
-    }
-    if (InBetween[m2from][m2to] & BitMask[m1to] && swap(pos, first) >= 0) return true;
-    return false;
 }
 
 void Search::updateEvalgains(const position_t& pos, uint32 move, int before, int after, Thread& sthread) {
@@ -367,7 +333,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 makeNullMove(pos, undo);
                 ++sthread.nodes;
                 int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, sthread, invertNode(nt));
-                ss.threatMove = ss.counterMove;
                 unmakeNullMove(pos, undo);
                 if (sthread.stop) return 0;
                 if (score >= beta) {

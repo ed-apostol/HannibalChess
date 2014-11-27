@@ -156,7 +156,6 @@ struct SearchStack {
         bestmove(EMPTY),
         dcc(0),
         counterMove(EMPTY),
-        threatMove(EMPTY),
         bannedMove(EMPTY),
         hashMove(EMPTY),
         hashDepth(0),
@@ -174,7 +173,6 @@ struct SearchStack {
     int evalvalue;
     uint64 dcc;
     basic_move_t counterMove;
-    basic_move_t threatMove;
     basic_move_t bannedMove;
     basic_move_t hashMove;
     int hashDepth;
@@ -244,7 +242,6 @@ enum movegen_phases {
     PH_NONTACTICAL_CHECKS,
     PH_NONTACTICAL_CHECKS_WIN,
     PH_NONTACTICAL_CHECKS_PURE,
-    PH_GAINING,
     PH_END
 };
 
