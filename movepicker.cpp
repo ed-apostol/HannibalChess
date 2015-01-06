@@ -96,7 +96,7 @@ void scoreCaptures(movelist_t& mvlist) {
     }
 }
 
-void scoreNonCaptures(const position_t& pos, movelist_t& mvlist, Thread& sthread) {
+void scoreNonCaptures(movelist_t& mvlist, Thread& sthread) {
     move_t *m;
 
     for (m = &mvlist.list[mvlist.pos]; m < &mvlist.list[mvlist.size]; m++) {
@@ -203,11 +203,6 @@ move_t* sortNext(SplitPoint* sp, SearchInfo& info, position_t& pos, movelist_t& 
                 if (move->m == mvlist.transmove) continue;
                 if (!moveIsLegal(pos, move->m, mvlist.pinned, false)) continue;
                 break;
-            case PH_GAINING:
-                if (move->m == mvlist.transmove) continue;
-                if (moveIsCheck(pos, move->m, discoveredCheckCandidates(pos, pos.side))) continue;
-                if (!moveIsLegal(pos, move->m, mvlist.pinned, false)) continue;
-                break;
             default:
                 // can't get here
                 if (sp != nullptr) sp->movelistlock.unlock();
@@ -277,18 +272,13 @@ move_t* sortNext(SplitPoint* sp, SearchInfo& info, position_t& pos, movelist_t& 
             break;
         case PH_QUIET_MOVES:
             genNonCaptures(pos, mvlist);
-            scoreNonCaptures(pos, mvlist, sthread);
+            scoreNonCaptures( mvlist, sthread);
             break;
         case PH_NONTACTICAL_CHECKS:
         case PH_NONTACTICAL_CHECKS_WIN:
         case PH_NONTACTICAL_CHECKS_PURE:
             genQChecks(pos, mvlist);
-            scoreNonCaptures(pos, mvlist, sthread);
-            break;
-        case PH_GAINING:
-            if (mvlist.scout - mvlist.evalvalue > 150) continue; // TODO: test other values
-            genGainingMoves(pos, mvlist, mvlist.scout - mvlist.evalvalue, sthread);
-            scoreNonCaptures(pos, mvlist, sthread);
+            scoreNonCaptures(mvlist, sthread);
             break;
         default:
             ASSERT(MoveGenPhase[mvlist.phase] == PH_END);

@@ -52,7 +52,7 @@ void TranspositionTable::StoreLower(const uint64 hash, basic_move_t move, const 
     replace->ReplaceMask(MLower);
 }
 
-void TranspositionTable::StoreUpper(const uint64 hash, basic_move_t move, const int depth, const int value) {
+void TranspositionTable::StoreUpper(const uint64 hash, const int depth, const int value) {
     int worst = -INF, t, score;
     TransEntry *replace, *entry;
 
@@ -126,7 +126,7 @@ void TranspositionTable::StoreAllLower(const uint64 hash, basic_move_t move, con
     replace->ReplaceMask(MLower | MAllLower);
 }
 
-void TranspositionTable::StoreCutUpper(const uint64 hash, basic_move_t move, const int depth, const int value) {
+void TranspositionTable::StoreCutUpper(const uint64 hash,  const int depth, const int value) {
     int worst = -INF, t, score;
     TransEntry *replace, *entry;
 
@@ -208,7 +208,7 @@ void TranspositionTable::StoreExact(const uint64 hash, basic_move_t move, const 
     replace->ReplaceMask(MExact);
 }
 
-void TranspositionTable::StoreNoMoves(const uint64 hash, basic_move_t move, const int depth, const int value) {
+void TranspositionTable::StoreNoMoves(const uint64 hash, const int depth, const int value) {
     int worst = -INF, t, score;
     TransEntry *replace, *entry;
 

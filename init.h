@@ -19,6 +19,7 @@
 #define FUTILITY_SCALE 18
 
 extern void initPST();
-extern void initArr(void);
+extern void initArr();
 extern void InitTrapped();
 extern void InitMateBoost();
+//extern void InitMobility();

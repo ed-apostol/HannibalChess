@@ -43,7 +43,6 @@ public:
         mPVHashTable(_pvt) {}
     void initNode(Thread& sthread);
     bool simpleStalemate(const position_t& pos);
-    bool prevMoveAllowsThreat(const position_t& pos, basic_move_t first, basic_move_t second);
     bool moveRefutesThreat(const position_t& pos, basic_move_t first, basic_move_t second);
     void updateEvalgains(const position_t& pos, uint32 move, int before, int after, Thread& sthread);
     void UpdateHistory(position_t& pos, SearchStack& ss, Thread& sthread, const int depth);
@@ -100,20 +99,6 @@ bool Search::simpleStalemate(const position_t& pos) {
         if (!isSqAtt(pos, pos.occupied, to, pos.side ^ 1)) return false;
     }
     return true;
-}
-
-bool Search::prevMoveAllowsThreat(const position_t& pos, basic_move_t first, basic_move_t second) {
-    int m1from = moveFrom(first);
-    int m2from = moveFrom(second);
-    int m1to = moveTo(first);
-    int m2to = moveTo(second);
-
-    if (m1to == m2from || m2to == m1from) return true;
-    if (InBetween[m2from][m2to] & BitMask[m1from]) return true;
-    uint64 m1att = pieceAttacksFromBB(pos, movePiece(first), m1to, pos.occupied ^ BitMask[m2from]);
-    if (m1att & BitMask[m2to]) return true;
-    if (m1att & BitMask[pos.kpos[pos.side]]) return true;
-    return false;
 }
 
 bool Search::moveRefutesThreat(const position_t& pos, basic_move_t first, basic_move_t second) {
@@ -255,7 +240,7 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     }
     if (ssprev.moveGivesCheck && ss.bestvalue == -INF) {
         ss.bestvalue = (-INF + pos.ply);
-        mTransTable.StoreNoMoves(pos.posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos.ply));
+        mTransTable.StoreNoMoves(pos.posStore.hash, 1, scoreToTrans(ss.bestvalue, pos.ply));
         return ss.bestvalue;
     }
     if (ss.bestvalue >= beta) {
@@ -268,7 +253,7 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
             mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
             mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, 1, scoreToTrans(ss.bestvalue, pos.ply));
         }
-        else mTransTable.StoreUpper(pos.posStore.hash, EMPTY, 1, scoreToTrans(ss.bestvalue, pos.ply));
+        else mTransTable.StoreUpper(pos.posStore.hash, 1, scoreToTrans(ss.bestvalue, pos.ply));
     }
     return ss.bestvalue;
 }
@@ -461,14 +446,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 newdepth = depth - 1;
                 //only reduce or prune some types of moves
                 int partialReduction = 0;
-                bool pruneOrReduce = ((move->m != ss.mvlist->transmove)
-                    && (move->m != ss.mvlist->killer1)
-                    && (move->m != ss.mvlist->killer2)
-                    && !moveIsTactical(move->m)
-                    && !ss.moveGivesCheck);
-                if (pruneOrReduce) {
-                    bool skipFutility = (inCheck || (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsPassedPawn(pos, move->m));
-                    if (!inRoot && !inPvNode(nt) /*&& !skipFutility*/) { //NEWSAM 1
+                if ((move->m != ss.mvlist->killer1) && (move->m != ss.mvlist->killer2) && !moveIsTactical(move->m) && !ss.moveGivesCheck) {
+                    if (!inRoot && !inPvNode(nt)) {
                         if (ss.playedMoves > lateMove) continue;
                         int predictedDepth = MAX(0, newdepth - ReductionTable[1][MIN(depth, 63)][MIN(ss.playedMoves, 63)]);
                         int scoreAprox = ss.evalvalue + FutilityMarginTable[MIN(predictedDepth, MAX_FUT_MARGIN)][MIN(ss.playedMoves, 63)]
@@ -483,6 +462,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                         }
                     }
                     if (depth >= MIN_REDUCTION_DEPTH) {
+                        bool skipFutility = (inCheck || (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsPassedPawn(pos, move->m));
                         int reduction = ReductionTable[(inPvNode(nt) ? 0 : 1)][MIN(depth, 63)][MIN(ss.playedMoves, 63)];
                         partialReduction += skipFutility ? (reduction + 1) / 2 : reduction;
                     }
@@ -564,7 +544,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (ss.playedMoves == 0) {
             if (inCheck) ss.bestvalue = -INF + pos.ply;
             else ss.bestvalue = DrawValue[pos.side];
-            mTransTable.StoreNoMoves(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
+            mTransTable.StoreNoMoves(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, pos.ply));
             return ss.bestvalue;
         }
         if (ss.bestvalue >= beta) {
@@ -579,8 +559,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
                 mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
             }
-            else if (inCutNode(nt)) mTransTable.StoreCutUpper(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
-            else mTransTable.StoreUpper(pos.posStore.hash, EMPTY, depth, scoreToTrans(ss.bestvalue, pos.ply));
+            else if (inCutNode(nt)) mTransTable.StoreCutUpper(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, pos.ply));
+            else mTransTable.StoreUpper(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, pos.ply));
         }
     }
     return ss.bestvalue;
@@ -623,6 +603,25 @@ void Engine::SearchFromIdleLoop(SplitPoint& sp, Thread& sthread) {
     else search->searchNode<false, true, false>(pos, sp.alpha, sp.beta, sp.depth, *sp.ssprev, sthread, sp.nodeType);
 }
 
+bool isLegal(const position_t& pos, const  basic_move_t move, const bool inCheck) { //this ensures perfect legality for moves that might actually be chosen by the engine
+    /*
+    movelist_t mvlist;
+    genLegal(pos, mvlist, true);
+    for (mvlist.pos = 0; mvlist.pos < mvlist.size; mvlist.pos++) {
+    if (m == mvlist.list[mvlist.pos].m) return true;
+    }
+    return false;
+    */
+    if (!genMoveIfLegal(pos, move, pinnedPieces(pos, pos.side))) return false;
+    if (inCheck && movePiece(move) != KING) { //MoveIfLegal handles all king moves pretty well already
+        int ksq = pos.kpos[pos.side];
+        uint64 checkers = attackingPiecesSide(pos, ksq, pos.side ^ 1);
+        if (MinTwoBits(checkers)) return false; //need to move king if two checkers
+        int sqchecker = getFirstBit(checkers);
+        if (!((InBetween[sqchecker][ksq] | checkers) & BitMask[moveTo(move)])) return false;
+    }
+    return true;
+}
 void Engine::ExtractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_move_t move) {
     PvHashEntry *entry;
     pos_store_t undo[MAXPLY];
@@ -633,7 +632,7 @@ void Engine::ExtractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_m
     while ((entry = pvhashtable.pvEntry(pos.posStore.hash)) != nullptr) {
         basic_move_t hashMove = entry->pvMove();
         if (hashMove == EMPTY) break;
-        if (!genMoveIfLegal(pos, hashMove, pinnedPieces(pos, pos.side))) break;
+        if (!isLegal(pos, hashMove, kingIsInCheck(pos))) break;
         if (anyRep(pos)) break; // break on repetition to avoid long pv display
         pv.moves[pv.length++] = hashMove;
         makeMove(pos, undo[ply++], hashMove);
@@ -643,6 +642,7 @@ void Engine::ExtractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_m
         unmakeMove(pos, undo[ply]);
     }
 }
+
 
 void Engine::RepopulateHash(position_t& pos, continuation_t& rootPV) {
     int moveOn;
@@ -801,29 +801,24 @@ void Engine::GetBestMove(Thread& sthread) {
             return;
         }
     }
-
-    do {
-        PvHashEntry *entry = pvhashtable.pvEntry(rootpos.posStore.hash);
-        if (nullptr == entry) break;
-        if (info.thinking_status == THINKING
-            && info.rootPV.moves[1] == rootpos.posStore.lastmove
-            && info.rootPV.moves[2] == entry->pvMove()
-            && genMoveIfLegal(rootpos, info.rootPV.moves[2], pinnedPieces(rootpos, rootpos.side))
-            && ((moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(entry->pvMove())))
-            || (PcValSEE[moveCapture(entry->pvMove())] > PcValSEE[movePiece(entry->pvMove())]))) {
-            info.bestmove = entry->pvMove();
-            info.best_value = entry->pvScore();
-            ExtractPvMovesFromHash(rootpos, info.rootPV, entry->pvMove());
-            DisplayPV(info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
-            if (info.rootPV.length > 1) info.pondermove = info.rootPV.moves[1];
-            else info.pondermove = 0;
-            StopSearch();
-            SendBestMove();
-            return;
+    PvHashEntry *entry = pvhashtable.pvEntry(rootpos.posStore.hash);
+    if (nullptr != entry && entry->pvMove() && isLegal(rootpos, entry->pvMove(), ss.moveGivesCheck)) {
+        if (info.rootPV.moves[1] == rootpos.posStore.lastmove && info.rootPV.moves[2] == entry->pvMove()) {
+            if (info.thinking_status == THINKING && ((moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(entry->pvMove())))
+                || MaxPieceValue[moveCapture(entry->pvMove())] > MaxPieceValue[movePiece(entry->pvMove())])) {
+                info.bestmove = entry->pvMove();
+                info.best_value = entry->pvScore();
+                ExtractPvMovesFromHash(rootpos, info.rootPV, entry->pvMove());
+                DisplayPV(info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
+                if (info.rootPV.length > 1) info.pondermove = info.rootPV.moves[1];
+                else info.pondermove = 0;
+                StopSearch();
+                SendBestMove();
+                return;
+            }
         }
         ss.hashMove = entry->pvMove();
-    } while (false);
-
+    }
     // extend time when there is no hashmove from hashtable, this is useful when just out of the book
     if (ss.hashMove == EMPTY || (info.rootPV.moves[1] != rootpos.posStore.lastmove)) {
         info.time_limit_max += info.alloc_time / 4; // 25%

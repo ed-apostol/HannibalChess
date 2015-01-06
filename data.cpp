@@ -13,6 +13,10 @@
 #include "constants.h"
 #include "macros.h"
 
+#ifdef EVAL_DEBUG
+bool SHOW_EVAL = false;
+#endif
+
 /* the precomputed piece 64 bit attacks */
 uint64 KnightMoves[64];
 uint64 KingMoves[64];

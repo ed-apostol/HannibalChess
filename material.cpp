@@ -249,7 +249,7 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
     return originalDrawn + drawn;
 }
 
-void initMaterial(void) {
+void InitMaterial(void) {
     int win, openscore, midscore1, midscore2, endscore, windex, bindex, phase;
     int bp, wp, bn, wn, bb, wb, br, wr, bq, wq;
     int wdraw, bdraw;
@@ -528,15 +528,31 @@ void initMaterial(void) {
             if (wq == 0 && wminors == 0 && wr == 1 && bq == 0 && br == 0 && bb == 0 && bn == 1 && wp == 0 && bp == 0) {
                 wflag = 11;
             }
-            /*
-            if (wq==1 && bq==1 && wnonQ == 0 && bnonQ == 0 && (wp || bp)) {
-            wflag = 14;
-            bflag = 14;
-            }
-            */
             if (wq == 1 && bq == 0 && wnonQ == 0 && bnonQ == 0 && wp == 0 && bp == 1) {
                 wflag = 12;
             }
+            if (wr == 1 && wq == 0 && wp == 1 && wminors == 0 && bb == 1 && bn == 0 && bq == 0 && br == 0 && bp == 0) {
+                wflag = 14;
+            }
+            /*
+            if (wq == 0 && wr == 0 && wb == 1 && wn == 0 && wp == 1 && bq == 0 && br == 0 && bb == 0 && bn == 1) {
+                wflag = 15;
+            }
+            if (wq == 0 && wr == 0 && wb == 0 && wn == 1 && wp == 1 && bq == 0 && br == 0 && bb == 0 && bn == 1) {
+                wflag = 15;
+            }
+            if (bq == 0 && br == 0 && bb == 0 && bn == 1 && bp == 1 && wq == 0 && wr == 0 && wb == 1 && wn == 0) {
+                bflag = 15;
+            }
+            if (wq == 0 && wr == 0 && wb == 1 && wn == 0 && wp == 2 && bq == 0 && br == 0 && bb == 0 && bn == 1 && bp== 1) {
+                wflag = 16;
+            }
+            if (wq == 0 && wr == 0 && wb == 0 && wn == 1 && wp == 2 && bq == 0 && br == 0 && bb == 0 && bn == 1 && bp == 1) {
+                wflag = 16;
+            }
+            if (bq == 0 && br == 0 && bb == 0 && bn == 1 && bp == 2 && wq == 0 && wr == 0 && wb == 1 && wn == 0 && wp == 1) {
+                bflag = 16;
+            }*/
             if (wflag == 0 && win > 40 && wp == 0 && wdraw < MAX_DRAW) {
                 wflag = 13; // try to mate with no pawns (do not supercede other things like NB v. King)
             }
@@ -548,13 +564,6 @@ void initMaterial(void) {
             MaterialTable[windex][bindex].flags[BLACK] = bflag;
             MaterialTable[bindex][windex].flags[WHITE] = bflag;
             MaterialTable[bindex][windex].flags[BLACK] = wflag;
-            /*
-            tryDelta = !wflag && !bflag && wdraw < 20 && bdraw < 20;
-            if (tryDelta) {
-            }
-            MaterialTable[windex][bindex].tryDelta = tryDelta;
-            MaterialTable[bindex][windex].tryDelta = tryDelta;
-            */
         }
-                                        }
+    }
 }

@@ -78,9 +78,6 @@ int mrook(int sq) {
     int f = SQFILE(sq);
     return (file[f]);
 }
-int erook(int sq) {
-    return 0;
-}
 int mqueen(int sq) {
     int central[8] = { 4, 2, 0, -1, -2, -4, -6, -9 };
     int file[8] = { -3, 0, 1, 3, 3, 1, 0, -3 };
@@ -148,8 +145,7 @@ void initPST() {
         PST(WHITE, BISHOP, i, MIDGAME) = mbishop(i);
         PST(WHITE, BISHOP, i, ENDGAME) = ebishop(i);
         // do rooks
-        PST(WHITE, ROOK, i, MIDGAME) = mrook(i);
-        PST(WHITE, ROOK, i, ENDGAME) = erook(i);
+        PST(WHITE, ROOK, i, MIDGAME) = mrook(i); //no endgame values for rook
         // do queens
         PST(WHITE, QUEEN, i, MIDGAME) = mqueen(i);
         PST(WHITE, QUEEN, i, ENDGAME) = equeen(i);

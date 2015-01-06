@@ -435,7 +435,6 @@ void makeMove(position_t& pos, pos_store_t& undo, basic_move_t m) {
     case KING:
         ASSERT(false);
         LogError() << "Move capturing the King: " << move2Str(m);
-        displayBoard(pos, 8);
         break;
     }
     pos.pieces[from] = EMPTY;

@@ -47,4 +47,4 @@
 #define VERY_DRAWISH (DRAWN1 )
 #define SUPER_DRAWISH (((DRAWN1+DRAWN)/2))
 
-extern  void initMaterial(void);
+extern  void InitMaterial(void);

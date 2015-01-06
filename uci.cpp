@@ -45,9 +45,9 @@ Interface::Interface() {
     initArr();
     initPST();
     InitTrapped();
-    initMaterial();
+    InitMaterial();
     InitMateBoost();
-
+//    InitMobility();
     setPosition(input_pos, STARTPOS);
 }
 

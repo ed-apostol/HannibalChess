@@ -24,35 +24,10 @@ bit 2: errfile
 bit 3: dumpfile
 */
 
-/* a utility to print the bits in a position-like format */
-void displayBit(uint64 a, int x) {
-    //int i, j;
-    //for (i = 56; i >= 0; i -= 8) {
-    //    Print(x, "\n%d  ", (i / 8) + 1);
-    //    for (j = 0; j < 8; ++j) {
-    //        Print(x, "%c ", ((a & ((uint64)1 << (i + j))) ? '1' : '_'));
-    //    }
-    //}
-    //Print(x, "\n\n");
-    //Print(x, "   a b c d e f g h \n\n");
-}
 int fr_square(int f, int r) {
     return ((r << 3) | f);
 }
-void showBitboard(uint64 b, int x) {
-    //int i, j;
-    //for (j = 7; j >= 0; j = j - 1) {
-    //    for (i = 0; i <= 7; i = i + 1) {
-    //        int sq = fr_square(i, j);
-    //        uint64 sqBM = BitMask[sq];
-    //        if (sqBM & b) {
-    //            Print(x, "X");
-    //        } else Print(x, ".");
-    //        Print(x, " ");
-    //    }
-    //    Print(x, "\n");
-    //}
-}
+
 /* a utility to convert large int to hex string*/
 char *bit2Str(uint64 n) {
     static char s[19];
@@ -98,37 +73,6 @@ char *sq2Str(int sq) {
         '\0'
         );
     return str;
-}
-
-/* a utility to print the position */
-void displayBoard(const position_t& pos, int x) {
-    static char pcstr[] = ".PNBRQK.pnbrqk";
-    //int i, j, c, p;
-    //int pes;
-    //for (i = 56; i >= 0; i -= 8) {
-    //    Print(x, "\n%d  ", (i / 8) + 1);
-    //    for (j = 0; j < 8; j++) {
-    //        c = getColor(pos, i + j);
-    //        p = getPiece(pos, i + j);
-    //        Print(x, "%c ", pcstr[p + (c ? 7 : 0)]);
-    //    }
-    //}
-    //Print(x, "\n\n");
-    //Print(x, "   a b c d e f g h \n\n");
-    //Print(x, "FEN %s\n", positionToFEN(pos));
-    //Print(x, "%d.%s%s ", (pos.sp) / 2
-    //    + (pos.side ? 1 : 0), pos.side ? " " : " ..",
-    //    move2Str(pos.posStore.lastmove));
-    //Print(x, "%s, ", pos.side == WHITE ? "WHITE" : "BLACK");
-    //Print(x, "Castle = %d, ", pos.posStore.castle);
-    //Print(x, "Ep = %d, ", pos.posStore.epsq);
-    //Print(x, "Fifty = %d, ", pos.posStore.fifty);
-    //Print(x, "Ev = %d, ", eval(pos, 0, &pes));
-    //Print(x, "Ch = %s,\n",
-    //    isAtt(pos, pos.side ^ 1, pos.kings&pos.color[pos.side])
-    //    ? "T" : "F");
-    //Print(x, "H = %s, ", bit2Str(pos.posStore.hash));
-    //Print(x, "PH = %s\n", bit2Str(pos.posStore.phash));
 }
 
 /* a utility to get a certain piece from a position given a square */
