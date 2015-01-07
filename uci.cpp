@@ -26,8 +26,8 @@
 
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
-const std::string Interface::year = "2014";
-const std::string Interface::version = "1.5x24";
+const std::string Interface::year = "2015";
+const std::string Interface::version = "1.5x32b";
 const std::string Interface::arch = "x64";
 
 // TODO: add Engine class parameters to UCI commands

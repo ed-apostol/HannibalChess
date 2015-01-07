@@ -151,9 +151,114 @@ void Search::UpdateHistory(position_t& pos, SearchStack& ss, Thread& sthread, co
 }
 
 const int MaxPieceValue[] = { 0, PawnValueEnd, KnightValueEnd, BishopValueEnd, RookValueEnd, QueenValueEnd, 10000 };
-
 template<bool inPv>
 int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread) {
+    SearchStack ss;
+    pos_store_t undo;
+
+    ASSERT(alpha < beta);
+    ASSERT(pos.ply > 0); // for ssprev above
+
+    initNode(sthread);
+    if (sthread.stop) return 0;
+
+    for (TransEntry *entry = mTransTable.Entry(pos.posStore.hash), *end = entry + mTransTable.BucketSize(); entry != end; ++entry) {
+        if (entry->HashLock() == LOCK(pos.posStore.hash)) {
+            entry->SetAge(mTransTable.Date());
+            if (!inPv) { // TODO: re-use values from here to evalvalue?
+                if (entry->LowerDepth() != 0) {
+                    int score = scoreFromTrans(entry->LowerValue(), pos.ply);
+                    if (score > alpha) {
+                        ssprev.counterMove = entry->Move();
+                        return score;
+                    }
+                }
+                if (entry->UpperDepth() != 0) {
+                    int score = scoreFromTrans(entry->UpperValue(), pos.ply);
+                    if (score < beta) return score;
+                }
+            }
+            if (entry->Move() != EMPTY && entry->LowerDepth() > ss.hashDepth && moveIsTactical(entry->Move())) {  //NEWSAM s1 added moveistactical
+                ss.hashDepth = entry->LowerDepth();
+                ss.hashMove = entry->Move();
+            }
+        }
+    }
+    if (pos.ply >= MAXPLY - 1) return eval(pos, sthread);
+    if (!ssprev.moveGivesCheck) {
+        if (simpleStalemate(pos)) {
+            return DrawValue[pos.side];
+        }
+        ss.evalvalue = ss.bestvalue = eval(pos, sthread);
+        updateEvalgains(pos, pos.posStore.lastmove, ssprev.evalvalue, ss.evalvalue, sthread);
+        if (ss.bestvalue > alpha) {
+            if (ss.bestvalue >= beta) {
+                ASSERT(valueIsOk(ss.bestvalue));
+                return ss.bestvalue;
+            }
+            alpha = ss.bestvalue;
+        }
+    }
+
+    ss.dcc = discoveredCheckCandidates(pos, pos.side);
+    if (ssprev.moveGivesCheck) {
+        sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseEvasion, sthread);
+    }
+    else {
+        if (inPv) sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_PVCHECK) ? MoveGenPhaseQuiescenceAndChecksPV : MoveGenPhaseQuiescencePV, sthread);
+        else sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_CHECK) ? MoveGenPhaseQuiescenceAndChecks : MoveGenPhaseQuiescence, sthread);
+    }
+    bool prunable = !ssprev.moveGivesCheck && !inPv && MinTwoBits(pos.color[pos.side ^ 1] & pos.pawns) && MinTwoBits(pos.color[pos.side ^ 1] & ~(pos.pawns | pos.kings));
+    move_t* move;
+    while ((move = sortNext(nullptr, mInfo, pos, *ss.mvlist, ss.mvlist_phase, sthread)) != nullptr) {
+        int score;
+        if (anyRepNoMove(pos, move->m)) {
+            score = DrawValue[pos.side];
+        }
+        else {
+            ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
+            if (prunable && move->m != ss.hashMove && !ss.moveGivesCheck && !moveIsPassedPawn(pos, move->m)) {
+                int scoreAprox = ss.evalvalue + PawnValueEnd + MaxPieceValue[moveCapture(move->m)];
+                if (scoreAprox < beta) continue;
+            }
+            int newdepth = depth - !ss.moveGivesCheck;
+            makeMove(pos, undo, move->m);
+            ++sthread.nodes;
+            score = -qSearch<inPv>(pos, -beta, -alpha, newdepth, ss, sthread);
+            unmakeMove(pos, undo);
+        }
+        if (sthread.stop) return 0;
+        if (score > ss.bestvalue) {
+            ss.bestvalue = score;
+            if (score > alpha) {
+                ss.bestmove = move->m;
+                if (score >= beta) break;
+                alpha = score;
+            }
+        }
+    }
+    if (ssprev.moveGivesCheck && ss.bestvalue == -INF) {
+        ss.bestvalue = (-INF + pos.ply);
+        mTransTable.StoreNoMoves(pos.posStore.hash, -1, scoreToTrans(ss.bestvalue, pos.ply));
+        return ss.bestvalue;
+    }
+    if (ss.bestvalue >= beta) {
+        ssprev.counterMove = ss.bestmove;
+        mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, pos.ply));
+    }
+    else {
+        if (inPv && ss.bestmove != EMPTY) {
+            ssprev.counterMove = ss.bestmove;
+            mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, pos.ply));
+            mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, pos.ply));
+        }
+        else mTransTable.StoreUpper(pos.posStore.hash, -1, scoreToTrans(ss.bestvalue, pos.ply));
+    }
+    return ss.bestvalue;
+}
+/*
+template<bool inPv>
+int Search::qSearchOld(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread) {
     SearchStack ss;
     pos_store_t undo;
 
@@ -257,7 +362,7 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     }
     return ss.bestvalue;
 }
-
+*/
 template <bool inRoot, bool inSplitPoint, bool inSingular>
 int Search::searchNode(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt) {
     if (depth <= 0) {

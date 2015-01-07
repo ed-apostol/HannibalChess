@@ -89,7 +89,7 @@ public:
     inline void pvSetAge(const uint8 age) {
         mAge = age;
     }
-    inline void pvSetDepth(const uint8 depth) {
+    inline void pvSetDepth(const int8 depth) {
         mDepth = depth;
     }
     inline void pvSetValue(const int16 value) {
@@ -110,7 +110,7 @@ public:
 
     virtual void Clear();
     void NewDate(int date);
-    void pvStore(uint64 hash, basic_move_t move, uint8 depth, int16 value);
+    void pvStore(uint64 hash, basic_move_t move, int depth, int16 value);
     PvHashEntry *pvEntry(const uint64 hash) const;
     PvHashEntry *pvEntryFromMove(const uint64 hash, basic_move_t move) const;
     int32 Date() const {
@@ -217,10 +217,10 @@ public:
     inline void ReplaceMask(const uint8 mask) {
         mMask = mask;
     }
-    inline void SetLowerDepth(const uint8 lowerdepth) {
+    inline void SetLowerDepth(const int8 lowerdepth) {
         mLowerDepth = lowerdepth;
     }
-    inline void SetUpperDepth(const uint8 upperdepth) {
+    inline void SetUpperDepth(const int8 upperdepth) {
         mUpperDepth = upperdepth;
     }
     inline void SetLowerValue(const int16 lowervalue) {
@@ -236,8 +236,8 @@ private:
     int16 mLowerValue;
     uint8 mMask;
     uint8 mAge;
-    uint8 mUpperDepth;
-    uint8 mLowerDepth;
+    int8 mUpperDepth;
+    int8 mLowerDepth;
 };
 
 class TranspositionTable : public BaseHashTable < TransEntry > {

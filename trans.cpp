@@ -27,6 +27,7 @@ void TranspositionTable::StoreLower(const uint64 hash, basic_move_t move, const 
             if (depth >= entry->LowerDepth() && !(entry->Mask() & MExact)) {
                 entry->SetAge(mDate);
                 entry->SetMove(move);
+//                if (move) entry->SetMove(move); //NEWSAM s1
                 entry->SetLowerDepth(depth);
                 entry->SetLowerValue(value);
                 entry->SetMask(MLower);
@@ -102,6 +103,7 @@ void TranspositionTable::StoreAllLower(const uint64 hash, basic_move_t move, con
             if (depth >= entry->LowerDepth() && ((entry->LowerDepth() == 0) || (entry->Mask() & MAllLower))) {
                 entry->SetAge(mDate);
                 entry->SetMove(move);
+//                if (move) entry->SetMove(move); //NEWSAM s1
                 entry->SetLowerDepth(depth);
                 entry->SetLowerValue(value);
                 entry->SetMask(MLower | MAllLower);
@@ -174,6 +176,7 @@ void TranspositionTable::StoreExact(const uint64 hash, basic_move_t move, const 
         if (entry->HashLock() == LOCK(hash)) {
             if (depth >= MAX(entry->UpperDepth(), entry->LowerDepth())) {
                 entry->SetMove(move);
+//                if (move) entry->SetMove(move); //NEWSAM s1
                 entry->SetAge(mDate);
                 entry->SetUpperDepth(depth);
                 entry->SetUpperValue(value);
@@ -294,7 +297,7 @@ PvHashEntry* PvHashTable::pvEntryFromMove(const uint64 hash, basic_move_t move) 
     return nullptr;
 }
 
-void PvHashTable::pvStore(const uint64 hash, const basic_move_t move, const uint8 depth, const int16 value) {
+void PvHashTable::pvStore(const uint64 hash, const basic_move_t move, const int depth, const int16 value) {
     int worst = -INF, t, score;
     PvHashEntry *replace, *entry;
 

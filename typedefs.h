@@ -159,7 +159,7 @@ struct SearchStack {
         threatMove(EMPTY),
         bannedMove(EMPTY),
         hashMove(EMPTY),
-        hashDepth(0),
+        hashDepth(-2),
         mvlist(&movelist),
         mvlist_phase(0) {}
     int playedMoves;
