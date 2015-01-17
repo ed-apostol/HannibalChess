@@ -624,14 +624,7 @@ bool genMoveIfLegal(const position_t& pos, uint32 move, uint64 pinned) {
     me = pos.side;
     opp = me ^ 1;
     occupied = pos.occupied;
-    /* SAM these things are all covered below
-    if (from == to) return false;
-    if (from < a1 || from > h8) return false;
-    if (to < a1 || to > h8) return false;
-    if (pc < PAWN || pc > KING) return false;
-    if (capt < EMPTY || capt > QUEEN) return false;
-    if (pc != PAWN && prom != EMPTY) return false;
-    */
+
     if (move == EMPTY || getPiece(pos, from) != pc || DiffColor(pos, from, me) ||
         ((pinned & BitMask[from]) && (DirFromTo[from][pos.kpos[me]] != DirFromTo[to][pos.kpos[me]]))) return false;
     switch (pc) {
@@ -662,28 +655,24 @@ bool genMoveIfLegal(const position_t& pos, uint32 move, uint64 pinned) {
             return ((prom != 0) == (PAWN_RANK(to, me) == Rank8));
         }
         break;
-
     case KNIGHT:
-        if (!prom && moveAction(move) != KNIGHT || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(KnightMoves[from] & BitMask[to])) return false;
+        if (prom || moveAction(move) != KNIGHT || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(KnightMoves[from] & BitMask[to])) return false;
         return true;
         break;
     case BISHOP:
-        if (!prom && moveAction(move) != BISHOP || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(bishopAttacksBB(from, occupied) & BitMask[to])) return false;
+        if (prom || moveAction(move) != BISHOP || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(bishopAttacksBB(from, occupied) & BitMask[to])) return false;
         return true;
         break;
-
     case ROOK:
-        if (!prom && moveAction(move) != ROOK || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(rookAttacksBB(from, occupied) & BitMask[to])) return false;
+        if (prom || moveAction(move) != ROOK || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(rookAttacksBB(from, occupied) & BitMask[to])) return false;
         return true;
         break;
-
     case QUEEN:
-        if (moveAction(move) != QUEEN || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(queenAttacksBB(from, occupied) & BitMask[to])) return false;
+        if (prom || moveAction(move) != QUEEN || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp) || !(queenAttacksBB(from, occupied) & BitMask[to])) return false;
         return true;
         break;
-
     case KING:
-        if (!prom && (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp)) return false;
+        if (prom || (getPiece(pos, to) != capt) || capt && DiffColor(pos, to, opp)) return false;
         if (isCastle(move)) {
             if (me == WHITE) {
                 if (from != e1) return false;

@@ -6,6 +6,11 @@
 /*  Contact: ed_apostol@yahoo.com                 */
 /*  Description: A chess playing program.         */
 /**************************************************/
+/*
+/GS- /GL /W4 /Gy /Zc:wchar_t /Zi /Gm /O2 /Ob2 /sdl- /Fd"x64\Release\vc120.pdb" /fp:fast /D "_MBCS" 
+/errorReport:prompt /GT /WX- /Zc:forScope /Gd /Oy /Oi /MT /Fa"x64\Release\" /EHsc /nologo /Fo"x64\Release\" /Ot /Fp"x64\Release\HannibalBitBucket.pch"
+*/
+
 
 #include "typedefs.h"
 #include "data.h"
@@ -27,7 +32,7 @@
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
 const std::string Interface::year = "2015";
-const std::string Interface::version = "1.5x32b";
+const std::string Interface::version = "1.5t1";
 const std::string Interface::arch = "x64";
 
 // TODO: add Engine class parameters to UCI commands
