@@ -156,6 +156,86 @@ void DrawnRookPawn(int attacker, const position_t& pos, int *draw, int32 mover) 
         }
     }
 }
+// THIS NEEDS TO BE RE-EXAMINED
+void PawnEnding(int attacker, const position_t& pos, int *draw, int mover) {
+    int defender = attacker ^ 1;
+    uint64 pawns[2], nonApawns, nonHpawns;
+    pawns[WHITE] = pos.pawns & pos.color[attacker];
+    pawns[BLACK] = pos.pawns & pos.color[defender];
+    // drawn races to win rook pawns
+    nonApawns = pawns[attacker] & (~FileABB);
+    if ((pawns[attacker] & FileABB) && (pawns[defender] & FileABB) && MaxOneBit(nonApawns) && (nonApawns & ~(FileBBB | FileCBB))) {
+        if (SHOW_EVAL) PrintOutput() << "info string rook pawn race\n";
+        int dpSq = getFirstBit(pawns[defender] & FileABB);
+        uint64 qSquares = (*FillPtr[attacker])(BitMask[dpSq]);
+        // make sure rook pawn is stopping opposition
+        // and pawn is not so advanced that attacker can shoulder defender
+        if ((qSquares & pawns[attacker]) == 0 && Q_DIST(dpSq, attacker) > 2) {
+            // how long to capture attacker pawn and then trap attacker in front of his pawn or get to the C sq
+            int aRace;
+            int apSq = GetOnlyBit(nonApawns);
+            int dRace1 = DISTANCE(apSq, pos.kpos[defender]);
+            if ((KingMoves[pos.kpos[attacker]] & nonApawns) != 0) {
+                aRace = DISTANCE(dpSq, apSq) - 2 + 1; // can scoot 1 over from pawn and force opponent 1 back
+                dRace1 = MAX(dRace1, 2);
+            }
+            else {
+                dRace1 -= (mover == defender);
+                aRace = DISTANCE(dpSq, pos.kpos[attacker]) + 1; // add one, since we need to get out from in front of our pawn
+            }
+            // this lets defender trap attacker king in front of his pawn
+            if (aRace >= dRace1 + DISTANCE(apSq, dpSq + 2)) {
+                *draw = VERY_DRAWISH;
+                if (SHOW_EVAL) PrintOutput() << "info string rook pawn race 1 att:" << aRace << " def " << dRace1 << " extra " << DISTANCE(apSq, dpSq + 2) << " \n";
+                return;
+            }
+            if (SHOW_EVAL) PrintOutput() << "info string rook pawn race X att:" << aRace << " def " << dRace1 << " extra " << DISTANCE(apSq, dpSq + 2) << " \n";
+            //see if defender can get to queen square area
+            if (aRace + Q_DIST(dpSq, attacker) - 2 >= dRace1 + DISTANCE(apSq, PAWN_PROMOTE(FileA, attacker) + 2)) {
+                *draw = VERY_DRAWISH;
+                if (SHOW_EVAL) PrintOutput() << "info string rook pawn race 2 aR:" << aRace + Q_DIST(dpSq, attacker) - 2 << " def " << dRace1 << " extra " << DISTANCE(apSq, PAWN_PROMOTE(FileC, attacker) + 2) << " \n";
+                return;
+            }
+            if (SHOW_EVAL) PrintOutput() << "info string rook pawn race X2 aR:" << aRace + Q_DIST(dpSq, attacker) - 2 << " def " << dRace1 << " extra " << DISTANCE(apSq, PAWN_PROMOTE(FileC, attacker) + 2) << " \n";
+        }
+    }
+    nonHpawns = pawns[attacker] & (~FileHBB);
+    if ((pawns[attacker] & FileHBB) && (pawns[defender] & FileHBB) && MaxOneBit(nonHpawns) && (nonHpawns & ~(FileGBB | FileFBB))) {
+        if (SHOW_EVAL) PrintOutput() << "info string rook pawn race\n";
+        int dpSq = getFirstBit(pawns[defender] & FileHBB);
+        uint64 qSquares = (*FillPtr[attacker])(BitMask[dpSq]);
+        // make sure rook pawn is stopping opposition
+        // and pawn is not so advanced that attacker can shoulder defender
+        if ((qSquares & pawns[attacker]) == 0 && Q_DIST(dpSq, attacker) > 2) {
+            // how long to capture attacker pawn and then trap attacker in front of his pawn or get to the C sq
+            int aRace;
+            int apSq = GetOnlyBit(nonHpawns);
+            int dRace1 = DISTANCE(apSq, pos.kpos[defender]);
+            if ((KingMoves[pos.kpos[attacker]] & nonApawns) != 0) {
+                aRace = DISTANCE(dpSq, apSq) - 2 + 1; // can scoot 1 over from pawn and force opponent 1 back
+                dRace1 = MAX(dRace1, 2);
+            }
+            else {
+                dRace1 -= (mover == defender);
+                aRace = DISTANCE(dpSq, pos.kpos[attacker]) + 1; // add one, since we need to get out from in front of our pawn
+            }
+            // this lets defender trap attacker king in front of his pawn
+            if (aRace >= dRace1 + DISTANCE(apSq, dpSq - 2)) {
+                *draw = VERY_DRAWISH;
+                if (SHOW_EVAL) PrintOutput() << "info string rook pawn race 1 att:" << aRace << " def " << dRace1 << " extra " << DISTANCE(apSq, dpSq - 2) << " \n";
+                return;
+            }
+            if (SHOW_EVAL) PrintOutput() << "info string rook pawn race X att:" << aRace << " def " << dRace1 << " extra " << DISTANCE(apSq, dpSq - 2) << " \n";
+            //see if defender can get to queen square area
+            if (aRace + Q_DIST(dpSq, attacker) - 2 >= dRace1 + DISTANCE(apSq, PAWN_PROMOTE(FileH, attacker) - 2)) {
+                *draw = VERY_DRAWISH;
+                if (SHOW_EVAL) PrintOutput() << "info string rook pawn race 2 aR:" << aRace + Q_DIST(dpSq, attacker) - 2 << " def " << dRace1 << " extra " << DISTANCE(apSq, PAWN_PROMOTE(FileC, attacker) - 2) << " \n";
+                return;
+            }
+            if (SHOW_EVAL) PrintOutput() << "info string rook pawn race X2 aR:" << aRace + Q_DIST(dpSq, attacker) - 2 << " def " << dRace1 << " extra " << DISTANCE(apSq, PAWN_PROMOTE(FileC, attacker) - 2) << " \n";
+        }
+    }
+}
 void KnightBishopMate(int color, const position_t& pos, int *score, int *draw) {
     int cornerDist;
     int defender = color ^ 1;
@@ -301,61 +381,6 @@ void DrawnNP(int attacker, const position_t& pos, eval_info_t& ei, int *draw) {
         int sq = GetOnlyBit(pawn);
         if (abs(SQFILE(pos.kpos[defender]) - SQFILE(sq)) <= 1 && IN_FRONT(SQRANK(pos.kpos[defender]), SQRANK(sq), attacker))
             *draw = SUPER_DRAWISH;
-    }
-}
-void PawnEnding(int attacker, const position_t& pos, int *draw, int mover) {
-    int defender = attacker ^ 1;
-    uint64 pawns[2], nonApawns, nonHpawns;
-    pawns[WHITE] = pos.pawns & pos.color[attacker];
-    pawns[BLACK] = pos.pawns & pos.color[defender];
-    // drawn races to win rook pawns
-    nonApawns = pawns[attacker] & (~FileABB);
-    if ((pawns[attacker] & FileABB) && (pawns[defender] & FileABB) && MaxOneBit(nonApawns)) {
-        int dpSq = getFirstBit(pawns[defender] & FileABB);
-        uint64 qSquares = (*FillPtr[attacker])(BitMask[dpSq]);
-        // make sure rook pawn is stopping opposition
-        // and pawn is not so advanced that attacker can shoulder defender
-        if ((qSquares & pawns[attacker]) == 0 && Q_DIST(dpSq, attacker) > 2) {
-            // how long does it take to capture defender pawn
-            // add one, since we need to get out from in front of our pawn
-            int aRace = DISTANCE(dpSq, pos.kpos[attacker]) + 1;
-            // how long to capture attacker pawn and then trap attacker in front of his pawn or get to the C sq
-            int apSq = GetOnlyBit(nonApawns);
-            int dRace1 = DISTANCE(apSq, pos.kpos[defender]) - (mover == defender);
-            if (aRace >= dRace1 + DISTANCE(apSq, dpSq + 2)) {
-                *draw = VERY_DRAWISH;
-                return;
-            }
-
-            if (aRace >= dRace1 + DISTANCE(apSq, PAWN_PROMOTE(FileA, attacker) + 2)) {
-                *draw = VERY_DRAWISH;
-                return;
-            }
-        }
-    }
-    nonHpawns = pawns[attacker] & (~FileHBB);
-    if ((pawns[attacker] & FileHBB) && (pawns[defender] & FileHBB) && MaxOneBit(nonHpawns)) {
-        int dpSq = getFirstBit(pawns[defender] & FileHBB);
-        uint64 qSquares = (*FillPtr[attacker])(BitMask[dpSq]);
-        // make sure rook pawn is stopping opposition
-        // and pawn is not so advanced that attacker can shoulder defender
-        if ((qSquares & pawns[attacker]) == 0 && Q_DIST(dpSq, attacker) > 2) {
-            // how long does it take to capture defender pawn
-            // add one, since we need to get out from in front of our pawn
-            int aRace = DISTANCE(dpSq, pos.kpos[attacker]) + 1;
-            // how long to capture attacker pawn and then trap attacker in front of his pawn or get to the C sq
-            int apSq = GetOnlyBit(nonHpawns);
-            int dRace1 = DISTANCE(apSq, pos.kpos[defender]) - (mover == defender);
-            if (aRace >= dRace1 + DISTANCE(apSq, dpSq - 2)) {
-                *draw = SUPER_DRAWISH;
-                return;
-            }
-
-            if (aRace >= dRace1 + DISTANCE(apSq, PAWN_PROMOTE(FileH, attacker) - 2)) {
-                *draw = SUPER_DRAWISH;
-                return;
-            }
-        }
     }
 }
 
@@ -634,9 +659,7 @@ void DrawnRookPawnvBishop(int attacker, const position_t& pos, int *draw) {
             const int queenSquare = PAWN_PROMOTE(dpSq, attacker);
             if (DISTANCE(queenSquare, pos.kpos[defender]) <= 1) { // if king near queening square
                 if (((pos.bishops & WhiteSquaresBB) == 0) != ((BitMask[queenSquare] & WhiteSquaresBB) == 0)) { // if right color bishop
-                    if (SHOW_EVAL) {
-                        PrintOutput() << "info string in RP v B endgame\n";
-                    }
+                    if (SHOW_EVAL) PrintOutput() << "info string in RP v B endgame\n";
                     *draw = SUPER_DRAWISH;
                 }
             }

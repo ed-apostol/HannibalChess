@@ -800,6 +800,12 @@ void Engine::GetBestMove(Thread& sthread) {
             return;
         }
     }
+#ifdef EVAL_DEBUG
+        SHOW_EVAL = true;
+        int tscore = eval(rootpos, sthread);
+        SHOW_EVAL = false;
+        PrintOutput() << "info string score = " << tscore << "\n";
+#endif
     PvHashEntry *entry = pvhashtable.pvEntry(rootpos.posStore.hash);
     if (nullptr != entry && entry->pvMove() && isLegal(rootpos, entry->pvMove(), ss.moveGivesCheck)) {
         if (info.rootPV.moves[1] == rootpos.posStore.lastmove && info.rootPV.moves[2] == entry->pvMove()) {
