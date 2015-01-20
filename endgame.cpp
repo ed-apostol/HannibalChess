@@ -327,23 +327,22 @@ void BishopEnding(int attacker, const position_t& pos, eval_info_t& ei, int *sco
             }
             if (blockingAll) {
                 *draw += 40; //SAM FIX probably should check potential passed pawns some too
-                /*
                 if (ei.MLindex[attacker] == MLB + MLP * 2) { //2 pawn is drawn if not on at least the 6th rank
-                passed = ei.pawn_entry->passedbits & pos.color[attacker];
-                int sq = popFirstBit(&passed);
-                if (Q_DIST(sq, attacker) > 2) {
-                *draw = SUPER_DRAWISH;
-                if (SHOW_EVAL) PrintOutput() << "info string oppo bishop 2 pawns < 6th rank king in front\n";
+                    passed = ei.pawn_entry->passedbits & pos.color[attacker];
+                    int sq = popFirstBit(&passed);
+                    if (Q_DIST(sq, attacker) > 2) {
+                        *draw = SUPER_DRAWISH;
+                        if (SHOW_EVAL) PrintOutput() << "info string oppo bishop 2 pawns < 6th rank king in front\n";
+                    }
+                    else {
+                        sq = popFirstBit(&passed);
+                        if (Q_DIST(sq, attacker) > 2) {
+                            *draw = SUPER_DRAWISH;
+                            if (SHOW_EVAL) PrintOutput() << "info string oppo bishop 2 pawns < 6th rank king in front\n";
+                        }
+                    }
                 }
-                else {
-                sq = popFirstBit(&passed);
-                if (Q_DIST(sq, attacker) > 2) {
-                *draw = SUPER_DRAWISH;
-                if (SHOW_EVAL) PrintOutput() << "info string oppo bishop 2 pawns < 6th rank king in front\n";
-                }
-                }
-                }
-                if (SHOW_EVAL) PrintOutput() << "info string oppo bishop king stopping all\n";*/
+                if (SHOW_EVAL) PrintOutput() << "info string oppo bishop king stopping all\n";
             }
             else *draw += 10; // all opposite bishop endings are somewhat drawish
         }
