@@ -178,10 +178,11 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
                     if (score < beta) return score;
                 }
             }
-            if (entry->Move() != EMPTY && entry->LowerDepth() > ss.hashDepth && moveIsTactical(entry->Move())) {  //NEWSAM s1 added moveistactical
+            if (entry->Move() != EMPTY && entry->LowerDepth() > ss.hashDepth && moveIsTactical(entry->Move())) { 
                 ss.hashDepth = entry->LowerDepth();
                 ss.hashMove = entry->Move();
             }
+            break; 
         }
     }
     if (pos.ply >= MAXPLY - 1) return eval(pos, sthread);
@@ -321,6 +322,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     evalDepth = entry->UpperDepth();
                     ss.evalvalue = scoreFromTrans(entry->UpperValue(), pos.ply);
                 }
+                break; 
             }
         }
         if (ss.evalvalue == -INF) ss.evalvalue = eval(pos, sthread);
@@ -414,7 +416,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         }
     }
 
-    int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 2) : (depth * depth)); //NEWSAM 1 4->2
+    int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 2) : (depth * depth));
     move_t* move;
     while ((move = sortNext(sp, mInfo, pos, *ss.mvlist, ss.mvlist_phase, sthread)) != nullptr) {
         int score = -INF;

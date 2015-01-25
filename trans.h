@@ -254,7 +254,6 @@ public:
     void StoreExact(uint64 hash, basic_move_t move, int depth, int value);
     void StoreNoMoves(uint64 hash, int depth, int value);
 
-    basic_move_t TransMove(uint64 hash);
     int32 Date() const {
         return mDate;
     }

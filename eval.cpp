@@ -19,7 +19,7 @@
 #include "material.h"
 #include "threads.h"
 
-const uint64 CenterRanks = (Rank3BB | Rank4BB | Rank5BB | Rank6BB) /*& ~(FileABB | FileHBB)*/; //NEWSAM t1
+const uint64 CenterRanks = (Rank3BB | Rank4BB | Rank5BB | Rank6BB); 
 //some castling comments
 const int KSC[2] = { WCKS, BCKS };
 const int QSC[2] = { WCQS, BCQS };
@@ -429,7 +429,7 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
     int threatScore = 0;
     uint64 boardSkeleton = pos.pawns;
     uint64 maybeTrapped = bewareTrapped[color] & ~ei.atkpawns[color];
-    uint64 safeCaptures = notOwnColor & ~pos.pawns; //NEWSAM t2
+//    uint64 safeCaptures = notOwnColor & ~pos.pawns; NEWSAM t5
 
     if (0 == (pos.posStore.castle & Castle[color])) boardSkeleton |= (pos.kings & pos.color[color]);
     notOwnSkeleton = ~(boardSkeleton & pos.color[color]);
@@ -471,7 +471,7 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
             ei.mid_score[color] -= 125;
         }
 
-        if ((fromMask & CenterRanks) && (BitMask[from + PAWN_MOVE_INC(color)] & pos.pawns)) ei.mid_score[color] += MINOR_SHIELD; //NEWSAM h1
+//        if ((fromMask & CenterRanks) && (BitMask[from + PAWN_MOVE_INC(color)] & pos.pawns)) ei.mid_score[color] += MINOR_SHIELD; NEWSAM t5
 
     }
     pc_bits = pos.bishops & pos.color[color];
@@ -491,16 +491,17 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
 //        ei.mid_score[color] += MidgameBishopMobArray[temp1];
 //        ei.end_score[color] += EndgameBishopMobArray[temp1];
         uint64 fromMask = BitMask[from];
-        if ((fromMask & CenterRanks) && (BitMask[from + PAWN_MOVE_INC(color)] & pos.pawns)) ei.mid_score[color] += MINOR_SHIELD; //NEWSAM h1
+//        if ((fromMask & CenterRanks) && (BitMask[from + PAWN_MOVE_INC(color)] & pos.pawns)) ei.mid_score[color] += MINOR_SHIELD; //NEWSAM t5
         if ((maybeTrapped & fromMask) && temp1 < 2) { //trapped piece if you are in opponent area and you have very few safe moves
             ei.mid_score[color] -= 125;
         }
+        /* NEWSAM t5
         if (temp1 < 2 && (temp64 & safeCaptures) == 0) {  //NEWSAM t2
             ei.mid_score[color] -= 5;
             if (maybeTrapped & fromMask) { //trapped piece if you are in opponent area and you have very few safe moves
                 ei.mid_score[color] -= 120;
             }
-        }
+        }*/
         xtemp64 = bishopAttacksBB(from, boardSkeleton) & notOwnSkeleton;
 
         if (xtemp64 & notOwnColor & (pos.kings | pos.queens)) {

@@ -158,7 +158,7 @@ move_t* sortNext(SplitPoint* sp, SearchInfo& info, position_t& pos, movelist_t& 
                 ASSERT(kingIsInCheck(pos));
                 break;
             case PH_TRANS:
-                if (!genMoveIfLegal(pos, move->m, mvlist.pinned)) continue; //NEWSAM s1 removed tactical Q search
+                if (!genMoveIfLegal(pos, move->m, mvlist.pinned)) continue;
                 break;
             case PH_ALL_CAPTURES:
                 if (move->m == mvlist.transmove) continue;

@@ -24,17 +24,13 @@ void TranspositionTable::StoreLower(const uint64 hash, basic_move_t move, const 
 
     for (t = 0; t < mBucketSize; t++, entry++) {
         if (entry->HashLock() == LOCK(hash)) {
-            if (depth >= entry->LowerDepth() && !(entry->Mask() & MExact)) {
-                entry->SetAge(mDate);
-                entry->SetMove(move);
-//                if (move) entry->SetMove(move); //NEWSAM s1
-                entry->SetLowerDepth(depth);
-                entry->SetLowerValue(value);
-                entry->SetMask(MLower);
-                entry->RemMask(MAllLower);
-                return;
-            }
-            mUsed++;
+            entry->SetAge(mDate);
+            entry->SetMove(move);
+            entry->SetLowerDepth(depth);
+            entry->SetLowerValue(value);
+            entry->SetMask(MLower);
+            entry->RemMask(MAllLower);
+            return;
         }
         score = (mAge[entry->Age()] * 256) - MAX(entry->UpperDepth(), entry->LowerDepth());
         if (score > worst) {
@@ -63,15 +59,12 @@ void TranspositionTable::StoreUpper(const uint64 hash, const int depth, const in
 
     for (t = 0; t < mBucketSize; t++, entry++) {
         if (entry->HashLock() == LOCK(hash)) {
-            if (depth >= entry->UpperDepth() && !(entry->Mask() & MExact)) {
-                entry->SetAge(mDate);
-                entry->SetUpperDepth(depth);
-                entry->SetUpperValue(value);
-                entry->SetMask(MUpper);
-                entry->RemMask(MCutUpper);
-                return;
-            }
-            mUsed++;
+            entry->SetAge(mDate);
+            entry->SetUpperDepth(depth);
+            entry->SetUpperValue(value);
+            entry->SetMask(MUpper);
+            entry->RemMask(MCutUpper);
+            return;
         }
         score = (mAge[entry->Age()] * 256) - MAX(entry->UpperDepth(), entry->LowerDepth());
         if (score > worst) {
@@ -100,16 +93,12 @@ void TranspositionTable::StoreAllLower(const uint64 hash, basic_move_t move, con
 
     for (t = 0; t < mBucketSize; t++, entry++) {
         if (entry->HashLock() == LOCK(hash)) {
-            if (depth >= entry->LowerDepth() && ((entry->LowerDepth() == 0) || (entry->Mask() & MAllLower))) {
-                entry->SetAge(mDate);
-                entry->SetMove(move);
-//                if (move) entry->SetMove(move); //NEWSAM s1
-                entry->SetLowerDepth(depth);
-                entry->SetLowerValue(value);
-                entry->SetMask(MLower | MAllLower);
-                return;
-            }
-            mUsed++;
+            entry->SetAge(mDate);
+            entry->SetMove(move);
+            entry->SetLowerDepth(depth);
+            entry->SetLowerValue(value);
+            entry->SetMask(MLower | MAllLower);
+            return;
         }
         score = (mAge[entry->Age()] * 256) - MAX(entry->UpperDepth(), entry->LowerDepth());
         if (score > worst) {
@@ -138,14 +127,11 @@ void TranspositionTable::StoreCutUpper(const uint64 hash,  const int depth, cons
 
     for (t = 0; t < mBucketSize; t++, entry++) {
         if (entry->HashLock() == LOCK(hash)) {
-            if (depth >= entry->UpperDepth() && ((entry->UpperDepth() == 0) || (entry->Mask() & MCutUpper))) {
                 entry->SetAge(mDate);
                 entry->SetUpperDepth(depth);
                 entry->SetUpperValue(value);
                 entry->SetMask(MUpper | MCutUpper);
                 return;
-            }
-            mUsed++;
         }
         score = (mAge[entry->Age()] * 256) - MAX(entry->UpperDepth(), entry->LowerDepth());
         if (score > worst) {
@@ -174,25 +160,21 @@ void TranspositionTable::StoreExact(const uint64 hash, basic_move_t move, const 
 
     for (t = 0; t < mBucketSize; t++, entry++) {
         if (entry->HashLock() == LOCK(hash)) {
-            if (depth >= MAX(entry->UpperDepth(), entry->LowerDepth())) {
-                entry->SetMove(move);
-//                if (move) entry->SetMove(move); //NEWSAM s1
-                entry->SetAge(mDate);
-                entry->SetUpperDepth(depth);
-                entry->SetUpperValue(value);
-                entry->SetLowerDepth(depth);
-                entry->SetLowerValue(value);
-                entry->ReplaceMask(MExact);
-                for (int x = t + 1; x < mBucketSize; x++) {
-                    entry++;
-                    if (entry->HashLock() == LOCK(hash)) {
-                        memset(entry, 0, sizeof(TransEntry));
-                        entry->SetAge((mDate + 1) % DATESIZE);
-                    }
+            entry->SetMove(move);
+            entry->SetAge(mDate);
+            entry->SetUpperDepth(depth);
+            entry->SetUpperValue(value);
+            entry->SetLowerDepth(depth);
+            entry->SetLowerValue(value);
+            entry->ReplaceMask(MExact);
+            for (int x = t + 1; x < mBucketSize; x++) {
+                entry++;
+                if (entry->HashLock() == LOCK(hash)) {
+                    memset(entry, 0, sizeof(TransEntry));
+                    entry->SetAge((mDate + 1) % DATESIZE);
                 }
-                return;
             }
-            mUsed++;
+            return;
         }
         score = (mAge[entry->Age()] * 256) - MAX(entry->UpperDepth(), entry->LowerDepth());
         if (score > worst) {
@@ -235,21 +217,6 @@ void TranspositionTable::StoreNoMoves(const uint64 hash, const int depth, const 
     replace->SetLowerDepth(depth);
     replace->SetLowerValue(value);
     replace->ReplaceMask(MExact | MNoMoves);
-}
-
-basic_move_t TranspositionTable::TransMove(const uint64 hash) {
-    int hashDepth = 0;
-    basic_move_t hashMove = EMPTY;
-    TransEntry *entry = Entry(hash);
-    for (int t = 0; t < mBucketSize; t++, entry++) {
-        if (entry->HashLock() == LOCK(hash)) {
-            if (entry->Move() != EMPTY && entry->LowerDepth() > hashDepth) {
-                hashDepth = entry->LowerDepth();
-                hashMove = entry->Move();
-            }
-        }
-    }
-    return hashMove;
 }
 
 void TranspositionTable::NewDate(int date) {
