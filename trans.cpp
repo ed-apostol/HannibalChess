@@ -167,13 +167,6 @@ void TranspositionTable::StoreExact(const uint64 hash, basic_move_t move, const 
             entry->SetLowerDepth(depth);
             entry->SetLowerValue(value);
             entry->ReplaceMask(MExact);
-            for (int x = t + 1; x < mBucketSize; x++) {
-                entry++;
-                if (entry->HashLock() == LOCK(hash)) {
-                    memset(entry, 0, sizeof(TransEntry));
-                    entry->SetAge((mDate + 1) % DATESIZE);
-                }
-            }
             return;
         }
         score = (mAge[entry->Age()] * 256) - MAX(entry->UpperDepth(), entry->LowerDepth());
