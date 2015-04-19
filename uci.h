@@ -23,14 +23,14 @@ public:
 
 private:
     bool Input(std::istringstream& stream);
-    void Stop();
-    void PonderHit();
-    void Go(std::istringstream& stream);
-    void Position(std::istringstream& stream);
-    void SetOption(std::istringstream& stream);
-    void NewGame();
-    void Id();
-    void Quit();
+    void Stop(Engine& engine);
+    void PonderHit(Engine& engine);
+    void Go(Engine& engine, position_t& pos, std::istringstream& stream);
+    void Position(position_t& pos, std::istringstream& stream);
+    void SetOption(Engine& engine, std::istringstream& stream);
+    void NewGame(Engine& engine);
+    void Id(Engine& engine);
+    void Quit(Engine& engine);
 
     void CheckSpeedup(std::istringstream& stream);
     void CheckBestSplit(std::istringstream& stream);

@@ -921,16 +921,16 @@ void evalPawns(const position_t& pos, eval_info_t& ei, Thread& sthread) {
         ei.end_score[WHITE] += ei.pawn_entry->end;
     }
     else {
-            {
-                int midpawnscore[2] = { 0, 0 };
-                int endpawnscore[2] = { 0, 0 };
-                ei.pawn_entry->passedbits = 0;
-                evalPawnsByColor(pos, ei, midpawnscore, endpawnscore, WHITE);
-                evalPawnsByColor(pos, ei, midpawnscore, endpawnscore, BLACK);
-                ei.pawn_entry->hashlock = LOCK(pos.posStore.phash);
-                ei.pawn_entry->opn = midpawnscore[WHITE] - midpawnscore[BLACK];
-                ei.pawn_entry->end = endpawnscore[WHITE] - endpawnscore[BLACK];
-            }
+        {
+            int midpawnscore[2] = { 0, 0 };
+            int endpawnscore[2] = { 0, 0 };
+            ei.pawn_entry->passedbits = 0;
+            evalPawnsByColor(pos, ei, midpawnscore, endpawnscore, WHITE);
+            evalPawnsByColor(pos, ei, midpawnscore, endpawnscore, BLACK);
+            ei.pawn_entry->hashlock = LOCK(pos.posStore.phash);
+            ei.pawn_entry->opn = midpawnscore[WHITE] - midpawnscore[BLACK];
+            ei.pawn_entry->end = endpawnscore[WHITE] - endpawnscore[BLACK];
+        }
     }
 }
 

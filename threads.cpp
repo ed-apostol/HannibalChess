@@ -66,25 +66,38 @@ void Thread::GetWork(SplitPoint* const master_sp) {
     SplitPoint* best_split_point = nullptr;
 
     for (Thread* th : mThreadGroup) {
-        if (th->thread_id == thread_id) continue; // no need to help self
-        if (master_sp != nullptr && !(master_sp->workersBitMask & ((uint64)1 << th->thread_id))) continue; // helpful master: looking to help threads still actively working for it
+        // there are only two possible scenarios to be here
+        // either an idle thread or a splitpoint master waiting for helper threads to finish
+        // if idle thread: it has no splitpoint; if helpful master: it can't help it's own splitpoint or it's parent splitpoint
+        // therefore, there is no need to check on it's own splitpoints
+        if (th->thread_id == thread_id) continue; 
+        // helpful master: looking to help threads still actively working for it
+        if (master_sp != nullptr && !(master_sp->workersBitMask & ((uint64)1 << th->thread_id))) continue; 
         for (int splitIdx = 0, num_splits = th->num_sp; splitIdx < num_splits; ++splitIdx) {
             SplitPoint* const sp = &th->sptable[splitIdx];
-            if (sp->cutoff) continue; // if it already has cutoff, move on
-            if (sp->workersBitMask != sp->allWorkersBitMask) continue; // only search those with all threads still searching
-            if (sp->depth > best_depth) { // deeper is better
+            // if it already has cutoff, no need to check child splitpoints
+            if (sp->cutoff) break;
+            // only search those with all threads still searching
+            if (sp->workersBitMask != sp->allWorkersBitMask) continue; 
+            // deeper is better
+            if (sp->depth > best_depth) { 
                 best_split_point = sp;
                 best_depth = sp->depth;
                 thread_to_help = th;
             }
-            break; // only check the first valid split in every thread, it is always the deepest, saves time
+            // only check the first valid splitpoint in every thread, it is always the deepest, saves time
+            break; 
         }
     }
+    // do a redundant check under lock protection
     if (!doSleep && best_split_point != nullptr && thread_to_help != nullptr) {
         std::lock_guard<Spinlock> lck(best_split_point->updatelock);
-        if (!best_split_point->cutoff // check if the splitpoint has not cutoff yet
-            && (best_split_point->workersBitMask == best_split_point->allWorkersBitMask) // check if all helper threads are still searching this splitpoint
-            && (master_sp == nullptr || (master_sp->workersBitMask & ((uint64)1 << thread_to_help->thread_id)))) { // check if the helper thread is still working for master
+        // check if the splitpoint has not cutoff yet
+        if (!best_split_point->cutoff 
+            // check if all helper threads are still searching this splitpoint
+            && (best_split_point->workersBitMask == best_split_point->allWorkersBitMask) 
+            // check if this is a helpful master and the helper thread is still working for it
+            && (master_sp == nullptr || (master_sp->workersBitMask & ((uint64)1 << thread_to_help->thread_id)))) { 
             best_split_point->workersBitMask |= ((uint64)1 << thread_id);
             best_split_point->allWorkersBitMask |= ((uint64)1 << thread_id);
             activeSplitPoint = best_split_point;
