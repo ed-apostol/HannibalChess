@@ -135,12 +135,14 @@ public:
     static const int MaxNumSplitPointsPerThread = 8;
     typedef std::function<void(Thread&)> CBFuncThink;
     typedef std::function<void(SplitPoint&, Thread&)> CBFuncSearch;
+    typedef std::function<void()> CBFuncGeneric;
 
-    Thread(int _thread_id, std::vector<Thread*>& _thread_group, CBFuncThink _getbest, CBFuncSearch _searchfromidle) :
+    Thread(int _thread_id, std::vector<Thread*>& _thread_group, CBFuncThink _getbest, CBFuncSearch _searchfromidle, CBFuncGeneric _stopthink) :
         ThreadBase(_thread_id),
         mThreadGroup(_thread_group),
         CBGetBestMove(_getbest),
-        CBSearchFromIdleLoop(_searchfromidle) {
+        CBSearchFromIdleLoop(_searchfromidle),
+        CBStopThinking(_stopthink) {
         Init();
         NativeThread() = std::thread(&Thread::IdleLoop, this);
     }
@@ -167,6 +169,7 @@ private:
     std::vector<Thread*>& mThreadGroup;
     CBFuncThink CBGetBestMove;
     CBFuncSearch CBSearchFromIdleLoop;
+    CBFuncGeneric CBStopThinking;
 };
 
 class TimerThread : public ThreadBase {

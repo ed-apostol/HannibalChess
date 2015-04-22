@@ -781,7 +781,7 @@ void Engine::SendBestMove() {
         if (info.pondermove) log << " ponder " << move2Str(info.pondermove);
     }
     //PrintThreadStats();
-    SetThinkFinished();
+    //SetThinkFinished();
 }
 
 void Engine::GetBestMove(Thread& sthread) {

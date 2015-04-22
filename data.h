@@ -65,8 +65,6 @@ extern int CastleMask[64];
 /* used as initial king penalty */
 extern int KingPosPenalty[2][64];
 
-extern pos_store_t UndoStack[MAX_HASH_STORE];
-
 extern int DrawValue[2];
 /* this is used for pawn shelter and pawn storm */
 extern uint64 PassedMask[2][64];

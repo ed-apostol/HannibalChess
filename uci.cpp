@@ -70,7 +70,7 @@ bool Interface::Input(std::istringstream& stream) {
     if (command == "stop") Stop(cEngine);
     else if (command == "ponderhit") PonderHit(cEngine);
     else if (command == "go") Go(cEngine, input_pos, stream);
-    else if (command == "position") Position(input_pos, stream);
+    else if (command == "position") Position(cEngine, input_pos, stream);
     else if (command == "setoption") SetOption(cEngine, stream);
     else if (command == "ucinewgame") NewGame(cEngine);
     else if (command == "isready") LogAndPrintOutput() << "readyok";
@@ -129,7 +129,7 @@ void Interface::Go(Engine& engine, position_t& pos, std::istringstream& stream) 
     engine.StartThinking(data, pos);
 }
 
-void Interface::Position(position_t& pos, std::istringstream& stream) {
+void Interface::Position(Engine& engine, position_t& pos, std::istringstream& stream) {
     basic_move_t m;
     std::string token, fen;
 
@@ -152,7 +152,7 @@ void Interface::Position(position_t& pos, std::istringstream& stream) {
         movelist_t ml;
         genLegal(pos, ml, true);
         m = parseMove(ml, token.c_str());
-        if (m) makeMove(pos, UndoStack[pos.sp], m);
+        if (m) makeMove(pos, engine.UndoStack[pos.sp], m);
         else break;
         if (pos.posStore.fifty == 0) pos.sp = 0;
     }
@@ -203,7 +203,7 @@ void Interface::CheckSpeedup(std::istringstream& stream) {
             NewGame(cEngine);
 
             streamcmd = std::istringstream("fen " + fenPos[idxpos]);
-            Position(input_pos, streamcmd);
+            Position(cEngine, input_pos, streamcmd);
 
             int64 startTime = getTime();
 
@@ -276,7 +276,7 @@ void Interface::CheckBestSplit(std::istringstream& stream) {
             NewGame(cEngine);
 
             streamcmd = std::istringstream("fen " + fenPos[idxpos]);
-            Position(input_pos, streamcmd);
+            Position(cEngine, input_pos, streamcmd);
 
             int64 startTime = getTime();
 

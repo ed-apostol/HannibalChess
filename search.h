@@ -262,7 +262,8 @@ public:
         while (mThreads.size() < num) {
             using namespace std::placeholders;
             int id = (int)mThreads.size();
-            mThreads.push_back(new Thread(id, mThreads, std::bind(&Engine::GetBestMove, this, _1), std::bind(&Engine::SearchFromIdleLoop, this, _1, _2)));
+            mThreads.push_back(new Thread(id, mThreads, std::bind(&Engine::GetBestMove, this, _1), 
+                std::bind(&Engine::SearchFromIdleLoop, this, _1, _2), std::bind(&Engine::SetThinkFinished, this)));
         }
         while (mThreads.size() > num) {
             delete mThreads.back();
@@ -370,6 +371,7 @@ public:
     }
 
     UCIOptions uci_opt;
+    pos_store_t UndoStack[MAX_HASH_STORE];
 private:
     static const int WORSE_SCORE_CUTOFF = 20;
 

@@ -26,7 +26,7 @@ private:
     void Stop(Engine& engine);
     void PonderHit(Engine& engine);
     void Go(Engine& engine, position_t& pos, std::istringstream& stream);
-    void Position(position_t& pos, std::istringstream& stream);
+    void Position(Engine& engine, position_t& pos, std::istringstream& stream);
     void SetOption(Engine& engine, std::istringstream& stream);
     void NewGame(Engine& engine);
     void Id(Engine& engine);

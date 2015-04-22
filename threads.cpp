@@ -44,6 +44,7 @@ void Thread::IdleLoop() {
         if (!exit_flag && !doSleep && master_sp == nullptr && thread_id == 0) {
             LogInfo() << "IdleLoop: Main thread waking up to start searching!";
             CBGetBestMove(*this);
+            CBStopThinking();
             doSleep = true;
         }
         if (!exit_flag && !doSleep && stop) {
