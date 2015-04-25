@@ -39,13 +39,12 @@ void Thread::IdleLoop() {
     SplitPoint* const master_sp = activeSplitPoint;
     while (!exit_flag) {
         if (!exit_flag && master_sp == nullptr && doSleep) {
-            SleepAndWaitForCondition();
+			SleepAndWaitForCondition();
         }
         if (!exit_flag && !doSleep && master_sp == nullptr && thread_id == 0) {
             LogInfo() << "IdleLoop: Main thread waking up to start searching!";
-            CBGetBestMove(*this);
-            CBStopThinking();
-            doSleep = true;
+			CBGetBestMove(*this);
+			CBStopThinking();
         }
         if (!exit_flag && !doSleep && stop) {
             GetWork(master_sp);
@@ -67,20 +66,26 @@ void Thread::GetWork(SplitPoint* const master_sp) {
     SplitPoint* best_split_point = nullptr;
 
     for (Thread* th : mThreadGroup) {
-        // there are only two possible scenarios to be here
-        // either an idle thread or a splitpoint master waiting for helper threads to finish
-        // if idle thread: it has no splitpoint; if helpful master: it can't help it's own splitpoint or it's parent splitpoint
+        // there are only two possible scenario to be here
+        // either this is an idle thread or a splitpoint master thread waiting for helper threads to finish
+        // if idle thread: it has no splitpoint. so don't waste time checking
+		// if helpful master: it shouldn't help it's current splitpoint (no more work) or it's parent splitpoint (inefficient)
         // therefore, there is no need to check on it's own splitpoints
-        if (th->thread_id == thread_id) continue; 
-        // helpful master: looking to help threads still actively working for it
+        if (th->thread_id == thread_id) continue;
+        // if this is a helpful master, only help splitpoints under helper threads still actively working for it
         if (master_sp != nullptr && !(master_sp->workersBitMask & ((uint64)1 << th->thread_id))) continue; 
         for (int splitIdx = 0, num_splits = th->num_sp; splitIdx < num_splits; ++splitIdx) {
             SplitPoint* const sp = &th->sptable[splitIdx];
-            // if it already has cutoff, no need to check child splitpoints
-            if (sp->cutoff) break;
-            // only search those with all threads still searching
+            // if it already has cutoff, no need to also check child splitpoints as they will return ASAP too
+			// so break here and stop checking next splitpoints which are just child splitpoints of this current splitpoint
+			if (sp->cutoff) break;
+            // only search those with all threads still searching, 
+			// otherwise there is no more work in that splitpoint that needs help
             if (sp->workersBitMask != sp->allWorkersBitMask) continue; 
-            // deeper is better
+            // deeper is better; the higher the depth, the bigger the workload, 
+			// bigger workload means better efficiency as we avoid joining splitpoints too much
+			// which is inefficient as we copy splitpoint data like position structure
+			// and joining a splitpoint in general takes computation time
             if (sp->depth > best_depth) { 
                 best_split_point = sp;
                 best_depth = sp->depth;
@@ -91,13 +96,14 @@ void Thread::GetWork(SplitPoint* const master_sp) {
         }
     }
     // do a redundant check under lock protection
+	// this is to make sure that the previous conditions still applies before joining the splitpoint
     if (!doSleep && best_split_point != nullptr && thread_to_help != nullptr) {
         std::lock_guard<Spinlock> lck(best_split_point->updatelock);
         // check if the splitpoint has not cutoff yet
         if (!best_split_point->cutoff 
             // check if all helper threads are still searching this splitpoint
             && (best_split_point->workersBitMask == best_split_point->allWorkersBitMask) 
-            // check if this is a helpful master and the helper thread is still working for it
+            // check if this is a helpful master and if the helper thread is still working for it
             && (master_sp == nullptr || (master_sp->workersBitMask & ((uint64)1 << thread_to_help->thread_id)))) { 
             best_split_point->workersBitMask |= ((uint64)1 << thread_id);
             best_split_point->allWorkersBitMask |= ((uint64)1 << thread_id);

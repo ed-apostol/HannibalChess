@@ -47,9 +47,9 @@ static const int MaxThreads = 64;
 static const int DefaultThreads = 1;
 
 static const std::string MinSplitDepthStr = "Min Split Depth";
-static const int MinSplitDepth = 2;
+static const int MinSplitDepth = 1;
 static const int MaxSplitDepth = 8;
-static const int DefaultSplitDepth = 4;
+static const int DefaultSplitDepth = 3;
 
 static const std::string ActiveSplitsStr = "Max Active Splits/Thread";
 static const int MinActiveSplit = 1;
@@ -282,11 +282,17 @@ public:
         }
         LogInfo() << "================================================================";
     }
-    void WaitForThinkFinished() {
+    void WaitForThink() {
         while (mThinking.test_and_set(std::memory_order_acquire)) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
     }
+	void WaitForThinkAndSetFinished() {
+		while (mThinking.test_and_set(std::memory_order_acquire)) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(5));
+		}
+		mThinking.clear(std::memory_order_release);
+	}
     void SetThinkFinished() {
         mThinking.clear(std::memory_order_release);
     }
@@ -299,7 +305,8 @@ public:
     }
     void SetAllThreadsToWork() {
         for (Thread* th : mThreads) {
-            if (th->thread_id != 0) th->TriggerCondition(); // thread_id == 0 is triggered separately
+			if (th->thread_id != 0) 
+				th->TriggerCondition(); // thread_id == 0 is triggered separately
         }
         mTimerThread->stop = false;
         mTimerThread->TriggerCondition();

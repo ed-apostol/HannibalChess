@@ -191,7 +191,6 @@ struct GoCmdData {
         winc = 0;
         binc = 0;
         movestogo = 0;
-        ponder = 0;
         depth = 0;
         movetime = 0;
         mate = 0;

@@ -257,6 +257,7 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     }
     return ss.bestvalue;
 }
+
 template <bool inRoot, bool inSplitPoint, bool inSingular>
 int Search::searchNode(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt) {
     if (depth <= 0) {
@@ -604,6 +605,7 @@ void Engine::SearchFromIdleLoop(SplitPoint& sp, Thread& sthread) {
     else search->searchNode<false, true, false>(pos, sp.alpha, sp.beta, sp.depth, *sp.ssprev, sthread, sp.nodeType);
 }
 
+// TODO: encapsulate
 bool isLegal(const position_t& pos, const  basic_move_t move, const bool inCheck) { //this ensures perfect legality for moves that might actually be chosen by the engine
     /*
     movelist_t mvlist;
@@ -902,7 +904,7 @@ void Engine::GetBestMove(Thread& sthread) {
 }
 
 void Engine::StartThinking(GoCmdData& data, position_t& pos) {
-    WaitForThinkFinished();
+    WaitForThink();
 
     rootpos = pos;
     info.Init();
@@ -994,6 +996,5 @@ void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     DrawValue[rootpos.side] = -info.contempt;
     DrawValue[rootpos.side ^ 1] = info.contempt;
 
-    ThreadFromIdx(0).stop = false;
     ThreadFromIdx(0).TriggerCondition();
 }
