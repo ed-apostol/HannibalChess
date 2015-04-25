@@ -272,7 +272,7 @@ move_t* sortNext(SplitPoint* sp, SearchInfo& info, position_t& pos, movelist_t& 
             break;
         case PH_QUIET_MOVES:
             genNonCaptures(pos, mvlist);
-            scoreNonCaptures( mvlist, sthread);
+            scoreNonCaptures(mvlist, sthread);
             break;
         case PH_NONTACTICAL_CHECKS:
         case PH_NONTACTICAL_CHECKS_WIN:

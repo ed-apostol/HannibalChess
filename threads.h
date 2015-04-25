@@ -78,6 +78,7 @@ struct SplitPoint {
     volatile bool cutoff;
     Spinlock movelistlock;
     Spinlock updatelock;
+    Spinlock movesplayedlock;
 };
 
 struct ThreadStack {

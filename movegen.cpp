@@ -42,19 +42,19 @@ void genLegal(const position_t& pos, movelist_t& mvlist, int promoteAll) {
         genEvasions(pos, mvlist);
         if (promoteAll)
             for (mlt.pos = 0; mlt.pos < mvlist.size; mlt.pos++) {
-            int mv = mvlist.list[mlt.pos].m;
-            if (movePromote(mv) == QUEEN) { // makes up for not generating ROOK and BISHOP promotes
-                int from = moveFrom(mv);
-                int to = moveTo(mv);
-                if (moveCapture(mv)) {
-                    mvlist.list[mvlist.size++].m = GenPromote(from, to, ROOK, getPiece(pos, to));
-                    mvlist.list[mvlist.size++].m = GenPromote(from, to, BISHOP, getPiece(pos, to));
+                int mv = mvlist.list[mlt.pos].m;
+                if (movePromote(mv) == QUEEN) { // makes up for not generating ROOK and BISHOP promotes
+                    int from = moveFrom(mv);
+                    int to = moveTo(mv);
+                    if (moveCapture(mv)) {
+                        mvlist.list[mvlist.size++].m = GenPromote(from, to, ROOK, getPiece(pos, to));
+                        mvlist.list[mvlist.size++].m = GenPromote(from, to, BISHOP, getPiece(pos, to));
+                    }
+                    else {
+                        mvlist.list[mvlist.size++].m = GenPromoteStraight(from, to, ROOK);
+                        mvlist.list[mvlist.size++].m = GenPromoteStraight(from, to, BISHOP);
+                    }
                 }
-                else {
-                    mvlist.list[mvlist.size++].m = GenPromoteStraight(from, to, ROOK);
-                    mvlist.list[mvlist.size++].m = GenPromoteStraight(from, to, BISHOP);
-                }
-            }
             }
     }
     else {

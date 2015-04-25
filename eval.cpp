@@ -19,7 +19,7 @@
 #include "material.h"
 #include "threads.h"
 
-const uint64 CenterRanks = (Rank3BB | Rank4BB | Rank5BB | Rank6BB); 
+const uint64 CenterRanks = (Rank3BB | Rank4BB | Rank5BB | Rank6BB);
 //some castling comments
 const int KSC[2] = { WCKS, BCKS };
 const int QSC[2] = { WCQS, BCQS };
@@ -429,7 +429,7 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
     int threatScore = 0;
     uint64 boardSkeleton = pos.pawns;
     uint64 maybeTrapped = bewareTrapped[color] & ~ei.atkpawns[color];
-//    uint64 safeCaptures = notOwnColor & ~pos.pawns; NEWSAM t5
+    //    uint64 safeCaptures = notOwnColor & ~pos.pawns; NEWSAM t5
 
     if (0 == (pos.posStore.castle & Castle[color])) boardSkeleton |= (pos.kings & pos.color[color]);
     notOwnSkeleton = ~(boardSkeleton & pos.color[color]);
@@ -451,8 +451,8 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         temp1 = bitCnt(safeMoves);
         ei.mid_score[color] += temp1 * MidgameKnightMob;
         ei.end_score[color] += temp1 * EndgameKnightMob;
-//      ei.mid_score[color] += MidgameKnightMobArray[temp1];
-//        ei.end_score[color] += EndgameKnightMobArray[temp1];
+        //      ei.mid_score[color] += MidgameKnightMobArray[temp1];
+        //        ei.end_score[color] += EndgameKnightMobArray[temp1];
         uint64 fromMask = BitMask[from];
         if (fromMask & weak_sq_mask) {
             temp1 = outpost(pos, ei, color, enemy, from);
@@ -461,18 +461,17 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         }
         /*
         if (temp1 < 2 && (temp64 & safeCaptures) == 0) {  //NEWSAM t2
-            ei.mid_score[color] -= 5;
-            if (maybeTrapped & fromMask) { //trapped piece if you are in opponent area and you have very few safe moves
-                ei.mid_score[color] -= 120;
-            }
+        ei.mid_score[color] -= 5;
+        if (maybeTrapped & fromMask) { //trapped piece if you are in opponent area and you have very few safe moves
+        ei.mid_score[color] -= 120;
         }
-          */
+        }
+        */
         if ((maybeTrapped & fromMask) && temp1 < 2) { //trapped piece if you are in opponent area and you have very few safe moves
             ei.mid_score[color] -= 125;
         }
 
-//        if ((fromMask & CenterRanks) && (BitMask[from + PAWN_MOVE_INC(color)] & pos.pawns)) ei.mid_score[color] += MINOR_SHIELD; NEWSAM t5
-
+        //        if ((fromMask & CenterRanks) && (BitMask[from + PAWN_MOVE_INC(color)] & pos.pawns)) ei.mid_score[color] += MINOR_SHIELD; NEWSAM t5
     }
     pc_bits = pos.bishops & pos.color[color];
     ei.kingatkbishops[color] = 0;
@@ -488,19 +487,19 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         temp1 = bitCnt(safeMoves);
         ei.mid_score[color] += (temp1)* MidgameBishopMob;
         ei.end_score[color] += temp1 * EndgameBishopMob;
-//        ei.mid_score[color] += MidgameBishopMobArray[temp1];
-//        ei.end_score[color] += EndgameBishopMobArray[temp1];
+        //        ei.mid_score[color] += MidgameBishopMobArray[temp1];
+        //        ei.end_score[color] += EndgameBishopMobArray[temp1];
         uint64 fromMask = BitMask[from];
-//        if ((fromMask & CenterRanks) && (BitMask[from + PAWN_MOVE_INC(color)] & pos.pawns)) ei.mid_score[color] += MINOR_SHIELD; //NEWSAM t5
+        //        if ((fromMask & CenterRanks) && (BitMask[from + PAWN_MOVE_INC(color)] & pos.pawns)) ei.mid_score[color] += MINOR_SHIELD; //NEWSAM t5
         if ((maybeTrapped & fromMask) && temp1 < 2) { //trapped piece if you are in opponent area and you have very few safe moves
             ei.mid_score[color] -= 125;
         }
         /* NEWSAM t5
         if (temp1 < 2 && (temp64 & safeCaptures) == 0) {  //NEWSAM t2
-            ei.mid_score[color] -= 5;
-            if (maybeTrapped & fromMask) { //trapped piece if you are in opponent area and you have very few safe moves
-                ei.mid_score[color] -= 120;
-            }
+        ei.mid_score[color] -= 5;
+        if (maybeTrapped & fromMask) { //trapped piece if you are in opponent area and you have very few safe moves
+        ei.mid_score[color] -= 120;
+        }
         }*/
         xtemp64 = bishopAttacksBB(from, boardSkeleton) & notOwnSkeleton;
 
@@ -513,8 +512,8 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         temp1 = bitCnt(xtemp64);
         ei.mid_score[color] += (temp1)* MidgameXrayBishopMob;
         ei.end_score[color] += temp1 * EndgameXrayBishopMob;
-//        ei.mid_score[color] += MidgameXrayBishopMobArray[temp1];
-//        ei.end_score[color] += EndgameXrayBishopMobArray[temp1];
+        //        ei.mid_score[color] += MidgameXrayBishopMobArray[temp1];
+        //        ei.end_score[color] += EndgameXrayBishopMobArray[temp1];
         if (temp1 < 3) {
             ei.mid_score[color] -= personality(thread).stuck_bishop;
             ei.end_score[color] -= personality(thread).stuck_bishop*personality(thread).stuck_end;
@@ -539,8 +538,8 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         temp1 = bitCnt(safeMoves);
         ei.mid_score[color] += temp1 * MidgameRookMob;
         ei.end_score[color] += temp1 * EndgameRookMob;
-//        ei.mid_score[color] += MidgameRookMobArray[temp1];
-//        ei.end_score[color] += EndgameRookMobArray[temp1];
+        //        ei.mid_score[color] += MidgameRookMobArray[temp1];
+        //        ei.end_score[color] += EndgameRookMobArray[temp1];
         xtemp64 = rookAttacksBB(from, boardSkeleton) & notOwnSkeleton;
         temp1 = bitCnt(xtemp64);
         if (xtemp64 & notOwnColor & (pos.kings | pos.queens)) {
@@ -553,8 +552,8 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         }
         ei.mid_score[color] += temp1 * MidgameXrayRookMob;
         ei.end_score[color] += temp1 * EndgameXrayRookMob;
-//        ei.mid_score[color] += MidgameXrayRookMobArray[temp1];
-//        ei.end_score[color] += EndgameXrayRookMobArray[temp1];
+        //        ei.mid_score[color] += MidgameXrayRookMobArray[temp1];
+        //        ei.end_score[color] += EndgameXrayRookMobArray[temp1];
 
         //its good to be lined up with a lot of enemy pawns (7th rank most common example)
         uint64 pressured = rookAttacksBB(from, ((pos.pawns | pos.kings) & pos.color[color]));
@@ -586,8 +585,8 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         temp1 = bitCnt(temp64 & mobileSquare);
         ei.mid_score[color] += temp1 * MidgameQueenMob;
         ei.end_score[color] += temp1 * EndgameQueenMob;
-//        ei.mid_score[color] += MidgameQueenMobArray[temp1];
-//        ei.end_score[color] += EndgameQueenMobArray[temp1];
+        //        ei.mid_score[color] += MidgameQueenMobArray[temp1];
+        //        ei.end_score[color] += EndgameQueenMobArray[temp1];
 
         xtemp64 = queenAttacksBB(from, boardSkeleton) & notOwnSkeleton;
         temp1 = bitCnt(xtemp64);
@@ -598,8 +597,8 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         }
         ei.mid_score[color] += temp1 * MidgameXrayQueenMob;
         ei.end_score[color] += temp1 * EndgameXrayQueenMob;
-//        ei.mid_score[color] += MidgameXrayQueenMobArray[temp1];
-//        ei.end_score[color] += EndgameXrayQueenMobArray[temp1];
+        //        ei.mid_score[color] += MidgameXrayQueenMobArray[temp1];
+        //        ei.end_score[color] += EndgameXrayQueenMobArray[temp1];
         if (xtemp64 & notOwnColor & pos.kings) {
             threatScore += (QueenAttackPower * QueenAttacked) / 2;
         }
@@ -1071,58 +1070,58 @@ int eval(const position_t& pos, Thread& sthread) {
 }
 /*
 void FillMobilityArray(double weight, int minGood, double penalty, int numMoves, int a[]) {
-    double mobilityArray[7 * 4 + 1];
-    mobilityArray[0] = 0;
-    for (int i = 1; i < numMoves; i++) {
-        //        double multiplier = (sqrt(i) - sqrt(i - 1)) * 3.5;
-        //        double multiplier = 1.1 - (i / 28.0); //34
-        mobilityArray[i] = mobilityArray[i - 1] + weight; //weight is what to play with if you want diminishing returns on mobility
-    }
-    for (int i = 0; i < numMoves; i++) {
-        if (i < minGood)  mobilityArray[i] -= penalty;
-        a[i] = round(mobilityArray[i]);
-        //        PrintOutput() << "mobility " << i << " = " << a[i] << "\n";
-    }
+double mobilityArray[7 * 4 + 1];
+mobilityArray[0] = 0;
+for (int i = 1; i < numMoves; i++) {
+//        double multiplier = (sqrt(i) - sqrt(i - 1)) * 3.5;
+//        double multiplier = 1.1 - (i / 28.0); //34
+mobilityArray[i] = mobilityArray[i - 1] + weight; //weight is what to play with if you want diminishing returns on mobility
+}
+for (int i = 0; i < numMoves; i++) {
+if (i < minGood)  mobilityArray[i] -= penalty;
+a[i] = round(mobilityArray[i]);
+//        PrintOutput() << "mobility " << i << " = " << a[i] << "\n";
+}
 }
 void InitMobility() {
-    const double MLow = 5;
-    const double ELow = 25;
-    const double MxrayLow = 10;
-    const double ExrayLow = 50;
-    const double MidgameKnightMob = 6;
-    const double EndgameKnightMob = 8;
+const double MLow = 5;
+const double ELow = 25;
+const double MxrayLow = 10;
+const double ExrayLow = 50;
+const double MidgameKnightMob = 6;
+const double EndgameKnightMob = 8;
 
-    const double MidgameBishopMob = 3;
-    const double MidgameXrayBishopMob = 2;
-    const double EndgameBishopMob = 3;
-    const double EndgameXrayBishopMob = 2;
+const double MidgameBishopMob = 3;
+const double MidgameXrayBishopMob = 2;
+const double EndgameBishopMob = 3;
+const double EndgameXrayBishopMob = 2;
 
-    const double MidgameRookMob = 1;
-    const double MidgameXrayRookMob = 3;
-    const double EndgameRookMob = 2;
-    const double EndgameXrayRookMob = 3;
+const double MidgameRookMob = 1;
+const double MidgameXrayRookMob = 3;
+const double EndgameRookMob = 2;
+const double EndgameXrayRookMob = 3;
 
-    const double MidgameQueenMob = 1;
-    const double MidgameXrayQueenMob = 1;
-    const double EndgameQueenMob = 2;
-    const double EndgameXrayQueenMob = 2;
+const double MidgameQueenMob = 1;
+const double MidgameXrayQueenMob = 1;
+const double EndgameQueenMob = 2;
+const double EndgameXrayQueenMob = 2;
 
-    FillMobilityArray(MidgameKnightMob, 2, MLow, 9, MidgameKnightMobArray);
-    FillMobilityArray(EndgameKnightMob, 2, ELow, 9, EndgameKnightMobArray);
+FillMobilityArray(MidgameKnightMob, 2, MLow, 9, MidgameKnightMobArray);
+FillMobilityArray(EndgameKnightMob, 2, ELow, 9, EndgameKnightMobArray);
 
-    FillMobilityArray(MidgameBishopMob, 2, MLow, 7 * 2 + 1, MidgameBishopMobArray);
-    FillMobilityArray(EndgameBishopMob, 2, ELow, 7 * 2 + 1, EndgameBishopMobArray);
-    FillMobilityArray(MidgameXrayBishopMob, 3, MxrayLow, 7 * 2 + 1, MidgameXrayBishopMobArray);
-    FillMobilityArray(EndgameXrayBishopMob, 3, ExrayLow, 7 * 2 + 1, EndgameXrayBishopMobArray);
+FillMobilityArray(MidgameBishopMob, 2, MLow, 7 * 2 + 1, MidgameBishopMobArray);
+FillMobilityArray(EndgameBishopMob, 2, ELow, 7 * 2 + 1, EndgameBishopMobArray);
+FillMobilityArray(MidgameXrayBishopMob, 3, MxrayLow, 7 * 2 + 1, MidgameXrayBishopMobArray);
+FillMobilityArray(EndgameXrayBishopMob, 3, ExrayLow, 7 * 2 + 1, EndgameXrayBishopMobArray);
 
-    FillMobilityArray(MidgameRookMob, 2, MLow, 7 * 2 + 1, MidgameRookMobArray);
-    FillMobilityArray(EndgameRookMob, 2, ELow, 7 * 2 + 1, EndgameRookMobArray);
-    FillMobilityArray(MidgameXrayRookMob, 3, MxrayLow, 7 * 2 + 1, MidgameXrayRookMobArray);
-    FillMobilityArray(EndgameXrayRookMob, 3, ExrayLow, 7 * 2 + 1, EndgameXrayRookMobArray);
+FillMobilityArray(MidgameRookMob, 2, MLow, 7 * 2 + 1, MidgameRookMobArray);
+FillMobilityArray(EndgameRookMob, 2, ELow, 7 * 2 + 1, EndgameRookMobArray);
+FillMobilityArray(MidgameXrayRookMob, 3, MxrayLow, 7 * 2 + 1, MidgameXrayRookMobArray);
+FillMobilityArray(EndgameXrayRookMob, 3, ExrayLow, 7 * 2 + 1, EndgameXrayRookMobArray);
 
-    FillMobilityArray(MidgameQueenMob, 2, MLow, 7 * 4 + 1, MidgameQueenMobArray);
-    FillMobilityArray(EndgameQueenMob, 2, ELow, 7 * 4 + 1, EndgameQueenMobArray);
-    FillMobilityArray(MidgameXrayQueenMob, 3, MxrayLow, 7 * 4 + 1, MidgameXrayQueenMobArray);
-    FillMobilityArray(EndgameXrayQueenMob, 3, ExrayLow, 7 * 4 + 1, EndgameXrayQueenMobArray);
+FillMobilityArray(MidgameQueenMob, 2, MLow, 7 * 4 + 1, MidgameQueenMobArray);
+FillMobilityArray(EndgameQueenMob, 2, ELow, 7 * 4 + 1, EndgameQueenMobArray);
+FillMobilityArray(MidgameXrayQueenMob, 3, MxrayLow, 7 * 4 + 1, MidgameXrayQueenMobArray);
+FillMobilityArray(EndgameXrayQueenMob, 3, ExrayLow, 7 * 4 + 1, EndgameXrayQueenMobArray);
 }
 */

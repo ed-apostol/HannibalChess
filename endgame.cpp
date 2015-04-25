@@ -358,12 +358,12 @@ void BishopEnding(int attacker, const position_t& pos, eval_info_t& ei, int *sco
             return;
         }/*
          else if (pNum == 2) {
-             const uint64 passed = ei.pawn_entry->passedbits & pos.color[attacker];
-             const int defender = attacker ^ 1;
-             if (passed == 0 && (KingMoves[pos.kpos[defender]] & (pos.pawns & pos.color[defender]))) {
-             *draw = VERY_DRAWISH;
-             if (SHOW_EVAL) PrintOutput() << "info string drawish bishop endgame\n";
-             }
+         const uint64 passed = ei.pawn_entry->passedbits & pos.color[attacker];
+         const int defender = attacker ^ 1;
+         if (passed == 0 && (KingMoves[pos.kpos[defender]] & (pos.pawns & pos.color[defender]))) {
+         *draw = VERY_DRAWISH;
+         if (SHOW_EVAL) PrintOutput() << "info string drawish bishop endgame\n";
+         }
          }*/
     }
 }
@@ -607,45 +607,45 @@ void DrawnQvREnding(int attacker, const position_t& pos, eval_info_t& ei, int *s
 }
 /*
 void MinorPawnvMinor(int attacker, const position_t& pos, eval_info_t& ei, int *draw) { //drawish if in front of pawn and knight safe
-    const int pawnSq = GetOnlyBit(pos.pawns & pos.color[attacker]);
-    const int defender = attacker ^ 1;
-    if (abs(SQFILE(pos.kpos[defender]) - SQFILE(pawnSq)) <= 1 && IN_FRONT(SQRANK(pos.kpos[defender]), SQRANK(pawnSq), attacker)) {
-        const uint64 dKnight = (pos.knights & pos.color[defender]);
-        if (dKnight == 0) {
-            *draw = VERY_DRAWISH;
-            if (SHOW_EVAL) PrintOutput() << "info string drawish knight + pawn + pawn vs. bishop + pawn endgame\n";
-        }
-        else if ((ei.atkall[attacker] & dKnight) == 0) {
-            const int knightSq = GetOnlyBit(dKnight);
-            const uint64 knightSquares = KnightMoves[knightSq];
-            if (((~ei.atkall[attacker]) & knightSquares) != 0) {
-                *draw = VERY_DRAWISH;
-                if (SHOW_EVAL) PrintOutput() << "info string drawish minor + pawn vs. knight endgame\n";
-            }
-        }
-    }
+const int pawnSq = GetOnlyBit(pos.pawns & pos.color[attacker]);
+const int defender = attacker ^ 1;
+if (abs(SQFILE(pos.kpos[defender]) - SQFILE(pawnSq)) <= 1 && IN_FRONT(SQRANK(pos.kpos[defender]), SQRANK(pawnSq), attacker)) {
+const uint64 dKnight = (pos.knights & pos.color[defender]);
+if (dKnight == 0) {
+*draw = VERY_DRAWISH;
+if (SHOW_EVAL) PrintOutput() << "info string drawish knight + pawn + pawn vs. bishop + pawn endgame\n";
+}
+else if ((ei.atkall[attacker] & dKnight) == 0) {
+const int knightSq = GetOnlyBit(dKnight);
+const uint64 knightSquares = KnightMoves[knightSq];
+if (((~ei.atkall[attacker]) & knightSquares) != 0) {
+*draw = VERY_DRAWISH;
+if (SHOW_EVAL) PrintOutput() << "info string drawish minor + pawn vs. knight endgame\n";
+}
+}
+}
 }
 
 void MinorPawnPawnvMinorPawn(int attacker, const position_t& pos, eval_info_t& ei, int *draw) { //drawish if in front of pawn and knight safe
-    const uint64 passed = ei.pawn_entry->passedbits & pos.color[attacker];
-    const int defender = attacker ^ 1;
+const uint64 passed = ei.pawn_entry->passedbits & pos.color[attacker];
+const int defender = attacker ^ 1;
 
-    if (passed == 0 && (KingMoves[pos.kpos[defender]] & (pos.pawns & pos.color[defender]))) {
-        const uint64 dKnight = (pos.knights & pos.color[defender]);
-        if (dKnight == 0) {
-            if (SHOW_EVAL) PrintOutput() << "info string was " << *draw << " drawish knight + pawn + pawn vs. bishop + pawn endgame\n";
-            *draw = PRETTY_DRAWISH;
-            if (SHOW_EVAL) PrintOutput() << "info string drawish knight + pawn + pawn vs. bishop + pawn endgame\n";
-        }
-        else if ((ei.atkall[attacker] & dKnight) == 0) {
-            const int knightSq = GetOnlyBit(dKnight);
-            const uint64 knightSquares = KnightMoves[knightSq];
-            if (((~ei.atkall[attacker]) & knightSquares) != 0) {
-                if (SHOW_EVAL) PrintOutput() << "info string was " << *draw << " drawish minor + pawn + pawn vs. knight + pawn endgame\n";
-                *draw = PRETTY_DRAWISH;
-            }
-        }
-    }
+if (passed == 0 && (KingMoves[pos.kpos[defender]] & (pos.pawns & pos.color[defender]))) {
+const uint64 dKnight = (pos.knights & pos.color[defender]);
+if (dKnight == 0) {
+if (SHOW_EVAL) PrintOutput() << "info string was " << *draw << " drawish knight + pawn + pawn vs. bishop + pawn endgame\n";
+*draw = PRETTY_DRAWISH;
+if (SHOW_EVAL) PrintOutput() << "info string drawish knight + pawn + pawn vs. bishop + pawn endgame\n";
+}
+else if ((ei.atkall[attacker] & dKnight) == 0) {
+const int knightSq = GetOnlyBit(dKnight);
+const uint64 knightSquares = KnightMoves[knightSq];
+if (((~ei.atkall[attacker]) & knightSquares) != 0) {
+if (SHOW_EVAL) PrintOutput() << "info string was " << *draw << " drawish minor + pawn + pawn vs. knight + pawn endgame\n";
+*draw = PRETTY_DRAWISH;
+}
+}
+}
 }
 */
 void DrawnRookPawnvBishop(int attacker, const position_t& pos, int *draw) {
@@ -719,10 +719,10 @@ void evalEndgame(int attacker, const position_t& pos, eval_info_t& ei, int *scor
         break;
         /*
     case 15:
-        MinorPawnvMinor(attacker, pos, ei, draw);
-        break;
+    MinorPawnvMinor(attacker, pos, ei, draw);
+    break;
     case 16:
-        MinorPawnPawnvMinorPawn(attacker, pos, ei, draw);
-        break;*/
+    MinorPawnPawnvMinorPawn(attacker, pos, ei, draw);
+    break;*/
     }
 }

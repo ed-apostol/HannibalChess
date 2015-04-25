@@ -26,7 +26,7 @@ private:
     void Stop(Engine& engine);
     void PonderHit(Engine& engine);
     void Go(Engine& engine, position_t& pos, std::istringstream& stream);
-	void Position(Engine& engine, position_t& pos, std::istringstream& stream);
+    void Position(Engine& engine, position_t& pos, std::istringstream& stream);
     void SetOption(Engine& engine, std::istringstream& stream);
     void NewGame(Engine& engine);
     void Id(Engine& engine);
@@ -34,7 +34,7 @@ private:
 
     void CheckSpeedup(std::istringstream& stream);
     void CheckBestSplit(std::istringstream& stream);
-	void Interface::CheckMaxSplit(std::istringstream& stream);
+    void Interface::CheckMaxSplit(std::istringstream& stream);
 
     static const std::string name;
     static const std::string author;

@@ -178,11 +178,11 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
                     if (score < beta) return score;
                 }
             }
-            if (entry->Move() != EMPTY && entry->LowerDepth() > ss.hashDepth && moveIsTactical(entry->Move())) { 
+            if (entry->Move() != EMPTY && entry->LowerDepth() > ss.hashDepth && moveIsTactical(entry->Move())) {
                 ss.hashDepth = entry->LowerDepth();
                 ss.hashMove = entry->Move();
             }
-            break; 
+            break;
         }
     }
     if (pos.ply >= MAXPLY - 1) return eval(pos, sthread);
@@ -323,7 +323,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     evalDepth = entry->UpperDepth();
                     ss.evalvalue = scoreFromTrans(entry->UpperValue(), pos.ply);
                 }
-                break; 
+                break;
             }
         }
         if (ss.evalvalue == -INF) ss.evalvalue = eval(pos, sthread);
@@ -423,14 +423,14 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         int score = -INF;
         if (inSingular && move->m == ssprev.bannedMove) continue;
         if (inSplitPoint) {
-            sp->updatelock.lock();
+            sp->movesplayedlock.lock();
             ss.playedMoves = ++sp->played;
         }
         else ++ss.playedMoves;
         if (ss.hisCnt < 64 && !moveIsTactical(move->m)) {
             ss.hisMoves[ss.hisCnt++] = move->m;
         }
-        if (inSplitPoint) sp->updatelock.unlock();
+        if (inSplitPoint) sp->movesplayedlock.unlock();
         if (anyRepNoMove(pos, move->m)) {
             score = DrawValue[pos.side];
         }
@@ -646,7 +646,6 @@ void Engine::ExtractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_m
     }
 }
 
-
 void Engine::RepopulateHash(position_t& pos, continuation_t& rootPV) {
     int moveOn;
     pos_store_t undo[MAXPLY];
@@ -805,10 +804,10 @@ void Engine::GetBestMove(Thread& sthread) {
         }
     }
 #ifdef EVAL_DEBUG
-        SHOW_EVAL = true;
-        int tscore = eval(rootpos, sthread);
-        SHOW_EVAL = false;
-        PrintOutput() << "info string score = " << tscore << "\n";
+    SHOW_EVAL = true;
+    int tscore = eval(rootpos, sthread);
+    SHOW_EVAL = false;
+    PrintOutput() << "info string score = " << tscore << "\n";
 #endif
     PvHashEntry *entry = pvhashtable.pvEntry(rootpos.posStore.hash);
     if (nullptr != entry && entry->pvMove() && isLegal(rootpos, entry->pvMove(), ss.moveGivesCheck)) {

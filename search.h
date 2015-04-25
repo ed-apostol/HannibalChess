@@ -49,7 +49,7 @@ static const int DefaultThreads = 1;
 static const std::string MinSplitDepthStr = "Min Split Depth";
 static const int MinSplitDepth = 1;
 static const int MaxSplitDepth = 8;
-static const int DefaultSplitDepth = 3;
+static const int DefaultSplitDepth = 4;
 
 static const std::string ActiveSplitsStr = "Max Active Splits/Thread";
 static const int MinActiveSplit = 1;
@@ -262,7 +262,7 @@ public:
         while (mThreads.size() < num) {
             using namespace std::placeholders;
             int id = (int)mThreads.size();
-            mThreads.push_back(new Thread(id, mThreads, std::bind(&Engine::GetBestMove, this, _1), 
+            mThreads.push_back(new Thread(id, mThreads, std::bind(&Engine::GetBestMove, this, _1),
                 std::bind(&Engine::SearchFromIdleLoop, this, _1, _2), std::bind(&Engine::SetThinkFinished, this)));
         }
         while (mThreads.size() > num) {
@@ -287,12 +287,12 @@ public:
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
     }
-	void WaitForThinkAndSetFinished() {
-		while (mThinking.test_and_set(std::memory_order_acquire)) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(5));
-		}
-		mThinking.clear(std::memory_order_release);
-	}
+    void WaitForThinkAndSetFinished() {
+        while (mThinking.test_and_set(std::memory_order_acquire)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+        mThinking.clear(std::memory_order_release);
+    }
     void SetThinkFinished() {
         mThinking.clear(std::memory_order_release);
     }
@@ -305,8 +305,8 @@ public:
     }
     void SetAllThreadsToWork() {
         for (Thread* th : mThreads) {
-			if (th->thread_id != 0) 
-				th->TriggerCondition(); // thread_id == 0 is triggered separately
+            if (th->thread_id != 0)
+                th->TriggerCondition(); // thread_id == 0 is triggered separately
         }
         mTimerThread->stop = false;
         mTimerThread->TriggerCondition();

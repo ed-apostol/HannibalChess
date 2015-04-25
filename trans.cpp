@@ -117,7 +117,7 @@ void TranspositionTable::StoreAllLower(const uint64 hash, basic_move_t move, con
     replace->ReplaceMask(MLower | MAllLower);
 }
 
-void TranspositionTable::StoreCutUpper(const uint64 hash,  const int depth, const int value) {
+void TranspositionTable::StoreCutUpper(const uint64 hash, const int depth, const int value) {
     int worst = -INF, t, score;
     TransEntry *replace, *entry;
 
@@ -127,11 +127,11 @@ void TranspositionTable::StoreCutUpper(const uint64 hash,  const int depth, cons
 
     for (t = 0; t < mBucketSize; t++, entry++) {
         if (entry->HashLock() == LOCK(hash)) {
-                entry->SetAge(mDate);
-                entry->SetUpperDepth(depth);
-                entry->SetUpperValue(value);
-                entry->SetMask(MUpper | MCutUpper);
-                return;
+            entry->SetAge(mDate);
+            entry->SetUpperDepth(depth);
+            entry->SetUpperValue(value);
+            entry->SetMask(MUpper | MCutUpper);
+            return;
         }
         score = (mAge[entry->Age()] * 256) - MAX(entry->UpperDepth(), entry->LowerDepth());
         if (score > worst) {
