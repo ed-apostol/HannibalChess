@@ -58,30 +58,25 @@ static const Personality personality;
 //king safety stuff
 #define PARTIAL_ATTACK 0 //0 means don't count, otherwise multiplies attack by 5
 #define MATE_CODE 10 // mate threat
-#define KING_ATT_W 4
-#define K_SHELT_W 17
-#define LOW_SHELTER 5
-#define EXP_PENALTY 1
 
-// side to move bonus
-//const int MidgameTempo = 20;
-//const int EndgameTempo = 10;
-/*
-static int MidgameKnightMobArray[8 + 1];
-static int EndgameKnightMobArray[8 + 1];
-static int MidgameBishopMobArray[7 * 2 + 1];
-static int EndgameBishopMobArray[7 * 2 + 1];
-static int MidgameXrayBishopMobArray[7 * 2 + 1];
-static int EndgameXrayBishopMobArray[7 * 2 + 1];
-static int MidgameRookMobArray[7 * 2 + 1];
-static int EndgameRookMobArray[7 * 2 + 1];
-static int MidgameXrayRookMobArray[7 * 2 + 1];
-static int EndgameXrayRookMobArray[7 * 2 + 1];
-static int MidgameQueenMobArray[7 * 4 + 1];
-static int EndgameQueenMobArray[7 * 4 + 1];
-static int MidgameXrayQueenMobArray[7 * 4 + 1];
-static int EndgameXrayQueenMobArray[7 * 4 + 1];
-*/
+#define KING_ATT_W 4
+#define SB1 9
+#define SB2 (SB1+9)
+#define SB3 (SB2+8)
+#define SB4 (SB3+8)
+#define SB5 (SB4+7)
+#define SB6 (SB5+7)
+#define SB7 (SB6+7)
+#define SB8 (SB7+7)
+#define SB9 (SB8+7)
+#define SB10 (SB9+7)
+#define SB11 (SB10+4)
+#define SB12 (SB11+3)
+#define SB13 (SB12+2)
+#define SB14 (SB13+2)
+const int ShelterBonus[] = { 0, SB1, SB2, SB3, SB4, SB5, SB6, SB7, SB8, SB9, SB10, SB11, SB12, SB13, SB14};
+
+#define EXP_PENALTY 1
 
 const int MidgameKnightMob = 6;
 const int EndgameKnightMob = 8;
@@ -264,6 +259,7 @@ void evalShelter(const int color, eval_info_t& ei, const position_t& pos) {
     // doubled pawns are a bit redundant as shelter
     doubledShelter = indirectShelter & (*FillPtr[color])(indirectShelter);
     indirectShelter ^= doubledShelter;
+    shelter ^= doubledShelter; 
     // remember, shelter is also indirect shelter so it is counted twice
     ei.pawn_entry->shelter[color] = bitCnt(shelter) + bitCnt(indirectShelter);
     // now take into account possible castling, and the associated safety SAM122109
@@ -273,6 +269,7 @@ void evalShelter(const int color, eval_info_t& ei, const position_t& pos) {
         // doubled pawns are a bit redundant as shelter
         doubledShelter = indirectShelter & (*FillPtr[color])(indirectShelter);
         indirectShelter ^= doubledShelter;
+        shelter ^= doubledShelter; 
         // remember, shelter is also indirect shelter so it is counted twice
         ei.pawn_entry->kshelter[color] = bitCnt(shelter) + bitCnt(indirectShelter);
     }
@@ -283,6 +280,7 @@ void evalShelter(const int color, eval_info_t& ei, const position_t& pos) {
         // doubled pawns are a bit redundant as shelter
         doubledShelter = indirectShelter & (*FillPtr[color])(indirectShelter);
         indirectShelter ^= doubledShelter;
+        shelter ^= doubledShelter; 
         // remember, shelter is also indirect shelter so it is counted twice
         ei.pawn_entry->qshelter[color] = bitCnt(shelter) + bitCnt(indirectShelter);
     }
@@ -687,21 +685,17 @@ void evalThreats(const position_t& pos, eval_info_t& ei, const int color) {
     }
 }
 
-void KingShelter(const int color, eval_info_t& ei, const position_t& pos, int danger) {
+int KingShelter(const int color, eval_info_t& ei, const position_t& pos) { //returns penalty for being under attack
+    
     int currentKing = ei.pawn_entry->shelter[color];
 
     int kingSide = ((pos.posStore.castle & KSC[color]) == 0 || (ei.atkall[color ^ 1] & KCSQ[color])) ? 0 : ei.pawn_entry->kshelter[color];
     int queenSide = ((pos.posStore.castle & QSC[color]) == 0 || (ei.atkall[color ^ 1] & QCSQ[color])) ? 0 : ei.pawn_entry->qshelter[color];
 
     kingSide = (kingSide > queenSide) ? kingSide : queenSide;
-    currentKing = (currentKing >= kingSide) ? currentKing : (currentKing / 2 + kingSide / 2);
-
-    danger += K_SHELT_W;
-    currentKing *= danger;
-    if (currentKing > (LOW_SHELTER*danger)) currentKing -= (currentKing - (LOW_SHELTER*danger)) / 2;
-    currentKing = (currentKing - (9 * danger)) / 2;
-
-    ei.mid_score[color] += currentKing;
+    currentKing += MAX(currentKing, kingSide);
+    ei.mid_score[color] += ShelterBonus[currentKing]; 
+    return MAX(0, 8 - currentKing);
 }
 
 void evalKingAttacks(const position_t& pos, eval_info_t& ei, const int color) {
@@ -715,12 +709,11 @@ void evalKingAttacks(const position_t& pos, eval_info_t& ei, const int color) {
     kzone_atkcnt = ei.atkcntpcs[color] & ((1 << 10) - 1);
 
     danger = (tot_atkrs >= 2 && kzone_atkcnt >= 1);
-    KingShelter(color, ei, pos, kzone_atkcnt + tot_atkrs);
+    penalty = KingShelter(color, ei, pos);
     if (danger) {
         king_atkmask = KingMoves[pos.kpos[color]];
         pc_weights = (ei.atkcntpcs[color] & ((1 << 20) - 1)) >> 10;
-        penalty = KingPosPenalty[color][pos.kpos[color]] + ((pc_weights * tot_atkrs) / 2)
-            + kzone_atkcnt;
+        penalty += KingPosPenalty[color][pos.kpos[color]] + ((pc_weights * tot_atkrs) / 2) + kzone_atkcnt;
         pc_defenders_mask = ei.atkqueens[color] | ei.atkrooks[color] | ei.atkbishops[color] | ei.atkknights[color] | ei.atkpawns[color];
         penalty += bitCnt(king_atkmask & ei.atkall[color ^ 1] & ~pc_defenders_mask);
         pc_atkrs_mask = king_atkmask & ei.atkqueens[color ^ 1] & (~pos.color[color ^ 1]);
