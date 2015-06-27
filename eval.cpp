@@ -695,13 +695,13 @@ int KingShelter(const int color, eval_info_t& ei, const position_t& pos) { //ret
     kingSide = (kingSide > queenSide) ? kingSide : queenSide;
     currentKing += MAX(currentKing, kingSide);
     ei.mid_score[color] += ShelterBonus[currentKing]; 
-    return MAX(0, 8 - currentKing);
+    return currentKing;
 }
 
 void evalKingAttacks(const position_t& pos, eval_info_t& ei, const int color) {
     int danger;
     uint64 pc_atkrs_mask, pc_atkhelpersmask, king_atkmask, pc_defenders_mask;
-    int penalty, tot_atkrs, pc_weights, kzone_atkcnt;
+    int shelter, tot_atkrs, pc_weights, kzone_atkcnt;
 
     ASSERT(colorIsOk(color));
 
@@ -709,8 +709,9 @@ void evalKingAttacks(const position_t& pos, eval_info_t& ei, const int color) {
     kzone_atkcnt = ei.atkcntpcs[color] & ((1 << 10) - 1);
 
     danger = (tot_atkrs >= 2 && kzone_atkcnt >= 1);
-    penalty = KingShelter(color, ei, pos);
+    shelter = KingShelter(color, ei, pos);
     if (danger) {
+        int penalty = MAX(0, 8 - shelter);
         king_atkmask = KingMoves[pos.kpos[color]];
         pc_weights = (ei.atkcntpcs[color] & ((1 << 20) - 1)) >> 10;
         penalty += KingPosPenalty[color][pos.kpos[color]] + ((pc_weights * tot_atkrs) / 2) + kzone_atkcnt;
