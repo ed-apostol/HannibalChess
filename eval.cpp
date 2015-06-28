@@ -295,12 +295,14 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int mid_score[], i
     int count, sq, rank;
     const int enemy = color ^ 1;
 
-    openBitMap = ei.pawns[color] & ~((*FillPtr2[enemy])((*ShiftPtr[enemy])((ei.pawns[color] | ei.pawns[enemy]), 8)));
-    doubledBitMap = ei.pawns[color] & (*FillPtr[enemy])(ei.pawns[color]);
+//    openBitMap = ei.pawns[color] & ~((*FillPtr2[enemy])((*ShiftPtr[enemy])((ei.pawns[color] | ei.pawns[enemy]), 8)));
+    openBitMap = ei.pawns[color] & ~((*FillPtr2[enemy])((*ShiftPtr[enemy])(pos.pawns, 8))); //Hannibal_33
+    doubledBitMap = ei.pawns[color] & (*FillPtr[enemy])(ei.pawns[color]); //the least advanced one is considered doubled
     isolatedBitMap = ei.pawns[color] & ~((*FillPtr2[color ^ 1])(ei.potentialPawnAttack[color]));
     backwardBitMap = (*ShiftPtr[enemy])(((*ShiftPtr[color])(ei.pawns[color], 8) & (ei.potentialPawnAttack[enemy] | ei.pawns[enemy])
         & ~ei.potentialPawnAttack[color]), 8) & ~isolatedBitMap; //this includes isolated
     passedBitMap = openBitMap & ~ei.potentialPawnAttack[enemy];
+
     targetBitMap = isolatedBitMap;
     //any backward pawn not easily protect by its own pawns is a target
     //TODO consider calculating exactly how many moves to protect and defend including double moves
@@ -319,6 +321,7 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int mid_score[], i
     //lets look through all the passed pawns and give them their static bonuses
     //TODO consider moving some king distance stuff in here
     temp64 = ei.pawns[color] & openBitMap & ~passedBitMap;
+
     while (temp64) {
         sq = popFirstBit(&temp64);
         if (bitCnt((*FillPtr2[color])(PawnCaps[sq][color]) & ei.pawns[enemy])
@@ -382,13 +385,12 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int mid_score[], i
     {
         int enemyKing = pos.kpos[color ^ 1];
         while (temp64) {
-            uint64 openPawn, doublePawn, sqBitMask;
+            uint64 openPawn, sqBitMask;
             int sqPenalty;
             sq = popFirstBit(&temp64);
             sqBitMask = BitMask[sq];
 
             openPawn = openBitMap & sqBitMask;
-            doublePawn = doubledBitMap & sqBitMask;
             //fixedPawn = (BitMask[sq + PAWN_MOVE_INC(color)] & (ei.atkpawns[enemy] | ei.pawns[enemy]));
             sqPenalty = weakFile[SQFILE(sq)] + weakRank[PAWN_RANK(sq, color)]; //TODO precale 64 entries
             mid_score[color] -= sqPenalty;	//penalty for being weak in middlegame
@@ -416,6 +418,32 @@ inline int outpost(const position_t& pos, eval_info_t& ei, const int color, cons
         }
     }
     return outpostValue;
+}
+
+void evalPawnPushes(const position_t& pos, eval_info_t& ei, const int color) {
+    
+    uint64 frontSquares = (*ShiftPtr[color])(ei.pawns[color], 8);
+    uint64 safePawnMove = frontSquares & ~(pos.occupied) & (ei.atkall[color] | ~(ei.atkall[color ^ 1]));
+    
+    /*
+    const uint64 doubleRank[2] = { Rank3BB, Rank6BB };
+    uint64 oneMove = (*ShiftPtr[color])(ei.pawns[color], 8) & ~(pos.occupied);
+    uint64 doubleMoveCandidates = (*ShiftPtr[color])((oneMove & doubleRank[color]),8) & ~(pos.occupied); //does not take into account en passant
+    uint64 safePawnMove = (oneMove | doubleMoveCandidates) & (ei.atkall[color] | ~(ei.atkall[color ^ 1]));
+*/
+    int numSafe = bitCnt(safePawnMove);
+    ei.mid_score[color] += numSafe * 4;
+    ei.end_score[color] += numSafe * 4;
+    if (SHOW_EVAL) {
+        while (safePawnMove) { //by definition this is not on the 7th rank
+            int sq = popFirstBit(&safePawnMove);
+//            char s[3] = sq2Str(sq);
+            PrintOutput() << "info string sp " << (char) (SQFILE(sq) + 'a') <<
+                (char)('1' + SQRANK(sq)) << " \n";
+//            PrintOutput() << "info string sp " << s << " \n";
+        }
+    }
+
 }
 void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
     uint64 pc_bits, temp64, katemp64, xtemp64, weak_sq_mask;
@@ -861,6 +889,7 @@ void evalPassedvsKing(const position_t& pos, eval_info_t& ei, const int allied, 
 void evalPassed(const position_t& pos, eval_info_t& ei, const int allied, uint64 passed) {
     uint64 passedpawn_mask = passed;
     int myMove = (pos.side == allied);
+    const int behind[] = { S, N };
     const int enemy = allied ^ 1;
     do {
         int from = popFirstBit(&passedpawn_mask);
@@ -869,7 +898,11 @@ void evalPassed(const position_t& pos, eval_info_t& ei, const int allied, uint64
         uint64 prom_path = (*FillPtr[allied])(BitMask[from]);
         uint64 path_attkd = prom_path & ei.atkall[enemy];
         uint64 path_dfndd = prom_path & ei.atkall[allied];
-        uint64 rooksBehind = (*FillPtr[enemy])(BitMask[from]) & pos.rooks;
+//        uint64 rooksBehind = (*FillPtr[enemy])(BitMask[from]) & pos.rooks; //TODO don't count rook if doubled pawn?
+        uint64 rooksBehind = rookAttacksBB(from, pos.pawns) & pos.rooks & DirBitmap[behind[allied]][from]; //Hannibal_34 don't count being behind a doubled pawn
+        if (SHOW_EVAL) {
+            if (rooksBehind) PrintOutput() << "info string behind\n";
+        }
         int frontSq = from + PAWN_MOVE_INC(allied);
 
         ei.mid_score[allied] += MidgamePassedMin + scale(MidgamePassedMax, rank);
@@ -1010,6 +1043,9 @@ int eval(const position_t& pos, Thread& sthread) {
 
     evalPieces(pos, ei, WHITE);
     evalPieces(pos, ei, BLACK);
+
+    evalPawnPushes(pos, ei, WHITE);
+    evalPawnPushes(pos, ei, BLACK);
 
     ei.queening = false;
 
