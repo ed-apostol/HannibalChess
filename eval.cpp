@@ -295,8 +295,7 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int mid_score[], i
     int count, sq, rank;
     const int enemy = color ^ 1;
 
-//    openBitMap = ei.pawns[color] & ~((*FillPtr2[enemy])((*ShiftPtr[enemy])((ei.pawns[color] | ei.pawns[enemy]), 8)));
-    openBitMap = ei.pawns[color] & ~((*FillPtr2[enemy])((*ShiftPtr[enemy])(pos.pawns, 8))); //Hannibal_33
+    openBitMap = ei.pawns[color] & ~((*FillPtr2[enemy])((*ShiftPtr[enemy])(pos.pawns, 8)));
     doubledBitMap = ei.pawns[color] & (*FillPtr[enemy])(ei.pawns[color]); //the least advanced one is considered doubled
     isolatedBitMap = ei.pawns[color] & ~((*FillPtr2[color ^ 1])(ei.potentialPawnAttack[color]));
     backwardBitMap = (*ShiftPtr[enemy])(((*ShiftPtr[color])(ei.pawns[color], 8) & (ei.potentialPawnAttack[enemy] | ei.pawns[enemy])
@@ -409,13 +408,11 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int mid_score[], i
 }
 inline int outpost(const position_t& pos, eval_info_t& ei, const int color, const int enemy, const int sq) {
     int outpostValue = OutpostValue[color][sq];
-    if (outpostValue > 0) {
-        if (BitMask[sq] & ei.atkpawns[color]) {
-            if (!(pos.knights & pos.color[enemy]) && !((BitMask[sq] & WhiteSquaresBB) ?
-                (pos.bishops & pos.color[enemy] & WhiteSquaresBB) : (pos.bishops & pos.color[enemy] & BlackSquaresBB)))
-                outpostValue += outpostValue + outpostValue / 2;
-            else outpostValue += outpostValue / 2;
-        }
+    if (BitMask[sq] & ei.atkpawns[color]) {
+        if (!(pos.knights & pos.color[enemy]) && !((BitMask[sq] & WhiteSquaresBB) ?
+            (pos.bishops & pos.color[enemy] & WhiteSquaresBB) : (pos.bishops & pos.color[enemy] & BlackSquaresBB)))
+            outpostValue += outpostValue + outpostValue / 2;
+        else outpostValue += outpostValue / 2;
     }
     return outpostValue;
 }
@@ -433,7 +430,8 @@ void evalPawnPushes(const position_t& pos, eval_info_t& ei, const int color) {
 */
     int numSafe = bitCnt(safePawnMove);
     ei.mid_score[color] += numSafe * 4;
-    ei.end_score[color] += numSafe * 4;
+    ei.end_score[color] += numSafe * 5;
+
     if (SHOW_EVAL) {
         while (safePawnMove) { //by definition this is not on the 7th rank
             int sq = popFirstBit(&safePawnMove);
