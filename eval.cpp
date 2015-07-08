@@ -76,8 +76,6 @@ static const Personality personality;
 #define SB14 (SB13+2)
 const int ShelterBonus[] = { 0, SB1, SB2, SB3, SB4, SB5, SB6, SB7, SB8, SB9, SB10, SB11, SB12, SB13, SB14};
 
-#define EXP_PENALTY 1
-
 const int MidgameKnightMob = 6;
 const int EndgameKnightMob = 8;
 
@@ -422,12 +420,6 @@ void evalPawnPushes(const position_t& pos, eval_info_t& ei, const int color) {
     uint64 frontSquares = (*ShiftPtr[color])(ei.pawns[color], 8);
     uint64 safePawnMove = frontSquares & ~(pos.occupied) & (ei.atkall[color] | ~(ei.atkall[color ^ 1]));
     
-    /*
-    const uint64 doubleRank[2] = { Rank3BB, Rank6BB };
-    uint64 oneMove = (*ShiftPtr[color])(ei.pawns[color], 8) & ~(pos.occupied);
-    uint64 doubleMoveCandidates = (*ShiftPtr[color])((oneMove & doubleRank[color]),8) & ~(pos.occupied); //does not take into account en passant
-    uint64 safePawnMove = (oneMove | doubleMoveCandidates) & (ei.atkall[color] | ~(ei.atkall[color ^ 1]));
-*/
     int numSafe = bitCnt(safePawnMove);
     ei.mid_score[color] += numSafe * 4;
     ei.end_score[color] += numSafe * 5;
@@ -435,10 +427,9 @@ void evalPawnPushes(const position_t& pos, eval_info_t& ei, const int color) {
     if (SHOW_EVAL) {
         while (safePawnMove) { //by definition this is not on the 7th rank
             int sq = popFirstBit(&safePawnMove);
-//            char s[3] = sq2Str(sq);
             PrintOutput() << "info string sp " << (char) (SQFILE(sq) + 'a') <<
                 (char)('1' + SQRANK(sq)) << " \n";
-//            PrintOutput() << "info string sp " << s << " \n";
+//            PrintOutput() << "info string sp " <<  sq2Str(sq) << " \n";
         }
     }
 
@@ -791,7 +782,7 @@ void evalKingAttacks(const position_t& pos, eval_info_t& ei, const int color) {
         if (pc_atkrs_mask & ei.atkknights[color ^ 1]) penalty += bitCnt(pc_atkrs_mask & ei.atkknights[color ^ 1]) * KnightSafeCheckValue;
         pc_atkrs_mask = discoveredCheckCandidates(pos, color ^ 1) & ~pos.pawns;
         if (pc_atkrs_mask) penalty += bitCnt(pc_atkrs_mask) * DiscoveredCheckValue;
-        ei.mid_score[color] -= (penalty * (penalty - EXP_PENALTY) * KING_ATT_W) / 20;
+        ei.mid_score[color] -= (penalty * penalty * KING_ATT_W) / 20;
     }
     else if (PARTIAL_ATTACK) { //if there is a maximum of 1 active attacker
         ei.mid_score[color] -= kzone_atkcnt*PARTIAL_ATTACK;
