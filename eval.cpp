@@ -485,11 +485,14 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         if ((maybeTrapped & fromMask) && temp1 < 2) { //trapped piece if you are in opponent area and you have very few safe moves
             ei.mid_score[color] -= 125;
         }
-
 //        if ((fromMask & CenterRanks) && (BitMask[from + PAWN_MOVE_INC(color)] & pos.pawns)) ei.mid_score[color] += MINOR_SHIELD; NEWSAM t5
-
     }
     pc_bits = pos.bishops & pos.color[color];
+    int SameColBishop = ((pc_bits & WhiteSquaresBB) == 0) ? 0 : bitCnt(WhiteSquaresBB & ei.pawns[color]);
+    SameColBishop += ((pc_bits & ~WhiteSquaresBB) == 0) ? 0 : bitCnt(~WhiteSquaresBB & ei.pawns[color]);
+    ei.mid_score[color] -= SameColBishop * 2;
+    ei.end_score[color] -= SameColBishop * 3;
+
     ei.kingatkbishops[color] = 0;
     while (pc_bits) {
         from = popFirstBit(&pc_bits);
