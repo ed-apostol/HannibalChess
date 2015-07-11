@@ -97,21 +97,27 @@ const int MidgameXrayQueenMob = 1;
 const int EndgameQueenMob = 2;
 const int EndgameXrayQueenMob = 2;
 
-// rook specific evaluation
-const int MidgameRookPawnPressure = 4;
-const int EndgameRookPawnPressure = 8;
-const int MidgameRook7th = 20 - MidgameRookPawnPressure * 2;
-const int EndgameRook7th = 40 - EndgameRookPawnPressure * 2;
-
 // queen specific evaluation
 const int MidgameQueen7th = 10;
 const int EndgameQueen7th = 20;
+
+// rook specific evaluation
+const int MidgameRookPawnPressure = 5;
+const int EndgameRookPawnPressure = 9;
+const int MidgameRook7th = 15;
+const int EndgameRook7th = 30;
+
 //bishop specific
 #define OB_WEIGHT 12 //opposite color bishops drawishness
+const int MidgameBishopPawnPressure = 5;
+const int EndgameBishopPawnPressure = 9;
 
 // knight specific evaluation
 #define N_ONE_SIDE 20
+const int MidgameKnightPawnPressure = 5;
+const int EndgameKnightPawnPressure = 9;
 
+// king specific evaluation
 const int kingAttackWeakness[8] = { 0, 22, 12, 5, 3, 1, 0, 0 };
 
 #define DOUBLED_O 2
@@ -444,6 +450,7 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
     int threatScore = 0;
     uint64 boardSkeleton = pos.pawns;
     uint64 maybeTrapped = bewareTrapped[color] & ~ei.atkpawns[color];
+    uint64 pawnTargets = ei.pawns[enemy] & ~ei.atkpawns[enemy];
 //    uint64 safeCaptures = notOwnColor & ~pos.pawns; NEWSAM t5
 
     if (0 == (pos.posStore.castle & Castle[color])) boardSkeleton |= (pos.kings & pos.color[color]);
@@ -462,6 +469,12 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         ei.atkknights[color] |= temp64;
         if (ei.flags & ONE_SIDED_PAWNS) ei.end_score[color] += N_ONE_SIDE;
         if (temp64 & ei.kingzone[enemy]) ei.atkcntpcs[enemy] += (1 << 20) + bitCnt(temp64 & ei.kingadj[enemy]) + (KnightAttackValue << 10);
+        uint64 pawnsPressured = temp64 & pawnTargets;
+        if (pawnsPressured) {
+            int numPawnsPressured = bitCnt(pawnsPressured);
+            ei.mid_score[color] += MidgameKnightPawnPressure * numPawnsPressured;
+            ei.end_score[color] += EndgameKnightPawnPressure * numPawnsPressured;
+        }
         uint64 safeMoves = temp64 & mobileSquare;
         temp1 = bitCnt(safeMoves);
         ei.mid_score[color] += temp1 * MidgameKnightMob;
@@ -521,6 +534,12 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
             }
         }*/
         xtemp64 = bishopAttacksBB(from, boardSkeleton) & notOwnSkeleton;
+        uint64 pawnsPressured = xtemp64 & pawnTargets;
+        if (pawnsPressured) {
+            int numPawnsPressured = bitCnt(pawnsPressured);
+            ei.mid_score[color] += MidgameBishopPawnPressure * numPawnsPressured;
+            ei.end_score[color] += EndgameBishopPawnPressure * numPawnsPressured;
+        }
 
         if (xtemp64 & notOwnColor & (pos.kings | pos.queens)) {
             threatScore += (BishopAttackPower * QueenAttacked) / 2;
@@ -576,18 +595,15 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
 
         //its good to be lined up with a lot of enemy pawns (7th rank most common example)
         uint64 pressured = rookAttacksBB(from, ((pos.pawns | pos.kings) & pos.color[color]));
-        uint64 pawnsPressured = pressured & ei.pawns[enemy] & ~ei.atkpawns[enemy];
+        uint64 pawnsPressured = pressured & pawnTargets;
         if (pawnsPressured) {
             int numPawnsPressured = bitCnt(pawnsPressured);
             ei.mid_score[color] += MidgameRookPawnPressure * numPawnsPressured;
-            ei.mid_score[color] += EndgameRookPawnPressure * numPawnsPressured;
+            ei.end_score[color] += EndgameRookPawnPressure * numPawnsPressured; 
         }
-
-        if (BitMask[from] & Rank7ByColorBB[color]) { //7th rank is also good for other reasons
-            if ((pos.pawns & pos.color[enemy] & Rank7ByColorBB[color]) || (BitMask[pos.kpos[enemy]] & Rank8ByColorBB[color])) {
-                ei.mid_score[color] += MidgameRook7th;
-                ei.end_score[color] += EndgameRook7th;
-            }
+        if ((BitMask[from] & Rank7ByColorBB[color]) && (BitMask[pos.kpos[enemy]] & Rank8ByColorBB[color])) {
+            ei.mid_score[color] += MidgameRook7th;
+            ei.end_score[color] += EndgameRook7th;
         }
     }
     pc_bits = pos.queens & pos.color[color];
@@ -621,12 +637,9 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         if (xtemp64 & notOwnColor & pos.kings) {
             threatScore += (QueenAttackPower * QueenAttacked) / 2;
         }
-
-        if (BitMask[from] & Rank7ByColorBB[color]) {
-            if ((pos.pawns & pos.color[enemy] & Rank7ByColorBB[color]) || (BitMask[pos.kpos[enemy]] & Rank8ByColorBB[color])) {
-                ei.mid_score[color] += MidgameQueen7th;
-                ei.end_score[color] += EndgameQueen7th;
-            }
+        if ((BitMask[from] & Rank7ByColorBB[color]) && (BitMask[pos.kpos[enemy]] & Rank8ByColorBB[color])) {
+            ei.mid_score[color] += MidgameQueen7th;
+            ei.end_score[color] += EndgameQueen7th;
         }
     }
     ei.atkall[color] = ei.atkpawns[color] | ei.atkknights[color] | ei.atkbishops[color] | ei.atkrooks[color] | ei.atkqueens[color];
@@ -929,7 +942,7 @@ void evalPassed(const position_t& pos, eval_info_t& ei, const int allied, uint64
         ei.end_score[allied] += EndgamePassedMin + scale(score, rank);
     } while (passedpawn_mask);
 }
-
+//this is a generalization of the "rook on the 7th row constraining the king" idea
 void evalPawns(const position_t& pos, eval_info_t& ei, Thread& sthread) {
     initPawnEvalByColor(pos, ei, WHITE);
     initPawnEvalByColor(pos, ei, BLACK);
