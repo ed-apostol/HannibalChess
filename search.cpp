@@ -572,7 +572,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
 /**************************************************************************************************/
 
 Engine::Engine() {
-    mThinking.clear(std::memory_order_release);
+    mThinking = false;
     search = new Search(*this, info, transtable, pvhashtable);
     mTimerThread = new TimerThread(std::bind(&Engine::CheckTime, this));
 
@@ -782,7 +782,7 @@ void Engine::SendBestMove() {
         if (info.pondermove) log << " ponder " << move2Str(info.pondermove);
     }
     //PrintThreadStats();
-    //SetThinkFinished();
+    SetThinkFinished();
 }
 
 void Engine::GetBestMove(Thread& sthread) {
@@ -792,6 +792,8 @@ void Engine::GetBestMove(Thread& sthread) {
     SplitPoint rootsp;
     ss.moveGivesCheck = kingIsInCheck(rootpos);
     ss.dcc = discoveredCheckCandidates(rootpos, rootpos.side);
+
+    SetThinkStarted();
 
     transtable.NewDate(transtable.Date());
     pvhashtable.NewDate(pvhashtable.Date());

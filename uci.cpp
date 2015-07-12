@@ -72,7 +72,7 @@ bool Interface::Input(std::istringstream& stream) {
     else if (command == "position") Position(cEngine, input_pos, stream);
     else if (command == "setoption") SetOption(cEngine, stream);
     else if (command == "ucinewgame") NewGame(cEngine);
-    else if (command == "isready") LogAndPrintOutput() << "readyok";
+    else if (command == "isready") IsReady(cEngine);
     else if (command == "uci") Id(cEngine);
     else if (command == "quit") { Quit(cEngine); return false; }
     else if (command == "speedup") CheckSpeedup(stream);
@@ -103,6 +103,11 @@ void Interface::Stop(Engine& engine) {
 
 void Interface::PonderHit(Engine& engine) {
     engine.PonderHit();
+}
+
+void Interface::IsReady(Engine& engine) {
+    engine.WaitForThink();
+    LogAndPrintOutput() << "readyok";
 }
 
 void Interface::Go(Engine& engine, position_t& pos, std::istringstream& stream) {
@@ -210,7 +215,7 @@ void Interface::CheckSpeedup(std::istringstream& stream) {
             streamcmd = std::istringstream("depth " + std::to_string(depth));
             Go(cEngine, input_pos, streamcmd);
 
-            cEngine.WaitForThinkAndSetFinished();
+            cEngine.WaitForThink();
 
             double timeSpeedUp;
             double nodesSpeedup;
@@ -282,7 +287,7 @@ void Interface::CheckBestSplit(std::istringstream& stream) {
             streamcmd = std::istringstream("depth " + std::to_string(depth));
             Go(cEngine, input_pos, streamcmd);
 
-            cEngine.WaitForThinkAndSetFinished();
+            cEngine.WaitForThink();
 
             int64 spentTime = getTime() - startTime;
             uint64 nodes = cEngine.ComputeNodes() / spentTime;
@@ -348,7 +353,7 @@ void Interface::CheckMaxSplit(std::istringstream& stream) {
             streamcmd = std::istringstream("depth " + std::to_string(depth));
             Go(cEngine, input_pos, streamcmd);
 
-            cEngine.WaitForThinkAndSetFinished();
+            cEngine.WaitForThink();
 
             int64 spentTime = getTime() - startTime;
             uint64 nodes = cEngine.ComputeNodes() / spentTime;

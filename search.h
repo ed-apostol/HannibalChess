@@ -263,7 +263,7 @@ public:
             using namespace std::placeholders;
             int id = (int)mThreads.size();
             mThreads.push_back(new Thread(id, mThreads, std::bind(&Engine::GetBestMove, this, _1),
-                std::bind(&Engine::SearchFromIdleLoop, this, _1, _2), std::bind(&Engine::SetThinkFinished, this)));
+                std::bind(&Engine::SearchFromIdleLoop, this, _1, _2)));
         }
         while (mThreads.size() > num) {
             delete mThreads.back();
@@ -283,18 +283,15 @@ public:
         LogInfo() << "================================================================";
     }
     void WaitForThink() {
-        while (mThinking.test_and_set(std::memory_order_acquire)) {
+        while (mThinking) {
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
     }
-    void WaitForThinkAndSetFinished() {
-        while (mThinking.test_and_set(std::memory_order_acquire)) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        }
-        mThinking.clear(std::memory_order_release);
+    void SetThinkStarted() {
+        mThinking = true;
     }
     void SetThinkFinished() {
-        mThinking.clear(std::memory_order_release);
+        mThinking = false;
     }
     void SetAllThreadsToStop() {
         for (Thread* th : mThreads) {
@@ -382,7 +379,7 @@ public:
 private:
     static const int WORSE_SCORE_CUTOFF = 20;
 
-    std::atomic_flag mThinking;
+    std::atomic<bool> mThinking;
     position_t rootpos;
     SearchInfo info;
     Search* search;
