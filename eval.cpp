@@ -291,7 +291,7 @@ void evalShelter(const int color, eval_info_t& ei, const position_t& pos) {
     else ei.pawn_entry->qshelter[color] = 0;
 }
 
-void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int mid_score[], int end_score[], const int color) {
+void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, int& end_score, const int color) {
     static const int weakFile[8] = { 0, 2, 3, 3, 3, 3, 2, 0 };
     static const int weakRank[8] = { 0, 0, 2, 4, 6, 8, 10, 0 };
     uint64 openBitMap, isolatedBitMap, doubledBitMap, passedBitMap, backwardBitMap, targetBitMap, temp64;
@@ -333,50 +333,50 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int mid_score[], i
             <= bitCnt(PawnCaps[sq][enemy] & ei.pawns[color])) {
             rank = PAWN_RANK(sq, color);
 
-            mid_score[color] += MidgameCandidatePawnMin + scale(MidgameCandidatePawnMax, rank);
-            end_score[color] += EndgameCandidatePawnMin + scale(EndgameCandidatePawnMax, rank);
+            mid_score += MidgameCandidatePawnMin + scale(MidgameCandidatePawnMax, rank);
+            end_score += EndgameCandidatePawnMin + scale(EndgameCandidatePawnMax, rank);
         }
     }
     if (doubledBitMap) {
         count = bitCnt(doubledBitMap);
-        mid_score[color] -= count * DOUBLED_O;
-        end_score[color] -= count * DOUBLED_E;
+        mid_score -= count * DOUBLED_O;
+        end_score -= count * DOUBLED_E;
         if (doubledBitMap & openBitMap) {
             count = bitCnt(doubledBitMap & openBitMap);
-            mid_score[color] -= count * DOUBLED_OPEN_O;
-            end_score[color] -= count * DOUBLE_OPEN_E;
+            mid_score -= count * DOUBLED_OPEN_O;
+            end_score -= count * DOUBLE_OPEN_E;
         }
     }
 
     if (targetBitMap) { //isolated or vulnerable backward pawns
         //target pawns that are not A or H file pawns are especially heinus
         count = bitCnt(targetBitMap);
-        mid_score[color] -= count * TARGET_O;
-        end_score[color] -= count * TARGET_E;
+        mid_score -= count * TARGET_O;
+        end_score -= count * TARGET_E;
         uint64 RFileTargetBitMap = targetBitMap & (FileABB | FileHBB);
         if (RFileTargetBitMap) {
             count = bitCnt(RFileTargetBitMap);
-            mid_score[color] += count * TARGET_O / 2;
-            end_score[color] += count * TARGET_E / 2;
+            mid_score += count * TARGET_O / 2;
+            end_score += count * TARGET_E / 2;
             if (RFileTargetBitMap & openBitMap) {
                 count = bitCnt(RFileTargetBitMap & openBitMap);
-                mid_score[color] += count * TARGET_OPEN_O / 3;
-                end_score[color] += count * TARGET_OPEN_E / 3;
+                mid_score += count * TARGET_OPEN_O / 3;
+                end_score += count * TARGET_OPEN_E / 3;
             }
         }
         if (targetBitMap & openBitMap) {
             count = bitCnt(targetBitMap & openBitMap);
-            mid_score[color] -= count * TARGET_OPEN_O;
-            end_score[color] -= count * TARGET_OPEN_E;
+            mid_score -= count * TARGET_OPEN_O;
+            end_score -= count * TARGET_OPEN_E;
         }
         if (targetBitMap & doubledBitMap) {
             count = bitCnt(doubledBitMap & targetBitMap);
-            mid_score[color] -= count * DOUBLE_TARGET_O;
-            end_score[color] -= count * DOUBLE_TARGET_E;
+            mid_score -= count * DOUBLE_TARGET_O;
+            end_score -= count * DOUBLE_TARGET_E;
             if (targetBitMap & doubledBitMap & openBitMap) {
                 count = bitCnt(doubledBitMap & targetBitMap & openBitMap);//all isolated are also backward
-                mid_score[color] -= count * DOUBLE_TARGET_OPEN_O;
-                end_score[color] -= count * DOUBLE_TARGET_OPEN_E;
+                mid_score -= count * DOUBLE_TARGET_OPEN_O;
+                end_score -= count * DOUBLE_TARGET_OPEN_E;
             }
         }
     }
@@ -396,19 +396,15 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int mid_score[], i
             openPawn = openBitMap & sqBitMask;
             //fixedPawn = (BitMask[sq + PAWN_MOVE_INC(color)] & (ei.atkpawns[enemy] | ei.pawns[enemy]));
             sqPenalty = weakFile[SQFILE(sq)] + weakRank[PAWN_RANK(sq, color)]; //TODO precale 64 entries
-            mid_score[color] -= sqPenalty;	//penalty for being weak in middlegame
-            end_score[color] -= kingAttackWeakness[DISTANCE(sq, enemyKing)]; //end endgame, king attacks is best measure of vulnerability
+            mid_score -= sqPenalty;	//penalty for being weak in middlegame
+            end_score -= kingAttackWeakness[DISTANCE(sq, enemyKing)]; //end endgame, king attacks is best measure of vulnerability
             if (openPawn) {
-                mid_score[color] -= sqPenalty;
+                mid_score -= sqPenalty;
             }
         }
     }
     evalShelter(color, ei, pos);
-
     ei.pawn_entry->passedbits |= passedBitMap;
-
-    ei.mid_score[color] += mid_score[color];
-    ei.end_score[color] += end_score[color];
 }
 inline int outpost(const position_t& pos, eval_info_t& ei, const int color, const int enemy, const int sq) {
     int outpostValue = OutpostValue[color][sq];
@@ -451,6 +447,7 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
     uint64 boardSkeleton = pos.pawns;
     uint64 maybeTrapped = bewareTrapped[color] & ~ei.atkpawns[color];
     uint64 pawnTargets = ei.pawns[enemy] & ~ei.atkpawns[enemy];
+    uint64 attackBlockers = ((pos.pawns | pos.kings) & pos.color[color]) | (ei.pawns[enemy] & ei.atkpawns[enemy]);
 //    uint64 safeCaptures = notOwnColor & ~pos.pawns; NEWSAM t5
 
     if (0 == (pos.posStore.castle & Castle[color])) boardSkeleton |= (pos.kings & pos.color[color]);
@@ -468,7 +465,7 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
 
         ei.atkknights[color] |= temp64;
         if (ei.flags & ONE_SIDED_PAWNS) ei.end_score[color] += N_ONE_SIDE;
-        if (temp64 & ei.kingzone[enemy]) ei.atkcntpcs[enemy] += (1 << 20) + bitCnt(temp64 & ei.kingadj[enemy]) + (KnightAttackValue << 10);
+        if (temp64 & ei.kingzone[enemy]) ei.atkcntpcs[enemy] += (1 << 20) + bitCnt(temp64 & ei.kingzone[enemy]) + (KnightAttackValue << 10);
         uint64 pawnsPressured = temp64 & pawnTargets;
         if (pawnsPressured) {
             int numPawnsPressured = bitCnt(pawnsPressured);
@@ -533,6 +530,13 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
                 ei.mid_score[color] -= 120;
             }
         }*/
+//        uint64 pressured = bishopAttacksBB(from, attackBlockers);
+//        uint64 pawnsPressured = pressured & pawnTargets; //Hannibal1
+//        if (pawnsPressured) {
+//            int numPawnsPressured = bitCnt(pawnsPressured);
+//            ei.mid_score[color] += MidgameBishopPawnPressure * numPawnsPressured;
+//            ei.end_score[color] += EndgameBishopPawnPressure * numPawnsPressured;
+//        }
         xtemp64 = bishopAttacksBB(from, boardSkeleton) & notOwnSkeleton;
         uint64 pawnsPressured = xtemp64 & pawnTargets;
         if (pawnsPressured) {
@@ -540,7 +544,6 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
             ei.mid_score[color] += MidgameBishopPawnPressure * numPawnsPressured;
             ei.end_score[color] += EndgameBishopPawnPressure * numPawnsPressured;
         }
-
         if (xtemp64 & notOwnColor & (pos.kings | pos.queens)) {
             threatScore += (BishopAttackPower * QueenAttacked) / 2;
         }
@@ -552,6 +555,12 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         ei.end_score[color] += temp1 * EndgameXrayBishopMob;
 //        ei.mid_score[color] += MidgameXrayBishopMobArray[temp1];
 //        ei.end_score[color] += EndgameXrayBishopMobArray[temp1];
+ /*       uint64 xNearKing = xtemp64 & ei.kingadj[enemy];
+        if (xNearKing) {
+            int numxking = bitCnt(xNearKing);
+            //            ei.atkcntpcs[enemy] += numxking;
+            ei.mid_score[color] += numxking * 5;
+        }*/
         if (temp1 < 3) {
             ei.mid_score[color] -= personality(thread).stuck_bishop;
             ei.end_score[color] -= personality(thread).stuck_bishop*personality(thread).stuck_end;
@@ -570,7 +579,6 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         katemp64 = rookAttacksBB(from, pos.occupied & ~(pos.queens | pos.rooks));
         ei.kingatkrooks[color] |= katemp64;
         ei.atkrooks[color] |= temp64;
-
         if (katemp64 & ei.kingzone[enemy]) ei.atkcntpcs[enemy] += (1 << 20) + bitCnt(katemp64 & ei.kingadj[enemy]) * 2 + (RookAttackValue << 10);
         uint64 safeMoves = temp64 & mobileSquare;
         temp1 = bitCnt(safeMoves);
@@ -592,15 +600,21 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         ei.end_score[color] += temp1 * EndgameXrayRookMob;
 //        ei.mid_score[color] += MidgameXrayRookMobArray[temp1];
 //        ei.end_score[color] += EndgameXrayRookMobArray[temp1];
-
+/*        uint64 xNearKing = xtemp64 & ei.kingadj[enemy];
+        if (xNearKing) {
+            int numxking = bitCnt(xNearKing);
+            //            ei.atkcntpcs[enemy] += numxking;
+            ei.mid_score[color] += numxking * 5;
+        }*/
         //its good to be lined up with a lot of enemy pawns (7th rank most common example)
-        uint64 pressured = rookAttacksBB(from, ((pos.pawns | pos.kings) & pos.color[color]));
+        uint64 pressured = rookAttacksBB(from, attackBlockers);
         uint64 pawnsPressured = pressured & pawnTargets;
         if (pawnsPressured) {
             int numPawnsPressured = bitCnt(pawnsPressured);
             ei.mid_score[color] += MidgameRookPawnPressure * numPawnsPressured;
             ei.end_score[color] += EndgameRookPawnPressure * numPawnsPressured; 
         }
+        // restricting king on 8th
         if ((BitMask[from] & Rank7ByColorBB[color]) && (BitMask[pos.kpos[enemy]] & Rank8ByColorBB[color])) {
             ei.mid_score[color] += MidgameRook7th;
             ei.end_score[color] += EndgameRook7th;
@@ -611,7 +625,6 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         from = popFirstBit(&pc_bits);
         temp64 = queenAttacksBB(from, pos.occupied);
         ei.atkqueens[color] |= temp64;
-
         if (temp64 & ei.kingzone[enemy]) {
             ei.atkcntpcs[enemy] += (1 << 20) + bitCnt(temp64 & ei.kingadj[enemy]) * 2 + (QueenAttackValue << 10);
             if (ei.kingadj[enemy] & ei.atkpawns[color]) ei.atkcntpcs[enemy] += (1 << 20);
@@ -634,6 +647,13 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         ei.end_score[color] += temp1 * EndgameXrayQueenMob;
 //        ei.mid_score[color] += MidgameXrayQueenMobArray[temp1];
 //        ei.end_score[color] += EndgameXrayQueenMobArray[temp1];
+/*        uint64 xNearKing = xtemp64 & ei.kingadj[enemy];
+        if (xNearKing) {
+            int numxking = bitCnt(xNearKing);
+//            ei.atkcntpcs[enemy] += numxking;
+            ei.mid_score[color] += numxking * 5;
+        }
+        */
         if (xtemp64 & notOwnColor & pos.kings) {
             threatScore += (QueenAttackPower * QueenAttacked) / 2;
         }
@@ -699,7 +719,15 @@ void evalThreats(const position_t& pos, eval_info_t& ei, const int color) {
     ei.end_score[color] += temp1 * PieceAttackMulEnd;
     ///now some serious threats
     {
-        uint64 threatB = enemy_pcs & ei.atkall[color] & ~ei.atkall[color ^ 1];
+        uint64 unprotected = enemy_pcs & ~ei.atkall[color ^ 1];
+        //undefended minors get penalty
+        uint64 unprotectedMinors = unprotected & (pos.bishops | pos.knights);
+        if (unprotectedMinors) {
+            int umScore = MinTwoBits(unprotectedMinors) ? 2 : 1;
+            ei.mid_score[color] += 13 * umScore;
+            ei.end_score[color] += 5 * umScore;
+        }
+        uint64 threatB = unprotected & ei.atkall[color];
         uint64 target = enemy_pcs & pos.queens;
 
         threatB |= (ei.atkrooks[color]) & target;
@@ -903,8 +931,7 @@ void evalPassed(const position_t& pos, eval_info_t& ei, const int allied, uint64
         uint64 prom_path = (*FillPtr[allied])(BitMask[from]);
         uint64 path_attkd = prom_path & ei.atkall[enemy];
         uint64 path_dfndd = prom_path & ei.atkall[allied];
-//        uint64 rooksBehind = (*FillPtr[enemy])(BitMask[from]) & pos.rooks; //TODO don't count rook if doubled pawn?
-        uint64 rooksBehind = rookAttacksBB(from, pos.pawns) & pos.rooks & DirBitmap[behind[allied]][from]; //Hannibal_34 don't count being behind a doubled pawn
+        uint64 rooksBehind = rookAttacksBB(from, pos.pawns) & pos.rooks & DirBitmap[behind[allied]][from]; 
         if (SHOW_EVAL) {
             if (rooksBehind) PrintOutput() << "info string behind\n";
         }
@@ -948,22 +975,20 @@ void evalPawns(const position_t& pos, eval_info_t& ei, Thread& sthread) {
     initPawnEvalByColor(pos, ei, BLACK);
 
     ei.pawn_entry = sthread.pt.Entry(pos.posStore.phash);
-    if (ei.pawn_entry->hashlock == LOCK(pos.posStore.phash)) {
-        ei.mid_score[WHITE] += ei.pawn_entry->opn;
-        ei.end_score[WHITE] += ei.pawn_entry->end;
+    if (ei.pawn_entry->hashlock != LOCK(pos.posStore.phash)) {
+        int midpawnscore = 0; 
+        int endpawnscore = 0;
+        ei.pawn_entry->passedbits = 0;
+        evalPawnsByColor(pos, ei, midpawnscore, endpawnscore, BLACK);
+        midpawnscore *= -1;
+        endpawnscore *= -1;
+        evalPawnsByColor(pos, ei, midpawnscore, endpawnscore, WHITE);
+        ei.pawn_entry->opn = midpawnscore;
+        ei.pawn_entry->end = endpawnscore;
+        ei.pawn_entry->hashlock = LOCK(pos.posStore.phash);
     }
-    else {
-            {
-                int midpawnscore[2] = { 0, 0 };
-                int endpawnscore[2] = { 0, 0 };
-                ei.pawn_entry->passedbits = 0;
-                evalPawnsByColor(pos, ei, midpawnscore, endpawnscore, WHITE);
-                evalPawnsByColor(pos, ei, midpawnscore, endpawnscore, BLACK);
-                ei.pawn_entry->hashlock = LOCK(pos.posStore.phash);
-                ei.pawn_entry->opn = midpawnscore[WHITE] - midpawnscore[BLACK];
-                ei.pawn_entry->end = endpawnscore[WHITE] - endpawnscore[BLACK];
-            }
-    }
+    ei.mid_score[WHITE] += ei.pawn_entry->opn;
+    ei.end_score[WHITE] += ei.pawn_entry->end;
 }
 
 int eval(const position_t& pos, Thread& sthread) {
