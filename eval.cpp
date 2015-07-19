@@ -759,7 +759,7 @@ int KingShelter(const int color, eval_info_t& ei, const position_t& pos) { //ret
     return currentKing;
 }
 
-void evalKingAttacks(const position_t& pos, eval_info_t& ei, const int color) {
+void evalKingAttacked(const position_t& pos, eval_info_t& ei, const int color) {
     int danger;
     uint64 pc_atkrs_mask, pc_atkhelpersmask, king_atkmask, pc_defenders_mask;
     int shelter, tot_atkrs, pc_weights, kzone_atkcnt;
@@ -827,6 +827,7 @@ void evalKingAttacks(const position_t& pos, eval_info_t& ei, const int color) {
         pc_atkrs_mask = discoveredCheckCandidates(pos, color ^ 1) & ~pos.pawns;
         if (pc_atkrs_mask) penalty += bitCnt(pc_atkrs_mask) * DiscoveredCheckValue;
         ei.mid_score[color] -= (penalty * penalty * KING_ATT_W) / 20;
+        ei.draw[color ^ 1] += penalty/2;
     }
     else if (PARTIAL_ATTACK) { //if there is a maximum of 1 active attacker
         ei.mid_score[color] -= kzone_atkcnt*PARTIAL_ATTACK;
@@ -995,7 +996,6 @@ int eval(const position_t& pos, Thread& sthread) {
     eval_info_t ei;
     material_info_t *mat;
     int open, end, score;
-    int winning;
     EvalEntry *entry;
     uint64 whitePassed, blackPassed;
 
@@ -1068,9 +1068,6 @@ int eval(const position_t& pos, Thread& sthread) {
         }
     }
 
-    ei.flags |= ATTACK_KING[BLACK] * (ei.MLindex[WHITE] >= MLQ + MLN);
-    ei.flags |= ATTACK_KING[WHITE] * (ei.MLindex[BLACK] >= MLQ + MLN);
-
     evalPieces(pos, ei, WHITE);
     evalPieces(pos, ei, BLACK);
 
@@ -1085,8 +1082,8 @@ int eval(const position_t& pos, Thread& sthread) {
         if (blackPassed) evalPassed(pos, ei, BLACK, blackPassed);
         evalThreats(pos, ei, WHITE);
         // attacking the black king
-        if (ei.flags & ATTACK_KING[BLACK]) {
-            evalKingAttacks(pos, ei, BLACK);
+        if (ei.MLindex[WHITE] >= MLQ + MLN) {
+            evalKingAttacked(pos, ei, BLACK);
         }
     }
     else {
@@ -1096,8 +1093,8 @@ int eval(const position_t& pos, Thread& sthread) {
     if (pos.color[BLACK] & ~pos.pawns & ~pos.kings) { //if black has a piece
         if (whitePassed) evalPassed(pos, ei, WHITE, whitePassed);
         evalThreats(pos, ei, BLACK);
-        if (ei.flags & ATTACK_KING[WHITE]) { // attacking the white king
-            evalKingAttacks(pos, ei, WHITE);
+        if (ei.MLindex[BLACK] >= MLQ + MLN) { // attacking the white king
+            evalKingAttacked(pos, ei, WHITE);
         }
     }
     else {
@@ -1110,8 +1107,6 @@ int eval(const position_t& pos, Thread& sthread) {
         int posVal = ((open * ei.phase) + (end * (32 - ei.phase))) / (32); //was 32, /16 means doubling the values
         score += posVal;
     }
-    winning = (score < DrawValue[WHITE]);
-
     // if there is an unstoppable pawn on the board, we cannot trust any of our draw estimates or endgame rules of thumb
     if (!ei.queening) {
         int edge = score < DrawValue[WHITE];

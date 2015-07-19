@@ -683,7 +683,7 @@ void evalEndgame(int attacker, const position_t& pos, eval_info_t& ei, int *scor
         BishopEnding(attacker, pos, ei, score, draw);
         DrawnRookPawn(attacker, pos, draw, pos.side);
         break;
-    case 4: // rook versys pawns endings
+    case 4: // rook versus pawns endings
         RookvPawnsEnding(attacker, pos, score, draw, pos.side);
         break;
     case 5: // knight + pawn

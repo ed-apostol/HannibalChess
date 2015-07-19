@@ -24,9 +24,8 @@ enum ranks {
 };
 
 //ENDGAME FLAGS (32 bits)
-const int ATTACK_KING[2] = { 1, 2 }; // bit 1 and 2
-const int ONE_SIDED_PAWNS = 4; // bit 3
-const int OPPOSITE_BISHOPS = 8;
+const int ONE_SIDED_PAWNS = 1; // bit 3
+const int OPPOSITE_BISHOPS = 2;
 
 //N+B - R + P = 68
 const int  PawnValueOpen = 89;	//84
