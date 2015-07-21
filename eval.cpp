@@ -54,7 +54,8 @@ public:
 };
 static const Personality personality;
 #define personality(thread) personality
-
+// draw stuff
+#define DRAW_WALL 20
 //king safety stuff
 #define PARTIAL_ATTACK 0 //0 means don't count, otherwise multiplies attack by 5
 #define MATE_CODE 10 // mate threat
@@ -108,7 +109,7 @@ const int MidgameRook7th = 15;
 const int EndgameRook7th = 30;
 
 //bishop specific
-#define OB_WEIGHT 12 //opposite color bishops drawishness
+#define OB_WEIGHT 12
 const int MidgameBishopPawnPressure = 5;
 const int EndgameBishopPawnPressure = 9;
 
@@ -546,6 +547,12 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         }
         if (xtemp64 & notOwnColor & (pos.kings | pos.queens)) {
             threatScore += (BishopAttackPower * QueenAttacked) / 2;
+//            uint64 betw = InBetween[from][pos.kpos[enemy]];
+//            if (betw & MaxOneBit(betw)) {
+//                threatScore += BishopAttackPower * KnightAttacked * ((betw & pos.knights) != 0);
+//                threatScore += BishopAttackPower * RookAttacked * 2 * ((betw & pos.rooks) != 0);
+//                threatScore += BishopAttackPower * QueenAttacked * 2 * ((betw & pos.queens) != 0);
+//            }
         }
         if (xtemp64 & notOwnColor & pos.rooks) {
             threatScore += (BishopAttackPower * RookAttacked) / 2;
@@ -590,6 +597,11 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         temp1 = bitCnt(xtemp64);
         if (xtemp64 & notOwnColor & (pos.kings | pos.queens)) {
             threatScore += (RookAttackPower * QueenAttacked) / 2;
+//            uint64 betw = InBetween[from][pos.kpos[enemy]];
+//            if (betw & MaxOneBit(betw)) {
+//                threatScore += RookAttackPower * BishopAttacked * ((betw & (pos.bishops | pos.knights)) != 0);
+//                threatScore += RookAttackPower * QueenAttacked * 2 * ((betw & pos.queens) != 0);
+//            }
         }
         //TODO consider being a bit more accurate with king
         if (temp1 < 3) {
@@ -656,6 +668,11 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         */
         if (xtemp64 & notOwnColor & pos.kings) {
             threatScore += (QueenAttackPower * QueenAttacked) / 2;
+//            uint64 betw = InBetween[from][pos.kpos[enemy]];
+//            if (betw & MaxOneBit(betw)) {
+//                threatScore += BishopAttackPower * KnightAttacked * ((betw & (pos.bishops | pos.knights)) != 0);
+//                threatScore += BishopAttackPower * RookAttacked * ((betw & pos.rooks) != 0);
+//            }
         }
         if ((BitMask[from] & Rank7ByColorBB[color]) && (BitMask[pos.kpos[enemy]] & Rank8ByColorBB[color])) {
             ei.mid_score[color] += MidgameQueen7th;
@@ -749,7 +766,6 @@ void evalThreats(const position_t& pos, eval_info_t& ei, const int color) {
 int KingShelter(const int color, eval_info_t& ei, const position_t& pos) { //returns penalty for being under attack
     
     int currentKing = ei.pawn_entry->shelter[color];
-
     int kingSide = ((pos.posStore.castle & KSC[color]) == 0 || (ei.atkall[color ^ 1] & KCSQ[color])) ? 0 : ei.pawn_entry->kshelter[color];
     int queenSide = ((pos.posStore.castle & QSC[color]) == 0 || (ei.atkall[color ^ 1] & QCSQ[color])) ? 0 : ei.pawn_entry->qshelter[color];
 
@@ -957,7 +973,7 @@ void evalPassed(const position_t& pos, eval_info_t& ei, const int allied, uint64
         }
 
         if (passed & (PawnCaps[from][allied] | PawnCaps[frontSq][enemy])
-            && ((pos.bishops | pos.queens) & pos.color[enemy]) == 0 && ei.queening == false && rank >= Rank6 && MaxOneBit(pos.color[enemy] & ~(pos.kings | pos.pawns)))	//CON
+            && ((pos.bishops | pos.queens) & pos.color[enemy]) == 0 && ei.queening == false && rank >= Rank6 && MaxOneBit(pos.color[enemy] & ~(pos.kings | pos.pawns)))	
         {
             int promotion = PAWN_PROMOTE(from, allied);
             int kDist = DISTANCE(pos.kpos[enemy], promotion) - (!myMove);
@@ -992,6 +1008,26 @@ void evalPawns(const position_t& pos, eval_info_t& ei, Thread& sthread) {
     ei.end_score[WHITE] += ei.pawn_entry->end;
 }
 
+template<bool color> //if there is no entrance for king into enemy position it is drawish (could be more advanced detecting multi-rank cutoffs
+void evalDrawish(const position_t& pos, eval_info_t& ei) { 
+    uint64 wall = (pos.pawns & !color) | ei.atkkings[color] | ei.atkpawns[color];
+//    uint64 wall = (pos.pawns & !color) | ei.atkkings[color] | ei.atkpawns[color] | ei.atkbishops[color] | ei.atkknights[color];
+    int kingRow = SQRANK(pos.kpos[!color]);
+    if (color == WHITE) {
+        if ((kingRow > 5 && ((wall & Rank5BB) == Rank5BB)) || (kingRow > 4 && ((wall & Rank4BB) == Rank4BB))) {
+            int drawBonus = (DRAW_WALL * (32 - ei.phase)) / 32;
+            ei.draw[WHITE] += drawBonus;
+            if (SHOW_EVAL) PrintOutput() << "info string WHITE DRAW WALL " << drawBonus << "\n";
+        }
+    }
+    else {
+        if ((kingRow < 5 && ((wall & Rank5BB) == Rank5BB)) || (kingRow < 4 && ((wall & Rank4BB) == Rank4BB))) {
+            int drawBonus = (DRAW_WALL * (32 - ei.phase)) / 32;
+            ei.draw[WHITE] += drawBonus;
+            if (SHOW_EVAL) PrintOutput() << "info string WHITE DRAW WALL " << drawBonus << "\n";
+        }
+    }
+}
 int eval(const position_t& pos, Thread& sthread) {
     eval_info_t ei;
     material_info_t *mat;
@@ -1022,7 +1058,6 @@ int eval(const position_t& pos, Thread& sthread) {
     else {
         score = computeMaterial(ei);
     }
-
     ei.mid_score[WHITE] = pos.posStore.open[WHITE];
     ei.mid_score[BLACK] = pos.posStore.open[BLACK];
     ei.end_score[WHITE] = pos.posStore.end[WHITE];
@@ -1046,26 +1081,31 @@ int eval(const position_t& pos, Thread& sthread) {
     ei.end_score[pos.side] += personality(thread_id).tempo_end;
 
     evalPawns(pos, ei, sthread);
+    blackPassed = ei.pawn_entry->passedbits & pos.color[BLACK];
+    whitePassed = ei.pawn_entry->passedbits & pos.color[WHITE];
+
     {
         int oneSided = ((QUEENSIDE & pos.pawns) == 0 ||
             (KINGSIDE & pos.pawns) == 0);
         if (oneSided) {
             ei.flags |= ONE_SIDED_PAWNS;
+//            if (abs(score) < 300) {
+//                ei.draw[WHITE] += (blackPassed == 0) * 5;
+//                ei.draw[BLACK] += (whitePassed == 0) * 5;
+//            }
         }
     }
-    {
-        int oppBishops = (
-            (pos.bishops & pos.color[WHITE]) && (pos.bishops & pos.color[BLACK]) &&
-            MaxOneBit((pos.bishops & pos.color[WHITE])) &&
-            MaxOneBit((pos.bishops & pos.color[BLACK])) &&
-            (((pos.bishops & pos.color[WHITE] & WhiteSquaresBB) == 0) !=
-            ((pos.bishops & pos.color[BLACK] & WhiteSquaresBB) == 0)));
-        if (oppBishops) {
-            ei.draw[WHITE] += OB_WEIGHT;
-            ei.draw[BLACK] += OB_WEIGHT;
+    int oppBishops = (
+        (pos.bishops & pos.color[WHITE]) && (pos.bishops & pos.color[BLACK]) &&
+        MaxOneBit((pos.bishops & pos.color[WHITE])) &&
+        MaxOneBit((pos.bishops & pos.color[BLACK])) &&
+        (((pos.bishops & pos.color[WHITE] & WhiteSquaresBB) == 0) !=
+        ((pos.bishops & pos.color[BLACK] & WhiteSquaresBB) == 0)));
+    if (oppBishops) {
+        ei.flags |= OPPOSITE_BISHOPS;
+        ei.draw[WHITE] += OB_WEIGHT;
+        ei.draw[BLACK] += OB_WEIGHT;
 
-            ei.flags |= OPPOSITE_BISHOPS;
-        }
     }
 
     evalPieces(pos, ei, WHITE);
@@ -1076,7 +1116,6 @@ int eval(const position_t& pos, Thread& sthread) {
 
     ei.queening = false;
 
-    blackPassed = ei.pawn_entry->passedbits & pos.color[BLACK];
 
     if (pos.color[WHITE] & ~pos.pawns & ~pos.kings) {//if white has a piece
         if (blackPassed) evalPassed(pos, ei, BLACK, blackPassed);
@@ -1089,7 +1128,6 @@ int eval(const position_t& pos, Thread& sthread) {
     else {
         if (blackPassed) evalPassedvsKing(pos, ei, BLACK, blackPassed);
     }
-    whitePassed = ei.pawn_entry->passedbits & pos.color[WHITE];
     if (pos.color[BLACK] & ~pos.pawns & ~pos.kings) { //if black has a piece
         if (whitePassed) evalPassed(pos, ei, WHITE, whitePassed);
         evalThreats(pos, ei, BLACK);
@@ -1109,10 +1147,13 @@ int eval(const position_t& pos, Thread& sthread) {
     }
     // if there is an unstoppable pawn on the board, we cannot trust any of our draw estimates or endgame rules of thumb
     if (!ei.queening) {
+        evalDrawish<WHITE>(pos, ei);
+        evalDrawish<BLACK>(pos, ei);
         int edge = score < DrawValue[WHITE];
         int draw = ei.draw[edge]; //this is who is trying to draw
         evalEndgame(edge, pos, ei, &score, &draw);
         draw = MIN(MAX_DRAW, draw); // max of 200 draw
+
         score = ((score * (MAX_DRAW - draw)) + (DrawValue[WHITE] * draw)) / MAX_DRAW;
     }
     score = score*sign[pos.side];

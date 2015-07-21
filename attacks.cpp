@@ -113,7 +113,7 @@ bool isMoveDefence(const position_t& pos, uint32 move, uint64 target) {
     return false;
 }
 /* this returns the pinned pieces to the King of the side Color */
-uint64 pinnedPieces(const position_t& pos, uint32 c) {
+uint64 pinnedPieces(const position_t& pos, uint32 c) { //SAM TODO this could be done more efficiently I think?
     uint64 b, pin, pinners;
     int t, ksq;
     pin = 0ULL;
