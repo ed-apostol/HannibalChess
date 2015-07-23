@@ -468,7 +468,6 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t& ei, int *score
                 }
             }
         }
-
         passed = passedA;
         while (passed) {
             int sq = popFirstBit(&passed);
@@ -493,6 +492,52 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t& ei, int *score
             *draw = 190 - 30 * (PAWN_RANK(pos.kpos[defender], attacker) == Rank8);
         return;
     }
+    else if (passedA && MaxOneBit(passedA) && ei.MLindex[attacker] - ei.MLindex[defender] < 2) { //if attacker has one passed pawn and is not up by more than 1 pawn
+        int passedSq = getFirstBit(passedA);
+        int passedFile = SQFILE(passedSq);
+        if ((passedFile < FileD && ((pos.pawns ^ passedA) & (FileABB | FileBBB | FileCBB | FileDBB | FileEBB)) == 0) ||
+            (passedFile > FileE && ((pos.pawns ^ passedA) & (FileHBB | FileGBB | FileFBB | FileEBB | FileFBB)) == 0)) {
+            if (SHOW_EVAL) PrintOutput() << "info string before draw " << *draw << "\n";            
+            *draw += 2 * abs(passedFile - SQFILE(pos.kpos[attacker]));
+            if (SHOW_EVAL) PrintOutput() << "info string king dist " << abs(passedFile - SQFILE(pos.kpos[attacker])) << "\n";
+            
+            *draw -= (ei.MLindex[attacker]-MLR) * 3;
+            if (SHOW_EVAL) PrintOutput() << "info string num attacker pawns " << (ei.MLindex[attacker] - MLR) << "\n";
+            
+            const int behind[] = { S, N };
+            uint64 behindPawn = DirBitmap[behind[attacker]][passedSq];
+            uint64 frontPawn = DirBitmap[behind[defender]][passedSq];
+/*            if (behindPawn & pos.rooks & pos.color[attacker]) {
+                *draw -= 10;
+                if (SHOW_EVAL) PrintOutput() << "info string attacker behind\n";
+            }*/
+            if (frontPawn & pos.rooks & pos.color[attacker]) {
+                *draw += ((pos.rooks & pos.color[attacker] & (Rank1 | Rank8)) == 0) ? 10 : 20;
+                if (SHOW_EVAL) PrintOutput() << "info string attacker in front\n";
+            }
+            if ((behindPawn & pos.rooks & pos.color[defender]) != 0) {
+                *draw += 10;
+                if (SHOW_EVAL) PrintOutput() << "info string defender behind\n";
+            }
+            bool attackerRookBehind = (behindPawn & pos.rooks & pos.color[attacker])!=0;
+            if (passedA & (FileABB | FileHBB)) {
+                *draw += attackerRookBehind ? 5 : 20;
+                if (SHOW_EVAL) PrintOutput() << "info string a file\n";
+            }
+            else if (passedA & (FileBBB | FileGBB)) {
+                *draw += attackerRookBehind ? 0 : 10;
+                if (SHOW_EVAL) PrintOutput() << "info string b file\n";
+            }
+            else {
+                *draw += attackerRookBehind ? 0 : 15;
+                if (SHOW_EVAL) PrintOutput() << "info string c file\n";
+            }
+
+            if (SHOW_EVAL) PrintOutput() << "info string after draw " << *draw << "\n";
+            if (*draw < 0) *draw = 0;
+        }
+    }
+
     // if no more than one pawn down
     else if (ei.MLindex[attacker] - ei.MLindex[defender] <= MLP  && passedA == 0) {
         uint64 pawnking = pos.color[defender] & ~pos.rooks;
@@ -605,49 +650,51 @@ void DrawnQvREnding(int attacker, const position_t& pos, eval_info_t& ei, int *s
         }
     }
 }
-/*
+//does not inlude bishop vs. bishop 
 void MinorPawnvMinor(int attacker, const position_t& pos, eval_info_t& ei, int *draw) { //drawish if in front of pawn and knight safe
-const int pawnSq = GetOnlyBit(pos.pawns & pos.color[attacker]);
-const int defender = attacker ^ 1;
-if (abs(SQFILE(pos.kpos[defender]) - SQFILE(pawnSq)) <= 1 && IN_FRONT(SQRANK(pos.kpos[defender]), SQRANK(pawnSq), attacker)) {
-const uint64 dKnight = (pos.knights & pos.color[defender]);
-if (dKnight == 0) {
-*draw = VERY_DRAWISH;
-if (SHOW_EVAL) PrintOutput() << "info string drawish knight + pawn + pawn vs. bishop + pawn endgame\n";
+    const int pawnSq = GetOnlyBit(pos.pawns & pos.color[attacker]);
+    const int defender = attacker ^ 1;
+    if (abs(SQFILE(pos.kpos[defender]) - SQFILE(pawnSq)) <= 1 && IN_FRONT(SQRANK(pos.kpos[defender]), SQRANK(pawnSq), attacker)) {
+        const uint64 dKnight = (pos.knights & pos.color[defender]);
+        if (dKnight == 0) {
+            *draw = VERY_DRAWISH;
+            if (SHOW_EVAL) PrintOutput() << "info string drawish knight pawn vs. minor endgame\n";
+        }
+        else if ((ei.atkall[attacker] & dKnight) == 0) {
+            const int knightSq = GetOnlyBit(dKnight);
+            const uint64 knightSquares = KnightMoves[knightSq];
+            if (((~ei.atkall[attacker]) & knightSquares) != 0) {
+                *draw = VERY_DRAWISH;
+                if (SHOW_EVAL) PrintOutput() << "info string drawish minor + pawn vs. knight endgame\n";
+            }
+        }
+    }
 }
-else if ((ei.atkall[attacker] & dKnight) == 0) {
-const int knightSq = GetOnlyBit(dKnight);
-const uint64 knightSquares = KnightMoves[knightSq];
-if (((~ei.atkall[attacker]) & knightSquares) != 0) {
-*draw = VERY_DRAWISH;
-if (SHOW_EVAL) PrintOutput() << "info string drawish minor + pawn vs. knight endgame\n";
-}
-}
-}
-}
-
+//does not inlude bishop vs. bishop 
 void MinorPawnPawnvMinorPawn(int attacker, const position_t& pos, eval_info_t& ei, int *draw) { //drawish if in front of pawn and knight safe
-const uint64 passed = ei.pawn_entry->passedbits & pos.color[attacker];
-const int defender = attacker ^ 1;
+    const uint64 passed = ei.pawn_entry->passedbits & pos.color[attacker];
+    const int defender = attacker ^ 1;
+    if (passed == 0) {
+        const int pawnSq = GetOnlyBit(pos.pawns & pos.color[defender]);
+        if (abs(SQFILE(pos.kpos[defender]) - SQFILE(pawnSq)) <= 1 && IN_FRONT(SQRANK(pos.kpos[defender]), SQRANK(pawnSq), attacker)) {
+            const uint64 dKnight = (pos.knights & pos.color[defender]);
+            if (dKnight == 0) {
+                *draw = DRAWISH;
+                if (SHOW_EVAL) PrintOutput() << "info string drawish knight + 2 pawns vs. minor + pawn endgame\n";
+            }
+            else if ((ei.atkall[attacker] & dKnight) == 0) {
+                const int knightSq = GetOnlyBit(dKnight);
+                const uint64 knightSquares = KnightMoves[knightSq];
+                if (((~ei.atkall[attacker]) & knightSquares) != 0) {
+                    *draw = DRAWISH;
+                    if (SHOW_EVAL) PrintOutput() << "info string drawish minor + 2 pawns vs. knight + pawn endgame\n";
+                }
+            }
+        }
+        else *draw += 10;
+    }
+}
 
-if (passed == 0 && (KingMoves[pos.kpos[defender]] & (pos.pawns & pos.color[defender]))) {
-const uint64 dKnight = (pos.knights & pos.color[defender]);
-if (dKnight == 0) {
-if (SHOW_EVAL) PrintOutput() << "info string was " << *draw << " drawish knight + pawn + pawn vs. bishop + pawn endgame\n";
-*draw = PRETTY_DRAWISH;
-if (SHOW_EVAL) PrintOutput() << "info string drawish knight + pawn + pawn vs. bishop + pawn endgame\n";
-}
-else if ((ei.atkall[attacker] & dKnight) == 0) {
-const int knightSq = GetOnlyBit(dKnight);
-const uint64 knightSquares = KnightMoves[knightSq];
-if (((~ei.atkall[attacker]) & knightSquares) != 0) {
-if (SHOW_EVAL) PrintOutput() << "info string was " << *draw << " drawish minor + pawn + pawn vs. knight + pawn endgame\n";
-*draw = PRETTY_DRAWISH;
-}
-}
-}
-}
-*/
 void DrawnRookPawnvBishop(int attacker, const position_t& pos, int *draw) {
     //this is usually drawn if it is a rook pawn past the 4th row, and king is in front
     const uint64 pawn = pos.pawns;
@@ -717,12 +764,11 @@ void evalEndgame(int attacker, const position_t& pos, eval_info_t& ei, int *scor
     case 14:
         DrawnRookPawnvBishop(attacker, pos, draw);
         break;
-        /*
     case 15:
-    MinorPawnvMinor(attacker, pos, ei, draw);
-    break;
+        MinorPawnvMinor(attacker, pos, ei, draw);
+        break;
     case 16:
-    MinorPawnPawnvMinorPawn(attacker, pos, ei, draw);
-    break;*/
+        MinorPawnPawnvMinorPawn(attacker, pos, ei, draw);
+        break;
     }
 }

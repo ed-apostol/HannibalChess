@@ -66,7 +66,8 @@ private:
         return ((nt == PVNode) ? PVNode : ((nt == CutNode) ? AllNode : CutNode));
     }
 
-    static const int EXPLORE_CUTOFF = 20;
+    static const int EXPLORE_BASE_CUTOFF = 18;
+    static const int EXPLORE_MULT_CUTOFF = 2;
     static const int Q_CHECK = 1; // implies 1 check
     static const int Q_PVCHECK = 2; // implies 2 checks
     static const int MIN_REDUCTION_DEPTH = 4; // default is false
@@ -334,9 +335,9 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (!inPvNode(nt) && !inCheck) {
             static const int MaxRazorDepth = 10;
             int rvalue;
-            if (depth < MaxRazorDepth && (pos.color[pos.side] & ~(pos.pawns | pos.kings))
-                && ss.evalvalue > (rvalue = beta + FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
-                return rvalue;
+            if (depth < MaxRazorDepth && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && beta <= MAXEVAL 
+                && ss.evalvalue >(rvalue = beta + FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
+                    return rvalue;
             }
             if (depth < MaxRazorDepth && pos.posStore.lastmove != EMPTY
                 && ss.evalvalue < (rvalue = beta - FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
@@ -350,6 +351,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             }
             if (depth >= 2 && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && ss.evalvalue >= beta) {
                 int nullDepth = depth - (4 + (depth / 5) + MIN(3, ((ss.evalvalue - beta) / PawnValue)));
+
                 makeNullMove(pos, undo);
                 ++sthread.nodes;
                 int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, sthread, invertNode(nt));
@@ -381,7 +383,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8)) { // singular extension
             int newdepth = depth / 2;
             if (ss.hashDepth >= newdepth) {
-                int targetScore = ss.evalvalue - EXPLORE_CUTOFF;
+                int targetScore = ss.evalvalue - EXPLORE_BASE_CUTOFF - depth * EXPLORE_MULT_CUTOFF;
                 ssprev.bannedMove = ss.hashMove;
                 int score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, newdepth, ssprev, sthread, nt);
                 ssprev.bannedMove = EMPTY;
@@ -416,7 +418,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             ss.firstExtend = ss.firstExtend || (inCheck && ss.mvlist->size == 1);
         }
     }
-
     int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 2) : (depth * depth));
     move_t* move;
     while ((move = sortNext(sp, mInfo, pos, *ss.mvlist, ss.mvlist_phase, sthread)) != nullptr) {
@@ -607,14 +608,6 @@ void Engine::SearchFromIdleLoop(SplitPoint& sp, Thread& sthread) {
 
 // TODO: encapsulate
 bool isLegal(const position_t& pos, const  basic_move_t move, const bool inCheck) { //this ensures perfect legality for moves that might actually be chosen by the engine
-    /*
-    movelist_t mvlist;
-    genLegal(pos, mvlist, true);
-    for (mvlist.pos = 0; mvlist.pos < mvlist.size; mvlist.pos++) {
-    if (m == mvlist.list[mvlist.pos].m) return true;
-    }
-    return false;
-    */
     if (!genMoveIfLegal(pos, move, pinnedPieces(pos, pos.side))) return false;
     if (inCheck && movePiece(move) != KING) { //MoveIfLegal handles all king moves pretty well already
         int ksq = pos.kpos[pos.side];

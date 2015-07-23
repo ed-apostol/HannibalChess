@@ -534,7 +534,6 @@ void InitMaterial(void) {
                                                 if (wr == 1 && wq == 0 && wp == 1 && wminors == 0 && bb == 1 && bn == 0 && bq == 0 && br == 0 && bp == 0) {
                                                     wflag = 14;
                                                 }
-                                                /*
                                                 if (wq == 0 && wr == 0 && wb == 1 && wn == 0 && wp == 1 && bq == 0 && br == 0 && bb == 0 && bn == 1) {
                                                 wflag = 15;
                                                 }
@@ -552,7 +551,7 @@ void InitMaterial(void) {
                                                 }
                                                 if (bq == 0 && br == 0 && bb == 0 && bn == 1 && bp == 2 && wq == 0 && wr == 0 && wb == 1 && wn == 0 && wp == 1) {
                                                 bflag = 16;
-                                                }*/
+                                                }
                                                 if (wflag == 0 && win > 40 && wp == 0 && wdraw < MAX_DRAW) {
                                                     wflag = 13; // try to mate with no pawns (do not supercede other things like NB v. King)
                                                 }

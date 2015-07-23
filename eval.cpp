@@ -1011,7 +1011,6 @@ void evalPawns(const position_t& pos, eval_info_t& ei, Thread& sthread) {
 template<bool color> //if there is no entrance for king into enemy position it is drawish (could be more advanced detecting multi-rank cutoffs
 void evalDrawish(const position_t& pos, eval_info_t& ei) { 
     uint64 wall = (pos.pawns & !color) | ei.atkkings[color] | ei.atkpawns[color];
-//    uint64 wall = (pos.pawns & !color) | ei.atkkings[color] | ei.atkpawns[color] | ei.atkbishops[color] | ei.atkknights[color];
     int kingRow = SQRANK(pos.kpos[!color]);
     if (color == WHITE) {
         if ((kingRow > 5 && ((wall & Rank5BB) == Rank5BB)) || (kingRow > 4 && ((wall & Rank4BB) == Rank4BB))) {
