@@ -429,6 +429,7 @@ void initArr(void) {
         }
     }
     InitKingShelter();
+    InitMobility();
     for (i = 8; i < 56; i++) {
         uint64 b = (uint64)1 << (i + 8);
         if (SQFILE(i) > FileA) b |= (uint64)1 << (i + 7);

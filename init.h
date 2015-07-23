@@ -22,4 +22,4 @@ extern void initPST();
 extern void initArr();
 extern void InitTrapped();
 extern void InitMateBoost();
-//extern void InitMobility();
+extern void InitMobility();
