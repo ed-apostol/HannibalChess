@@ -50,6 +50,8 @@ static const Personality personality;
 //king safety stuff
 #define PARTIAL_ATTACK 0 //0 means don't count, otherwise multiplies attack by 5
 #define MATE_CODE 10 // mate threat
+#define KING_SMOTHER_PENALTY 5
+#define KING_SMOTHER 20
 
 #define KING_ATT_W 4
 #define SB1 9
@@ -275,6 +277,14 @@ void evalShelter(const int color, eval_info_t& ei, const position_t& pos) {
     }
     else ei.pawn_entry->qshelter[color] = 0;
 }
+int BBwidth(const uint64 BB) {
+    if (BB == 0) return 0;
+    int left = FileA;
+    int right = FileH;
+    while ((BB & FileMask[left]) == 0) left++;
+    while ((BB & FileMask[right]) == 0) right--;
+    return right - left;
+}
 
 void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, int& end_score, const int color) {
     static const int weakFile[8] = { 0, 2, 3, 3, 3, 3, 2, 0 };
@@ -284,14 +294,54 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, in
     int count, sq, rank;
     const int enemy = color ^ 1;
 
+//    end_score += 4*BBwidth(ei.pawns[color]); // wider pawn base can be good in endgame h37
+
     openBitMap = ei.pawns[color] & ~((*FillPtr2[enemy])((*ShiftPtr[enemy])(pos.pawns, 8)));
-    doubledBitMap = ei.pawns[color] & (*FillPtr[enemy])(ei.pawns[color]); //the least advanced one is considered doubled
+    doubledBitMap = ei.pawns[color] & (*FillPtr[enemy])(ei.pawns[color]); //the least advanced ones are considered doubled
     isolatedBitMap = ei.pawns[color] & ~((*FillPtr2[color ^ 1])(ei.potentialPawnAttack[color]));
     backwardBitMap = (*ShiftPtr[enemy])(((*ShiftPtr[color])(ei.pawns[color], 8) & (ei.potentialPawnAttack[enemy] | ei.pawns[enemy])
         & ~ei.potentialPawnAttack[color]), 8) & ~isolatedBitMap; //this includes isolated
     passedBitMap = openBitMap & ~ei.potentialPawnAttack[enemy];
+    {
+        int enemyKing = pos.kpos[color ^ 1];
+        /*
+        int kingFile = SQFILE(enemyKing);
+        // lets do some pawn storm stuff
+        static const int storm[] = { 0, 5, 10, 15 };
+//        static const int unblockedstorm[] = { 0, 6, 12, 18 };
+//        static const int blockedStorm[] = { 0, 3, 9, 15 };
+        uint64 pawnStorm = ei.pawns[color] & ~doubledBitMap & (FileMask[kingFile] | FileMask[MAX(FileA, kingFile - 1)] | FileMask[MIN(FileH, kingFile + 1)]) & (Rank3BB | Rank4BB | Rank5BB | Rank6BB);
+        while (pawnStorm) {
+            int psq = popFirstBit(&pawnStorm);
+            int stormRank = PAWN_RANK(psq, color) - 2;
+//            mid_score += (pos.color[color ^ 1] & BitMask[psq + PAWN_MOVE_INC(color)]) ? blockedStorm[stormRank] : unblockedstorm[stormRank];
+            mid_score += storm[stormRank];
+            if (SHOW_EVAL) PrintOutput() << "info string storm " << (char)(SQFILE(psq) + 'a') << (char)('1' + SQRANK(psq)) << "\n";
+        }*/
+
+        //backward pawns are addressed here as are all other pawn weaknesses to some extent
+        //these are pawns that are not guarded, and are not adjacent to other pawns
+        temp64 = ei.pawns[color] & ~(ei.atkpawns[color] | shiftLeft(ei.pawns[color], 1) |
+            shiftRight(ei.pawns[color], 1));
+        while (temp64) {
+            uint64 openPawn, sqBitMask;
+            int sqPenalty;
+            sq = popFirstBit(&temp64);
+            sqBitMask = BitMask[sq];
+
+            openPawn = openBitMap & sqBitMask;
+            //fixedPawn = (BitMask[sq + PAWN_MOVE_INC(color)] & (ei.atkpawns[enemy] | ei.pawns[enemy]));
+            sqPenalty = weakFile[SQFILE(sq)] + weakRank[PAWN_RANK(sq, color)]; //TODO precale 64 entries
+            mid_score -= sqPenalty;	//penalty for being weak in middlegame
+            end_score -= kingAttackWeakness[DISTANCE(sq, enemyKing)]; //end endgame, king attacks is best measure of vulnerability
+            if (openPawn) {
+                mid_score -= sqPenalty;
+            }
+        }
+    }
 
     targetBitMap = isolatedBitMap;
+
     //any backward pawn not easily protect by its own pawns is a target
     //TODO consider calculating exactly how many moves to protect and defend including double moves
     //TODO consider increasing distance of defender by 1
@@ -305,7 +355,6 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, in
             targetBitMap |= BitMask[sq];
         }
     }
-
     //lets look through all the passed pawns and give them their static bonuses
     //TODO consider moving some king distance stuff in here
     temp64 = ei.pawns[color] & openBitMap & ~passedBitMap;
@@ -366,28 +415,7 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, in
         }
     }
 
-    //backward pawns are addressed here as are all other pawn weaknesses to some extent
-    //these are pawns that are not guarded, and are not adjacent to other pawns
-    temp64 = ei.pawns[color] & ~(ei.atkpawns[color] | shiftLeft(ei.pawns[color], 1) |
-        shiftRight(ei.pawns[color], 1));
-    {
-        int enemyKing = pos.kpos[color ^ 1];
-        while (temp64) {
-            uint64 openPawn, sqBitMask;
-            int sqPenalty;
-            sq = popFirstBit(&temp64);
-            sqBitMask = BitMask[sq];
 
-            openPawn = openBitMap & sqBitMask;
-            //fixedPawn = (BitMask[sq + PAWN_MOVE_INC(color)] & (ei.atkpawns[enemy] | ei.pawns[enemy]));
-            sqPenalty = weakFile[SQFILE(sq)] + weakRank[PAWN_RANK(sq, color)]; //TODO precale 64 entries
-            mid_score -= sqPenalty;	//penalty for being weak in middlegame
-            end_score -= kingAttackWeakness[DISTANCE(sq, enemyKing)]; //end endgame, king attacks is best measure of vulnerability
-            if (openPawn) {
-                mid_score -= sqPenalty;
-            }
-        }
-    }
     evalShelter(color, ei, pos);
     ei.pawn_entry->passedbits |= passedBitMap;
 }
@@ -660,7 +688,6 @@ void evalThreats(const position_t& pos, eval_info_t& ei, const int color) {
 }
 
 int KingShelter(const int color, eval_info_t& ei, const position_t& pos) { //returns penalty for being under attack
-    
     int currentKing = ei.pawn_entry->shelter[color];
     int kingSide = ((pos.posStore.castle & KSC[color]) == 0 || (ei.atkall[color ^ 1] & KCSQ[color])) ? 0 : ei.pawn_entry->kshelter[color];
     int queenSide = ((pos.posStore.castle & QSC[color]) == 0 || (ei.atkall[color ^ 1] & QCSQ[color])) ? 0 : ei.pawn_entry->qshelter[color];
@@ -675,7 +702,7 @@ void evalKingAttacked(const position_t& pos, eval_info_t& ei, const int color) {
     int danger;
     uint64 pc_atkrs_mask, pc_atkhelpersmask, king_atkmask, pc_defenders_mask;
     int shelter, tot_atkrs, pc_weights, kzone_atkcnt;
-
+//    int penalty = 0;
     ASSERT(colorIsOk(color));
 
     tot_atkrs = ei.atkcntpcs[color] >> 20;
@@ -683,9 +710,17 @@ void evalKingAttacked(const position_t& pos, eval_info_t& ei, const int color) {
 
     danger = (tot_atkrs >= 2 && kzone_atkcnt >= 1);
     shelter = KingShelter(color, ei, pos);
+/*    if ((KingMoves[pos.kpos[color]] & ~ei.atkall[color ^ 1]) == 0) { //kingSmothered
+        ei.mid_score[color] -= 13; 
+        penalty += 2;
+        //TODO correct so knight to move was not part of making the king not covered
+    }*/
     if (danger) {
         int penalty = MAX(0, 8 - shelter);
+//        penalty += MAX(0, 8 - shelter);
         king_atkmask = KingMoves[pos.kpos[color]];
+        uint64 kingEscapes = king_atkmask & ~ei.atkall[color ^ 1];
+        if (MaxOneBit(kingEscapes)) penalty += (kingEscapes == 0) ? 4 : 2;//samh41
         pc_weights = (ei.atkcntpcs[color] & ((1 << 20) - 1)) >> 10;
         penalty += KingPosPenalty[color][pos.kpos[color]] + ((pc_weights * tot_atkrs) / 2) + kzone_atkcnt;
         pc_defenders_mask = ei.atkqueens[color] | ei.atkrooks[color] | ei.atkbishops[color] | ei.atkknights[color] | ei.atkpawns[color];
@@ -724,7 +759,7 @@ void evalKingAttacked(const position_t& pos, eval_info_t& ei, const int color) {
                 } while (queenContact);
             }
         }
-
+        //SAM TODO probably faster to do queen separate rather than evoke bitCnt multiple time
         pc_atkrs_mask = rookAttacksBB(pos.kpos[color], pos.occupied) & ~ei.atkall[color] & ~pos.color[color ^ 1];
         if (pc_atkrs_mask & ei.atkqueens[color ^ 1]) {
             int numQueenChecks = bitCnt(pc_atkrs_mask & ei.atkqueens[color ^ 1]);
@@ -736,13 +771,11 @@ void evalKingAttacked(const position_t& pos, eval_info_t& ei, const int color) {
         if (pc_atkrs_mask & ei.kingatkbishops[color ^ 1]) penalty += bitCnt(pc_atkrs_mask & ei.kingatkbishops[color ^ 1]) * BishopSafeCheckValue;
         pc_atkrs_mask = KnightMoves[pos.kpos[color]] & ~ei.atkall[color] & ~pos.color[color ^ 1];
         if (pc_atkrs_mask & ei.atkknights[color ^ 1]) penalty += bitCnt(pc_atkrs_mask & ei.atkknights[color ^ 1]) * KnightSafeCheckValue;
+
         pc_atkrs_mask = discoveredCheckCandidates(pos, color ^ 1) & ~pos.pawns;
         if (pc_atkrs_mask) penalty += bitCnt(pc_atkrs_mask) * DiscoveredCheckValue;
         ei.mid_score[color] -= (penalty * penalty * KING_ATT_W) / 20;
         ei.draw[color ^ 1] += penalty/2;
-    }
-    else if (PARTIAL_ATTACK) { //if there is a maximum of 1 active attacker
-        ei.mid_score[color] -= kzone_atkcnt*PARTIAL_ATTACK;
     }
 }
 
