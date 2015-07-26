@@ -25,9 +25,6 @@ uint64 PawnMoves[64][2];
 uint64 PawnMoves2[64][2];
 
 uint64 MagicAttacks[107648];
-
-uint64 bewareTrapped[2];
-
 /* the precomputed material values table and the flags table */
 material_info_t MaterialTable[MAX_MATERIAL][MAX_MATERIAL];
 

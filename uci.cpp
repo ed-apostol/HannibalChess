@@ -46,7 +46,6 @@ Interface::Interface() {
 
     initArr();
     initPST();
-    InitTrapped();
     InitMaterial();
     InitMateBoost();
 

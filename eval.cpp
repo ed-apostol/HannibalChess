@@ -50,9 +50,11 @@ static const Personality personality;
 //king safety stuff
 #define PARTIAL_ATTACK 0 //0 means don't count, otherwise multiplies attack by 5
 #define MATE_CODE 10 // mate threat
-#define KING_SMOTHER_PENALTY 5
-#define KING_SMOTHER 20
+//#define KING_SMOTHER_PENALTY 5
+//#define KING_SMOTHER 20
+static const uint64 bewareTrapped[2] = { (Rank8BB | Rank7BB | Rank6BB ), (Rank1BB | Rank2BB | Rank3BB ) };
 
+#define TRAPPED_PENALTY 125 //(125-LOW_MOB*2)
 #define KING_ATT_W 4
 #define SB1 9
 #define SB2 (SB1+9)
@@ -277,6 +279,7 @@ void evalShelter(const int color, eval_info_t& ei, const position_t& pos) {
     }
     else ei.pawn_entry->qshelter[color] = 0;
 }
+/*
 int BBwidth(const uint64 BB) {
     if (BB == 0) return 0;
     int left = FileA;
@@ -285,7 +288,7 @@ int BBwidth(const uint64 BB) {
     while ((BB & FileMask[right]) == 0) right--;
     return right - left;
 }
-
+*/
 void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, int& end_score, const int color) {
     static const int weakFile[8] = { 0, 2, 3, 3, 3, 3, 2, 0 };
     static const int weakRank[8] = { 0, 0, 2, 4, 6, 8, 10, 0 };
@@ -294,7 +297,7 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, in
     int count, sq, rank;
     const int enemy = color ^ 1;
 
-//    end_score += 4*BBwidth(ei.pawns[color]); // wider pawn base can be good in endgame h37
+//    end_score += 4*BBwidth(ei.pawns[color]); // wider pawn base can be good in endgame 
 
     openBitMap = ei.pawns[color] & ~((*FillPtr2[enemy])((*ShiftPtr[enemy])(pos.pawns, 8)));
     doubledBitMap = ei.pawns[color] & (*FillPtr[enemy])(ei.pawns[color]); //the least advanced ones are considered doubled
@@ -317,8 +320,8 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, in
 //            mid_score += (pos.color[color ^ 1] & BitMask[psq + PAWN_MOVE_INC(color)]) ? blockedStorm[stormRank] : unblockedstorm[stormRank];
             mid_score += storm[stormRank];
             if (SHOW_EVAL) PrintOutput() << "info string storm " << (char)(SQFILE(psq) + 'a') << (char)('1' + SQRANK(psq)) << "\n";
-        }*/
-
+        }
+        */
         //backward pawns are addressed here as are all other pawn weaknesses to some extent
         //these are pawns that are not guarded, and are not adjacent to other pawns
         temp64 = ei.pawns[color] & ~(ei.atkpawns[color] | shiftLeft(ei.pawns[color], 1) |
@@ -488,15 +491,14 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         temp1 = bitCnt(safeMoves);
       ei.mid_score[color] += MidgameKnightMobArray[temp1];
         ei.end_score[color] += EndgameKnightMobArray[temp1];
-        uint64 fromMask = BitMask[from];
+        const uint64 fromMask = BitMask[from];
         if (fromMask & weak_sq_mask) {
             temp1 = outpost(pos, ei, color, enemy, from);
             ei.mid_score[color] += temp1;
             ei.end_score[color] += temp1;
         }
-        if ((maybeTrapped & fromMask) && temp1 < 2) { //trapped piece if you are in opponent area and you have very few safe moves
-            ei.mid_score[color] -= 125;
-        }
+        if ((maybeTrapped & fromMask) && temp1 < 2 /*&& (temp64 & (pos.color[enemy] & ~pos.pawns)) == 0 && (safeMoves & ~bewareTrapped[color]) == 0*/) //trapped piece if you are in opponent area and you have very few safe moves
+            ei.mid_score[color] -= TRAPPED_PENALTY;
     }
     pc_bits = pos.bishops & pos.color[color];
     int SameColBishop = ((pc_bits & WhiteSquaresBB) == 0) ? 0 : bitCnt(WhiteSquaresBB & ei.pawns[color]);
@@ -517,10 +519,9 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         temp1 = bitCnt(safeMoves);
         ei.mid_score[color] += MidgameBishopMobArray[temp1];
         ei.end_score[color] += EndgameBishopMobArray[temp1];
-        uint64 fromMask = BitMask[from];
-        if ((maybeTrapped & fromMask) && temp1 < 2) { //trapped piece if you are in opponent area and you have very few safe moves
-            ei.mid_score[color] -= 125;
-        }
+        const uint64 fromMask = BitMask[from];
+        if ((maybeTrapped & fromMask) && temp1 < 2 /*&& (temp64 & (pos.color[enemy] & ~pos.pawns)) == 0 && (safeMoves & ~bewareTrapped[color]) == 0*/) //trapped piece if you are in opponent area and you have very few safe moves
+            ei.mid_score[color] -= TRAPPED_PENALTY;
         xtemp64 = bishopAttacksBB(from, boardSkeleton) & notOwnSkeleton;
         uint64 pawnsPressured = xtemp64 & pawnTargets;
         if (pawnsPressured) {
@@ -556,6 +557,7 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         temp1 = bitCnt(safeMoves);
         ei.mid_score[color] += MidgameRookMobArray[temp1];
         ei.end_score[color] += EndgameRookMobArray[temp1];
+
         xtemp64 = rookAttacksBB(from, boardSkeleton) & notOwnSkeleton;
         temp1 = bitCnt(xtemp64);
         if (xtemp64 & notOwnColor & (pos.kings | pos.queens)) {
@@ -563,6 +565,7 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         }
         ei.mid_score[color] += MidgameXrayRookMobArray[temp1];
         ei.end_score[color] += EndgameXrayRookMobArray[temp1];
+
         //its good to be lined up with a lot of enemy pawns (7th rank most common example)
         uint64 pressured = rookAttacksBB(from, attackBlockers);
         uint64 pawnsPressured = pressured & pawnTargets;
@@ -702,7 +705,6 @@ void evalKingAttacked(const position_t& pos, eval_info_t& ei, const int color) {
     int danger;
     uint64 pc_atkrs_mask, pc_atkhelpersmask, king_atkmask, pc_defenders_mask;
     int shelter, tot_atkrs, pc_weights, kzone_atkcnt;
-//    int penalty = 0;
     ASSERT(colorIsOk(color));
 
     tot_atkrs = ei.atkcntpcs[color] >> 20;
@@ -710,14 +712,8 @@ void evalKingAttacked(const position_t& pos, eval_info_t& ei, const int color) {
 
     danger = (tot_atkrs >= 2 && kzone_atkcnt >= 1);
     shelter = KingShelter(color, ei, pos);
-/*    if ((KingMoves[pos.kpos[color]] & ~ei.atkall[color ^ 1]) == 0) { //kingSmothered
-        ei.mid_score[color] -= 13; 
-        penalty += 2;
-        //TODO correct so knight to move was not part of making the king not covered
-    }*/
     if (danger) {
         int penalty = MAX(0, 8 - shelter);
-//        penalty += MAX(0, 8 - shelter);
         king_atkmask = KingMoves[pos.kpos[color]];
         uint64 kingEscapes = king_atkmask & ~ei.atkall[color ^ 1];
         if (MaxOneBit(kingEscapes)) penalty += (kingEscapes == 0) ? 4 : 2;//samh41
@@ -726,7 +722,7 @@ void evalKingAttacked(const position_t& pos, eval_info_t& ei, const int color) {
         pc_defenders_mask = ei.atkqueens[color] | ei.atkrooks[color] | ei.atkbishops[color] | ei.atkknights[color] | ei.atkpawns[color];
         penalty += bitCnt(king_atkmask & ei.atkall[color ^ 1] & ~pc_defenders_mask);
         pc_atkrs_mask = king_atkmask & ei.atkqueens[color ^ 1] & (~pos.color[color ^ 1]);
-        if (pc_atkrs_mask) {
+        if (pc_atkrs_mask) { //TODO rook contact checks
             uint64 queenContact;
             pc_atkhelpersmask = (ei.atkkings[color ^ 1] | ei.kingatkrooks[color ^ 1] | ei.kingatkbishops[color ^ 1] | ei.atkknights[color ^ 1] | ei.atkpawns[color ^ 1]);
             pc_atkrs_mask &= pc_atkhelpersmask;
@@ -1087,7 +1083,7 @@ int eval(const position_t& pos, Thread& sthread) {
     return score;
 }
 
-void FillMobilityArray(double weight, int minGood, double penalty, double cumPenality, int numMoves, int diminishingReturns, int a[]) {
+void FillMobilityArray(double weight, int minGood, double penalty, int numMoves, int diminishingReturns, int a[]) {
     double mobilityArray[7 * 4 + 1];
     mobilityArray[0] = 0;
     for (int i = 1; i < numMoves; i++) {
@@ -1097,7 +1093,7 @@ void FillMobilityArray(double weight, int minGood, double penalty, double cumPen
  
     }
     for (int i = 0; i < numMoves; i++) {
-        if (i < minGood)  mobilityArray[i] -= penalty - cumPenality*(minGood-i);
+        if (i < minGood)  mobilityArray[i] -= penalty;
         a[i] = round(mobilityArray[i]);
         //        PrintOutput() << "mobility " << i << " = " << a[i] << "\n";
     }
@@ -1105,6 +1101,7 @@ void FillMobilityArray(double weight, int minGood, double penalty, double cumPen
 void InitMobility() {
     const double MxrayLow = 10;
     const double ExrayLow = 50;
+    const double MminorLow = 0; //13
 
     const int knightMidDiminish = 8; 
     const int knightEndDiminish = 6; 
@@ -1130,22 +1127,22 @@ void InitMobility() {
     const double EndgameQueenMob = 2;
     const double EndgameXrayQueenMob = 2;
 
-    FillMobilityArray(MidgameKnightMob, 0, 0, 0, 9, knightMidDiminish, MidgameKnightMobArray);
-    FillMobilityArray(EndgameKnightMob, 0, 0, 0, 9, knightEndDiminish, EndgameKnightMobArray);
+    FillMobilityArray(MidgameKnightMob, 2, MminorLow, 9, knightMidDiminish, MidgameKnightMobArray);
+    FillMobilityArray(EndgameKnightMob, 2, 0, 9, knightEndDiminish, EndgameKnightMobArray);
 
-    FillMobilityArray(MidgameBishopMob, 0, 0, 0, 7 * 2 + 1, bishopMidDiminish, MidgameBishopMobArray);
-    FillMobilityArray(EndgameBishopMob, 0, 0, 0, 7 * 2 + 1, bishopEndDiminish, EndgameBishopMobArray);
-    FillMobilityArray(MidgameXrayBishopMob, 3, MxrayLow, 0 , 7 * 2 + 1, 100, MidgameXrayBishopMobArray);
-    FillMobilityArray(EndgameXrayBishopMob, 3, ExrayLow, 0, 7 * 2 + 1, 100, EndgameXrayBishopMobArray);
+    FillMobilityArray(MidgameBishopMob, 2, MminorLow, 7 * 2 + 1, bishopMidDiminish, MidgameBishopMobArray);
+    FillMobilityArray(EndgameBishopMob, 2, 0, 7 * 2 + 1, bishopEndDiminish, EndgameBishopMobArray);
+    FillMobilityArray(MidgameXrayBishopMob, 3, MxrayLow, 7 * 2 + 1, 100, MidgameXrayBishopMobArray);
+    FillMobilityArray(EndgameXrayBishopMob, 3, ExrayLow, 7 * 2 + 1, 100, EndgameXrayBishopMobArray);
 
-    FillMobilityArray(MidgameRookMob, 0, 0, 0, 7 * 2 + 1, rookMidDiminish, MidgameRookMobArray);
-    FillMobilityArray(EndgameRookMob, 0, 0, 0, 7 * 2 + 1, rookEndDiminish, EndgameRookMobArray);
-    FillMobilityArray(MidgameXrayRookMob, 3, MxrayLow, 0, 7 * 2 + 1, 100, MidgameXrayRookMobArray);
-    FillMobilityArray(EndgameXrayRookMob, 3, ExrayLow, 0, 7 * 2 + 1, 100, EndgameXrayRookMobArray);
+    FillMobilityArray(MidgameRookMob, 2, 0, 7 * 2 + 1, rookMidDiminish, MidgameRookMobArray);
+    FillMobilityArray(EndgameRookMob, 2, 0, 7 * 2 + 1, rookEndDiminish, EndgameRookMobArray);
+    FillMobilityArray(MidgameXrayRookMob, 3, MxrayLow, 7 * 2 + 1, 100, MidgameXrayRookMobArray);
+    FillMobilityArray(EndgameXrayRookMob, 3, ExrayLow, 7 * 2 + 1, 100, EndgameXrayRookMobArray);
 
-    FillMobilityArray(MidgameQueenMob, 0, 0, 0, 7 * 4 + 1, queenMidDiminish, MidgameQueenMobArray);
-    FillMobilityArray(EndgameQueenMob, 0, 0, 0, 7 * 4 + 1, queenEndDiminish, EndgameQueenMobArray);
-    FillMobilityArray(MidgameXrayQueenMob, 3, MxrayLow, 0, 7 * 4 + 1, 100, MidgameXrayQueenMobArray);
-    FillMobilityArray(EndgameXrayQueenMob, 3, ExrayLow, 0, 7 * 4 + 1, 100, EndgameXrayQueenMobArray);
+    FillMobilityArray(MidgameQueenMob, 2, 0, 7 * 4 + 1, queenMidDiminish, MidgameQueenMobArray);
+    FillMobilityArray(EndgameQueenMob, 2, 0, 7 * 4 + 1, queenEndDiminish, EndgameQueenMobArray);
+    FillMobilityArray(MidgameXrayQueenMob, 3, MxrayLow, 7 * 4 + 1, 100, MidgameXrayQueenMobArray);
+    FillMobilityArray(EndgameXrayQueenMob, 3, ExrayLow, 7 * 4 + 1, 100, EndgameXrayQueenMobArray);
 
 }

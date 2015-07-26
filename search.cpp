@@ -367,7 +367,25 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 }
             }
         }
-
+//        if (!inCheck && !inPvNode(nt) && depth >= 4) { // if we have a no-brainer capture we should just do it
+        if (!inCheck && !inPvNode(nt) && depth >= 5) { // if we have a no-brainer capture we should just do it
+                sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseQuiescence, sthread);
+            move_t* move;
+            int target = beta + 200;
+            int minCapture = target - ss.evalvalue;
+            int newdepth = depth - 5;
+            while ((move = sortNext(nullptr, mInfo, pos, *ss.mvlist, ss.mvlist_phase, sthread)) != nullptr) {
+                int score;
+                if (MaxPieceValue[moveCapture(move->m)] < minCapture || swap(pos, move->m) < minCapture) continue;
+                ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
+                makeMove(pos, undo, move->m);
+                ++sthread.nodes;
+                score = -searchNode<false, false, false>(pos, -target - 1, -target, newdepth, ss, sthread, inCutNode(nt) ? AllNode : CutNode);
+                unmakeMove(pos, undo);
+                if (sthread.stop) return 0;
+                if (score > target) return score;
+            }
+        }
         if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt) ? 6 : 8)) { // IID
             int newdepth = inPvNode(nt) ? depth - 2 : depth / 2;
             if (ss.hashMove == EMPTY || ss.hashDepth < newdepth) {
