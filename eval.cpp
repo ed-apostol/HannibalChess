@@ -50,11 +50,9 @@ static const Personality personality;
 //king safety stuff
 #define PARTIAL_ATTACK 0 //0 means don't count, otherwise multiplies attack by 5
 #define MATE_CODE 10 // mate threat
-//#define KING_SMOTHER_PENALTY 5
-//#define KING_SMOTHER 20
 static const uint64 bewareTrapped[2] = { (Rank8BB | Rank7BB | Rank6BB ), (Rank1BB | Rank2BB | Rank3BB ) };
 
-#define TRAPPED_PENALTY 125 //(125-LOW_MOB*2)
+#define TRAPPED_PENALTY 125 //125
 #define KING_ATT_W 4
 #define SB1 9
 #define SB2 (SB1+9)
@@ -102,9 +100,9 @@ const int MidgameBishopPawnPressure = 5;
 const int EndgameBishopPawnPressure = 9;
 
 // knight specific evaluation
-#define N_ONE_SIDE 20
 const int MidgameKnightPawnPressure = 5;
 const int EndgameKnightPawnPressure = 9;
+#define KNIGHT_PWIDTH 7
 
 // king specific evaluation
 const int kingAttackWeakness[8] = { 0, 22, 12, 5, 3, 1, 0, 0 };
@@ -164,19 +162,19 @@ const int KnightSafeCheckValue = 1;
 const int DiscoveredCheckValue = 3;
 
 // piece attacks
-const int QueenAttacked = 4; //4
-const int RookAttacked = 3; //3
-const int BishopAttacked = 2; //2
-const int KnightAttacked = 2; //2
+const int QueenAttacked = 4; 
+const int RookAttacked = 3; 
+const int BishopAttacked = 2; 
+const int KnightAttacked = 2;
 
-const int QueenAttackPower = 1; //1
-const int RookAttackPower = 2; //2
-const int BishopAttackPower = 3; //3
-const int KnightAttackPower = 3; //3
-const int PawnAttackPower = 4; //4
+const int QueenAttackPower = 1; 
+const int RookAttackPower = 2; 
+const int BishopAttackPower = 3; 
+const int KnightAttackPower = 3; 
+const int PawnAttackPower = 4; 
 
-const int PieceAttackMulMid = 4; //5
-const int PieceAttackMulEnd = 3; //3
+const int PieceAttackMulMid = 4; 
+const int PieceAttackMulEnd = 3; 
 
 const int ThreatBonus[] = { 0, 8, 88, 108, 128, 138, 148, 178, 188 };
 
@@ -279,7 +277,7 @@ void evalShelter(const int color, eval_info_t& ei, const position_t& pos) {
     }
     else ei.pawn_entry->qshelter[color] = 0;
 }
-/*
+
 int BBwidth(const uint64 BB) {
     if (BB == 0) return 0;
     int left = FileA;
@@ -288,7 +286,7 @@ int BBwidth(const uint64 BB) {
     while ((BB & FileMask[right]) == 0) right--;
     return right - left;
 }
-*/
+
 void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, int& end_score, const int color) {
     static const int weakFile[8] = { 0, 2, 3, 3, 3, 3, 2, 0 };
     static const int weakRank[8] = { 0, 0, 2, 4, 6, 8, 10, 0 };
@@ -296,8 +294,6 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, in
 
     int count, sq, rank;
     const int enemy = color ^ 1;
-
-//    end_score += 4*BBwidth(ei.pawns[color]); // wider pawn base can be good in endgame 
 
     openBitMap = ei.pawns[color] & ~((*FillPtr2[enemy])((*ShiftPtr[enemy])(pos.pawns, 8)));
     doubledBitMap = ei.pawns[color] & (*FillPtr[enemy])(ei.pawns[color]); //the least advanced ones are considered doubled
@@ -479,7 +475,7 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         temp64 = KnightMoves[from];
 
         ei.atkknights[color] |= temp64;
-        if (ei.flags & ONE_SIDED_PAWNS) ei.end_score[color] += N_ONE_SIDE;
+        ei.end_score[color] -= ei.pawnWidth * KNIGHT_PWIDTH;
         if (temp64 & ei.kingzone[enemy]) ei.atkcntpcs[enemy] += (1 << 20) + bitCnt(temp64 & ei.kingzone[enemy]) + (KnightAttackValue << 10);
         uint64 pawnsPressured = temp64 & pawnTargets;
         if (pawnsPressured) {
@@ -716,7 +712,7 @@ void evalKingAttacked(const position_t& pos, eval_info_t& ei, const int color) {
         int penalty = MAX(0, 8 - shelter);
         king_atkmask = KingMoves[pos.kpos[color]];
         uint64 kingEscapes = king_atkmask & ~ei.atkall[color ^ 1];
-        if (MaxOneBit(kingEscapes)) penalty += (kingEscapes == 0) ? 4 : 2;//samh41
+        if (MaxOneBit(kingEscapes)) penalty += (kingEscapes == 0) ? 4 : 2;
         pc_weights = (ei.atkcntpcs[color] & ((1 << 20) - 1)) >> 10;
         penalty += KingPosPenalty[color][pos.kpos[color]] + ((pc_weights * tot_atkrs) / 2) + kzone_atkcnt;
         pc_defenders_mask = ei.atkqueens[color] | ei.atkrooks[color] | ei.atkbishops[color] | ei.atkknights[color] | ei.atkpawns[color];
@@ -915,7 +911,7 @@ void evalPassed(const position_t& pos, eval_info_t& ei, const int allied, uint64
 void evalPawns(const position_t& pos, eval_info_t& ei, Thread& sthread) {
     initPawnEvalByColor(pos, ei, WHITE);
     initPawnEvalByColor(pos, ei, BLACK);
-
+    if (ei.atkknights != 0) ei.pawnWidth = BBwidth(pos.pawns); //WARNING this needs to change if width used for other things
     ei.pawn_entry = sthread.pt.Entry(pos.posStore.phash);
     if (ei.pawn_entry->hashlock != LOCK(pos.posStore.phash)) {
         int midpawnscore = 0; 
@@ -987,7 +983,6 @@ int eval(const position_t& pos, Thread& sthread) {
     ei.end_score[WHITE] = pos.posStore.end[WHITE];
     ei.end_score[BLACK] = pos.posStore.end[BLACK];
 
-    ei.flags = 0;
     ei.atkpawns[WHITE] = ei.atkpawns[BLACK] = 0;
     ei.atkknights[WHITE] = ei.atkknights[BLACK] = 0;
     ei.atkbishops[WHITE] = ei.atkbishops[BLACK] = 0;
@@ -1007,24 +1002,15 @@ int eval(const position_t& pos, Thread& sthread) {
     evalPawns(pos, ei, sthread);
     blackPassed = ei.pawn_entry->passedbits & pos.color[BLACK];
     whitePassed = ei.pawn_entry->passedbits & pos.color[WHITE];
-
-    {
-        int oneSided = ((QUEENSIDE & pos.pawns) == 0 || (KINGSIDE & pos.pawns) == 0);
-        if (oneSided) ei.flags |= ONE_SIDED_PAWNS;
-    }
-    int oppBishops = (
-        (pos.bishops & pos.color[WHITE]) && (pos.bishops & pos.color[BLACK]) &&
+    ei.oppBishops = (pos.bishops & pos.color[WHITE]) && (pos.bishops & pos.color[BLACK]) &&
         MaxOneBit((pos.bishops & pos.color[WHITE])) &&
         MaxOneBit((pos.bishops & pos.color[BLACK])) &&
         (((pos.bishops & pos.color[WHITE] & WhiteSquaresBB) == 0) !=
-        ((pos.bishops & pos.color[BLACK] & WhiteSquaresBB) == 0)));
-    if (oppBishops) {
-        ei.flags |= OPPOSITE_BISHOPS;
+        ((pos.bishops & pos.color[BLACK] & WhiteSquaresBB) == 0));
+    if (ei.oppBishops) {
         ei.draw[WHITE] += OB_WEIGHT;
         ei.draw[BLACK] += OB_WEIGHT;
-
     }
-
     evalPieces(pos, ei, WHITE);
     evalPieces(pos, ei, BLACK);
 

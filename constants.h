@@ -28,41 +28,33 @@ const int ONE_SIDED_PAWNS = 1; // bit 3
 const int OPPOSITE_BISHOPS = 2;
 
 //N+B - R + P = 68
-const int  PawnValueOpen = 89;	//84
-const int KnightValueOpen = 300;	//271
-const int BishopValueOpen = 311;	//287
-const int RookValueOpen = 454;	//413
-const int QueenValueOpen = 890;	//809
-const int BishopPairBonusOpen = 34;	//33
-//N+B - R + P = 56
-const int PawnValueMid1 = 89;	//93
-const int KnightValueMid1 = 300;	//285
-const int BishopValueMid1 = 311;	//300
-const int RookValueMid1 = 466;	//487
-const int QueenValueMid1 = 890;	//884
-const int BishopPairBonusMid1 = 41;	//41
-//N+B - R + P = -29
-const int PawnValueMid2 = 115;	//112
-const int KnightValueMid2 = 333;	//323
-const int BishopValueMid2 = 333;	//328
-const int RookValueMid2 = 580 - 20;	//553
-const int QueenValueMid2 = 1080;	//1027
-const int BishopPairBonusMid2 = 51;	//49
-// 60 50 30 15
-//#define ValueP Value4Scaled (80, 90, 110, 125, 100, PValue)
-//#define ValueN Value4Scaled (270, 295, 345, 370, 320, NValue)
-//#define ValueB Value4Scaled (280, 305, 355, 380, 330, BValue)
-//#define ValueR Value4Scaled (410, 460, 560, 610, 510, RValue)
-//#define ValueQ Value4Scaled (850, 925, 1075, 1150, 1000, QValue)
-//#define ValueBP Value4Scaled (30, 40, 60, 70, 50, BPValue)
-//N+B - R + P = -12
-const int PawnValueEnd = 125;	//127
+const int  PawnValueOpen = 89;	
+const int KnightValueOpen = 300;	
+const int BishopValueOpen = 311;	
+const int RookValueOpen = 454;	
+const int QueenValueOpen = 890;	
+const int BishopPairBonusOpen = 34;	
 
-const int KnightValueEnd = 363;	//357
-const int BishopValueEnd = 362;	//361
-const int RookValueEnd = 612;	//612
-const int QueenValueEnd = 1150;	//1152
-const int BishopPairBonusEnd = 55;	//55
+const int PawnValueMid1 = 89;	
+const int KnightValueMid1 = 309;	
+const int BishopValueMid1 = 311;	
+const int RookValueMid1 = 466;	
+const int QueenValueMid1 = 890;	
+const int BishopPairBonusMid1 = 41;
+
+const int PawnValueMid2 = 115;	
+const int KnightValueMid2 = 348;	
+const int BishopValueMid2 = 333;	
+const int RookValueMid2 = 580 - 20;	
+const int QueenValueMid2 = 1080;	
+const int BishopPairBonusMid2 = 51;	
+
+const int PawnValueEnd = 125;	
+const int KnightValueEnd = 387;	
+const int BishopValueEnd = 362;	
+const int RookValueEnd = 612;	
+const int QueenValueEnd = 1150;	
+const int BishopPairBonusEnd = 55;	
 
 const int KingValueOpen = 10000;
 const int KingValueMid1 = 10000;

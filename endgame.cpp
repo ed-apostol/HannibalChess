@@ -269,16 +269,15 @@ void MateNoPawn(int attacker, const position_t& pos, int *score) {
 
 void RookBishopEnding(int attacker, const position_t& pos, eval_info_t& ei, int *draw) {
     // opposite bishop endgames
-    if (ei.flags & OPPOSITE_BISHOPS) {
-        *draw += 5;
+    if (ei.oppBishops) {
+            *draw += 5;
         if ((ei.pawn_entry->passedbits & pos.color[attacker]) == 0) *draw += 10; // ones without passed are really drawish
         if (MaxOneBit(pos.pawns & pos.color[attacker])) *draw += 30; // can saq a bishop to get RB v. R endgame
     }
 }
 void BishopEnding(int attacker, const position_t& pos, eval_info_t& ei, int *score, int *draw) {
     // opposite bishop endgames
-
-    if (ei.flags & OPPOSITE_BISHOPS) {
+    if (ei.oppBishops) {
         int defender;
         int qs;
         // all opposite bishop endgames are drawish
