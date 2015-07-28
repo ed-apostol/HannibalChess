@@ -245,7 +245,7 @@ void evalShelter(const int color, eval_info_t& ei, const position_t& pos) {
     uint64 pawns = ei.pawns[color];
 
     // king shelter in your current position
-    shelter = kingShelter[color][pos.kpos[color]] & pawns;
+    shelter = kingShelter[color][pos.kpos[color]] & (pawns | (pos.pawns & FileBB[SQFILE(pos.kpos[color])]  )); //opponent pawn in front of king can act as a shelter
     indirectShelter = kingIndirectShelter[color][pos.kpos[color]] & pawns;
     // doubled pawns are a bit redundant as shelter
     doubledShelter = indirectShelter & (*FillPtr[color])(indirectShelter);
@@ -305,17 +305,43 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, in
         int enemyKing = pos.kpos[color ^ 1];
         /*
         int kingFile = SQFILE(enemyKing);
-        // lets do some pawn storm stuff
-        static const int storm[] = { 0, 5, 10, 15 };
-//        static const int unblockedstorm[] = { 0, 6, 12, 18 };
-//        static const int blockedStorm[] = { 0, 3, 9, 15 };
-        uint64 pawnStorm = ei.pawns[color] & ~doubledBitMap & (FileMask[kingFile] | FileMask[MAX(FileA, kingFile - 1)] | FileMask[MIN(FileH, kingFile + 1)]) & (Rank3BB | Rank4BB | Rank5BB | Rank6BB);
+        // lets do some pawn storm stuff 
+        static const int  openFileTowardKing = 10;
+        static const double storm4 = 0.5 * openFileTowardKing;
+        static const double storm5 = 1.0 * openFileTowardKing;
+        static const double storm6 = 1.5 * openFileTowardKing;
+        static const int storm[] = { 0, round(storm4), round(storm5), round(storm6) };
+        static const int blockedStorm[] = { 0, 0, round(storm4), round(storm5) }; //79
+        //h80 has nothing for blocked
+        uint64 relevantFiles = FileMask[kingFile];
+        relevantFiles |= (kingFile == FileA) ? FileCBB: FileMask[kingFile - 1];
+        relevantFiles |= (kingFile == FileH) ? FileFBB : FileMask[kingFile + 1];
+
+        uint64 pawnStorm = ei.pawns[color] & ~doubledBitMap & relevantFiles;
+        mid_score += (3 - bitCnt(pawnStorm)) * 10;
+        
+//            while (pawnStorm) {
+//                int psq = popFirstBit(&pawnStorm);
+//                int stormRank = PAWN_RANK(psq, color) - 2;
+//                int frontSq = psq + PAWN_MOVE_INC(color);
+//                mid_score += (enemyKing == frontSq) ? kingBlockedStorm[stormRank] :
+//                    (FileMask[SQFILE(psq)] & ei.pawns[color]) == 0 ? openStorm[stormRank] :
+//                    (ei.pawns[color ^ 1] & BitMask[frontSq]) ? pawnBlockedStorm[stormRank] : pawnBlockedStorm[stormRank];
+//                if (SHOW_EVAL) PrintOutput() << "info string storm " << (char)(SQFILE(psq) + 'a') << (char)('1' + SQRANK(psq)) << "\n";
+//            }
+ 
+        if (SHOW_EVAL) PrintOutput() << "info string open files toward king = " << (3 - bitCnt(pawnStorm)) << "\n";
+        pawnStorm &= (Rank3BB | Rank4BB | Rank5BB | Rank6BB);
         while (pawnStorm) {
             int psq = popFirstBit(&pawnStorm);
             int stormRank = PAWN_RANK(psq, color) - 2;
-//            mid_score += (pos.color[color ^ 1] & BitMask[psq + PAWN_MOVE_INC(color)]) ? blockedStorm[stormRank] : unblockedstorm[stormRank];
-            mid_score += storm[stormRank];
-            if (SHOW_EVAL) PrintOutput() << "info string storm " << (char)(SQFILE(psq) + 'a') << (char)('1' + SQRANK(psq)) << "\n";
+            int frontSq = psq + PAWN_MOVE_INC(color);
+            mid_score += (pos.color[color ^ 1] & (pos.kings | pos.pawns) & BitMask[frontSq]) == 0 ? storm[stormRank] : blockedStorm[stormRank];
+            if (SHOW_EVAL) {
+                if ((pos.color[color ^ 1] & (pos.kings | pos.pawns) & BitMask[frontSq]) == 0) 
+                    PrintOutput() << "info string storm " << (char)(SQFILE(psq) + 'a') << (char)('1' + SQRANK(psq)) << "\n";
+                else PrintOutput() << "info string blocked storm " << (char)(SQFILE(psq) + 'a') << (char)('1' + SQRANK(psq)) << "\n";
+            }
         }
         */
         //backward pawns are addressed here as are all other pawn weaknesses to some extent
@@ -684,6 +710,42 @@ void evalThreats(const position_t& pos, eval_info_t& ei, const int color) {
             ei.end_score[color] += ThreatBonus[numThreats];
         }
     }
+    /*
+    // backrow mate threat
+    int myRank8 = (color==WHITE) ? Rank8 : Rank1;
+    uint64 rank8BB = RankBB[myRank8];
+    uint64 noescape8 = rank8BB | ei.atkbishops[color] | ei.atkknights[color] | ei.atkkings[color] | ei.atkpawns[color] | pos.color[color ^ 1]; //not including R or Q in case moving it is part of threat
+    int kingSq = pos.kpos[color ^ 1];
+    uint64 backRankTargets = rank8BB & ~ei.atkall[color ^ 1];
+    uint64 backRankThreats = (ei.atkrooks[color] | ei.atkqueens[color]) & backRankTargets;
+    if (SHOW_EVAL) PrintOutput() << " enemy kingrank = " << SQRANK(kingSq) << "rank8 = " << myRank8 << "\n";
+    if (SQRANK(kingSq) == myRank8 && (ei.atkkings[color ^ 1] & ~noescape8) == 0 && backRankThreats != 0) {
+        if (SHOW_EVAL) PrintOutput() << " worry about backrow mate\n";
+        int enemy = color ^ 1;
+        bool realThreat = 0;
+        while (backRankThreats) {
+            int sq = popFirstBit(&backRankThreats);
+            uint64 blockSpots = InBetween[sq][kingSq];
+            if ((blockSpots & pos.occupied) == 0) {
+                realThreat = 1;
+                if ((blockSpots & (ei.atkbishops[enemy] & (ei.atkkings[enemy] | ei.atkknights[enemy] | ei.atkrooks[enemy] | ei.atkqueens[enemy]))) == 0 &&
+                    (blockSpots & (ei.atkknights[enemy] & (ei.atkkings[enemy] | ei.atkrooks[enemy] | ei.atkqueens[enemy]))) == 0) {
+                    //TODO consider redundant piece or xray defenses
+                    //                int bonus =  ? 25 : 10; //samh71 50 20
+#define SERIOUS_BACKRANK_THREAT 20
+#define BACKRANK_THREAT 10
+                    ei.mid_score[color] += (pos.side == color) ? SERIOUS_BACKRANK_THREAT : BACKRANK_THREAT;
+                    ei.end_score[color] += (pos.side == color) ? SERIOUS_BACKRANK_THREAT : BACKRANK_THREAT;
+                    if (SHOW_EVAL) PrintOutput() << " VERY WORRIED\n";
+                    break;
+                }
+            }
+        }
+        if (realThreat) {
+            ei.mid_score[color] += TEMPO_OPEN;
+            ei.end_score[color] += TEMPO_END;
+        }
+    }*/
 }
 
 int KingShelter(const int color, eval_info_t& ei, const position_t& pos) { //returns penalty for being under attack
