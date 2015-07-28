@@ -494,9 +494,9 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t& ei, int *score
     else if (passedA && MaxOneBit(passedA) && ei.MLindex[attacker] - ei.MLindex[defender] < 2) { //if attacker has one passed pawn and is not up by more than 1 pawn
         int passedSq = getFirstBit(passedA);
         int passedFile = SQFILE(passedSq);
-        if ((passedFile < FileD && ((pos.pawns ^ passedA) & (FileABB | FileBBB | FileCBB | FileDBB | FileEBB)) == 0) ||
-            (passedFile > FileE && ((pos.pawns ^ passedA) & (FileHBB | FileGBB | FileFBB | FileEBB | FileFBB)) == 0)) {
-            if (SHOW_EVAL) PrintOutput() << "info string before draw " << *draw << "\n";            
+        if ((passedFile < FileD && ((ei.pawns[attacker] ^ passedA) & (FileABB | FileBBB | FileCBB | FileDBB | FileEBB)) == 0) || 
+            (passedFile > FileE && ((ei.pawns[attacker] ^ passedA) & (FileHBB | FileGBB | FileFBB | FileEBB | FileFBB)) == 0)) {
+            if (SHOW_EVAL) PrintOutput() << "info string before draw " << *draw << "\n";
             *draw += 2 * abs(passedFile - SQFILE(pos.kpos[attacker]));
             if (SHOW_EVAL) PrintOutput() << "info string king dist " << abs(passedFile - SQFILE(pos.kpos[attacker])) << "\n";
             
@@ -543,7 +543,7 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t& ei, int *score
         // no passed pawn is drawish
         *draw += 10;
         // pawns on one side is more drawish assuming the defending king is on the same side
-        if ((QUEENSIDE & pawnking) == 0 || (KINGSIDE & pawnking) == 0) {
+        if ((QUEENSIDE & pawnking) == 0 || (KINGSIDE & pawnking) == 0) { //TODO consider using pawn width instead of king/queenside
             int pawnsTraded = MAX(4, 8 - (ei.MLindex[attacker] - MLR));
             // the less unguarded pawns, the more drawish it is
 

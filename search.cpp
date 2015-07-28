@@ -219,6 +219,7 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
         }
         else {
             ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
+            if (!inPv && ssprev.moveGivesCheck &&  ss.bestvalue > -MAXEVAL && !ss.moveGivesCheck && swap(pos, move->m) < 0) continue; 
             if (prunable && move->m != ss.hashMove && !ss.moveGivesCheck && !moveIsPassedPawn(pos, move->m)) {
                 int scoreAprox = ss.evalvalue + PawnValueEnd + MaxPieceValue[moveCapture(move->m)];
                 if (scoreAprox < beta) continue;
@@ -367,13 +368,33 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 }
             }
         }
-//        if (!inCheck && !inPvNode(nt) && depth >= 4) { // if we have a no-brainer capture we should just do it
+        /*
+        // if we can do a 0 ply check and find a draw instead of a deep search, that will save us time
+        if (depth >= 8 && beta <= DrawValue[pos.side] && pos.posStore.fifty >= 4) { //started at 5 2
+            movelist_t mvList;
+            mvList.pos = 0;
+            if (inCheck) {
+                genEvasions(pos, mvList);
+                if (mvList.size == 0) {
+                    ss.bestvalue = -INF + pos.ply;
+                    mTransTable.StoreNoMoves(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, pos.ply));
+                    return ss.bestvalue;
+                }
+            }
+            else genNonCaptures(pos, mvList);
+            for (int i = 0; i < mvList.size; i++) {
+                if (anyRepNoMove(pos, mvList.list[i].m)) {
+                    return DrawValue[pos.side];
+                }
+            }
+        }*/
         if (!inCheck && !inPvNode(nt) && depth >= 5) { // if we have a no-brainer capture we should just do it
-                sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseQuiescence, sthread);
+            sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseQuiescence, sthread);
             move_t* move;
             int target = beta + 200;
             int minCapture = target - ss.evalvalue;
             int newdepth = depth - 5;
+//            int newdepth = depth - (4 + (depth / 5));
             while ((move = sortNext(nullptr, mInfo, pos, *ss.mvlist, ss.mvlist_phase, sthread)) != nullptr) {
                 int score;
                 if (MaxPieceValue[moveCapture(move->m)] < minCapture || swap(pos, move->m) < minCapture) continue;
