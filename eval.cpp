@@ -785,7 +785,6 @@ void evalKingAttacked(const position_t& pos, eval_info_t& ei, const int color) {
             pc_atkhelpersmask = (ei.atkkings[color ^ 1] | ei.kingatkrooks[color ^ 1] | ei.kingatkbishops[color ^ 1] | ei.atkknights[color ^ 1] | ei.atkpawns[color ^ 1]);
             pc_atkrs_mask &= pc_atkhelpersmask;
             queenContact = pc_atkrs_mask & ~pc_defenders_mask;
-
             if (queenContact) {
                 int bonus = ((pos.side == (color ^ 1)) ? 2 : 1) * QueenSafeContactCheckValue;
                 uint64 kingEscape = king_atkmask & ~(pc_atkhelpersmask | pos.color[color]);

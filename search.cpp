@@ -27,7 +27,7 @@
 
 bool moveIsTactical(uint32 m) { // TODO
     ASSERT(moveIsOk(m));
-    return bool(m & 0x01fe0000UL);
+    return (m & 0x01fe0000UL)!=0;
 }
 
 int historyIndex(uint32 side, uint32 move) { // TODO
@@ -336,9 +336,9 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (!inPvNode(nt) && !inCheck) {
             static const int MaxRazorDepth = 10;
             int rvalue;
-            if (depth < MaxRazorDepth && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && beta <= MAXEVAL 
+            if (depth < MaxRazorDepth && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && beta <= MAXEVAL
                 && ss.evalvalue >(rvalue = beta + FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
-                    return rvalue;
+                return rvalue;
             }
             if (depth < MaxRazorDepth && pos.posStore.lastmove != EMPTY
                 && ss.evalvalue < (rvalue = beta - FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
@@ -371,22 +371,22 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         /*
         // if we can do a 0 ply check and find a draw instead of a deep search, that will save us time
         if (depth >= 8 && beta <= DrawValue[pos.side] && pos.posStore.fifty >= 4) { //started at 5 2
-            movelist_t mvList;
-            mvList.pos = 0;
-            if (inCheck) {
-                genEvasions(pos, mvList);
-                if (mvList.size == 0) {
-                    ss.bestvalue = -INF + pos.ply;
-                    mTransTable.StoreNoMoves(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, pos.ply));
-                    return ss.bestvalue;
-                }
-            }
-            else genNonCaptures(pos, mvList);
-            for (int i = 0; i < mvList.size; i++) {
-                if (anyRepNoMove(pos, mvList.list[i].m)) {
-                    return DrawValue[pos.side];
-                }
-            }
+        movelist_t mvList;
+        mvList.pos = 0;
+        if (inCheck) {
+        genEvasions(pos, mvList);
+        if (mvList.size == 0) {
+        ss.bestvalue = -INF + pos.ply;
+        mTransTable.StoreNoMoves(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, pos.ply));
+        return ss.bestvalue;
+        }
+        }
+        else genNonCaptures(pos, mvList);
+        for (int i = 0; i < mvList.size; i++) {
+        if (anyRepNoMove(pos, mvList.list[i].m)) {
+        return DrawValue[pos.side];
+        }
+        }
         }*/
         if (!inCheck && !inPvNode(nt) && depth >= 5) { // if we have a no-brainer capture we should just do it
             sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseQuiescence, sthread);
@@ -394,7 +394,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             int target = beta + 200;
             int minCapture = target - ss.evalvalue;
             int newdepth = depth - 5;
-//            int newdepth = depth - (4 + (depth / 5));
+            //            int newdepth = depth - (4 + (depth / 5));
             while ((move = sortNext(nullptr, mInfo, pos, *ss.mvlist, ss.mvlist_phase, sthread)) != nullptr) {
                 int score;
                 if (MaxPieceValue[moveCapture(move->m)] < minCapture || swap(pos, move->m) < minCapture) continue;
@@ -417,17 +417,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     ss.hashMove = ssprev.counterMove;
                     ss.hashDepth = newdepth;
                 }
-            }
-        }
-        if (ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8)) { // singular extension
-            int newdepth = depth / 2;
-            if (ss.hashDepth >= newdepth) {
-                int targetScore = ss.evalvalue - EXPLORE_BASE_CUTOFF - depth * EXPLORE_MULT_CUTOFF;
-                ssprev.bannedMove = ss.hashMove;
-                int score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, newdepth, ssprev, sthread, nt);
-                ssprev.bannedMove = EMPTY;
-                if (sthread.stop) return 0;
-                if (score <= targetScore) ss.firstExtend = true;
             }
         }
     }
@@ -454,13 +443,13 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         else {
             ss.dcc = discoveredCheckCandidates(pos, pos.side);
             sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), sthread);
-            ss.firstExtend = ss.firstExtend || (inCheck && ss.mvlist->size == 1);
         }
     }
     int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 2) : (depth * depth));
     move_t* move;
     while ((move = sortNext(sp, mInfo, pos, *ss.mvlist, ss.mvlist_phase, sthread)) != nullptr) {
         int score = -INF;
+        int newdepth = depth-1;
         if (inSingular && move->m == ssprev.bannedMove) continue;
         if (inSplitPoint) {
             sp->movesplayedlock.lock();
@@ -475,16 +464,30 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             score = DrawValue[pos.side];
         }
         else {
-            int newdepth;
             ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
             if (ss.bestvalue == -INF) { //TODO remove this from loop and do it first
-                newdepth = depth - !ss.firstExtend;
+                if (inCheck && ss.mvlist->size == 1 || (ss.moveGivesCheck && swap(pos, move->m) >= 0) || //samh91
+                    (moveCapture(move->m) > PAWN && MaxOneBit(pos.color[pos.side ^ 1] & ~(pos.pawns | pos.kings)))) newdepth++;
+                else if (ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8)) { // singular extension
+                    int exploreDepth = depth / 2;
+                    if (ss.hashDepth >= exploreDepth) {
+                        //singular extension is intended for extending moves that lead to small trees 
+                        if (moveIsCheck(pos, move->m, ss.hashMove) && swap(pos, ss.hashMove) >= 0) newdepth++;
+                        else {
+                            int targetScore = ss.evalvalue - EXPLORE_BASE_CUTOFF - depth * EXPLORE_MULT_CUTOFF;
+                            ssprev.bannedMove = ss.hashMove;
+                            int score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, exploreDepth, ssprev, sthread, nt);
+                            ssprev.bannedMove = EMPTY;
+                            if (sthread.stop) return 0;
+                            if (score <= targetScore) newdepth++;
+                        }
+                    }
+                }
                 makeMove(pos, undo, move->m);
                 ++sthread.nodes;
                 score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, sthread, invertNode(nt));
             }
             else {
-                newdepth = depth - 1;
                 //only reduce or prune some types of moves
                 int partialReduction = 0;
                 if ((move->m != ss.mvlist->killer1) && (move->m != ss.mvlist->killer2) && !moveIsTactical(move->m) && !ss.moveGivesCheck) {

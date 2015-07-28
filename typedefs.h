@@ -146,7 +146,6 @@ struct material_info_t {
 
 struct SearchStack {
     SearchStack() :
-        firstExtend(false),
         reducedMove(false),
         moveGivesCheck(false),
         playedMoves(0),
@@ -167,8 +166,6 @@ struct SearchStack {
     basic_move_t hisMoves[64];
     int bestvalue;
     basic_move_t bestmove;
-
-    bool firstExtend;
     bool reducedMove;
     bool moveGivesCheck;
     int evalvalue;
