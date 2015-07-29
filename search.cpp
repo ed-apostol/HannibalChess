@@ -368,33 +368,12 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 }
             }
         }
-        /*
-        // if we can do a 0 ply check and find a draw instead of a deep search, that will save us time
-        if (depth >= 8 && beta <= DrawValue[pos.side] && pos.posStore.fifty >= 4) { //started at 5 2
-        movelist_t mvList;
-        mvList.pos = 0;
-        if (inCheck) {
-        genEvasions(pos, mvList);
-        if (mvList.size == 0) {
-        ss.bestvalue = -INF + pos.ply;
-        mTransTable.StoreNoMoves(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, pos.ply));
-        return ss.bestvalue;
-        }
-        }
-        else genNonCaptures(pos, mvList);
-        for (int i = 0; i < mvList.size; i++) {
-        if (anyRepNoMove(pos, mvList.list[i].m)) {
-        return DrawValue[pos.side];
-        }
-        }
-        }*/
         if (!inCheck && !inPvNode(nt) && depth >= 5) { // if we have a no-brainer capture we should just do it
             sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseQuiescence, sthread);
             move_t* move;
             int target = beta + 200;
             int minCapture = target - ss.evalvalue;
             int newdepth = depth - 5;
-            //            int newdepth = depth - (4 + (depth / 5));
             while ((move = sortNext(nullptr, mInfo, pos, *ss.mvlist, ss.mvlist_phase, sthread)) != nullptr) {
                 int score;
                 if (MaxPieceValue[moveCapture(move->m)] < minCapture || swap(pos, move->m) < minCapture) continue;
@@ -466,24 +445,21 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         else {
             ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
             if (ss.bestvalue == -INF) { //TODO remove this from loop and do it first
-                if (inCheck && ss.mvlist->size == 1 || (ss.moveGivesCheck && swap(pos, move->m) >= 0) || //samh91
-                    (moveCapture(move->m) > PAWN && MaxOneBit(pos.color[pos.side ^ 1] & ~(pos.pawns | pos.kings)))) newdepth++;
-                else if (ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8)) { // singular extension
-                    int exploreDepth = depth / 2;
-                    if (ss.hashDepth >= exploreDepth) {
-                        //singular extension is intended for extending moves that lead to small trees 
-                        if (moveIsCheck(pos, move->m, ss.hashMove) && swap(pos, ss.hashMove) >= 0) newdepth++;
-                        else {
+                if (!inRoot && !inSingular && !inSplitPoint) {
+                    if (inCheck && ss.mvlist->size == 1) newdepth++;
+                    else if (ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8)) {
+                        int exploreDepth = depth / 2;
+                        if (ss.hashDepth >= exploreDepth) { //two reasons to extend are: a) tree is likely smaller than normal and/or b) tree is likely critical
                             int targetScore = ss.evalvalue - EXPLORE_BASE_CUTOFF - depth * EXPLORE_MULT_CUTOFF;
                             ssprev.bannedMove = ss.hashMove;
                             int score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, exploreDepth, ssprev, sthread, nt);
-                            ssprev.bannedMove = EMPTY;
                             if (sthread.stop) return 0;
+                            ssprev.bannedMove = EMPTY;
                             if (score <= targetScore) newdepth++;
                         }
                     }
                 }
-                makeMove(pos, undo, move->m);
+                makeMove(pos, undo, move->m); 
                 ++sthread.nodes;
                 score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, sthread, invertNode(nt));
             }
