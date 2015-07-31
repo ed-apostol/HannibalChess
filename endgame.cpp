@@ -502,14 +502,9 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t& ei, int *score
             
             *draw -= (ei.MLindex[attacker]-MLR) * 3;
             if (SHOW_EVAL) PrintOutput() << "info string num attacker pawns " << (ei.MLindex[attacker] - MLR) << "\n";
-            
             const int behind[] = { S, N };
             uint64 behindPawn = DirBitmap[behind[attacker]][passedSq];
             uint64 frontPawn = DirBitmap[behind[defender]][passedSq];
-/*            if (behindPawn & pos.rooks & pos.color[attacker]) {
-                *draw -= 10;
-                if (SHOW_EVAL) PrintOutput() << "info string attacker behind\n";
-            }*/
             if (frontPawn & pos.rooks & pos.color[attacker]) {
                 *draw += ((pos.rooks & pos.color[attacker] & (Rank1 | Rank8)) == 0) ? 10 : 20;
                 if (SHOW_EVAL) PrintOutput() << "info string attacker in front\n";
@@ -536,7 +531,7 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t& ei, int *score
             if (*draw < 0) *draw = 0;
         }
     }
-
+    
     // if no more than one pawn down
     else if (ei.MLindex[attacker] - ei.MLindex[defender] <= MLP  && passedA == 0) {
         uint64 pawnking = pos.color[defender] & ~pos.rooks;

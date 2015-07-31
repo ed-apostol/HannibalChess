@@ -338,7 +338,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             int rvalue;
             if (depth < MaxRazorDepth && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && beta <= MAXEVAL
                 && ss.evalvalue >(rvalue = beta + FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
-                return rvalue;
+                return rvalue; //consider enforcing a max of MAXEVAL
             }
             if (depth < MaxRazorDepth && pos.posStore.lastmove != EMPTY
                 && ss.evalvalue < (rvalue = beta - FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
@@ -350,20 +350,19 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     if (score < rvalue) return score;
                 }
             }
-            if (depth >= 2 && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && ss.evalvalue >= beta) {
+            if (depth >= 2 && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && ss.evalvalue >= beta && beta <= MAXEVAL) {
                 int nullDepth = depth - (4 + (depth / 5) + MIN(3, ((ss.evalvalue - beta) / PawnValue)));
 
                 makeNullMove(pos, undo);
                 ++sthread.nodes;
-                int score = -searchNode<false, false, false>(pos, -beta, -alpha, nullDepth, ss, sthread, invertNode(nt));
+                int score = -searchNode<false, false, false>(pos, -beta, -beta+1, nullDepth, ss, sthread, invertNode(nt));
                 ss.threatMove = ss.counterMove;
                 unmakeNullMove(pos, undo);
                 if (sthread.stop) return 0;
                 if (score >= beta) {
-                    if (depth >= 12) {
-                        score = searchNode<false, false, false>(pos, alpha, beta, nullDepth, ssprev, sthread, nt);
-                        if (sthread.stop) return 0;
-                    }
+                    if (depth < 12) return MIN(MAXEVAL,score);
+                    score = searchNode<false, false, false>(pos, beta-1, beta, nullDepth, ssprev, sthread, nt);
+                    if (sthread.stop) return 0;
                     if (score >= beta) return score;
                 }
             }
