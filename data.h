@@ -46,8 +46,7 @@ extern int ReductionTable[2][64][64];
 #define MoveGenPhaseQuiescenceAndChecksPV (MoveGenPhaseStandard+7)
 #define MoveGenPhaseQuiescence (MoveGenPhaseQuiescenceAndChecksPV+5)
 #define MoveGenPhaseQuiescenceAndChecks (MoveGenPhaseQuiescence+4)
-#define MoveGenPhaseQuiescencePV (MoveGenPhaseQuiescenceAndChecks+5)
-#define MoveGenPhaseRoot (MoveGenPhaseQuiescencePV+4)
+#define MoveGenPhaseRoot (MoveGenPhaseQuiescenceAndChecks+5)
 
 extern const int MoveGenPhase[];
 
@@ -64,10 +63,8 @@ extern int CastleMask[64];
 extern int KingPosPenalty[2][64];
 
 extern int DrawValue[2];
-/* this is used for pawn shelter and pawn storm */
-extern uint64 PassedMask[2][64];
-extern uint64 kingShelter[2][64]; // provides good shelter for king SAM1 added extern
-extern uint64 kingIndirectShelter[2][64]; // provides ok shelter for king SAM1 added extern
+extern uint64 kingShelter[2][64]; // provides good shelter for king 
+extern uint64 kingIndirectShelter[2][64]; // provides ok shelter for king 
 
 // used in setting up the position and eval symmetry
 extern const char *FenString[];

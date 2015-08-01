@@ -327,7 +327,6 @@ void initArr(void) {
     memset(RankMask, 0, sizeof(RankMask));
     memset(FileMask, 0, sizeof(FileMask));
     memset(InBetween, 0, sizeof(InBetween));
-    memset(PassedMask, 0, sizeof(PassedMask));
 
     for (i = 0; i < 0x40; i++) CastleMask[i] = 0xF;
 
@@ -415,17 +414,6 @@ void initArr(void) {
     }
     InitKingShelter();
 //    InitMobility();
-    for (i = 8; i < 56; i++) {
-        uint64 b = (uint64)1 << (i + 8);
-        if (SQFILE(i) > FileA) b |= (uint64)1 << (i + 7);
-        if (SQFILE(i) < FileH) b |= (uint64)1 << (i + 9);
-        PassedMask[0][i] = fillUp2(b);
-
-        b = (uint64)1 << (i - 8);
-        if (SQFILE(i) > FileA) b |= (uint64)1 << (i - 9);
-        if (SQFILE(i) < FileH) b |= (uint64)1 << (i - 7);
-        PassedMask[1][i] = fillDown2(b);
-    }
 
     for (i = 0; i <= MAX_FUT_MARGIN; i++) {
         for (j = 0; j < 64; j++) {

@@ -75,8 +75,8 @@ enum PieceTypes {
 #else
 #define DISTANCE(a,b)             MAX((ABS((SQRANK(a))-(SQRANK(b)))),(ABS((SQFILE(a))-(SQFILE(b)))))
 #endif
-#define PAWN_RANK(f,c)           (((c)==BLACK)?(7-SQRANK(f)):(SQRANK(f)))
-#define Q_DIST(f,c)              (((c)==WHITE)?(7-SQRANK(f)):(SQRANK(f)))
+#define PAWN_RANK(sq,c)           (((c)==BLACK)?(7-SQRANK(sq)):(SQRANK(sq)))
+#define Q_DIST(sq,c)              (((c)==WHITE)?(7-SQRANK(sq)):(SQRANK(sq)))
 #define PAWN_MOVE_INC(c)         ((c)?-8:8)
 //#define PAWN_PROMOTE(sq,c)       (SQFILE(sq) + ((c==BLACK)?0:56))
 

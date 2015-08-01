@@ -56,12 +56,6 @@ inline int scoreNonTactical(uint32 side, uint32 move, Thread& sthread) {
     int score = sthread.history[historyIndex(side, move)];
     return score;
 }
-bool moveIsPassedPawn(const position_t& pos, uint32 move) {
-    if (movePiece(move) == PAWN && !((*FillPtr[pos.side])(BitMask[moveTo(move)]) & pos.pawns)) {
-        if (!(pos.pawns & pos.color[pos.side ^ 1] & PassedMask[pos.side][moveTo(move)])) return true;
-    }
-    return false;
-}
 
 bool captureIsGood(const position_t& pos, const basic_move_t m) {
     uint32 prom = movePromote(m);

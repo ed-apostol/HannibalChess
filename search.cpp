@@ -25,12 +25,16 @@
 #include "book.h"
 #include "init.h"
 
-bool moveIsTactical(uint32 m) { // TODO
+bool moveIsTactical(const uint32 m) { // TODO
     ASSERT(moveIsOk(m));
     return (m & 0x01fe0000UL)!=0;
 }
 
-int historyIndex(uint32 side, uint32 move) { // TODO
+bool moveIsDangerousPawn(const position_t& pos, const uint32 move) {
+    return (movePiece(move) == PAWN && Q_DIST(moveTo(move), pos.side) <= 2);
+}
+
+int historyIndex(const uint32 side, const uint32 move) { // TODO
     return ((((side) << 9) + ((movePiece(move)) << 6) + (moveTo(move))) & 0x3ff);
 }
 
@@ -207,7 +211,7 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
         sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseEvasion, sthread);
     }
     else {
-        if (inPv) sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_PVCHECK) ? MoveGenPhaseQuiescenceAndChecksPV : MoveGenPhaseQuiescencePV, sthread);
+        if (inPv) sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_PVCHECK) ? MoveGenPhaseQuiescenceAndChecksPV : MoveGenPhaseQuiescence, sthread);
         else sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_CHECK) ? MoveGenPhaseQuiescenceAndChecks : MoveGenPhaseQuiescence, sthread);
     }
     bool prunable = !ssprev.moveGivesCheck && !inPv && MinTwoBits(pos.color[pos.side ^ 1] & pos.pawns) && MinTwoBits(pos.color[pos.side ^ 1] & ~(pos.pawns | pos.kings));
@@ -220,7 +224,7 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
         else {
             ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
             if (!inPv && ssprev.moveGivesCheck &&  ss.bestvalue > -MAXEVAL && !ss.moveGivesCheck && swap(pos, move->m) < 0) continue; 
-            if (prunable && move->m != ss.hashMove && !ss.moveGivesCheck && !moveIsPassedPawn(pos, move->m)) {
+            if (prunable && move->m != ss.hashMove && !ss.moveGivesCheck && !moveIsDangerousPawn(pos, move->m)) {
                 int scoreAprox = ss.evalvalue + PawnValueEnd + MaxPieceValue[moveCapture(move->m)];
                 if (scoreAprox < beta) continue;
             }
@@ -350,25 +354,25 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     if (score < rvalue) return score;
                 }
             }
-            if (depth >= 2 && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && ss.evalvalue >= beta && beta <= MAXEVAL) {
+            if (depth >= 2 && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && ss.evalvalue >= beta) {
                 int nullDepth = depth - (4 + (depth / 5) + MIN(3, ((ss.evalvalue - beta) / PawnValue)));
 
                 makeNullMove(pos, undo);
                 ++sthread.nodes;
-                int score = -searchNode<false, false, false>(pos, -beta, -beta+1, nullDepth, ss, sthread, invertNode(nt));
+                int score = -searchNode<false, false, false>(pos, -beta, -beta+1, nullDepth, ss, sthread, invertNode(nt)); //alpha = beta - 1 because not a PV node
                 ss.threatMove = ss.counterMove;
                 unmakeNullMove(pos, undo);
                 if (sthread.stop) return 0;
                 if (score >= beta) {
-                    if (depth < 12) return MIN(MAXEVAL,score);
-                    score = searchNode<false, false, false>(pos, beta-1, beta, nullDepth, ssprev, sthread, nt);
+                    if (depth < 12 && abs(score) <= MAXEVAL) return score;
+                    int score2 = searchNode<false, false, false>(pos, alpha, beta, nullDepth, ssprev, sthread, nt); //alpha = beta - 1 because not a PV node
                     if (sthread.stop) return 0;
-                    if (score >= beta) return score;
+                    if (score2 >= beta) return score;
                 }
             }
         }
         if (!inCheck && !inPvNode(nt) && depth >= 5) { // if we have a no-brainer capture we should just do it
-            sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseQuiescence, sthread);
+            sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseQuiescence, sthread); //h109
             move_t* move;
             int target = beta + 200;
             int minCapture = target - ss.evalvalue;
@@ -482,7 +486,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                         }
                     }
                     if (depth >= MIN_REDUCTION_DEPTH) {
-                        bool skipFutility = (inCheck || (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsPassedPawn(pos, move->m));
+                        bool skipFutility = (inCheck || (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsDangerousPawn(pos, move->m));
                         int reduction = ReductionTable[(inPvNode(nt) ? 0 : 1)][MIN(depth, 63)][MIN(ss.playedMoves, 63)];
                         partialReduction += skipFutility ? (reduction + 1) / 2 : reduction;
                     }
