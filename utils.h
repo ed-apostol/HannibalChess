@@ -13,7 +13,7 @@
 #include <iostream>
 #include <sstream>
 
-extern void displayBit(uint64 a, int x);
+extern void PrintBitBoard(uint64 n);
 extern char *bit2Str(uint64 n);
 extern char *move2Str(basic_move_t m);
 extern char *sq2Str(int sq);

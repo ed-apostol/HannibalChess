@@ -18,7 +18,6 @@ extern bool isAtt(const position_t& pos, uint32 color, uint64 target);
 extern bool isSqAtt(const position_t& pos, uint64 occ, int sq, int color);
 extern uint64 pieceAttacksFromBB(const position_t& pos, const int pc, const int sq, const uint64 occ);
 extern bool kingIsInCheck(const position_t& pos);
-extern bool isMoveDefence(const position_t& pos, uint32 move, uint64 target);
 extern uint64 pinnedPieces(const position_t& pos, uint32 c);
 extern uint64 discoveredCheckCandidates(const position_t& pos, uint32 c);
 extern bool moveIsLegal(const position_t& pos, uint32 move, uint64 pinned, bool incheck);

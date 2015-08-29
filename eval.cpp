@@ -46,7 +46,13 @@ public:
 static const Personality personality;
 #define personality(thread) personality
 // draw stuff
-#define DRAW_WALL 20
+/*
+#define MAX_DRAW_PAWN_BREAKS 3 // 198_3
+//#define MAX_WALL_PHASE 4 //cannot be 0 since we divide by it for scale
+#define MAX_WALL_PHASE 0 //cannot be 0 since we divide by it for scale
+#define DRAW_WALL_MIN 40
+#define DRAW_WALL_SCALE 0
+*/
 //king safety stuff
 #define PARTIAL_ATTACK 0 //0 means don't count, otherwise multiplies attack by 5
 #define MATE_CODE 10 // mate threat
@@ -321,47 +327,6 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, in
     passedBitMap = openBitMap & ~ei.potentialPawnAttack[enemy];
     {
         int enemyKing = pos.kpos[color ^ 1];
-        /*
-        int kingFile = SQFILE(enemyKing);
-        // lets do some pawn storm stuff 
-        static const int  openFileTowardKing = 10;
-        static const double storm4 = 0.5 * openFileTowardKing;
-        static const double storm5 = 1.0 * openFileTowardKing;
-        static const double storm6 = 1.5 * openFileTowardKing;
-        static const int storm[] = { 0, round(storm4), round(storm5), round(storm6) };
-        static const int blockedStorm[] = { 0, 0, round(storm4), round(storm5) }; //79
-        //h80 has nothing for blocked
-        uint64 relevantFiles = FileMask[kingFile];
-        relevantFiles |= (kingFile == FileA) ? FileCBB: FileMask[kingFile - 1];
-        relevantFiles |= (kingFile == FileH) ? FileFBB : FileMask[kingFile + 1];
-
-        uint64 pawnStorm = ei.pawns[color] & ~doubledBitMap & relevantFiles;
-        mid_score += (3 - bitCnt(pawnStorm)) * 10;
-        
-//            while (pawnStorm) {
-//                int psq = popFirstBit(&pawnStorm);
-//                int stormRank = PAWN_RANK(psq, color) - 2;
-//                int frontSq = psq + PAWN_MOVE_INC(color);
-//                mid_score += (enemyKing == frontSq) ? kingBlockedStorm[stormRank] :
-//                    (FileMask[SQFILE(psq)] & ei.pawns[color]) == 0 ? openStorm[stormRank] :
-//                    (ei.pawns[color ^ 1] & BitMask[frontSq]) ? pawnBlockedStorm[stormRank] : pawnBlockedStorm[stormRank];
-//                if (SHOW_EVAL) PrintOutput() << "info string storm " << (char)(SQFILE(psq) + 'a') << (char)('1' + SQRANK(psq)) << "\n";
-//            }
- 
-        if (SHOW_EVAL) PrintOutput() << "info string open files toward king = " << (3 - bitCnt(pawnStorm)) << "\n";
-        pawnStorm &= (Rank3BB | Rank4BB | Rank5BB | Rank6BB);
-        while (pawnStorm) {
-            int psq = popFirstBit(&pawnStorm);
-            int stormRank = PAWN_RANK(psq, color) - 2;
-            int frontSq = psq + PAWN_MOVE_INC(color);
-            mid_score += (pos.color[color ^ 1] & (pos.kings | pos.pawns) & BitMask[frontSq]) == 0 ? storm[stormRank] : blockedStorm[stormRank];
-            if (SHOW_EVAL) {
-                if ((pos.color[color ^ 1] & (pos.kings | pos.pawns) & BitMask[frontSq]) == 0) 
-                    PrintOutput() << "info string storm " << (char)(SQFILE(psq) + 'a') << (char)('1' + SQRANK(psq)) << "\n";
-                else PrintOutput() << "info string blocked storm " << (char)(SQFILE(psq) + 'a') << (char)('1' + SQRANK(psq)) << "\n";
-            }
-        }
-        */
         //backward pawns are addressed here as are all other pawn weaknesses to some extent
         //these are pawns that are not guarded, and are not adjacent to other pawns
         temp64 = ei.pawns[color] & ~(ei.atkpawns[color] | shiftLeft(ei.pawns[color], 1) |
@@ -402,7 +367,7 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, in
     //TODO consider moving some king distance stuff in here
     temp64 = ei.pawns[color] & openBitMap & ~passedBitMap;
 
-    while (temp64) {
+    while (temp64) { //SAM TODO examine for speed improvements
         sq = popFirstBit(&temp64);
         if (bitCnt((*FillPtr2[color])(PawnCaps[sq][color]) & ei.pawns[enemy])
             <= bitCnt((*FillPtr2[enemy])(PawnCaps[sq + PAWN_MOVE_INC(color)][enemy]) & ei.pawns[color]) &&
@@ -519,7 +484,7 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         temp64 = KnightMoves[from];
 
         ei.atkknights[color] |= temp64;
-        ei.end_score[color] -= ei.pawnWidth * KNIGHT_PWIDTH;
+        ei.end_score[color] -= ei.pawn_entry->pawnWidthBonus;
         if (temp64 & ei.kingzone[enemy]) ei.atkcntpcs[enemy] += (1 << 20) + bitCnt(temp64 & ei.kingzone[enemy]) + (KnightAttackValue << 10);
         uint64 pawnsPressured = temp64 & pawnTargets;
         if (pawnsPressured) {
@@ -758,42 +723,6 @@ void evalThreats(const position_t& pos, eval_info_t& ei, const int color) {
             ei.end_score[color] += ThreatBonus[numThreats];
         }
     }
-    /*
-    // backrow mate threat
-    int myRank8 = (color==WHITE) ? Rank8 : Rank1;
-    uint64 rank8BB = RankBB[myRank8];
-    uint64 noescape8 = rank8BB | ei.atkbishops[color] | ei.atkknights[color] | ei.atkkings[color] | ei.atkpawns[color] | pos.color[color ^ 1]; //not including R or Q in case moving it is part of threat
-    int kingSq = pos.kpos[color ^ 1];
-    uint64 backRankTargets = rank8BB & ~ei.atkall[color ^ 1];
-    uint64 backRankThreats = (ei.atkrooks[color] | ei.atkqueens[color]) & backRankTargets;
-    if (SHOW_EVAL) PrintOutput() << " enemy kingrank = " << SQRANK(kingSq) << "rank8 = " << myRank8 << "\n";
-    if (SQRANK(kingSq) == myRank8 && (ei.atkkings[color ^ 1] & ~noescape8) == 0 && backRankThreats != 0) {
-        if (SHOW_EVAL) PrintOutput() << " worry about backrow mate\n";
-        int enemy = color ^ 1;
-        bool realThreat = 0;
-        while (backRankThreats) {
-            int sq = popFirstBit(&backRankThreats);
-            uint64 blockSpots = InBetween[sq][kingSq];
-            if ((blockSpots & pos.occupied) == 0) {
-                realThreat = 1;
-                if ((blockSpots & (ei.atkbishops[enemy] & (ei.atkkings[enemy] | ei.atkknights[enemy] | ei.atkrooks[enemy] | ei.atkqueens[enemy]))) == 0 &&
-                    (blockSpots & (ei.atkknights[enemy] & (ei.atkkings[enemy] | ei.atkrooks[enemy] | ei.atkqueens[enemy]))) == 0) {
-                    //TODO consider redundant piece or xray defenses
-                    //                int bonus =  ? 25 : 10; //samh71 50 20
-#define SERIOUS_BACKRANK_THREAT 20
-#define BACKRANK_THREAT 10
-                    ei.mid_score[color] += (pos.side == color) ? SERIOUS_BACKRANK_THREAT : BACKRANK_THREAT;
-                    ei.end_score[color] += (pos.side == color) ? SERIOUS_BACKRANK_THREAT : BACKRANK_THREAT;
-                    if (SHOW_EVAL) PrintOutput() << " VERY WORRIED\n";
-                    break;
-                }
-            }
-        }
-        if (realThreat) {
-            ei.mid_score[color] += TEMPO_OPEN;
-            ei.end_score[color] += TEMPO_END;
-        }
-    }*/
 }
 
 int KingShelter(const int color, eval_info_t& ei, const position_t& pos) { //returns penalty for being under attack
@@ -941,7 +870,6 @@ void evalPassedvsKing(const position_t& pos, eval_info_t& ei, const int allied, 
                 // or king can escort pawn in
                 else if (qDist <= 2) {
                     int mDist = DISTANCE(pos.kpos[allied], promotion) - myMove;
-                    // SAMNOTE TRY EDITING OUT ROOKPAWN FILES
                     if (pFile == FileA || pFile == FileH) mDist++; // need more margin for error for rook pawns NOTE: may need to check for king in from of pawn if we allow this later
                     if (mDist < eDist || (mDist == eDist && myMove)) { //if this race is a tie we can still win it, but must spend move on king first not pawn
                         score += UnstoppablePassedPawn;
@@ -965,7 +893,7 @@ void evalPassedvsKing(const position_t& pos, eval_info_t& ei, const int allied, 
         ei.queening = true;
     }
 }
-
+//TODO a fair amount of this could be accounted for in hashed pawn values
 void evalPassed(const position_t& pos, eval_info_t& ei, const int allied, uint64 passed) {
     uint64 passedpawn_mask = passed;
     int myMove = (pos.side == allied);
@@ -1016,11 +944,10 @@ void evalPassed(const position_t& pos, eval_info_t& ei, const int allied, uint64
         ei.end_score[allied] += EndgamePassedMin + scale(score, rank);
     } while (passedpawn_mask);
 }
-//this is a generalization of the "rook on the 7th row constraining the king" idea
+
 void evalPawns(const position_t& pos, eval_info_t& ei, Thread& sthread) {
     initPawnEvalByColor(pos, ei, WHITE);
     initPawnEvalByColor(pos, ei, BLACK);
-    if (ei.atkknights != 0) ei.pawnWidth = BBwidth(pos.pawns); //WARNING this needs to change if width used for other things
     ei.pawn_entry = sthread.pt.Entry(pos.posStore.phash);
     if (ei.pawn_entry->hashlock != LOCK(pos.posStore.phash)) {
         int midpawnscore = 0; 
@@ -1032,30 +959,12 @@ void evalPawns(const position_t& pos, eval_info_t& ei, Thread& sthread) {
         evalPawnsByColor(pos, ei, midpawnscore, endpawnscore, WHITE);
         ei.pawn_entry->opn = midpawnscore;
         ei.pawn_entry->end = endpawnscore;
+        ei.pawn_entry->pawnWidthBonus = BBwidth(pos.pawns) * KNIGHT_PWIDTH;
         ei.pawn_entry->hashlock = LOCK(pos.posStore.phash);
     }
     ei.mid_score[WHITE] += ei.pawn_entry->opn;
     ei.end_score[WHITE] += ei.pawn_entry->end;
-}
 
-template<bool color> //if there is no entrance for king into enemy position it is drawish (could be more advanced detecting multi-rank cutoffs
-void evalDrawish(const position_t& pos, eval_info_t& ei) { 
-    uint64 wall = (pos.pawns & !color) | ei.atkkings[color] | ei.atkpawns[color];
-    int kingRow = SQRANK(pos.kpos[!color]);
-    if (color == WHITE) {
-        if ((kingRow > 5 && ((wall & Rank5BB) == Rank5BB)) || (kingRow > 4 && ((wall & Rank4BB) == Rank4BB))) {
-            int drawBonus = (DRAW_WALL * (32 - ei.phase)) / 32;
-            ei.draw[WHITE] += drawBonus;
-            if (SHOW_EVAL) PrintOutput() << "info string WHITE DRAW WALL " << drawBonus << "\n";
-        }
-    }
-    else {
-        if ((kingRow < 5 && ((wall & Rank5BB) == Rank5BB)) || (kingRow < 4 && ((wall & Rank4BB) == Rank4BB))) {
-            int drawBonus = (DRAW_WALL * (32 - ei.phase)) / 32;
-            ei.draw[WHITE] += drawBonus;
-            if (SHOW_EVAL) PrintOutput() << "info string WHITE DRAW WALL " << drawBonus << "\n";
-        }
-    }
 }
 int eval(const position_t& pos, Thread& sthread) {
     eval_info_t ei;
@@ -1109,9 +1018,10 @@ int eval(const position_t& pos, Thread& sthread) {
     ei.end_score[pos.side] += personality(thread_id).tempo_end;
 
     evalPawns(pos, ei, sthread);
+
     blackPassed = ei.pawn_entry->passedbits & pos.color[BLACK];
     whitePassed = ei.pawn_entry->passedbits & pos.color[WHITE];
-    ei.oppBishops = (pos.bishops & pos.color[WHITE]) && (pos.bishops & pos.color[BLACK]) &&
+    ei.oppBishops = (pos.bishops & pos.color[WHITE]) && (pos.bishops & pos.color[BLACK]) && //TODO could do this only once side with edge determined
         MaxOneBit((pos.bishops & pos.color[WHITE])) &&
         MaxOneBit((pos.bishops & pos.color[BLACK])) &&
         (((pos.bishops & pos.color[WHITE] & WhiteSquaresBB) == 0) !=
@@ -1159,13 +1069,16 @@ int eval(const position_t& pos, Thread& sthread) {
     }
     // if there is an unstoppable pawn on the board, we cannot trust any of our draw estimates or endgame rules of thumb
     if (!ei.queening) {
-        evalDrawish<WHITE>(pos, ei);
-        evalDrawish<BLACK>(pos, ei);
         int edge = score < DrawValue[WHITE];
         int draw = ei.draw[edge]; //this is who is trying to draw
+        if (SHOW_EVAL) {
+            PrintOutput() << "info string drawish was = " << draw << "\n";
+        }
         evalEndgame(edge, pos, ei, &score, &draw);
         draw = MIN(MAX_DRAW, draw); // max of 200 draw
-
+        if (SHOW_EVAL) {
+            PrintOutput() << "info string drawish is = " << draw << "\n";
+        }
         score = ((score * (MAX_DRAW - draw)) + (DrawValue[WHITE] * draw)) / MAX_DRAW;
     }
     score = score*sign[pos.side];

@@ -15,25 +15,25 @@
 
 /* the following routines returns a 64 bit xray attacks of pieces
 on the From square with the limiting Occupied bits */
-uint64 bishopAttacksBBX(uint32 from, uint64 occ) {
+inline uint64 bishopAttacksBBX(const uint32 from, const uint64 occ) {
     return bishopAttacksBB(from, occ & ~(bishopAttacksBB(from, occ) & occ));
 }
 
-uint64 rookAttacksBBX(uint32 from, uint64 occ) {
+inline uint64 rookAttacksBBX(const uint32 from, const uint64 occ) {
     return rookAttacksBB(from, occ & ~(rookAttacksBB(from, occ) & occ));
 }
 
 /* the following routines returns a 64 bit attacks of pieces
 on the From square with the limiting Occupied bits */
-uint64 bishopAttacksBB(uint32 from, uint64 occ) {
+inline uint64 bishopAttacksBB(const uint32 from, const uint64 occ) {
     return MagicAttacks[BOffset[from] + (((BMagicMask[from] & (occ)) * BMagic[from]) >> BShift[from])];
 }
 
-uint64 rookAttacksBB(uint32 from, uint64 occ) {
+inline uint64 rookAttacksBB(const uint32 from, const uint64 occ) {
     return MagicAttacks[ROffset[from] + (((RMagicMask[from] & (occ)) * RMagic[from]) >> RShift[from])];
 }
 
-uint64 queenAttacksBB(uint32 from, uint64 occ) {
+inline uint64 queenAttacksBB(const uint32 from, const uint64 occ) {
     return (MagicAttacks[BOffset[from] + (((BMagicMask[from] & (occ)) * BMagic[from]) >> BShift[from])]
         | MagicAttacks[ROffset[from] + (((RMagicMask[from] & (occ)) * RMagic[from]) >> RShift[from])]);
 }
@@ -41,7 +41,7 @@ uint64 queenAttacksBB(uint32 from, uint64 occ) {
 /* this is the attack routine, capable of multiple targets,
 can be used to determine if the bits on the 64 bit parameter
 is being attacked by the side color */
-bool isAtt(const position_t& pos, uint32 color, uint64 target) {
+bool isAtt(const position_t& pos, const uint32 color, uint64 target) {
     int from;
 
     ASSERT(target);
@@ -66,7 +66,6 @@ bool isSqAtt(const position_t& pos, uint64 occ, int sq, int color) {
         (bishopAttacksBB(sq, occ) & ((pos.bishops | pos.queens) & pos.color[color])) ||
         (rookAttacksBB(sq, occ) & ((pos.rooks | pos.queens) & pos.color[color]));
 }
-
 uint64 pieceAttacksFromBB(const position_t& pos, const int pc, const int sq, const uint64 occ) {
     switch (pc) {
     case PAWN: return PawnCaps[sq][pos.side];
@@ -80,37 +79,8 @@ uint64 pieceAttacksFromBB(const position_t& pos, const int pc, const int sq, con
 }
 
 /* this determines if the side to move is in check */
-bool kingIsInCheck(const position_t& pos) {
+inline bool kingIsInCheck(const position_t& pos) {
     return isSqAtt(pos, pos.occupied, pos.kpos[pos.side], pos.side ^ 1);
-    //    return isAtt(pos, pos.side^1, pos.kings & pos.color[pos.side]);
-}
-/* checks if the move attacks the target */
-bool isMoveDefence(const position_t& pos, uint32 move, uint64 target) {
-    int from, to, piece;//, sq, dir;
-
-    if (!target) return 0;
-    from = moveFrom(move);
-    if (BitMask[from] & target) return true;
-    to = moveTo(move);
-    piece = pos.pieces[from];
-    switch (piece) {
-    case PAWN:
-        if (PawnCaps[to][pos.side] & target) return true;
-        break;
-    case KNIGHT:
-        if (KnightMoves[to] & target) return true;
-        break;
-    case BISHOP:
-        if (bishopAttacksBB(to, pos.occupied&~BitMask[from]) & target) return true;
-        break;
-    case ROOK:
-        if (rookAttacksBB(to, pos.occupied&~BitMask[from]) & target) return true;
-        break;
-    case QUEEN:
-        if (queenAttacksBB(to, pos.occupied&~BitMask[from]) & target) return true;
-        break;
-    }
-    return false;
 }
 /* this returns the pinned pieces to the King of the side Color */
 uint64 pinnedPieces(const position_t& pos, uint32 c) { //SAM TODO this could be done more efficiently I think?
@@ -275,12 +245,10 @@ bool moveIsCheck(const position_t& pos, basic_move_t m, uint64 dcc) {
 /* this returns the bitboard of all pieces of a given side attacking a certain square */
 
 uint64 attackingPiecesSide(const position_t& pos, uint32 sq, uint32 side) {
-    uint64 attackers = 0;
-
     ASSERT(squareIsOk(sq));
     ASSERT(colorIsOk(side));
 
-    attackers |= PawnCaps[sq][side ^ 1] & pos.pawns;
+    uint64 attackers = PawnCaps[sq][side ^ 1] & pos.pawns;
     attackers |= KnightMoves[sq] & pos.knights;
     attackers |= KingMoves[sq] & pos.kings;
     attackers |= bishopAttacksBB(sq, pos.occupied) & (pos.bishops | pos.queens);

@@ -27,7 +27,14 @@ bit 3: dumpfile
 int fr_square(int f, int r) {
     return ((r << 3) | f);
 }
-
+void PrintBitBoard(uint64 n) {
+    PrintOutput() << "info string ";
+    while (n) {
+        int sq = popFirstBit(&n);
+        PrintOutput() << (char)(SQFILE(sq) + 'a') << (char)('1' + SQRANK(sq)) << ' ';
+    }
+    PrintOutput() << "\n";
+}
 /* a utility to convert large int to hex string*/
 char *bit2Str(uint64 n) {
     static char s[19];

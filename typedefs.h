@@ -159,8 +159,7 @@ struct SearchStack {
         bannedMove(EMPTY),
         hashMove(EMPTY),
         hashDepth(-2),
-        mvlist(&movelist),
-        mvlist_phase(0) {}
+        mvlist(&movelist) {}
     int playedMoves;
     int hisCnt;
     basic_move_t hisMoves[64];
@@ -178,7 +177,6 @@ struct SearchStack {
 
     movelist_t movelist;
     movelist_t* mvlist;
-    int mvlist_phase;
 };
 
 struct GoCmdData {

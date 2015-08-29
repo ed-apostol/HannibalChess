@@ -33,6 +33,7 @@ private:
     void Id(Engine& engine);
     void Quit(Engine& engine);
 
+    void CheckSpeed();
     void CheckSpeedup(std::istringstream& stream);
     void CheckBestSplit(std::istringstream& stream);
     void Interface::CheckMaxSplit(std::istringstream& stream);

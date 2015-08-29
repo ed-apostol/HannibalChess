@@ -33,7 +33,6 @@ struct eval_info_t {
     int atkcntpcs[2];
     int phase;
     int MLindex[2];
-    short pawnWidth;
     bool oppBishops;
     bool queening;
     uint8 endFlags[2];

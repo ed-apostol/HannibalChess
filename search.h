@@ -221,16 +221,16 @@ public:
     void StartThinking(GoCmdData& data, position_t& pos);
 
     // hash
-    void InitTTHash(int size) {
+    void InitTTHash(size_t size) {
         transtable.Init(size, transtable.BUCKET);
     }
-    void InitPVTTHash(int size) {
+    void InitPVTTHash(size_t size) {
         pvhashtable.Init(size, pvhashtable.BUCKET);
     }
-    void InitPawnHash(int size) {
+    void InitPawnHash(size_t size) {
         for (Thread* th : mThreads) th->pt.Init(size, th->pt.BUCKET);
     }
-    void InitEvalHash(int size) {
+    void InitEvalHash(size_t size) {
         for (Thread* th : mThreads) th->et.Init(size, th->et.BUCKET);
     }
     void ClearTTHash() {

@@ -216,7 +216,7 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     }
     bool prunable = !ssprev.moveGivesCheck && !inPv && MinTwoBits(pos.color[pos.side ^ 1] & pos.pawns) && MinTwoBits(pos.color[pos.side ^ 1] & ~(pos.pawns | pos.kings));
     move_t* move;
-    while ((move = sortNext(nullptr, mInfo, pos, *ss.mvlist, ss.mvlist_phase, sthread)) != nullptr) {
+    while ((move = sortNext(nullptr, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
         int score;
         if (anyRepNoMove(pos, move->m)) {
             score = DrawValue[pos.side];
@@ -284,7 +284,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
 
     ASSERT(alpha < beta);
     ASSERT(depth >= 1);
-
+    ASSERT(!inSingular || ssprev.bannedMove != 0);
     initNode(sthread);
     if (sthread.stop) return 0;
 
@@ -377,7 +377,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             int target = beta + 200;
             int minCapture = target - ss.evalvalue;
             int newdepth = depth - 5;
-            while ((move = sortNext(nullptr, mInfo, pos, *ss.mvlist, ss.mvlist_phase, sthread)) != nullptr) {
+            while ((move = sortNext(nullptr, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
                 int score;
                 if (MaxPieceValue[moveCapture(move->m)] < minCapture || swap(pos, move->m) < minCapture) continue;
                 ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
@@ -424,15 +424,18 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         }
         else {
             ss.dcc = discoveredCheckCandidates(pos, pos.side);
-            sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), sthread);
+            if (inSingular) { //assumes singular only called when there is a bannedMove
+                sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ssprev.bannedMove, alpha, ss.evalvalue, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), sthread);
+                sortNext(sp, mInfo, pos, *ss.mvlist, sthread);
+            }
+            else sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), sthread);
         }
     }
     int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 2) : (depth * depth));
     move_t* move;
-    while ((move = sortNext(sp, mInfo, pos, *ss.mvlist, ss.mvlist_phase, sthread)) != nullptr) {
+    while ((move = sortNext(sp, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
         int score = -INF;
         int newdepth = depth-1;
-        if (inSingular && move->m == ssprev.bannedMove) continue;
         if (inSplitPoint) {
             sp->movesplayedlock.lock();
             ss.playedMoves = ++sp->played;
@@ -450,7 +453,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             if (ss.bestvalue == -INF) { //TODO remove this from loop and do it first
                 if (!inRoot && !inSingular && !inSplitPoint) {
                     if (inCheck && ss.mvlist->size == 1) newdepth++;
-                    else if (ss.hashMove != EMPTY && depth >= (inPvNode(nt) ? 6 : 8)) {
+                    else if (ss.hashMove == move->m && depth >= (inPvNode(nt) ? 6 : 8)) {
                         int exploreDepth = depth / 2;
                         if (ss.hashDepth >= exploreDepth) { //two reasons to extend are: a) tree is likely smaller than normal and/or b) tree is likely critical
                             int targetScore = ss.evalvalue - EXPLORE_BASE_CUTOFF - depth * EXPLORE_MULT_CUTOFF;

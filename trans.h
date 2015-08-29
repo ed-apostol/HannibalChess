@@ -26,13 +26,11 @@ public:
     Entity* Entry(const uint64 hash) const {
         return &mpTable[KEY(hash) & mMask];
     }
-    void Init(uint64 target, const int bucket_size) {
-        uint64 size = 2;
+    void Init(size_t targetMB, const int bucket_size) {
+        size_t size = 2;
         mBucketSize = bucket_size;
-        if (target < 1) target = 1;
-        target *= 1024 * 1024;
-        while (size * sizeof(Entity) <= target) size *= 2;
-        size = size / 2;
+        size_t halfTarget = MAX(1, targetMB) * (1024 * 1024) / 2;
+        while (size * sizeof(Entity) <= halfTarget) size *= 2;
         if (size + bucket_size - 1 == mSize) {
             Clear();
         }
@@ -43,7 +41,7 @@ public:
             mpTable = new Entity[mSize];
         }
     }
-    uint64 HashSize() const {
+    size_t HashSize() const {
         return mSize;
     }
     uint64 BucketSize() const {
@@ -51,7 +49,7 @@ public:
     }
 protected:
     Entity* mpTable;
-    uint64 mSize;
+    size_t mSize;
     uint64 mMask;
     uint64 mBucketSize;
 };
@@ -135,12 +133,13 @@ struct PawnEntry {
         qshelter[0] = qshelter[1] = 0;
     }
     uint32 hashlock;
-    uint64 passedbits;
     int16 opn;
     int16 end;
+    uint64 passedbits;
     int8 shelter[2];
     int8 kshelter[2];
     int8 qshelter[2];
+    int16 pawnWidthBonus; 
 };
 
 class PawnHashTable : public BaseHashTable < PawnEntry > {
@@ -151,11 +150,9 @@ public:
 struct EvalEntry {
     EvalEntry() :
         hashlock(0),
-        value(0),
-        pessimism(0) {}
+        value(0) {}
     uint32 hashlock;
-    int16 value;
-    int16 pessimism;
+    int32 value;
 };
 
 class EvalHashTable : public BaseHashTable < EvalEntry > {

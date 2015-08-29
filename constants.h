@@ -36,22 +36,25 @@ const int QueenValueOpen = 890;
 const int BishopPairBonusOpen = 34;	
 
 const int PawnValueMid1 = 89;	
-const int KnightValueMid1 = 309;	
-const int BishopValueMid1 = 311;	
+const int KnightValueMid1 = 309;//309	//KnightValueMid1 = 300
+//const int KnightValueMid1 = 300;//309	//KnightValueMid1 = 300
+const int BishopValueMid1 = 311;
 const int RookValueMid1 = 466;	
 const int QueenValueMid1 = 890;	
 const int BishopPairBonusMid1 = 41;
 
 const int PawnValueMid2 = 115;	
-const int KnightValueMid2 = 348;	
-const int BishopValueMid2 = 333;	
+const int KnightValueMid2 = 348;//348	//KnightValueMid2 = 333;
+//const int KnightValueMid2 = 333;//348	//KnightValueMid2 = 333;
+const int BishopValueMid2 = 333;
 const int RookValueMid2 = 580 - 20;	
 const int QueenValueMid2 = 1080;	
 const int BishopPairBonusMid2 = 51;	
 
 const int PawnValueEnd = 125;	
-const int KnightValueEnd = 387;	
-const int BishopValueEnd = 362;	
+const int KnightValueEnd = 387;//387	// KnightValueEnd = 363;
+//const int KnightValueEnd = 363;//387	// KnightValueEnd = 363;
+const int BishopValueEnd = 362;
 const int RookValueEnd = 612;	
 const int QueenValueEnd = 1150;	
 const int BishopPairBonusEnd = 55;	

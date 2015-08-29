@@ -11,7 +11,7 @@
 
 #ifdef DEBUG
 #define ASSERT(a) { if (!(a)) \
-    Print(4, "file \"%s\", line %d, assertion \"" #a "\" failed\n", __FILE__, __LINE__); }
+    Print(4, "file \"%s\", line %d, assertion \"" #a "\" failed\n", __FILE__, __LINE__); } //TODO fix this
 #else
 #define ASSERT(a)
 #endif
@@ -28,14 +28,9 @@
 #define INF                 32500
 #define MAXEVAL             32000
 #define MAXHIST             32500
-//#define INF                 16000
-//#define MAXEVAL             14000
-//#define MAXHIST             16384
 
 #define WHITE               0
 #define BLACK               1
-#define LEFT                0
-#define RIGHT               1
 
 enum PieceTypes {
     EMPTY = 0,
@@ -99,8 +94,6 @@ enum ThinkingStatus {
     PONDERING,
     ANALYSING
 };
-
-#define REDUCED             4
 
 #define LOCK(x)             (uint32)((x)>>32)
 #define KEY(x)              (uint32)(x)
