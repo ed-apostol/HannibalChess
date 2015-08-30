@@ -413,7 +413,7 @@ void initArr(void) {
         }
     }
     InitKingShelter();
-//    InitMobility();
+    InitMobility();
 
     for (i = 0; i <= MAX_FUT_MARGIN; i++) {
         for (j = 0; j < 64; j++) {

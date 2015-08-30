@@ -764,7 +764,7 @@ void BreakPawnReduction(const int color, const uint64 stopSquares, const positio
     if ((pos.color[color] & ~(pos.pawns | pos.kings)) != 0) score /= numBreaks + 1;
     *draw += score;
 }
-/*
+
 void LockedPawns(int attacker, const position_t& pos, eval_info_t& ei, int *draw) {
     const uint64 passed = ei.pawn_entry->passedbits & pos.color[attacker];
     if (MaxOneBit(passed) == true) {
@@ -852,7 +852,7 @@ void LockedPawns(int attacker, const position_t& pos, eval_info_t& ei, int *draw
             }
         }
     }
-}*/
+}
 void evalEndgame(int attacker, const position_t& pos, eval_info_t& ei, int *score, int *draw) {
     mflag_t endIndex;
     endIndex = ei.endFlags[attacker];
@@ -919,7 +919,7 @@ void evalEndgame(int attacker, const position_t& pos, eval_info_t& ei, int *scor
     case 17:
         MinorPawnPawnvMinorPawn(attacker, pos, ei, draw);
         break;
-/*    case 18:
+    case 18:
         PawnEnding(attacker, pos, draw, pos.side);
         DrawnRookPawn(attacker, pos, draw, pos.side);
         LockedPawns(attacker, pos, ei, draw);
@@ -934,6 +934,6 @@ void evalEndgame(int attacker, const position_t& pos, eval_info_t& ei, int *scor
     case 20: // bishop endings WITH enough pawns to lock things
         if (SHOW_EVAL) PrintOutput() << "info string stronger side has b/n weaker side has b/n/r (not bvb) and might be locked\n";
         LockedPawns(attacker, pos, ei, draw);
-        break;*/
+        break;
     }
 }
