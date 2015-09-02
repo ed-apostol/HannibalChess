@@ -915,6 +915,13 @@ void evalPawns(const position_t& pos, eval_info_t& ei, Thread& sthread) {
     ei.end_score[WHITE] += ei.pawn_entry->end;
 
 }
+bool QuickStalemate(const position_t& pos, eval_info_t& ei, const int color) {
+    if ((ei.MLindex[color] > 8 * MLP) ||
+        ((KingMoves[pos.kpos[color]] & ~(pos.color[color] | ei.atkall[color^1])) != 0) ||
+        (ei.atkpawns[color] & pos.color[color ^ 1]) != 0) return false;
+    uint64 pawnMoves = (*ShiftPtr[color])(ei.pawns[color], 8) & ~pos.occupied;
+    return (pawnMoves==0);
+}
 int eval(const position_t& pos, Thread& sthread) {
     eval_info_t ei;
     material_info_t *mat;
@@ -981,59 +988,62 @@ int eval(const position_t& pos, Thread& sthread) {
     }
     evalPieces(pos, ei, WHITE);
     evalPieces(pos, ei, BLACK);
-
-    evalPawnPushes(pos, ei, WHITE);
-    evalPawnPushes(pos, ei, BLACK);
-
-    ei.queening = false;
-
-
-    if (pos.color[WHITE] & ~pos.pawns & ~pos.kings) {//if white has a piece
-        if (blackPassed) evalPassed(pos, ei, BLACK, blackPassed);
-        evalThreats(pos, ei, WHITE);
-        if (ei.MLindex[WHITE] >= MLQ + MLN) {
-            evalKingAttacked(pos, ei, BLACK);
-        }
+    if (QuickStalemate(pos, ei, pos.side)) {
+        score = DrawValue[pos.side];
+        if (SHOW_EVAL) PrintOutput() << "info string stalemate detected";
     }
     else {
-        if (blackPassed) evalPassedvsKing(pos, ei, BLACK, blackPassed);
-    }
-    if (pos.color[BLACK] & ~pos.pawns & ~pos.kings) { //if black has a piece
-        if (whitePassed) evalPassed(pos, ei, WHITE, whitePassed);
-        evalThreats(pos, ei, BLACK);
-        if (ei.MLindex[BLACK] >= MLQ + MLN) { // attacking the white king
-            evalKingAttacked(pos, ei, WHITE);
-        }
-    }
-    else {
-        if (whitePassed) evalPassedvsKing(pos, ei, WHITE, whitePassed);
-    }
+        evalPawnPushes(pos, ei, WHITE);
+        evalPawnPushes(pos, ei, BLACK);
 
-    open = ei.mid_score[WHITE] - ei.mid_score[BLACK];
-    end = ei.end_score[WHITE] - ei.end_score[BLACK];
-    {
-        int posVal = ((open * ei.phase) + (end * (32 - ei.phase))) / (32); //was 32, /16 means doubling the values
-        score += posVal;
-    }
-    // if there is an unstoppable pawn on the board, we cannot trust any of our draw estimates or endgame rules of thumb
-    if (!ei.queening) {
-        int edge = score < DrawValue[WHITE];
-        int draw = ei.draw[edge]; //this is who is trying to draw
-        if (SHOW_EVAL) {
-            PrintOutput() << "info string drawish was = " << draw << "\n";
-        }
-        evalEndgame(edge, pos, ei, &score, &draw);
-        draw = MIN(MAX_DRAW, draw); // max of 200 draw
-        if (SHOW_EVAL) {
-            PrintOutput() << "info string drawish is = " << draw << "\n";
-        }
-        score = ((score * (MAX_DRAW - draw)) + (DrawValue[WHITE] * draw)) / MAX_DRAW;
-    }
-    score = score*sign[pos.side];
+        ei.queening = false;
 
-    if (score < -MAXEVAL) score = -MAXEVAL;
-    else if (score > MAXEVAL) score = MAXEVAL;
 
+        if (pos.color[WHITE] & ~pos.pawns & ~pos.kings) {//if white has a piece
+            if (blackPassed) evalPassed(pos, ei, BLACK, blackPassed);
+            evalThreats(pos, ei, WHITE);
+            if (ei.MLindex[WHITE] >= MLQ + MLN) {
+                evalKingAttacked(pos, ei, BLACK);
+            }
+        }
+        else {
+            if (blackPassed) evalPassedvsKing(pos, ei, BLACK, blackPassed);
+        }
+        if (pos.color[BLACK] & ~pos.pawns & ~pos.kings) { //if black has a piece
+            if (whitePassed) evalPassed(pos, ei, WHITE, whitePassed);
+            evalThreats(pos, ei, BLACK);
+            if (ei.MLindex[BLACK] >= MLQ + MLN) { // attacking the white king
+                evalKingAttacked(pos, ei, WHITE);
+            }
+        }
+        else {
+            if (whitePassed) evalPassedvsKing(pos, ei, WHITE, whitePassed);
+        }
+
+        open = ei.mid_score[WHITE] - ei.mid_score[BLACK];
+        end = ei.end_score[WHITE] - ei.end_score[BLACK];
+        {
+            int posVal = ((open * ei.phase) + (end * (32 - ei.phase))) / (32); //was 32, /16 means doubling the values
+            score += posVal;
+        }
+        // if there is an unstoppable pawn on the board, we cannot trust any of our draw estimates or endgame rules of thumb
+        if (!ei.queening) {
+            int edge = score < DrawValue[WHITE];
+            int draw = ei.draw[edge]; //this is who is trying to draw
+            if (SHOW_EVAL) {
+                PrintOutput() << "info string drawish was = " << draw << "\n";
+            }
+            evalEndgame(edge, pos, ei, &score, &draw);
+            draw = MIN(MAX_DRAW, draw); // max of 200 draw
+            if (SHOW_EVAL) {
+                PrintOutput() << "info string drawish is = " << draw << "\n";
+            }
+            score = ((score * (MAX_DRAW - draw)) + (DrawValue[WHITE] * draw)) / MAX_DRAW;
+        }
+        score = score*sign[pos.side];
+        if (score < -MAXEVAL) score = -MAXEVAL;
+        else if (score > MAXEVAL) score = MAXEVAL;
+    }
     entry->hashlock = LOCK(pos.posStore.hash);
     entry->value = score;
     return score;

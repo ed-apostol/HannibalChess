@@ -46,7 +46,6 @@ public:
         mTransTable(_tt),
         mPVHashTable(_pvt) {}
     void initNode(Thread& sthread);
-    bool simpleStalemate(const position_t& pos);
     bool moveRefutesThreat(const position_t& pos, basic_move_t first, basic_move_t second);
     void updateEvalgains(const position_t& pos, uint32 move, int before, int after, Thread& sthread);
     void UpdateHistory(position_t& pos, SearchStack& ss, Thread& sthread, const int depth);
@@ -91,21 +90,6 @@ void Search::initNode(Thread& sthread) {
         mEngine.StopSearch();
     }
 }
-
-bool Search::simpleStalemate(const position_t& pos) {
-    uint32 kpos, to;
-    uint64 mv_bits;
-    if (MinTwoBits(pos.color[pos.side] & ~pos.pawns)) return false;
-    kpos = pos.kpos[pos.side];
-    if (kpos != a1 && kpos != a8 && kpos != h1 && kpos != h8) return false;
-    mv_bits = KingMoves[kpos];
-    while (mv_bits) {
-        to = popFirstBit(&mv_bits);
-        if (!isSqAtt(pos, pos.occupied, to, pos.side ^ 1)) return false;
-    }
-    return true;
-}
-
 bool Search::moveRefutesThreat(const position_t& pos, basic_move_t first, basic_move_t second) {
     int m1from = moveFrom(first);
     int m2from = moveFrom(second);
@@ -192,9 +176,6 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     }
     if (pos.ply >= MAXPLY - 1) return eval(pos, sthread);
     if (!ssprev.moveGivesCheck) {
-        if (simpleStalemate(pos)) {
-            return DrawValue[pos.side];
-        }
         ss.evalvalue = ss.bestvalue = eval(pos, sthread);
         updateEvalgains(pos, pos.posStore.lastmove, ssprev.evalvalue, ss.evalvalue, sthread);
         if (ss.bestvalue > alpha) {
