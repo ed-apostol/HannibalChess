@@ -398,8 +398,6 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, in
             }
         }
     }
-
-
     evalShelter(color, ei, pos);
     ei.pawn_entry->passedbits |= passedBitMap;
 }
@@ -503,7 +501,7 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         ei.end_score[color] += EndgameBishopMobArray[temp1];
 
         const uint64 fromMask = BitMask[from];
-        if ((maybeTrapped & fromMask) && temp1 < 2 /*&& (temp64 & (pos.color[enemy] & ~pos.pawns)) == 0 && (safeMoves & ~bewareTrapped[color]) == 0*/) //trapped piece if you are in opponent area and you have very few safe moves
+        if ((maybeTrapped & fromMask) && temp1 < 2) //trapped piece if you are in opponent area and you have very few safe moves
             ei.mid_score[color] -= TRAPPED_PENALTY;
         xtemp64 = bishopAttacksBB(from, boardSkeleton) & notOwnSkeleton;
         uint64 pawnsPressured = xtemp64 & pawnTargets;
@@ -997,7 +995,6 @@ int eval(const position_t& pos, Thread& sthread) {
         evalPawnPushes(pos, ei, BLACK);
 
         ei.queening = false;
-
 
         if (pos.color[WHITE] & ~pos.pawns & ~pos.kings) {//if white has a piece
             if (blackPassed) evalPassed(pos, ei, BLACK, blackPassed);
