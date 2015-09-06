@@ -306,11 +306,9 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, in
     openBitMap = ei.pawns[color] & ~((*FillPtr2[enemy])((*ShiftPtr[enemy])(pos.pawns, 8)));
     doubledBitMap = ei.pawns[color] & (*FillPtr[enemy])(ei.pawns[color]); //the least advanced ones are considered doubled
     isolatedBitMap = ei.pawns[color] & ~((*FillPtr2[color ^ 1])(ei.potentialPawnAttack[color]));
-//	backwardBitMap = (*ShiftPtr[enemy])((advanceSquares & (ei.potentialPawnAttack[enemy] | ei.pawns[enemy])
-//		& ~ei.potentialPawnAttack[color]), 8) & ~isolatedBitMap;
-	const uint64 tradeThreatBitMap = ei.pawns[color] & ei.atkpawns[enemy]; //hhh14
+	const uint64 tradeThreatBitMap = ei.pawns[color] & ei.atkpawns[enemy]; 
 	backwardBitMap = (*ShiftPtr[enemy])((advanceSquares & (ei.potentialPawnAttack[enemy] | ei.pawns[enemy])
-		& ~ei.potentialPawnAttack[color]), 8) & ~(isolatedBitMap | tradeThreatBitMap); //hhh14
+		& ~ei.potentialPawnAttack[color]), 8) & ~(isolatedBitMap | tradeThreatBitMap);
 	passedBitMap = openBitMap & ~ei.potentialPawnAttack[enemy];
 	const uint64 adjacentPawns = ei.pawns[color] & adjacent(ei.pawns[color]);
 	const uint64 guarded = ei.pawns[color] & ei.atkpawns[color];
@@ -457,7 +455,6 @@ void evalPawnPushes(const position_t& pos, eval_info_t& ei, const int color) {
             int sq = popFirstBit(&safePawnMove);
             PrintOutput() << "info string sp " << (char) (SQFILE(sq) + 'a') <<
                 (char)('1' + SQRANK(sq)) << " \n";
-//            PrintOutput() << "info string sp " <<  sq2Str(sq) << " \n";
         }
     }
 
@@ -702,11 +699,13 @@ void evalThreats(const position_t& pos, eval_info_t& ei, const int color) {
         }
     }
 }
+static const int kingCastleBonus = (PST(WHITE, KING, G1, MIDGAME) - PST(WHITE, KING, E1, MIDGAME))/2;
+static const int queenCastleBonus = (PST(WHITE, KING, C1, MIDGAME) - PST(WHITE, KING, E1, MIDGAME))/2;
 
 int KingShelter(const int color, eval_info_t& ei, const position_t& pos) { //returns penalty for being under attack
     int currentKing = ei.pawn_entry->shelter[color];
-    int kingSide = ((pos.posStore.castle & KSC[color]) == 0 || (ei.atkall[color ^ 1] & KCSQ[color])) ? 0 : ei.pawn_entry->kshelter[color];
-    int queenSide = ((pos.posStore.castle & QSC[color]) == 0 || (ei.atkall[color ^ 1] & QCSQ[color])) ? 0 : ei.pawn_entry->qshelter[color];
+	int kingSide = ((pos.posStore.castle & KSC[color]) == 0 || (ei.atkall[color ^ 1] & KCSQ[color])) ? 0 : (ei.pawn_entry->kshelter[color] + kingCastleBonus);
+	int queenSide = ((pos.posStore.castle & QSC[color]) == 0 || (ei.atkall[color ^ 1] & QCSQ[color])) ? 0 : (ei.pawn_entry->qshelter[color] + queenCastleBonus);
 
     kingSide = (kingSide > queenSide) ? kingSide : queenSide;
     currentKing += MAX(currentKing, kingSide);
