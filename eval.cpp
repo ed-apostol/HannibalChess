@@ -292,6 +292,9 @@ inline uint64 doublePawnGuard(const uint64 pawns, const int color) {
 	const uint64 pawnAttackright = (*ShiftPtr[color])(pawns, Shift[color]) & ~FileABB;
 	return (pawnAttackLeft & pawnAttackright);
 }
+
+static const int Trade4 = 5;
+static const int Trade5 = 10;
 void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, int& end_score, const int color) {
     static const int weakFile[8] = { 0, 2, 3, 3, 3, 3, 2, 0 };
     static const int weakRank[8] = { 0, 0, 2, 4, 6, 8, 10, 0 };
@@ -303,29 +306,35 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, in
     openBitMap = ei.pawns[color] & ~((*FillPtr2[enemy])((*ShiftPtr[enemy])(pos.pawns, 8)));
     doubledBitMap = ei.pawns[color] & (*FillPtr[enemy])(ei.pawns[color]); //the least advanced ones are considered doubled
     isolatedBitMap = ei.pawns[color] & ~((*FillPtr2[color ^ 1])(ei.potentialPawnAttack[color]));
+//	backwardBitMap = (*ShiftPtr[enemy])((advanceSquares & (ei.potentialPawnAttack[enemy] | ei.pawns[enemy])
+//		& ~ei.potentialPawnAttack[color]), 8) & ~isolatedBitMap;
+	const uint64 tradeThreatBitMap = ei.pawns[color] & ei.atkpawns[enemy]; //hhh14
 	backwardBitMap = (*ShiftPtr[enemy])((advanceSquares & (ei.potentialPawnAttack[enemy] | ei.pawns[enemy])
-        & ~ei.potentialPawnAttack[color]), 8) & ~isolatedBitMap; //this includes isolated
-    passedBitMap = openBitMap & ~ei.potentialPawnAttack[enemy];
+		& ~ei.potentialPawnAttack[color]), 8) & ~(isolatedBitMap | tradeThreatBitMap); //hhh14
+	passedBitMap = openBitMap & ~ei.potentialPawnAttack[enemy];
 	const uint64 adjacentPawns = ei.pawns[color] & adjacent(ei.pawns[color]);
 	const uint64 guarded = ei.pawns[color] & ei.atkpawns[color];
 	const uint64 safePawns = adjacentPawns | guarded;
 	const uint64 unsafePawns = ei.pawns[color] & ~safePawns;
-
-	/* hhh11 start */
-	const uint64 squashSquares = (doublePawnGuard(ei.pawns[color ^ 1], color ^ 1) & ~ei.atkpawns[color]) | (advanceSquares & pos.pawns);//hhh11
+	uint64 tradeThreats = tradeThreatBitMap & Rank4BB;
+	if (tradeThreats) {
+		int num = bitCnt(tradeThreats) * (color == WHITE ? Trade4 : Trade5);
+		mid_score += num;
+		end_score += num;
+	}
+	tradeThreats = tradeThreatBitMap & Rank5BB;
+	if (tradeThreats) {
+		int num = bitCnt(tradeThreats) * (color == BLACK ? Trade4 : Trade5);
+		mid_score += num;
+		end_score += num;
+	}
+	const uint64 squashSquares = (doublePawnGuard(ei.pawns[enemy], enemy) & ~ei.atkpawns[color]) | (advanceSquares & pos.pawns);
 	uint64 connected = safePawns & pastThirdRank[color];
 	while (connected) {
-//		const int ConnectBonus[] = { 0, 0, 0, 5, 10, 20, 40, 80 }; //hhh12
-//		const int ConnectBonus[] = { 0, 0, 0, 10, 20, 40, 60, 80 };
-//		const int ConnectBonus[] = { 0, 0, 0, 6, 12, 24, 48, 96 }; 
-//		const int ConnectBonus[] = { 0, 0, 0, 7, 14, 28, 56, 112 };
-//		const int ConnectBonus[] = { 0, 0, 0, 0, 10, 30, 60, 90 };
-//		const int ConnectBonus[] = { 0, 0, 0, 5, 10, 30, 60, 90 };
-//		const int ConnectBonus[] = { 0, 0, 0, 5, 15, 30, 60, 90 };
 		const int ConnectBonus[] = { 0, 0, 0, 4, 10, 30, 60, 90 };
 
 		sq = popFirstBit(&connected);
-		bool blocked = (BitMask[sq+PAWN_MOVE_INC(color)] & squashSquares) != 0; //hhh11
+		bool blocked = (BitMask[sq+PAWN_MOVE_INC(color)] & squashSquares) != 0;
 		int advanced = PAWN_RANK(sq, color);
 		int score = ((adjacentPawns & BitMask[sq]) != 0) ? ConnectBonus[advanced] : (ConnectBonus[advanced + 1] - ConnectBonus[advanced]) / 2;
 		if (blocked) score /= 2;
@@ -345,16 +354,12 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, in
         sq = popFirstBit(&temp64);
         sqBitMask = BitMask[sq];
         openPawn = openBitMap & sqBitMask;
-        //fixedPawn = (BitMask[sq + PAWN_MOVE_INC(color)] & (ei.atkpawns[enemy] | ei.pawns[enemy]));
         sqPenalty = weakFile[SQFILE(sq)] + weakRank[PAWN_RANK(sq, color)]; //TODO precale 64 entries
         mid_score -= sqPenalty;	//penalty for being weak in middlegame
         end_score -= kingAttackWeakness[DISTANCE(sq, enemyKing)]; //end endgame, king attacks is best measure of vulnerability
-        if (openPawn) {
-            mid_score -= sqPenalty;
-        }
+        if (openPawn) mid_score -= sqPenalty;
     }
     targetBitMap = isolatedBitMap;
-
     //any backward pawn not easily protect by its own pawns is a target
     //TODO consider calculating exactly how many moves to protect and defend including double moves
     //TODO consider increasing distance of defender by 1
@@ -364,9 +369,7 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, in
             (BitMask[sq + PAWN_MOVE_INC(color)] & (ei.atkpawns[enemy])) || //enemy adjacent pawn within 1
             ((BitMask[sq + PAWN_MOVE_INC(color) * 2] & ei.atkpawns[enemy]) && //enemy adjacent pawn within 2
             (BitMask[sq + PAWN_MOVE_INC(color)] & ei.atkpawns[color]) == 0); //support pawn within 1
-        if (permWeak) {
-            targetBitMap |= BitMask[sq];
-        }
+        if (permWeak) targetBitMap |= BitMask[sq];
     }
     //lets look through all the passed pawns and give them their static bonuses
     //TODO consider moving some king distance stuff in here
@@ -396,12 +399,11 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, in
     }
 
     if (targetBitMap) { //isolated or vulnerable backward pawns
-        //target pawns that are not A or H file pawns are especially heinus
         count = bitCnt(targetBitMap);
         mid_score -= count * TARGET_O;
         end_score -= count * TARGET_E;
         uint64 RFileTargetBitMap = targetBitMap & (FileABB | FileHBB);
-        if (RFileTargetBitMap) {
+        if (RFileTargetBitMap) {  //target pawns on A or H file pawns are not as bad
             count = bitCnt(RFileTargetBitMap);
             mid_score += count * TARGET_O / 2;
             end_score += count * TARGET_E / 2;
