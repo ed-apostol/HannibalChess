@@ -159,3 +159,6 @@ uint64 shiftLeft(uint64 b, uint32 i) {
 uint64 shiftRight(uint64 b, uint32 i) {
     return (b >> i);
 }
+inline uint64 adjacent(const uint64 BB) {
+	return (BB & (shiftLeft(BB & ~FileHBB, 1) | shiftRight(BB & ~FileABB, 1)));
+}

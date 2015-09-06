@@ -475,10 +475,10 @@ void InitMaterial(void) {
                                                 bool block = (bp >= 4 && wp >= 3);
 
                                                 if (wr == 1 && wq == 0 && wminors == 0 && wp && br == 1 && bq == 0 && bminors == 0) {
-                                                    wflag = 2;
+                                                    wflag = (wp==1) ? 21 : 2;
                                                 }
                                                 if (wr == 1 && wq == 0 && wminors == 0 && bp && br == 1 && bq == 0 && bminors == 0) {
-                                                    bflag = 2;
+													bflag = (bp == 1) ? 21 : 2;
                                                 }
                                                 if (wb == 1 && bb == 1 && wr == 0 && br == 0 && wq == 0 && bq == 0 && wn == 0 && bn == 0) {
                                                     wflag = wlock ? 19 : 3;

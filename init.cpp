@@ -43,13 +43,11 @@ int outpost(int sq) {
     return value;
 }
 int mknight(int sq) {
-    //    int central[8] = {2,1,0,-1,-1,-1,-1,-1};
     int file[8] = { -26, -9, 2, 5, 5, 2, -9, -26 };
     int rank[8] = { -30, -9, 6, 16, 20, 19, 11, -11 };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (file[f] + rank[r]);
-    //    return (central[abs(f-r)] + central[abs(f+r-7)] + file[f] + rank[r]); //CEN
 }
 int eknight(int sq) {
     int central[8] = { 3, 2, 1, 0, -2, -4, -6, -8 };

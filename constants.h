@@ -24,8 +24,7 @@ enum ranks {
 };
 
 //ENDGAME FLAGS (32 bits)
-const int ONE_SIDED_PAWNS = 1; // bit 3
-const int OPPOSITE_BISHOPS = 2;
+const int OPPOSITE_BISHOPS = 1;
 
 //N+B - R + P = 68
 const int  PawnValueOpen = 89;	
@@ -36,24 +35,21 @@ const int QueenValueOpen = 890;
 const int BishopPairBonusOpen = 34;	
 
 const int PawnValueMid1 = 89;	
-const int KnightValueMid1 = 309;//309	//KnightValueMid1 = 300
-//const int KnightValueMid1 = 300;//309	//KnightValueMid1 = 300
+const int KnightValueMid1 = 309;
 const int BishopValueMid1 = 311;
 const int RookValueMid1 = 466;	
 const int QueenValueMid1 = 890;	
 const int BishopPairBonusMid1 = 41;
 
 const int PawnValueMid2 = 115;	
-const int KnightValueMid2 = 348;//348	//KnightValueMid2 = 333;
-//const int KnightValueMid2 = 333;//348	//KnightValueMid2 = 333;
+const int KnightValueMid2 = 348;
 const int BishopValueMid2 = 333;
 const int RookValueMid2 = 580 - 20;	
 const int QueenValueMid2 = 1080;	
 const int BishopPairBonusMid2 = 51;	
 
 const int PawnValueEnd = 125;	
-const int KnightValueEnd = 387;//387	// KnightValueEnd = 363;
-//const int KnightValueEnd = 363;//387	// KnightValueEnd = 363;
+const int KnightValueEnd = 387;
 const int BishopValueEnd = 362;
 const int RookValueEnd = 612;	
 const int QueenValueEnd = 1150;	
@@ -241,6 +237,8 @@ const uint64 RankBB[8] = {
     0xFFULL, 0xFF00ULL, 0xFF0000ULL, 0xFF000000ULL, 0xFF00000000ULL,
     0xFF0000000000ULL, 0xFF000000000000ULL, 0xFF00000000000000ULL
 };
+static const uint64 boardSide[] = { (Rank1BB | Rank2BB | Rank3BB | Rank4BB), (Rank5BB | Rank6BB | Rank7BB | Rank8BB) };
+static const uint64 pastThirdRank[] = { (Rank4BB | Rank5BB | Rank6BB | Rank7BB | Rank8BB), (Rank1BB | Rank2BB | Rank3BB | Rank4BB | Rank5BB) };
 
 // used in assorted eval
 const uint64 SpaceMaskBB[2] = {

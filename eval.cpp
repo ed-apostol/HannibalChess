@@ -96,7 +96,7 @@ const int EndgameRook7th = 30;
 
 //bishop specific
 #define OB_WEIGHT 12
-const int MidgameBishopPawnPressure = 5;
+const int MidgameBishopPawnPressure = 5; //TODO make bishop pawn pressure count xrays when coming from behind
 const int EndgameBishopPawnPressure = 9;
 
 // knight specific evaluation
@@ -286,7 +286,12 @@ int BBwidth(const uint64 BB) {
     while ((BB & FileMask[right]) == 0) right--;
     return right - left;
 }
-
+inline uint64 doublePawnGuard(const uint64 pawns, const int color) {
+	static const int Shift[] = { 9, 7 };
+	const uint64 pawnAttackLeft = (*ShiftPtr[color])(pawns, Shift[color ^ 1]) & ~FileHBB;
+	const uint64 pawnAttackright = (*ShiftPtr[color])(pawns, Shift[color]) & ~FileABB;
+	return (pawnAttackLeft & pawnAttackright);
+}
 void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, int& end_score, const int color) {
     static const int weakFile[8] = { 0, 2, 3, 3, 3, 3, 2, 0 };
     static const int weakRank[8] = { 0, 0, 2, 4, 6, 8, 10, 0 };
@@ -294,36 +299,60 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, in
 
     int count, sq, rank;
     const int enemy = color ^ 1;
-
+	const uint64 advanceSquares = (*ShiftPtr[color])(ei.pawns[color], 8);
     openBitMap = ei.pawns[color] & ~((*FillPtr2[enemy])((*ShiftPtr[enemy])(pos.pawns, 8)));
     doubledBitMap = ei.pawns[color] & (*FillPtr[enemy])(ei.pawns[color]); //the least advanced ones are considered doubled
     isolatedBitMap = ei.pawns[color] & ~((*FillPtr2[color ^ 1])(ei.potentialPawnAttack[color]));
-    backwardBitMap = (*ShiftPtr[enemy])(((*ShiftPtr[color])(ei.pawns[color], 8) & (ei.potentialPawnAttack[enemy] | ei.pawns[enemy])
+	backwardBitMap = (*ShiftPtr[enemy])((advanceSquares & (ei.potentialPawnAttack[enemy] | ei.pawns[enemy])
         & ~ei.potentialPawnAttack[color]), 8) & ~isolatedBitMap; //this includes isolated
     passedBitMap = openBitMap & ~ei.potentialPawnAttack[enemy];
-    {
-        int enemyKing = pos.kpos[color ^ 1];
-        //backward pawns are addressed here as are all other pawn weaknesses to some extent
-        //these are pawns that are not guarded, and are not adjacent to other pawns
-        temp64 = ei.pawns[color] & ~(ei.atkpawns[color] | shiftLeft(ei.pawns[color], 1) |
-            shiftRight(ei.pawns[color], 1));
-        while (temp64) {
-            uint64 openPawn, sqBitMask;
-            int sqPenalty;
-            sq = popFirstBit(&temp64);
-            sqBitMask = BitMask[sq];
+	const uint64 adjacentPawns = ei.pawns[color] & adjacent(ei.pawns[color]);
+	const uint64 guarded = ei.pawns[color] & ei.atkpawns[color];
+	const uint64 safePawns = adjacentPawns | guarded;
+	const uint64 unsafePawns = ei.pawns[color] & ~safePawns;
 
-            openPawn = openBitMap & sqBitMask;
-            //fixedPawn = (BitMask[sq + PAWN_MOVE_INC(color)] & (ei.atkpawns[enemy] | ei.pawns[enemy]));
-            sqPenalty = weakFile[SQFILE(sq)] + weakRank[PAWN_RANK(sq, color)]; //TODO precale 64 entries
-            mid_score -= sqPenalty;	//penalty for being weak in middlegame
-            end_score -= kingAttackWeakness[DISTANCE(sq, enemyKing)]; //end endgame, king attacks is best measure of vulnerability
-            if (openPawn) {
-                mid_score -= sqPenalty;
-            }
+	/* hhh11 start */
+	const uint64 squashSquares = (doublePawnGuard(ei.pawns[color ^ 1], color ^ 1) & ~ei.atkpawns[color]) | (advanceSquares & pos.pawns);//hhh11
+	uint64 connected = safePawns & pastThirdRank[color];
+	while (connected) {
+//		const int ConnectBonus[] = { 0, 0, 0, 5, 10, 20, 40, 80 }; //hhh12
+//		const int ConnectBonus[] = { 0, 0, 0, 10, 20, 40, 60, 80 };
+//		const int ConnectBonus[] = { 0, 0, 0, 6, 12, 24, 48, 96 }; 
+//		const int ConnectBonus[] = { 0, 0, 0, 7, 14, 28, 56, 112 };
+//		const int ConnectBonus[] = { 0, 0, 0, 0, 10, 30, 60, 90 };
+//		const int ConnectBonus[] = { 0, 0, 0, 5, 10, 30, 60, 90 };
+//		const int ConnectBonus[] = { 0, 0, 0, 5, 15, 30, 60, 90 };
+		const int ConnectBonus[] = { 0, 0, 0, 4, 10, 30, 60, 90 };
+
+		sq = popFirstBit(&connected);
+		bool blocked = (BitMask[sq+PAWN_MOVE_INC(color)] & squashSquares) != 0; //hhh11
+		int advanced = PAWN_RANK(sq, color);
+		int score = ((adjacentPawns & BitMask[sq]) != 0) ? ConnectBonus[advanced] : (ConnectBonus[advanced + 1] - ConnectBonus[advanced]) / 2;
+		if (blocked) score /= 2;
+		mid_score += score;
+		end_score += (score * 2) / 3;
+		if (SHOW_EVAL) PrintOutput() << "info string connected " << (char)(SQFILE(sq) + 'a') << (char)('1' + SQRANK(sq)) << " score " << score << "\n";
+		if (SHOW_EVAL && blocked) PrintOutput() << "info string blocked\n";
+	}
+	
+    int enemyKing = pos.kpos[color ^ 1];
+    //backward pawns are addressed here as are all other pawn weaknesses to some extent
+    //these are pawns that are not guarded, and are not adjacent to other pawns
+	temp64 = unsafePawns;
+    while (temp64) {
+        uint64 openPawn, sqBitMask;
+        int sqPenalty;
+        sq = popFirstBit(&temp64);
+        sqBitMask = BitMask[sq];
+        openPawn = openBitMap & sqBitMask;
+        //fixedPawn = (BitMask[sq + PAWN_MOVE_INC(color)] & (ei.atkpawns[enemy] | ei.pawns[enemy]));
+        sqPenalty = weakFile[SQFILE(sq)] + weakRank[PAWN_RANK(sq, color)]; //TODO precale 64 entries
+        mid_score -= sqPenalty;	//penalty for being weak in middlegame
+        end_score -= kingAttackWeakness[DISTANCE(sq, enemyKing)]; //end endgame, king attacks is best measure of vulnerability
+        if (openPawn) {
+            mid_score -= sqPenalty;
         }
     }
-
     targetBitMap = isolatedBitMap;
 
     //any backward pawn not easily protect by its own pawns is a target
@@ -382,7 +411,7 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, in
                 end_score += count * TARGET_OPEN_E / 3;
             }
         }
-        if (targetBitMap & openBitMap) {
+		if (targetBitMap & openBitMap) {
             count = bitCnt(targetBitMap & openBitMap);
             mid_score -= count * TARGET_OPEN_O;
             end_score -= count * TARGET_OPEN_E;

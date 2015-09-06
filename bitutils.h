@@ -19,6 +19,7 @@ extern uint64 fillUp2(uint64 b);
 extern uint64 fillDown2(uint64 b);
 extern uint64 shiftLeft(uint64 b, uint32 i);
 extern uint64 shiftRight(uint64 b, uint32 i);
+extern uint64 adjacent(const uint64 BB);
 
 #define MaxOneBit(x) (((x) & ((x)-1))==0)
 #define MinTwoBits(x) ((x) & ((x)-1))
