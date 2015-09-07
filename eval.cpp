@@ -154,11 +154,12 @@ const int QueenAttackValue = 5;
 const int RookAttackValue = 3;
 const int BishopAttackValue = 2;
 const int KnightAttackValue = 2;
-const int QueenSafeContactCheckValue = 3;
-const int QueenSafeCheckValue = 2;
-const int RookSafeCheckValue = 1;
+
+const int QueenSafeContactCheckValue = 4; //3
+const int QueenSafeCheckValue = 3; //2
+const int RookSafeCheckValue = 3; //1
 const int BishopSafeCheckValue = 1;
-const int KnightSafeCheckValue = 1;
+const int KnightSafeCheckValue = 2; //1
 const int DiscoveredCheckValue = 3;
 
 // piece attacks

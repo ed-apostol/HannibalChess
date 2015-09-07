@@ -22,7 +22,30 @@ enum files {
 enum ranks {
     Rank1, Rank2, Rank3, Rank4, Rank5, Rank6, Rank7, Rank8
 };
-
+enum endgameFlags {
+	NoEnd = 0,
+	SinglePawnEnd = 1,
+	RvREnd = 2,
+	BvBEnd = 3,
+	RvPEnd = 4,
+	NPEnd = 5,
+	QvREnd = 6,
+	BNEnd = 7,
+	RBvRB = 8,
+	BPEnd = 9,
+	BEnd = 10,
+	RvNEnd = 11,
+	QvPEnd = 12,
+	NoPawnEnd = 13,
+	RPvBEnd = 14,
+	BPvNEnd = 15,
+	BPvMEnd = 16,
+	MPPvMPEnd = 17,
+	BLockEnd = 18,
+	BvBLockEnd = 19,
+	MinorLock = 20,
+	RPvREnd = 21
+};
 //ENDGAME FLAGS (32 bits)
 const int OPPOSITE_BISHOPS = 1;
 

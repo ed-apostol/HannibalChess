@@ -266,9 +266,8 @@ void InitMaterial(void) {
                                             int bminors = bn + bb;
                                             int wnonQ = wminors + wr;
                                             int bnonQ = bminors + br;
-
-                                            mflag_t wflag = 0;
-                                            mflag_t bflag = 0;
+											mflag_t wflag = NoEnd;
+											mflag_t bflag = NoEnd;
 
                                             windex = wp * MatSummValue[PAWN] + wn * MatSummValue[KNIGHT] + wb * MatSummValue[BISHOP] +
                                                 wr * MatSummValue[ROOK] + wq * MatSummValue[QUEEN];
@@ -467,111 +466,109 @@ void InitMaterial(void) {
                                                 MaterialTable[bindex][windex].phase = phase;
                                                 MaterialTable[bindex][windex].draw[WHITE] = bdraw;
                                                 MaterialTable[bindex][windex].draw[BLACK] = wdraw;
-
-                                                //FLAGS are set from the attackers perspective (so the other side is trying to draw)
-                                                if (windex == MLP) wflag = 1;
-                                                if (bindex == MLP) bflag = 1;
-                                                bool wlock = (wp >= 4 && bp >= 3);
-                                                bool block = (bp >= 4 && wp >= 3);
-
+												bool wlock = (wp >= 4 && bp >= 3);
+												bool block = (bp >= 4 && wp >= 3);
+												//FLAGS are set from the attackers perspective (so the other side is trying to draw)
+												if (windex == MLP) wflag = SinglePawnEnd;
+												if (bindex == MLP) bflag = SinglePawnEnd;
                                                 if (wr == 1 && wq == 0 && wminors == 0 && wp && br == 1 && bq == 0 && bminors == 0) {
-                                                    wflag = (wp==1) ? 21 : 2;
+													wflag = (wp == 1) ? RPvREnd : RvREnd;
                                                 }
                                                 if (wr == 1 && wq == 0 && wminors == 0 && bp && br == 1 && bq == 0 && bminors == 0) {
-													bflag = (bp == 1) ? 21 : 2;
+													bflag = (bp == 1) ? RPvREnd : RvREnd;
                                                 }
                                                 if (wb == 1 && bb == 1 && wr == 0 && br == 0 && wq == 0 && bq == 0 && wn == 0 && bn == 0) {
-                                                    wflag = wlock ? 19 : 3;
-                                                    bflag = block ? 19 : 3;
-                                                    wflag = bflag = 3;
+													wflag = wlock ? BvBLockEnd : BvBEnd;
+													bflag = block ? BvBLockEnd : BvBEnd;
                                                 }
                                                 if (wr == 1 && wq == 0 && wminors == 0 && wp == 0 && bq == 0 && bp && bnonQ == 0) {
-                                                    wflag = 4;
+													wflag = RvPEnd;
                                                 }
 
                                                 if (br == 1 && bq == 0 && bminors == 0 && bp == 0 && wq == 0 && wp && wnonQ == 0) {
-                                                    bflag = 4;
+													bflag = RvPEnd;
                                                 }
                                                 if (wp == 1 && wn == 1 && wb == 0 && wr == 0 && wq == 0) {
-                                                    wflag = 5;
+													wflag = NPEnd;
                                                 }
                                                 if (bp == 1 && bn == 1 && bb == 0 && br == 0 && bq == 0) {
-                                                    bflag = 5;
+													bflag = NPEnd;
                                                 }
                                                 if (wq == 1 && wnonQ == 0 && wp == 0 && br == 1 && bq == 0 && bminors == 0 && bp) {
-                                                    wflag = 6;
+													wflag = QvREnd;
                                                 }
                                                 if (bq == 1 && bnonQ == 0 && bp == 0 && wr == 1 && wq == 0 && wminors == 0 && wp) {
-                                                    bflag = 6;
+													bflag = QvREnd;
                                                 }
-                                                if (windex == MLN + MLB && bindex == 0) wflag = 7;
+												if (windex == MLN + MLB && bindex == 0) wflag = BNEnd;
                                                 if (wq == 0 && bq == 0 && wn == 0 && bn == 0 && wr == br && wb == 1 && bb == 1 && wr) {
-                                                    wflag = 8;
-                                                    bflag = 8;
+													wflag = RBvRB;
+													bflag = RBvRB;
                                                 }
                                                 if (wflag == 0 && wp && wq == 0) {
                                                     if (wnonQ == 1 && wnonQ == wb) { //pawn endgames and bishop endgames
-                                                        wflag = 9;
+                                                        wflag = BPEnd;
                                                     }
                                                     if (wnonQ == 0 && wp > 1) { //pawn endgames (not single pawn)
-                                                        wflag = wlock ? 18 : 10;
-                                                        wflag = 10;
+														wflag = wlock ? BLockEnd : BEnd;
                                                     }
                                                 }
                                                 if (bflag == 0 && bp && bq == 0) {
                                                     if (bnonQ == 1 && bnonQ == bb) {
-                                                        bflag = 9;
+														bflag = BPEnd;
                                                     }
                                                     if (bnonQ == 0 && bp > 1) {
-                                                        bflag = block ? 18 : 10;
-                                                        bflag = 10;
+														bflag = block ? BLockEnd : BEnd;
                                                     }
                                                 }
                                                 if (wq == 0 && wminors == 0 && wr == 1 && bq == 0 && br == 0 && bb == 0 && bn == 1 && wp == 0 && bp == 0) {
-                                                    wflag = 11;
+													wflag = RvNEnd;
                                                 }
                                                 if (wq == 1 && bq == 0 && wnonQ == 0 && bnonQ == 0 && wp == 0 && bp == 1) {
-                                                    wflag = 12;
+													wflag = QvPEnd;
                                                 }
                                                 if (wr == 1 && wq == 0 && wp == 1 && wminors == 0 && bb == 1 && bn == 0 && bq == 0 && br == 0 && bp == 0) {
-                                                    wflag = 14;
+													wflag = RPvBEnd;
                                                 }
                                                 if (wq == 0 && wr == 0 && wb == 1 && wn == 0 && wp == 1 && bq == 0 && br == 0 && bb == 0 && bn == 1) {
-                                                    wflag = 15;
+													wflag = BPvNEnd;
                                                 }
                                                 if (wq == 0 && wr == 0 && wb == 0 && wn == 1 && wp == 1 && bq == 0 && br == 0 && bb == 0 && bn == 1) {
-                                                    wflag = 16;
+													wflag = BPvMEnd;
                                                 }
                                                 if (bq == 0 && br == 0 && bb == 0 && bn == 1 && bp == 1 && wq == 0 && wr == 0 && wb == 1 && wn == 0) {
-                                                    bflag = 16;
+													bflag = BPvMEnd;
                                                 }
-                                                if (wq == 0 && wr == 0 && wb == 1 && wn == 0 && wp == 2 && bq == 0 && br == 0 && bb == 0 && bn == 1 && bp== 1) {
-                                                    wflag = 17;
+                                                if (wq == 0 && wr == 0 && wb == 1 && wn == 0 && wp == 2 && bq == 0 && br == 0 && bb == 0 && bn == 1 && bp>= 1) {
+													wflag = MPPvMPEnd;
                                                 }
-                                                if (wq == 0 && wr == 0 && wb == 0 && wn == 1 && wp == 2 && bq == 0 && br == 0 && bb == 0 && bn == 1 && bp == 1) {
-                                                    wflag = 17;
+                                                if (wq == 0 && wr == 0 && wb == 0 && wn == 1 && wp == 2 && bq == 0 && br == 0 && bb == 0 && bn == 1 && bp >= 1) {
+													wflag = MPPvMPEnd;
                                                 }
-                                                if (bq == 0 && br == 0 && bb == 0 && bn == 1 && bp == 2 && wq == 0 && wr == 0 && wb == 1 && wn == 0 && wp == 1) {
-                                                    bflag = 17;
+                                                if (bq == 0 && br == 0 && bb == 1 && bn == 0 && bp == 2 && wq == 0 && wr == 0 && wb == 0 && wn == 1 && wp >= 1) {
+													bflag = MPPvMPEnd;
                                                 }
-                                                if (wq == 0 && wr == 0 && wb == 1 && wn == 0 && (bq+ br + bn) >= 1 && wlock) {
-                                                    wflag = 20; //attacker has bishop and lots of pawns, defender has non queen and lots of pawns
+												if (bq == 0 && br == 0 && bb == 0 && bn == 1 && bp == 2 && wq == 0 && wr == 0 && wb == 0 && wn == 1 && wp >= 1) {
+													bflag = MPPvMPEnd;
+												}
+												if (wq == 0 && wr == 0 && wb == 1 && wn == 0 && (bq+ br + bn) >= 1 && wlock) {
+													wflag = MinorLock; //attacker has bishop and lots of pawns, defender has non queen and lots of pawns
                                                 }
                                                 if (wq == 0 && wr == 0 && wb == 0 && wn == 1 && (bq + br + bb + bn) >= 1 && wlock) {
-                                                    wflag = 20; //attacker has knight and lots of pawns, defender has non queen and lots of pawns
+													wflag = MinorLock; //attacker has knight and lots of pawns, defender has non queen and lots of pawns
                                                 }
                                                 if (bq == 0 && br == 0 && bb == 1 && bn == 0 && (wq + wr + wn) >= 1 && block) {
-                                                    bflag = 20; //attacker has bishop and lots of pawns, defender has non queen and lots of pawns
+													bflag = MinorLock; //attacker has bishop and lots of pawns, defender has non queen and lots of pawns
                                                 }
                                                 if (bq == 0 && br == 0 && bb == 0 && bn == 1 && (wq + wr + wb + wn) >= 1 && block) {
-                                                    bflag = 20; //attacker has knight and lots of pawns, defender has non queen and lots of pawns
+													bflag = MinorLock; //attacker has knight and lots of pawns, defender has non queen and lots of pawns
                                                 }
                                                 //TODO consider expanding to include more pieces (rook, queen, more minors, etc.
                                                 if (wflag == 0 && win > 40 && wp == 0 && wdraw < MAX_DRAW) {
-                                                    wflag = 13; // try to mate with no pawns (do not supercede other things like NB v. King)
+													wflag = NoPawnEnd; // try to mate with no pawns (do not supercede other things like NB v. King)
                                                 }
                                                 if (bflag == 0 && win < -40 && bp == 0 && bdraw < MAX_DRAW) {
-                                                    bflag = 13; // try to mate with no pawns (do not supercede other things like NB v. King)
+													bflag = NoPawnEnd; // try to mate with no pawns (do not supercede other things like NB v. King)
                                                 }
                                                 MaterialTable[windex][bindex].flags[WHITE] = wflag;
                                                 MaterialTable[windex][bindex].flags[BLACK] = bflag;

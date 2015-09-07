@@ -135,7 +135,6 @@ struct position_t {
 };
 
 typedef uint8 mflag_t;
-
 /* the material info structure */
 struct material_info_t {
     int16 value;

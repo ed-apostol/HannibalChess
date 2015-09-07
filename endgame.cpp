@@ -817,89 +817,90 @@ void LockedPawns(int attacker, const position_t& pos, eval_info_t& ei, int *draw
         }
     }
 }
+
 void evalEndgame(int attacker, const position_t& pos, eval_info_t& ei, int *score, int *draw) {
     mflag_t endIndex;
     endIndex = ei.endFlags[attacker];
 
     switch (endIndex) {
-    case 1: // single pawn endgames
+	case SinglePawnEnd: // single pawn endgames
         SinglePawnEnding(attacker, pos, ei, score, draw, pos.side);
         DrawnRookPawn(attacker, pos, draw, pos.side);
         break;
-    case 2: // rook endings
+	case RvREnd: // rook endings
 		RookEnding<false>(attacker, pos, ei, score, draw);
         if (SHOW_EVAL) PrintOutput() << "info string each side has a rook endgame (multiple attaker pawns)\n";
         break;
-    case 3: // bishop endings without enough pawns to lock things
+	case BvBEnd: // bishop endings without enough pawns to lock things
         if (SHOW_EVAL) PrintOutput() << "info string each side has a bishop endgame (cannot be locked)\n";
         BishopEnding(attacker, pos, ei, score, draw);
         DrawnRookPawn(attacker, pos, draw, pos.side);
         break;
-    case 4: // rook versus pawns endings
+	case RvPEnd: // rook versus pawns endings
         RookvPawnsEnding(attacker, pos, score, draw, pos.side);
         break;
-    case 5: // knight + pawn
+	case NPEnd: // knight + pawn
         DrawnNP(attacker, pos, ei, draw);
         break;
-    case 6: // Q vs. Rook + Pawn(s)
+	case QvREnd: // Q vs. Rook + Pawn(s)
         DrawnQvREnding(attacker, pos, ei, score, draw);
         break;
-    case 7: // mate with knight and bishop
+	case BNEnd: // mate with knight and bishop
         KnightBishopMate(attacker, pos, score, draw);
         break;
-    case 8:
+	case RBvRB:
         RookBishopEnding(attacker, pos, ei, draw);
         break;
-    case 9: //pawn + bishop endgame
+	case BPEnd: //pawn + bishop endgame
         DrawnRookPawn(attacker, pos, draw, pos.side);
         if (SHOW_EVAL) PrintOutput() << "info string bishop and pawn vs. endgame\n";
         break;
-    case 10: //pawn endgames with more than 1 pawn
+	case BEnd: //pawn endgames with more than 1 pawn
         DrawnRookPawn(attacker, pos, draw, pos.side);
         PawnEnding(attacker, pos, draw, pos.side);
         if (SHOW_EVAL) PrintOutput() << "info string more than one pawn endgame\n";
         break;
-    case 11: //rook against knight
+	case RvNEnd: //rook against knight
         RookvKnight(attacker, pos, score, draw);
         break;
-    case 12: //queen against pawn
+	case QvPEnd: //queen against pawn
         QueenvPawn(attacker, pos, ei, score, draw);
         break;
-    case 13:
+	case NoPawnEnd:
         MateNoPawn(attacker, pos, score);
         break;
-    case 14: //rook against bishop
+	case RPvBEnd: //rook against bishop
         DrawnRookPawnvBishop(attacker, pos, draw);
         break;
-    case 15: //bishop and pawn vs knight
+	case BPvNEnd: //bishop and pawn vs knight
         MinorPawnvMinor(attacker, pos, ei, draw);
         DrawnRookPawn(attacker, pos, draw, pos.side);
         if (SHOW_EVAL) PrintOutput() << "info string bishop and pawn vs. knight endgame\n";
         break;
-    case 16: //knight and pawn vs bishop or knight
+	case BPvMEnd: //knight and pawn vs bishop or knight
         MinorPawnvMinor(attacker, pos, ei, draw);
         if (SHOW_EVAL) PrintOutput() << "info string knight and pawn vs. minor endgame\n";
         break;
-    case 17:
+	case MPPvMPEnd:
         MinorPawnPawnvMinorPawn(attacker, pos, ei, draw);
         break;
-    case 18:
+	case BLockEnd:
         PawnEnding(attacker, pos, draw, pos.side);
         DrawnRookPawn(attacker, pos, draw, pos.side);
         LockedPawns(attacker, pos, ei, draw);
         if (SHOW_EVAL) PrintOutput() << "info string more than one pawn endgame (might be locked)\n";
         break;
-    case 19: // bishop endings WITH enough pawns to lock things
+	case BvBLockEnd: // bishop endings WITH enough pawns to lock things
         if (SHOW_EVAL) PrintOutput() << "info string each side has a bishop endgame that might be locked\n";
         BishopEnding(attacker, pos, ei, score, draw);
         DrawnRookPawn(attacker, pos, draw, pos.side);
         LockedPawns(attacker, pos, ei, draw);
         break;
-    case 20: // bishop endings WITH enough pawns to lock things
+	case MinorLock: // bishop endings WITH enough pawns to lock things
         if (SHOW_EVAL) PrintOutput() << "info string stronger side has b/n weaker side has b/n/r (not bvb) and might be locked\n";
         LockedPawns(attacker, pos, ei, draw);
         break;
-	case 21: // bishop endings WITH enough pawns to lock things
+	case RPvREnd: // bishop endings WITH enough pawns to lock things
 		RookEnding<true>(attacker, pos, ei, score, draw);
 		if (SHOW_EVAL) PrintOutput() << "info string each side has a rook endgame (single attaker pawn)\n";
 		break;
