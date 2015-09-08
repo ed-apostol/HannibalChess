@@ -307,26 +307,13 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, in
     openBitMap = ei.pawns[color] & ~((*FillPtr2[enemy])((*ShiftPtr[enemy])(pos.pawns, 8)));
     doubledBitMap = ei.pawns[color] & (*FillPtr[enemy])(ei.pawns[color]); //the least advanced ones are considered doubled
     isolatedBitMap = ei.pawns[color] & ~((*FillPtr2[color ^ 1])(ei.potentialPawnAttack[color]));
-	const uint64 tradeThreatBitMap = ei.pawns[color] & ei.atkpawns[enemy]; 
 	backwardBitMap = (*ShiftPtr[enemy])((advanceSquares & (ei.potentialPawnAttack[enemy] | ei.pawns[enemy])
-		& ~ei.potentialPawnAttack[color]), 8) & ~(isolatedBitMap | tradeThreatBitMap);
+		& ~ei.potentialPawnAttack[color]), 8) & ~(isolatedBitMap | ei.atkpawns[enemy]);
 	passedBitMap = openBitMap & ~ei.potentialPawnAttack[enemy];
 	const uint64 adjacentPawns = ei.pawns[color] & adjacent(ei.pawns[color]);
 	const uint64 guarded = ei.pawns[color] & ei.atkpawns[color];
 	const uint64 safePawns = adjacentPawns | guarded;
 	const uint64 unsafePawns = ei.pawns[color] & ~safePawns;
-	uint64 tradeThreats = tradeThreatBitMap & Rank4BB;
-	if (tradeThreats) {
-		int num = bitCnt(tradeThreats) * (color == WHITE ? Trade4 : Trade5);
-		mid_score += num;
-		end_score += num;
-	}
-	tradeThreats = tradeThreatBitMap & Rank5BB;
-	if (tradeThreats) {
-		int num = bitCnt(tradeThreats) * (color == BLACK ? Trade4 : Trade5);
-		mid_score += num;
-		end_score += num;
-	}
 	const uint64 squashSquares = (doublePawnGuard(ei.pawns[enemy], enemy) & ~ei.atkpawns[color]) | (advanceSquares & pos.pawns);
 	uint64 connected = safePawns & pastThirdRank[color];
 	while (connected) {
@@ -443,11 +430,10 @@ inline int outpost(const position_t& pos, eval_info_t& ei, const int color, cons
 }
 
 void evalPawnPushes(const position_t& pos, eval_info_t& ei, const int color) {
-    
-    uint64 frontSquares = (*ShiftPtr[color])(ei.pawns[color], 8);
-    uint64 safePawnMove = frontSquares & ~(pos.occupied) & (ei.atkall[color] | ~(ei.atkall[color ^ 1]));
-    
-    int numSafe = bitCnt(safePawnMove);
+	const uint64 frontSquares = (*ShiftPtr[color])(ei.pawns[color], 8);
+	uint64 safePawnMove = frontSquares & ~(pos.occupied) & (ei.atkall[color] | ~(ei.atkall[color ^ 1]));
+    const int numSafe = bitCnt(safePawnMove);
+
     ei.mid_score[color] += numSafe * 4;
     ei.end_score[color] += numSafe * 5;
 
@@ -465,11 +451,11 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
     int from, temp1;
     const int enemy = color ^ 1;
     uint64 mobileSquare;
-    uint64 notOwnColor = ~pos.color[color];
+    const uint64 notOwnColor = ~pos.color[color];
     uint64 notOwnSkeleton;
     int threatScore = 0;
     uint64 boardSkeleton = pos.pawns;
-    uint64 maybeTrapped = bewareTrapped[color] & ~ei.atkpawns[color];
+    const uint64 maybeTrapped = bewareTrapped[color] & ~ei.atkpawns[color];
     uint64 pawnTargets = ei.pawns[enemy] & ~ei.atkpawns[enemy];
     uint64 attackBlockers = ((pos.pawns | pos.kings) & pos.color[color]) | (ei.pawns[enemy] & ei.atkpawns[enemy]);
 
@@ -673,32 +659,31 @@ void evalThreats(const position_t& pos, eval_info_t& ei, const int color) {
     ei.mid_score[color] += temp1 * PieceAttackMulMid;
     ei.end_score[color] += temp1 * PieceAttackMulEnd;
     ///now some serious threats
-    {
-        uint64 unprotected = enemy_pcs & ~ei.atkall[color ^ 1];
-        //undefended minors get penalty
-        uint64 unprotectedMinors = unprotected & (pos.bishops | pos.knights);
-        if (unprotectedMinors) {
-            int umScore = MinTwoBits(unprotectedMinors) ? 2 : 1;
-            ei.mid_score[color] += 13 * umScore;
-            ei.end_score[color] += 5 * umScore;
-        }
-        uint64 threatB = unprotected & ei.atkall[color];
-        uint64 target = enemy_pcs & pos.queens;
-
-        threatB |= (ei.atkrooks[color]) & target;
-        target |= enemy_pcs & pos.rooks;
-        threatB |= (ei.atkbishops[color] | ei.atkknights[color]) & target;
-        target |= enemy_pcs & (pos.knights | pos.bishops);
-        threatB |= ei.atkpawns[color] & target;
-
-        if (threatB) {
-            int numThreats = bitCnt(threatB);
-            //only really takes double threats for the opponent seriously, since its not handled well by qsearch and such
-            numThreats += (pos.side == color);
-            ei.mid_score[color] += ThreatBonus[numThreats];
-            ei.end_score[color] += ThreatBonus[numThreats];
-        }
+    uint64 unprotected = enemy_pcs & ~ei.atkall[color ^ 1];
+    //undefended minors get penalty
+    uint64 unprotectedMinors = unprotected & (pos.bishops | pos.knights);
+    if (unprotectedMinors) {
+        int umScore = MinTwoBits(unprotectedMinors) ? 2 : 1;
+        ei.mid_score[color] += 13 * umScore;
+        ei.end_score[color] += 5 * umScore;
     }
+    uint64 threatB = unprotected & ei.atkall[color];
+    uint64 target = enemy_pcs & pos.queens;
+
+    threatB |= (ei.atkrooks[color]) & target;
+    target |= enemy_pcs & pos.rooks;
+    threatB |= (ei.atkbishops[color] | ei.atkknights[color]) & target;
+    target |= enemy_pcs & (pos.knights | pos.bishops);
+    threatB |= ei.atkpawns[color] & target;
+
+    if (threatB) {
+        int numThreats = bitCnt(threatB);
+        //only really takes double threats for the opponent seriously, since its not handled well by qsearch and such
+        numThreats += (pos.side == color);
+        ei.mid_score[color] += ThreatBonus[numThreats];
+        ei.end_score[color] += ThreatBonus[numThreats];
+    }
+
 }
 static const int kingCastleBonus = (PST(WHITE, KING, G1, MIDGAME) - PST(WHITE, KING, E1, MIDGAME))/2;
 static const int queenCastleBonus = (PST(WHITE, KING, C1, MIDGAME) - PST(WHITE, KING, E1, MIDGAME))/2;

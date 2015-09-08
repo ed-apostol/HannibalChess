@@ -866,7 +866,7 @@ void Engine::GetBestMove(Thread& sthread) {
                 alpha = -INF;
                 beta = INF;
             }
-            else {
+            else { 
 				alpha = info.last_value - AspirationWindow;
 				beta = info.last_value + AspirationWindow;
 				if (alpha < -QueenValue) alpha = -INF;

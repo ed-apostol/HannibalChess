@@ -46,10 +46,7 @@ enum endgameFlags {
 	MinorLock = 20,
 	RPvREnd = 21
 };
-//ENDGAME FLAGS (32 bits)
-const int OPPOSITE_BISHOPS = 1;
 
-//N+B - R + P = 68
 const int  PawnValueOpen = 89;	
 const int KnightValueOpen = 300;	
 const int BishopValueOpen = 311;	
