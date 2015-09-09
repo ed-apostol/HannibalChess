@@ -52,9 +52,9 @@ move_t* getMove(movelist_t& mvlist) {
     *best = *temp;
     return start;
 }
-inline int scoreNonTactical(uint32 side, uint32 move, Thread& sthread) {
-    int score = sthread.history[historyIndex(side, move)];
-    return score;
+inline int scoreNonTactical(const uint32 side, const int32 move, Thread& sthread) {
+	int score = sthread.history[historyIndex(side, move)] + sthread.evalgains[historyIndex(side, move)];
+	return score;
 }
 
 bool captureIsGood(const position_t& pos, const basic_move_t m) {
@@ -75,24 +75,13 @@ bool captureIsGood(const position_t& pos, const basic_move_t m) {
 
 void scoreCapturesPure(movelist_t& mvlist) {
     move_t *m;
-
     for (m = &mvlist.list[mvlist.pos]; m < &mvlist.list[mvlist.size]; m++) {
-        m->s = (moveCapture(m->m) * 6) + movePromote(m->m) - movePiece(m->m);
-    }
-}
-
-void scoreCaptures(movelist_t& mvlist) {
-    move_t *m;
-
-    for (m = &mvlist.list[mvlist.pos]; m < &mvlist.list[mvlist.size]; m++) {
-        m->s = (moveCapture(m->m) * 6) + movePromote(m->m) - movePiece(m->m);
-        if (m->m == mvlist.transmove) m->s += MAXHIST;
+		m->s = (moveCapture(m->m) * 6) + movePromote(m->m) - movePiece(m->m);
     }
 }
 
 void scoreNonCaptures(movelist_t& mvlist, Thread& sthread) {
     move_t *m;
-
     for (m = &mvlist.list[mvlist.pos]; m < &mvlist.list[mvlist.size]; m++) {
         m->s = scoreNonTactical(mvlist.side, m->m, sthread);
     }
@@ -240,7 +229,7 @@ move_t* sortNext(SplitPoint* sp, SearchInfo& info, position_t& pos, movelist_t& 
         case PH_GOOD_CAPTURES:
         case PH_GOOD_CAPTURES_PURE:
             genCaptures(pos, mvlist);
-            scoreCapturesPure(mvlist);
+			scoreCapturesPure(mvlist);
             break;
         case PH_BAD_CAPTURES:
             for (int i = MAXMOVES - 1; i >= mvlist.startBad; --i) {

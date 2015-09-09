@@ -453,7 +453,6 @@ void InitMaterial(void) {
                                                 if (wdraw > MAX_DRAW) wdraw = MAX_DRAW;
                                                 if (bdraw < 0) bdraw = 0;
                                                 if (bdraw > MAX_DRAW) bdraw = MAX_DRAW;
-
                                                 if (wdraw == MAX_DRAW && bdraw < MAX_DRAW && win > -10) win = -10;
                                                 if (bdraw == MAX_DRAW && wdraw < MAX_DRAW && win < 10) win = 10;
 
