@@ -853,16 +853,15 @@ void Engine::GetBestMove(Thread& sthread) {
     // SMP
     InitVars();
     SetAllThreadsToWork();
-
-    for (id = 1; id < MAXPLY; id++) {
-		const int AspirationWindow = 12; 
+	for (id = 1; id < MAXPLY; id++) {
+		const int AspirationWindow = 12;
         int faillow = 0, failhigh = 0;
         info.iteration = id;
         info.best_value = -INF;
         info.change = 0;
-        info.research = 0;
-        for (info.multipvIdx = 0; info.multipvIdx < info.multipv; ++info.multipvIdx) {
-            if (id < 6) {
+        info.research = 0; 
+		for (info.multipvIdx = 0; info.multipvIdx < info.multipv; ++info.multipvIdx) {
+			if (id < 6) {
                 alpha = -INF;
                 beta = INF;
             }
