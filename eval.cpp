@@ -34,8 +34,8 @@ const int KScastleTo[2] = { g1, g8 };
 const int QScastleTo[2] = { c1, c8 };
 
 #define MINOR_SHIELD 12
-#define TEMPO_OPEN 20 //20
-#define TEMPO_END 10 //10
+#define TEMPO_OPEN 20 
+#define TEMPO_END 10
 
 class Personality {
 public:
@@ -108,6 +108,11 @@ const int EndgameKnightPawnPressure = 9;
 // king specific evaluation
 const int kingAttackWeakness[8] = { 0, 22, 12, 5, 3, 1, 0, 0 };
 
+//pawn specific evaluttion
+static const int MSAFE_PPUSH = 4;
+static const int ESAFE_PPUSH = 5;
+static const int MPPUSH_THREAT = 8;
+static const int EPPUSH_THREAT = 8;
 #define DOUBLED_O 2
 #define DOUBLED_E 4
 #define DOUBLED_OPEN_O 2
@@ -173,7 +178,7 @@ const int QueenAttackPower = 1;
 const int RookAttackPower = 2; 
 const int BishopAttackPower = 3; 
 const int KnightAttackPower = 3; 
-const int PawnAttackPower = 4; 
+const int PawnAttackPower = 5; 
 
 const int PieceAttackMulMid = 4; 
 const int PieceAttackMulEnd = 3; 
@@ -288,6 +293,13 @@ int BBwidth(const uint64 BB) {
     while ((BB & FileMask[right]) == 0) right--;
     return right - left;
 }
+inline uint64 pawnAttackBB(const uint64 pawns, const int color) {
+	static const int Shift[] = { 9, 7 };
+	const uint64 pawnAttackLeft = (*ShiftPtr[color])(pawns, Shift[color ^ 1]) & ~FileHBB;
+	const uint64 pawnAttackright = (*ShiftPtr[color])(pawns, Shift[color]) & ~FileABB;
+	return (pawnAttackLeft | pawnAttackright);
+
+}
 inline uint64 doublePawnGuard(const uint64 pawns, const int color) {
 	static const int Shift[] = { 9, 7 };
 	const uint64 pawnAttackLeft = (*ShiftPtr[color])(pawns, Shift[color ^ 1]) & ~FileHBB;
@@ -295,8 +307,6 @@ inline uint64 doublePawnGuard(const uint64 pawns, const int color) {
 	return (pawnAttackLeft & pawnAttackright);
 }
 
-static const int Trade4 = 5;
-static const int Trade5 = 10;
 void evalPawnsByColor(const position_t& pos, eval_info_t& ei, int& mid_score, int& end_score, const int color) {
     static const int weakFile[8] = { 0, 2, 3, 3, 3, 3, 2, 0 };
     static const int weakRank[8] = { 0, 0, 2, 4, 6, 8, 10, 0 };
@@ -431,20 +441,31 @@ inline int outpost(const position_t& pos, eval_info_t& ei, const int color, cons
 }
 
 void evalPawnPushes(const position_t& pos, eval_info_t& ei, const int color) {
-	const uint64 frontSquares = (*ShiftPtr[color])(ei.pawns[color], 8);
-	uint64 safePawnMove = frontSquares & ~(pos.occupied) & (ei.atkall[color] | ~(ei.atkall[color ^ 1]));
-    const int numSafe = bitCnt(safePawnMove);
-
-    ei.mid_score[color] += numSafe * 4;
-    ei.end_score[color] += numSafe * 5;
-
+	static const uint64 Rank4[] = { Rank4BB, Rank5BB };
+	uint64 frontSquares = (*ShiftPtr[color])(ei.pawns[color], 8) & ~(pos.occupied)  & ~ei.atkpawns[color ^ 1];
+	frontSquares |= (*ShiftPtr[color])(frontSquares, 8) & ~pos.occupied & Rank4[color] & ~ei.atkpawns[color ^ 1];
+	uint64 safePawnMove = frontSquares & (ei.atkall[color] | ~(ei.atkall[color ^ 1]));
+	const int numSafe = bitCnt(safePawnMove);
+	ei.mid_score[color] += numSafe * MSAFE_PPUSH; 
+	ei.end_score[color] += numSafe * ESAFE_PPUSH; 
+	uint64 attackMoves = pawnAttackBB(safePawnMove, color) & (pos.color[color ^ 1] & ~pos.pawns);
+	if (attackMoves) {
+		const int numAttacks = bitCnt(attackMoves);
+		ei.mid_score[color] += numAttacks * MPPUSH_THREAT; 
+		ei.end_score[color] += numAttacks * EPPUSH_THREAT; 
+	}
     if (SHOW_EVAL) {
         while (safePawnMove) { //by definition this is not on the 7th rank
             int sq = popFirstBit(&safePawnMove);
             PrintOutput() << "info string sp " << (char) (SQFILE(sq) + 'a') <<
                 (char)('1' + SQRANK(sq)) << " \n";
         }
-    }
+		while (attackMoves) { //by definition this is not on the 7th rank
+			int sq = popFirstBit(&attackMoves);
+			PrintOutput() << "info string am " << (char)(SQFILE(sq) + 'a') <<
+				(char)('1' + SQRANK(sq)) << " \n";
+		}
+	}
 }
 /*
 void evalKnight(const position_t& pos, eval_info_t& ei, const uint64 pawnTargets, const uint64 mobileSquares, const uint64 weak_sq_mask, const uint64 maybeTrapped, const int color, const int enemy) {
@@ -685,7 +706,7 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
             ei.mid_score[color] += temp1;
             ei.end_score[color] += temp1;
         }
-		if ((fromMask & boardSide[color]) && (BitMask[from + PAWN_MOVE_INC(color)] & pos.pawns)) ei.mid_score[color] += MINOR_BLOCKER; ///hhh22
+		if ((fromMask & boardSide[color]) && (BitMask[from + PAWN_MOVE_INC(color)] & pos.pawns)) ei.mid_score[color] += MINOR_BLOCKER;
         if ((maybeTrapped & fromMask) && temp1 < 2) //trapped piece if you are in opponent area and you have very few safe moves
             ei.mid_score[color] -= TRAPPED_PENALTY;
     }
@@ -734,7 +755,7 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
             ei.mid_score[color] += temp1;
             ei.end_score[color] += temp1;
         }
-		if ((fromMask & boardSide[color]) && (BitMask[from + PAWN_MOVE_INC(color)] & pos.pawns)) ei.mid_score[color] += MINOR_BLOCKER; ///hhh22
+		if ((fromMask & boardSide[color]) && (BitMask[from + PAWN_MOVE_INC(color)] & pos.pawns)) ei.mid_score[color] += MINOR_BLOCKER; 
     }
     pc_bits = pos.rooks & pos.color[color];
     ei.kingatkrooks[color] = 0;
