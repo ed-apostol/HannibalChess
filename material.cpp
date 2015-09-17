@@ -289,8 +289,6 @@ void InitMaterial(void) {
                                                     - ((bb >= 2) * BishopPairBonusOpen)
                                                     + ((wp - 5) * wn * 0) - ((bp - 5) * bn * 0)
                                                     - ((wp - 5) * wr * 5) + ((bp - 5) * br * 5)
-                                                    //            - ((wr==2) * (16-3)) + ((br==2) * (16-3))
-                                                    //            - ((wq+wr>2) * 8) + ((bq+br>2) * 8)
                                                     ;
 
                                                 midscore1 =
@@ -303,8 +301,6 @@ void InitMaterial(void) {
                                                     - ((bb >= 2) * BishopPairBonusMid1)
                                                     + ((wp - 5) * wn * 2) - ((bp - 5) * bn * 2)
                                                     - ((wp - 5) * wr * 4) + ((bp - 5) * br * 4)
-                                                    //            - ((wr==2) * (20-6)) + ((br==2) * (20-6))
-                                                    //            - ((wq+wr>2) * 10) + ((bq+br>2) * 10)
                                                     ;
 
                                                 midscore2 =
@@ -429,7 +425,7 @@ void InitMaterial(void) {
                                                     openscore *= phase - 24;
                                                     win = (openscore + midscore1) / 8;
                                                 }
-                                                // now adjust draw
+												// now adjust draw
 
                                                 wdraw = 0;
                                                 bdraw = 0;
@@ -562,11 +558,17 @@ void InitMaterial(void) {
                                                 if (bq == 0 && br == 0 && bb == 0 && bn == 1 && (wq + wr + wb + wn) >= 1 && block) {
 													bflag = MinorLock; //attacker has knight and lots of pawns, defender has non queen and lots of pawns
                                                 }
-                                                //TODO consider expanding to include more pieces (rook, queen, more minors, etc.
-                                                if (wflag == 0 && win > 40 && wp == 0 && wdraw < MAX_DRAW) {
+												if (wq == 1 && wr == 0 && wminors == 0 && wp == 1 && bq) {
+													wflag = QPvQEnd;
+												}
+												if (bq == 1 && br == 0 && bminors == 0 && bp == 1 && wq) {
+													bflag = QPvQEnd;
+												}
+												//TODO consider expanding to include more pieces (rook, queen, more minors, etc.
+												if (wflag == NoEnd && win > 40 && wp == 0 && wdraw < MAX_DRAW) {
 													wflag = NoPawnEnd; // try to mate with no pawns (do not supercede other things like NB v. King)
                                                 }
-                                                if (bflag == 0 && win < -40 && bp == 0 && bdraw < MAX_DRAW) {
+												if (bflag == NoEnd && win < -40 && bp == 0 && bdraw < MAX_DRAW) {
 													bflag = NoPawnEnd; // try to mate with no pawns (do not supercede other things like NB v. King)
                                                 }
                                                 MaterialTable[windex][bindex].flags[WHITE] = wflag;

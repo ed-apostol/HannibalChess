@@ -20,6 +20,8 @@ extern uint64 fillDown2(uint64 b);
 extern uint64 shiftLeft(uint64 b, uint32 i);
 extern uint64 shiftRight(uint64 b, uint32 i);
 extern uint64 adjacent(const uint64 BB);
+extern uint64 pawnAttackBB(const uint64 pawns, const int color);
+extern uint64 doublePawnAttackBB(const uint64 pawns, const int color);
 
 #define MaxOneBit(x) (((x) & ((x)-1))==0)
 #define MinTwoBits(x) ((x) & ((x)-1))

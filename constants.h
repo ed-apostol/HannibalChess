@@ -22,6 +22,7 @@ enum files {
 enum ranks {
     Rank1, Rank2, Rank3, Rank4, Rank5, Rank6, Rank7, Rank8
 };
+
 enum endgameFlags {
 	NoEnd = 0,
 	SinglePawnEnd = 1,
@@ -44,7 +45,8 @@ enum endgameFlags {
 	BLockEnd = 18,
 	BvBLockEnd = 19,
 	MinorLock = 20,
-	RPvREnd = 21
+	RPvREnd = 21,
+	QPvQEnd = 22
 };
 
 const int  PawnValueOpen = 89;	
@@ -64,7 +66,7 @@ const int BishopPairBonusMid1 = 41;
 const int PawnValueMid2 = 115;	
 const int KnightValueMid2 = 348;
 const int BishopValueMid2 = 333;
-const int RookValueMid2 = 580 - 20;	
+const int RookValueMid2 = 560;	
 const int QueenValueMid2 = 1080;	
 const int BishopPairBonusMid2 = 51;	
 

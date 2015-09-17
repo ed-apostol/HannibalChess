@@ -162,3 +162,16 @@ uint64 shiftRight(uint64 b, uint32 i) {
 inline uint64 adjacent(const uint64 BB) {
 	return (BB & (shiftLeft(BB & ~FileHBB, 1) | shiftRight(BB & ~FileABB, 1)));
 }
+inline uint64 pawnAttackBB(const uint64 pawns, const int color) {
+	static const int Shift[] = { 9, 7 };
+	const uint64 pawnAttackLeft = (*ShiftPtr[color])(pawns, Shift[color ^ 1]) & ~FileHBB;
+	const uint64 pawnAttackright = (*ShiftPtr[color])(pawns, Shift[color]) & ~FileABB;
+	return (pawnAttackLeft | pawnAttackright);
+}
+inline uint64 doublePawnAttackBB(const uint64 pawns, const int color) {
+	static const int Shift[] = { 9, 7 };
+	const uint64 pawnAttackLeft = (*ShiftPtr[color])(pawns, Shift[color ^ 1]) & ~FileHBB;
+	const uint64 pawnAttackright = (*ShiftPtr[color])(pawns, Shift[color]) & ~FileABB;
+	return (pawnAttackLeft & pawnAttackright);
+
+}

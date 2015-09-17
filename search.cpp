@@ -684,6 +684,7 @@ void Engine::DisplayPV(continuation_t& pv, int multipvIdx, int depth, int alpha,
     time = getTime();
     info.last_time = time;
     time = info.last_time - info.start_time;
+	score = (score * 100) / PawnValueEnd; //this keeps output regular even after automated turning of material values and such
 
     log << "info depth " << depth;
     if (abs(score) < (INF - MAXPLY)) {
