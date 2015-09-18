@@ -16,7 +16,7 @@
 #include "init.h"
 #include "bitutils.h"
 
-int mpawn(int sq) {
+int16 mpawn(int sq) {
     int central[8] = { 2, 1, 0, -1, -1, -1, -1, -1 };
     int file[8] = { -16, -7, -1, 5, 5, -1, -7, -16 };
     int rank[8] = { 0, -3, -2, 0, 1, 2, 0, 0 };
@@ -24,7 +24,7 @@ int mpawn(int sq) {
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
 }
-int epawn(int sq) {
+int16 epawn(int sq) {
     int file[8] = { -4, -5, -7, -8, -8, -7, -5, -4 };
     int rank[8] = { 0, -2, -3, 1, 4, 7, 1, 0 };
     int f = SQFILE(sq);
@@ -42,14 +42,14 @@ int outpost(int sq) {
     if (value < 0) value = 0;
     return value;
 }
-int mknight(int sq) {
+int16 mknight(int sq) {
     int file[8] = { -26, -9, 2, 5, 5, 2, -9, -26 };
     int rank[8] = { -30, -9, 6, 16, 20, 19, 11, -11 };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (file[f] + rank[r]);
 }
-int eknight(int sq) {
+int16 eknight(int sq) {
     int central[8] = { 3, 2, 1, 0, -2, -4, -6, -8 };
     int file[8] = { -10, -3, 0, 2, 2, 0, -3, -10 };
     int rank[8] = { -10, -4, -1, 2, 4, 6, 3, -5 };
@@ -57,26 +57,25 @@ int eknight(int sq) {
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
 }
-int mbishop(int sq) {
+int16 mbishop(int sq) {
     int central[8] = { 11, 6, 2, -2, -4, -6, -7, -11 };
     int rank[8] = { -7, 0, 0, 0, 0, 0, 0, -1 };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)] + rank[r]);
 }
-
-int ebishop(int sq) {
+int16 ebishop(int sq) {
     int central[8] = { 5, 3, 1, 1, -2, -2, -3, -5 };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)]);
 }
-int mrook(int sq) {
+int16 mrook(int sq) {
     int file[8] = { -2, 1, 4, 7, 7, 4, 1, -2 };
     int f = SQFILE(sq);
     return (file[f]);
 }
-int mqueen(int sq) {
+int16 mqueen(int sq) {
     int central[8] = { 4, 2, 0, -1, -2, -4, -6, -9 };
     int file[8] = { -3, 0, 1, 3, 3, 1, 0, -3 };
     int rank[8] = { -7, 0, 0, 1, 1, 0, 0, -1 };
@@ -84,7 +83,7 @@ int mqueen(int sq) {
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
 }
-int equeen(int sq) {
+int16 equeen(int sq) {
     int central[8] = { 3, 2, 1, -1, -3, -5, -7, -11 };
     int file[8] = { -3, 0, 1, 3, 3, 1, 0, -3 };
     int rank[8] = { -3, 0, 1, 3, 3, 1, 0, -3 };
@@ -102,7 +101,7 @@ int equeen(int sq) {
 #define MKR3 4 //4
 #define MKR4 4 //4
 #define MKR5 4 //4
-int mking(int sq) {
+int16 mking(int sq) {
     int file[8] = { MKF2 - MKF1, MKF2, 0, -MKF3, -MKF3, 0, MKF2, MKF2 - MKF1 };
     int rank[8] = { MKR1, 0, -MKR2, -MKR2 - MKR3, -MKR2 - MKR3 - MKR4, -MKR2 - MKR3 - MKR4 - MKR5, -MKR2 - MKR3 - MKR4 - MKR5, -MKR2 - MKR3 - MKR4 - MKR5 };
 
@@ -111,7 +110,7 @@ int mking(int sq) {
     return (file[f] + rank[r]);
 }
 
-int eking(int sq) {
+int16 eking(int sq) {
     int central[8] = { 0, -2, -4, -7, -10, -14, -23, -32 };
     int file[8] = { -13, 1, 11, 16, 16, 11, 1, -13 };
     int rank[8] = { -29, -4, 1, 6, 10, 6, 1, -10 };
@@ -131,37 +130,23 @@ void initPST() {
 
     int i, j, k;
 
-    memset(PcSqTb, 0, sizeof(PcSqTb));
     for (i = 0; i < 64; i++) {
-        // do pawns
-        PST(WHITE, PAWN, i, MIDGAME) = mpawn(i);
-        PST(WHITE, PAWN, i, ENDGAME) = epawn(i);
-        // do knights
-        PST(WHITE, KNIGHT, i, MIDGAME) = mknight(i);
-        PST(WHITE, KNIGHT, i, ENDGAME) = eknight(i);
-        // do bishops
-        PST(WHITE, BISHOP, i, MIDGAME) = mbishop(i);
-        PST(WHITE, BISHOP, i, ENDGAME) = ebishop(i);
-        // do rooks
-        PST(WHITE, ROOK, i, MIDGAME) = mrook(i); //no endgame values for rook
-        // do queens
-        PST(WHITE, QUEEN, i, MIDGAME) = mqueen(i);
-        PST(WHITE, QUEEN, i, ENDGAME) = equeen(i);
-        // do king
-        PST(WHITE, KING, i, MIDGAME) = mking(i);
-        PST(WHITE, KING, i, ENDGAME) = eking(i);
-
+		PST(WHITE, PAWN, i) = ComposeEvalScore(mpawn(i), epawn(i));
+		PST(WHITE, KNIGHT, i) = ComposeEvalScore(mknight(i), eknight(i));
+		PST(WHITE, BISHOP, i) = ComposeEvalScore(mbishop(i), ebishop(i));
+		PST(WHITE, ROOK, i) = ComposeEvalScore(mrook(i),0); //no endgame values for rook
+		PST(WHITE, QUEEN, i) = ComposeEvalScore(mqueen(i), equeen(i));
+		PST(WHITE, KING, i) = ComposeEvalScore(mking(i),eking(i));
         //do outposts
         int oScore = outpost(i);
         OutpostValue[WHITE][i] = oScore;
         OutpostValue[BLACK][((7 - SQRANK(i)) * 8) + SQFILE(i)] = oScore;
     }
 
-    for (i = 0; i < 8; i++) {
+	for (i = PAWN; i <= KING; i++) {
         for (j = 0; j < 64; j++) {
             k = ((7 - SQRANK(j)) * 8) + SQFILE(j);
-            PST(BLACK, i, k, MIDGAME) = PST(WHITE, i, j, MIDGAME);
-            PST(BLACK, i, k, ENDGAME) = PST(WHITE, i, j, ENDGAME);
+            PST(BLACK, i, k) = PST(WHITE, i, j);
         }
     }
     for (j = 0; j < 64; j++) {

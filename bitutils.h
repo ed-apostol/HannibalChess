@@ -25,3 +25,7 @@ extern uint64 doublePawnAttackBB(const uint64 pawns, const int color);
 
 #define MaxOneBit(x) (((x) & ((x)-1))==0)
 #define MinTwoBits(x) ((x) & ((x)-1))
+
+extern EvalScore ComposeEvalScore(int16 s1, int16 s2);
+extern int16 GetOpening(EvalScore s1);
+extern int16 GetEndgame(EvalScore s1);

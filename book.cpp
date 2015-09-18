@@ -71,10 +71,10 @@ basic_move_t polyglot_move_to_move(uint16 move, position_t& pos) {
         }
     }
     if (movedPiece == KING) {
-        if (from == E1 && to == H1) return GenWhiteOO();
-        if (from == E1 && to == A1) return GenWhiteOOO();
-        if (from == E8 && to == H8) return GenBlackOO();
-        if (from == E8 && to == A8) return  GenBlackOOO();
+        if (from == e1 && to == h1) return GenWhiteOO();
+        if (from == e1 && to == a1) return GenWhiteOOO();
+        if (from == e8 && to == h8) return GenBlackOO();
+        if (from == e8 && to == a8) return  GenBlackOOO();
     }
     if (movedPiece == PAWN && to == pos.posStore.epsq) return GenEnPassant(from, to);
     return GenBasicMove(from, to, movedPiece, capturedPiece);

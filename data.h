@@ -55,7 +55,7 @@ zero otherwise */
 extern int DirFromTo[64][64];
 
 /* used for pre-computed piece-square table */
-extern int PcSqTb[2048];
+extern EvalScore PieceSquareTable[2][KING][64];
 extern int OutpostValue[2][64];
 /* used in updating the castle status of the position */
 extern int CastleMask[64];

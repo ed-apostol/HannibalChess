@@ -175,3 +175,6 @@ inline uint64 doublePawnAttackBB(const uint64 pawns, const int color) {
 	return (pawnAttackLeft & pawnAttackright);
 
 }
+inline EvalScore ComposeEvalScore(int16 s1, int16 s2) { return COMP(s1,s2); }
+inline int16 GetOpening(EvalScore s1) { return ((int16)(s1 & 0xFFFF)); }
+inline int16 GetEndgame(EvalScore s1) { return (((s1 >> 15) & 1) + (int16)(s1 >> 16)); }

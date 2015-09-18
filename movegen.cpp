@@ -99,24 +99,24 @@ void genNonCaptures(const position_t& pos, movelist_t& mvlist) {
     mvlist.size = mvlist.pos;
 
     if (pos.side == BLACK) { //TODO consider writing so we don't need this expensive branch
-        if ((pos.posStore.castle&BCKS) && (!(occupied&(F8 | G8)))) {
-            if (!isAtt(pos, pos.side ^ 1, E8 | F8 | G8))
+        if ((pos.posStore.castle&BCKS) && (!(occupied&(F8BB | G8BB)))) {
+            if (!isAtt(pos, pos.side ^ 1, E8BB | F8BB | G8BB))
                 mvlist.list[mvlist.size++].m = GenBlackOO();
         }
-        if ((pos.posStore.castle&BCQS) && (!(occupied&(B8 | C8 | D8)))) {
-            if (!isAtt(pos, pos.side ^ 1, E8 | D8 | C8))
+        if ((pos.posStore.castle&BCQS) && (!(occupied&(B8BB | C8BB | D8BB)))) {
+            if (!isAtt(pos, pos.side ^ 1, E8BB | D8BB | C8BB))
                 mvlist.list[mvlist.size++].m = GenBlackOOO();
         }
         pc_bits_1 = (pos.pawns & allies & ~Rank2BB) & ((~occupied) << 8);
         pc_bits_2 = (pos.pawns & allies & Rank7BB) & ((~occupied) << 8) & ((~occupied) << 16);
     }
     else {
-        if ((pos.posStore.castle&WCKS) && (!(occupied&(F1 | G1)))) {
-            if (!isAtt(pos, pos.side ^ 1, E1 | F1 | G1))
+        if ((pos.posStore.castle&WCKS) && (!(occupied&(F1BB | G1BB)))) {
+            if (!isAtt(pos, pos.side ^ 1, E1BB | F1BB | G1BB))
                 mvlist.list[mvlist.size++].m = GenWhiteOO();
         }
-        if ((pos.posStore.castle&WCQS) && (!(occupied&(B1 | C1 | D1)))) {
-            if (!isAtt(pos, pos.side ^ 1, E1 | D1 | C1))
+        if ((pos.posStore.castle&WCQS) && (!(occupied&(B1BB | C1BB | D1BB)))) {
+            if (!isAtt(pos, pos.side ^ 1, E1BB | D1BB | C1BB))
                 mvlist.list[mvlist.size++].m = GenWhiteOOO();
         }
         pc_bits_1 = (pos.pawns & allies & ~Rank7BB) & ((~occupied) >> 8);
@@ -591,16 +591,16 @@ void genQChecks(const position_t& pos, movelist_t& mvlist) {
         }
     }
     if (((us == WHITE) ? (pos.posStore.castle & WCKS) : (pos.posStore.castle & BCKS))
-        && (!(pos.occupied & ((us == WHITE) ? (F1 | G1) : (F8 | G8))))
-        && !isAtt(pos, pos.side ^ 1, (us == WHITE) ? (E1 | F1 | G1) : (E8 | F8 | G8))) {
+        && (!(pos.occupied & ((us == WHITE) ? (F1BB | G1BB) : (F8BB | G8BB))))
+        && !isAtt(pos, pos.side ^ 1, (us == WHITE) ? (E1BB | F1BB | G1BB) : (E8BB | F8BB | G8BB))) {
         bit1 = pos.occupied ^ BitMask[(us == WHITE) ? e1 : e8] ^
             BitMask[(us == WHITE) ? g1 : g8];
         if (rookAttacksBB(ksq, bit1) & BitMask[(us == WHITE) ? f1 : f8])
             mvlist.list[mvlist.size++].m = (us == WHITE) ? GenWhiteOO() : GenBlackOO();
     }
     if (((us == WHITE) ? (pos.posStore.castle & WCQS) : (pos.posStore.castle & BCQS))
-        && (!(pos.occupied & ((us == WHITE) ? (B1 | C1 | D1) : (B8 | C8 | D8))))
-        && !isAtt(pos, pos.side ^ 1, (us == WHITE) ? (E1 | D1 | C1) : (E8 | D8 | C8))) {
+        && (!(pos.occupied & ((us == WHITE) ? (B1BB | C1BB | D1BB) : (B8BB | C8BB | D8BB))))
+        && !isAtt(pos, pos.side ^ 1, (us == WHITE) ? (E1BB | D1BB | C1BB) : (E8BB | D8BB | C8BB))) {
         bit1 = pos.occupied ^ BitMask[(us == WHITE) ? e1 : e8] ^
             BitMask[(us == WHITE) ? c1 : c8];
         if (rookAttacksBB(ksq, bit1) & BitMask[(us == WHITE) ? d1 : d8])
@@ -677,20 +677,20 @@ bool genMoveIfLegal(const position_t& pos, uint32 move, uint64 pinned) {
             if (me == WHITE) {
                 if (from != e1) return false;
                 if (to == g1) {
-                    if (!(pos.posStore.castle & WCKS) || (occupied&(F1 | G1)) || isAtt(pos, opp, E1 | F1 | G1)) return false;
+                    if (!(pos.posStore.castle & WCKS) || (occupied&(F1BB | G1BB)) || isAtt(pos, opp, E1BB | F1BB | G1BB)) return false;
                 }
                 else if (to == c1) {
-                    if (!(pos.posStore.castle & WCQS) || (occupied&(B1 | C1 | D1)) || isAtt(pos, opp, C1 | D1 | E1)) return false;
+                    if (!(pos.posStore.castle & WCQS) || (occupied&(B1BB | C1BB | D1BB)) || isAtt(pos, opp, C1BB | D1BB | E1BB)) return false;
                 }
                 else return false;
             }
             else {
                 if (from != e8) return false;
                 if (to == g8) {
-                    if (!(pos.posStore.castle & BCKS) || (occupied&(F8 | G8)) || isAtt(pos, opp, E8 | F8 | G8)) return false;
+                    if (!(pos.posStore.castle & BCKS) || (occupied&(F8BB | G8BB)) || isAtt(pos, opp, E8BB | F8BB | G8BB)) return false;
                 }
                 else if (to == c8) {
-                    if (!(pos.posStore.castle & BCQS) || (occupied&(B8 | C8 | D8)) || isAtt(pos, opp, C8 | D8 | E8)) return false;
+                    if (!(pos.posStore.castle & BCQS) || (occupied&(B8BB | C8BB | D8BB)) || isAtt(pos, opp, C8BB | D8BB | E8BB)) return false;
                 }
                 else return false;
             }
