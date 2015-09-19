@@ -919,33 +919,6 @@ void Engine::GetBestMove(Thread& sthread) {
 
     SendBestMove();
 }
-#define MKF1 04 //5
-#define MKF2 30 //30
-#define MKF3 20 //20
-
-#define MKR1 3 //3
-#define MKR2 5 //5
-#define MKR3 4 //4
-#define MKR4 4 //4
-#define MKR5 4 //4
-int16 mking2(int sq) {
-	int file[8] = { MKF2 - MKF1, MKF2, 0, -MKF3, -MKF3, 0, MKF2, MKF2 - MKF1 };
-	int rank[8] = { MKR1, 0, -MKR2, -MKR2 - MKR3, -MKR2 - MKR3 - MKR4, -MKR2 - MKR3 - MKR4 - MKR5, -MKR2 - MKR3 - MKR4 - MKR5, -MKR2 - MKR3 - MKR4 - MKR5 };
-
-	int f = SQFILE(sq);
-	int r = SQRANK(sq);
-	return (file[f] + rank[r]);
-}
-
-int16 eking2(int sq) {
-	int central[8] = { 0, -2, -4, -7, -10, -14, -23, -32 };
-	int file[8] = { -13, 1, 11, 16, 16, 11, 1, -13 };
-	int rank[8] = { -29, -4, 1, 6, 10, 6, 1, -10 };
-
-	int f = SQFILE(sq);
-	int r = SQRANK(sq);
-	return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
-}
 void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     WaitForThink();
 

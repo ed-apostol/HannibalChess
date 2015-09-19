@@ -31,17 +31,6 @@ int16 epawn(int sq) {
     int r = SQRANK(sq);
     return (file[f] + rank[r]);
 }
-
-int outpost(int sq) {
-    int central[8] = { 7, 6, 5, 4, 3, 2, 1, 0 };
-    int file[8] = { -20, -8, -2, 0, 0, -2, -8, -20 };
-    int rank[8] = { -20, -20, -5, 1, 5, 1, -5, -10 };
-    int f = SQFILE(sq);
-    int r = SQRANK(sq);
-    int value = (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
-    if (value < 0) value = 0;
-    return value;
-}
 int16 mknight(int sq) {
     int file[8] = { -26, -9, 2, 5, 5, 2, -9, -26 };
     int rank[8] = { -30, -9, 6, 16, 20, 19, 11, -11 };
@@ -137,10 +126,6 @@ void initPST() {
 		PST(WHITE, ROOK, i) = ComposeEvalScore(mrook(i),0); //no endgame values for rook
 		PST(WHITE, QUEEN, i) = ComposeEvalScore(mqueen(i), equeen(i));
 		PST(WHITE, KING, i) = ComposeEvalScore(mking(i),eking(i));
-        //do outposts
-        int oScore = outpost(i);
-        OutpostValue[WHITE][i] = oScore;
-        OutpostValue[BLACK][((7 - SQRANK(i)) * 8) + SQFILE(i)] = oScore;
     }
 
 	for (i = PAWN; i <= KING; i++) {
@@ -396,7 +381,7 @@ void initArr(void) {
         }
     }
     InitKingShelter();
-    InitMobility();
+	InitEval();
 
     for (i = 0; i <= MAX_FUT_MARGIN; i++) {
         for (j = 0; j < 64; j++) {
