@@ -16,116 +16,62 @@
 #include "init.h"
 #include "bitutils.h"
 
-int16 mpawn(int sq) {
-    int central[8] = { 2, 1, 0, -1, -1, -1, -1, -1 };
-    int file[8] = { -16, -7, -1, 5, 5, -1, -7, -16 };
-    int rank[8] = { 0, -3, -2, 0, 1, 2, 0, 0 };
+EvalScore pawnSQ(int sq) {
+	EvalScore central[8] = { COMP(2, 0), COMP(1, 0), COMP(0, 0), COMP(-1, 0), COMP(-1, 0), COMP(-1, 0), COMP(-1, 0), COMP(-1, 0) };
+	EvalScore file[8] = { COMP(-16, -4), COMP(-7, -5), COMP(-1, -7), COMP(5, -8), COMP(5, -8), COMP(-1, -7), COMP(-7, -5), COMP(-16, -4) };
+	EvalScore rank[8] = { COMP(0, 0), COMP(-3, -2), COMP(-2, -3), COMP(0, 1), COMP(1, 4), COMP(2, 7), COMP(0, 1), COMP(0, 0) };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
 }
-int16 epawn(int sq) {
-    int file[8] = { -4, -5, -7, -8, -8, -7, -5, -4 };
-    int rank[8] = { 0, -2, -3, 1, 4, 7, 1, 0 };
+
+EvalScore knightSQ(int sq) {
+	EvalScore central[8] = { COMP(0, 3), COMP(0, 2), COMP(0, 1), COMP(0, 0), COMP(0, -2), COMP(0, -4), COMP(0, -6), COMP(0, -8) };
+	EvalScore file[8] = { COMP(-26, -10), COMP(-9, -3), COMP(2, 0), COMP(5, 2), COMP(5, 2), COMP(2, 0), COMP(-9, -3), COMP(-26, -10) };
+	EvalScore rank[8] = { COMP(-30, -10), COMP(-9, -4), COMP(6, -1), COMP(16, 2), COMP(20, 4), COMP(19, 6), COMP(11, 3), COMP(-11, -5) };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
-    return (file[f] + rank[r]);
+	return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
 }
-int16 mknight(int sq) {
-    int file[8] = { -26, -9, 2, 5, 5, 2, -9, -26 };
-    int rank[8] = { -30, -9, 6, 16, 20, 19, 11, -11 };
-    int f = SQFILE(sq);
-    int r = SQRANK(sq);
-    return (file[f] + rank[r]);
-}
-int16 eknight(int sq) {
-    int central[8] = { 3, 2, 1, 0, -2, -4, -6, -8 };
-    int file[8] = { -10, -3, 0, 2, 2, 0, -3, -10 };
-    int rank[8] = { -10, -4, -1, 2, 4, 6, 3, -5 };
-    int f = SQFILE(sq);
-    int r = SQRANK(sq);
-    return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
-}
-int16 mbishop(int sq) {
-    int central[8] = { 11, 6, 2, -2, -4, -6, -7, -11 };
-    int rank[8] = { -7, 0, 0, 0, 0, 0, 0, -1 };
+EvalScore bishopSQ(int sq) {
+	EvalScore central[8] = { COMP(11, 5), COMP(6, 3), COMP(2, 1), COMP(-2, 1), COMP(-4, -2), COMP(-6, -2), COMP(-7, -3), COMP(-11, -5) };
+	EvalScore rank[8] = { COMP(-7, 0), COMP(0, 0), COMP(0, 0), COMP(0, 0), COMP(0, 0), COMP(0, 0), COMP(0,0 ), COMP(-1, 0) };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)] + rank[r]);
 }
-int16 ebishop(int sq) {
-    int central[8] = { 5, 3, 1, 1, -2, -2, -3, -5 };
-    int f = SQFILE(sq);
-    int r = SQRANK(sq);
-    return (central[abs(f - r)] + central[abs(f + r - 7)]);
-}
-int16 mrook(int sq) {
-    int file[8] = { -2, 1, 4, 7, 7, 4, 1, -2 };
+EvalScore rookSQ(int sq) {
+	EvalScore file[8] = { COMP(-2, 0), COMP(1, 0), COMP(4, 0), COMP(7, 0), COMP(7, 0), COMP(4, 0), COMP(1, 0), COMP(-2, 0) };
     int f = SQFILE(sq);
     return (file[f]);
 }
-int16 mqueen(int sq) {
-    int central[8] = { 4, 2, 0, -1, -2, -4, -6, -9 };
-    int file[8] = { -3, 0, 1, 3, 3, 1, 0, -3 };
-    int rank[8] = { -7, 0, 0, 1, 1, 0, 0, -1 };
+EvalScore queenSQ(int sq) {
+	EvalScore central[8] = { COMP(4, 3), COMP(2, 2), COMP(0, 1), COMP(-1, -1), COMP(-2, -3), COMP(-4, -5), COMP(-6, -7), COMP(-9, -11) };
+	EvalScore file[8] = { COMP(-3, -3), COMP(0, 0), COMP(1, 1), COMP(3, 3), COMP(3, 3), COMP(1, 1), COMP(0, 0), COMP(-3, -3) };
+	EvalScore rank[8] = { COMP(-7, -3), COMP(0, 0), COMP(0, 1), COMP(1, 3), COMP(1, 3), COMP(0, 1), COMP(0, 0), COMP(-1, -3) };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
-}
-int16 equeen(int sq) {
-    int central[8] = { 3, 2, 1, -1, -3, -5, -7, -11 };
-    int file[8] = { -3, 0, 1, 3, 3, 1, 0, -3 };
-    int rank[8] = { -3, 0, 1, 3, 3, 1, 0, -3 };
+} 
+EvalScore kingSQ(int sq) {
+	EvalScore central[8] = { COMP(0, 0), COMP(0, -2), COMP(0, -4), COMP(0, -7), COMP(0, -10), COMP(0, -14), COMP(0, -23), COMP(0, -32) };
+	EvalScore file[8] = { COMP(26, -13), COMP(30, 1), COMP(0, 11), COMP(-20, 16), COMP(-20, 16), COMP(0, 11), COMP(30, 1), COMP(26, -13) };
+	EvalScore rank[8] = { COMP(3, -29), COMP(0, -4), COMP(-5, 1), COMP(-9, 6), COMP(-13, 10), COMP(-17, 6), COMP(-17, 1), COMP(-17, -10) };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
-    return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
-}
-
-#define MKF1 04 //5
-#define MKF2 30 //30
-#define MKF3 20 //20
-
-#define MKR1 3 //3
-#define MKR2 5 //5
-#define MKR3 4 //4
-#define MKR4 4 //4
-#define MKR5 4 //4
-int16 mking(int sq) {
-    int file[8] = { MKF2 - MKF1, MKF2, 0, -MKF3, -MKF3, 0, MKF2, MKF2 - MKF1 };
-    int rank[8] = { MKR1, 0, -MKR2, -MKR2 - MKR3, -MKR2 - MKR3 - MKR4, -MKR2 - MKR3 - MKR4 - MKR5, -MKR2 - MKR3 - MKR4 - MKR5, -MKR2 - MKR3 - MKR4 - MKR5 };
-
-    int f = SQFILE(sq);
-    int r = SQRANK(sq);
-    return (file[f] + rank[r]);
-}
-
-int16 eking(int sq) {
-    int central[8] = { 0, -2, -4, -7, -10, -14, -23, -32 };
-    int file[8] = { -13, 1, 11, 16, 16, 11, 1, -13 };
-    int rank[8] = { -29, -4, 1, 6, 10, 6, 1, -10 };
-
-    int f = SQFILE(sq);
-    int r = SQRANK(sq);
-    return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
+	return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
 }
 
 void initPST() {
-    const int KingFileMul[8] = {
-        +3, +4, +2, +0, +0, +2, +4, +3,
-    };
-    const int KingRankMul[8] = {
-        +1, +0, -2, -3, -4, -5, -6, -7,
-    };
-
     int i, j, k;
 
     for (i = 0; i < 64; i++) {
-		PST(WHITE, PAWN, i) = ComposeEvalScore(mpawn(i), epawn(i));
-		PST(WHITE, KNIGHT, i) = ComposeEvalScore(mknight(i), eknight(i));
-		PST(WHITE, BISHOP, i) = ComposeEvalScore(mbishop(i), ebishop(i));
-		PST(WHITE, ROOK, i) = ComposeEvalScore(mrook(i),0); //no endgame values for rook
-		PST(WHITE, QUEEN, i) = ComposeEvalScore(mqueen(i), equeen(i));
-		PST(WHITE, KING, i) = ComposeEvalScore(mking(i),eking(i));
+		PST(WHITE, PAWN, i) = pawnSQ(i);
+		PST(WHITE, KNIGHT, i) = knightSQ(i);
+		PST(WHITE, BISHOP, i) = bishopSQ(i);
+		PST(WHITE, ROOK, i) = rookSQ(i);
+		PST(WHITE, QUEEN, i) = queenSQ(i);
+		PST(WHITE, KING, i) = kingSQ(i);
     }
 
 	for (i = PAWN; i <= KING; i++) {
@@ -134,89 +80,7 @@ void initPST() {
             PST(BLACK, i, k) = PST(WHITE, i, j);
         }
     }
-    for (j = 0; j < 64; j++) {
-        k = ((7 - SQRANK(j)) * 8) + SQFILE(j);
-        KingPosPenalty[WHITE][j] = (4 - KingFileMul[SQFILE(j)]) + (1 - KingRankMul[SQRANK(j)]);
-        KingPosPenalty[BLACK][k] = KingPosPenalty[WHITE][j];
-    }
 }
-
-void InitKingShelter() {
-    // lets do king shelter and indirect shelter
-    int i, j;
-    int ri, fi, rj, fj;
-    for (i = 0; i < 64; i++) {
-        kingShelter[WHITE][i] = 0;
-        kingIndirectShelter[WHITE][i] = 0;
-        kingShelter[BLACK][i] = 0;
-        kingIndirectShelter[BLACK][i] = 0;
-        ri = i / 8;
-        fi = i % 8;
-        for (j = 0; j < 64; j++) {
-            rj = j / 8;
-            fj = j % 8;
-            // WHITE
-            if (ri <= rj) {
-                //                if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1)
-                if (abs(ri - rj) <= 1 && abs(fi - fj) <= 1 && rj == Rank2) //only great protection on 2nd rate...example pawn on g2 protects Kg2/Kg1 equally
-                {
-                    kingShelter[WHITE][i] |= BitMask[j];
-                }
-                //               if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1)
-                if (abs(ri - rj) <= 2 && abs(fi - fj) <= 1 && (rj <= Rank3 || abs(ri - rj) <= 1)) {
-                    kingIndirectShelter[WHITE][i] |= BitMask[j];
-                }
-            }
-            // BLACK
-            if (ri >= rj) {
-                //                if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1)
-                if (abs(ri - rj) <= 1 && abs(fi - fj) <= 1 && rj == Rank7) {
-                    kingShelter[BLACK][i] |= BitMask[j];
-                }
-                //                if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1)
-                if (abs(ri - rj) <= 2 && abs(fi - fj) <= 1 && (rj >= Rank6 || abs(ri - rj) <= 1)) {
-                    kingIndirectShelter[BLACK][i] |= BitMask[j];
-                }
-            }
-        }
-    }
-
-    // deal with exceptions for white
-    for (i = 0; i < 7; i++) {
-        // king on A file protected by pawn on C file
-        kingIndirectShelter[WHITE][i * 8 + a1] |= BitMask[i * 8 + 8 + c1 - a1];
-        kingIndirectShelter[WHITE][i * 8 + a1] |= BitMask[i * 8 + c1 - a1];
-        // king on H file protected by pawn on F file
-        kingIndirectShelter[WHITE][i * 8 + h1] |= BitMask[i * 8 + 8 + h1 - f1];
-        kingIndirectShelter[WHITE][i * 8 + h1] |= BitMask[i * 8 + h1 - f1];
-        // the E and D files do not protect as well
-        kingShelter[WHITE][i * 8 + c1] &= ~BitMask[i * 8 + 8 + d1];
-        kingShelter[WHITE][i * 8 + d1] &= ~BitMask[i * 8 + 8 + d1];
-        kingShelter[WHITE][i * 8 + e1] &= ~BitMask[i * 8 + 8 + d1];
-        kingShelter[WHITE][i * 8 + d1] &= ~BitMask[i * 8 + 8 + e1];
-        kingShelter[WHITE][i * 8 + e1] &= ~BitMask[i * 8 + 8 + e1];
-        kingShelter[WHITE][i * 8 + f1] &= ~BitMask[i * 8 + 8 + e1];
-        // don't need to add back in indirect since its already there
-    }
-
-    // deal with exceptions for black
-    for (i = 1; i < 8; i++) {
-        // king on A file protected by pawn on C file
-        kingIndirectShelter[BLACK][i * 8 + a1] |= BitMask[i * 8 - 8 + c1 - a1];
-        kingIndirectShelter[BLACK][i * 8 + a1] |= BitMask[i * 8 + c1 - a1];
-        // king on H file protected by pawn on F file
-        kingIndirectShelter[BLACK][i * 8 + h1] |= BitMask[i * 8 - 8 + f1 - h1];
-        kingIndirectShelter[BLACK][i * 8 + h1] |= BitMask[i * 8 + f1 - h1];
-        // the E and D files do not protect as well
-        kingShelter[BLACK][i * 8 + c1] &= ~BitMask[i * 8 - 8 + d1];
-        kingShelter[BLACK][i * 8 + d1] &= ~BitMask[i * 8 - 8 + d1];
-        kingShelter[BLACK][i * 8 + e1] &= ~BitMask[i * 8 - 8 + d1];
-        kingShelter[BLACK][i * 8 + d1] &= ~BitMask[i * 8 - 8 + e1];
-        kingShelter[BLACK][i * 8 + e1] &= ~BitMask[i * 8 - 8 + e1];
-        kingShelter[BLACK][i * 8 + f1] &= ~BitMask[i * 8 - 8 + e1];
-    }
-}
-
 uint64 BMagicHash(int i, uint64 occ) {
     uint64 free = 0;
     int j;
@@ -380,9 +244,6 @@ void initArr(void) {
             }
         }
     }
-    InitKingShelter();
-	InitEval();
-
     for (i = 0; i <= MAX_FUT_MARGIN; i++) {
         for (j = 0; j < 64; j++) {
             FutilityMarginTable[i][j] = ((i*i*FUTILITY_SCALE) + FUTILITY_SCALE) - (((i*i*FUTILITY_SCALE) + FUTILITY_SCALE) * j / FUTILITY_MOVE);

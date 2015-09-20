@@ -45,8 +45,8 @@ static const Personality personality;
 #define PARTIAL_ATTACK 0 //0 means don't count, otherwise multiplies attack by 5
 #define MATE_CODE 10 // mate threat
 static const uint64 bewareTrapped[2] = { (Rank8BB | Rank7BB | Rank6BB ), (Rank1BB | Rank2BB | Rank3BB ) };
+static const int KING_ATT_W = 18;
 
-#define KING_ATT_W 4
 #define SB1 9
 #define SB2 (SB1+9)
 #define SB3 (SB2+8)
@@ -63,8 +63,8 @@ static const uint64 bewareTrapped[2] = { (Rank8BB | Rank7BB | Rank6BB ), (Rank1B
 #define SB14 (SB13+2)
 const EvalScore ShelterBonus[] = { COMP(0,0), COMP(SB1,0), COMP(SB2,0), COMP(SB3,0), COMP(SB4,0), COMP(SB5,0), COMP(SB6,0), COMP(SB7,0), 
 									COMP(SB8,0), COMP(SB9,0), COMP(SB10,0), COMP(SB11,0), COMP(SB12,0), COMP(SB13,0), COMP(SB14,0)};
-uint64 outpostBB[2] = { (Rank4BB | Rank5BB | Rank6BB | Rank7BB) & ~(FileABB | FileHBB), (Rank5BB | Rank4BB | Rank3BB | Rank2BB) & ~(FileABB | FileHBB) }; //hhhh8
-const EvalScore OutpostValue[2][2] = { { COMP(11, 3), COMP(16, 4) }, { COMP(5, 1), COMP(8, 2) } }; //First is Bishops / knights, next is supported by pawn or not
+uint64 outpostBB[2] = { (Rank4BB | Rank5BB | Rank6BB /*| Rank7BB*/) & ~(FileABB | FileHBB), (Rank5BB | Rank4BB | Rank3BB /*| Rank2BB*/) & ~(FileABB | FileHBB) }; //hhhh8
+const EvalScore OutpostValue[2][2] = { { COMP(11, 3), COMP(16, 4) }, { COMP(5, 1), COMP(8, 2) } }; //First is knights / Bishops, next is supported by pawn or not
 EvalScore KnightMobArray[9];
 EvalScore BishopMobArray[7 * 2 + 1];
 EvalScore XrayBishopMobArray[7 * 2 + 1];
@@ -92,7 +92,9 @@ const EvalScore KnightPawnPressure = COMP(5, 9);
 
 // king specific evaluation
 const EvalScore kingAttackWeakness[8] = { COMP(0,0), COMP(0,22), COMP(0,12), COMP(0,5), COMP(0,3), COMP(0,1), COMP(0,0), COMP(0,0) };
-
+uint64 kingShelter[2][64]; // provides good shelter for king 
+uint64 kingIndirectShelter[2][64]; // provides ok shelter for king 
+int KingPosPenalty[2][64];/* used as initial king penalty */
 //pawn specific evaluttion
 const EvalScore SAFE_PPUSH = COMP(4, 5);
 const EvalScore PPUSH_THREAT = COMP(8, 8);
@@ -107,17 +109,16 @@ const EvalScore  DOUBLE_TARGET = COMP(2, 4);
 const EvalScore  DOUBLE_TARGET_OPEN = COMP(4, 6);
 
 //passed pawns
+const EvalScore PassedMin = (20,10);
+
 const int UnstoppablePassedPawn = 700;
-const int EndgamePassedMin = 10;
 const int EndgamePassedMax = 60;
-const int MidgamePassedMin = 20;
 const int MidgamePassedMax = 120;
 const EvalScore CandidatePawnMin = COMP(10, 5);
 const int MidgameCandidatePawnMax = 90;
 const int EndgameCandidatePawnMax = 45;
 const int ProtectedPasser = 10;
 const int DuoPawnPasser = 15;
-const int kingDistImp[8] = { 0, 20, 40, 55, 65, 70, 70, 70 }; //best if this cannot get higher than EndgamePassedMax
 const int PathFreeFriendPasser = 10;
 const int DefendedByPawnPasser = 10;
 const int PathFreeNotAttackedDefAllPasser = 80;
@@ -409,7 +410,13 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
 	const uint64 maybeTrapped = bewareTrapped[color] & ~ei.atkpawns[color];
 	uint64 pawnTargets = ei.pawns[enemy] & ~ei.atkpawns[enemy];
 	uint64 attackBlockers = ((pos.pawns | pos.kings) & pos.color[color]) | (ei.pawns[enemy] & ei.atkpawns[enemy]);
-	uint64 outpostMask = outpostBB[color] & ~ei.potentialPawnAttack[color];
+	uint64 outpostMask = outpostBB[color] & ~ei.potentialPawnAttack[color^1];
+	if (SHOW_EVAL) {
+		if (color == WHITE) PrintOutput() << "info string WHITE outposts\n";
+		PrintOutput() << "info string BLACK outposts\n";
+		PrintBitBoard(outpostMask);
+		PrintOutput() << "end outpost\n";
+	}
 
 	if (0 == (pos.posStore.castle & Castle[color])) boardSkeleton |= (pos.kings & pos.color[color]);
 	notOwnSkeleton = ~(boardSkeleton & pos.color[color]);
@@ -676,6 +683,7 @@ void evalKingAttacked(const position_t& pos, eval_info_t& ei, const int color) {
                         //FOR NOW IGNORE QUEEN IS PINNED ISSUES
                         if (pos.side == (color ^ 1)) {
                             ei.posScore[color] -= ComposeEvalScore(10000,10000);
+							return;
                         }
                         else {
                             penalty += MATE_CODE;
@@ -699,9 +707,9 @@ void evalKingAttacked(const position_t& pos, eval_info_t& ei, const int color) {
 
         pc_atkrs_mask = discoveredCheckCandidates(pos, color ^ 1) & ~pos.pawns;
         if (pc_atkrs_mask) penalty += bitCnt(pc_atkrs_mask) * DiscoveredCheckValue;
-        ei.posScore[color] -= ComposeEvalScore((penalty * penalty * KING_ATT_W) / 20,0);
-        ei.draw[color ^ 1] += penalty/2;
-    }
+		ei.posScore[color] -= ComposeEvalScore((penalty * penalty * KING_ATT_W) / 100, 0);
+		ei.draw[color] += MIN(50, penalty);
+	}
 }
 
 void evalPassedvsKing(const position_t& pos, eval_info_t& ei, const int allied, uint64 passed) {
@@ -717,7 +725,7 @@ void evalPassedvsKing(const position_t& pos, eval_info_t& ei, const int allied, 
     uint64 passedpawn_mask = passed;
     do {
         int from = popFirstBit(&passedpawn_mask);
-        int score = 0;
+		int score = EndgamePassedMax;
         int rank = PAWN_RANK(from, allied);
         uint64 prom_path = (*FillPtr[allied])(BitMask[from]);
         uint64 path_attkd = prom_path & ei.atkall[enemy];
@@ -733,12 +741,9 @@ void evalPassedvsKing(const position_t& pos, eval_info_t& ei, const int allied, 
         if (ei.atkpawns[allied] & BitMask[from + PAWN_MOVE_INC(allied)]) {
             score += DuoPawnPasser;
         }
-        score += EndgamePassedMax;
-        {
-            int frontSq = from + PAWN_MOVE_INC(allied);
-            score += DISTANCE(frontSq, pos.kpos[enemy]) * PassedPawnDefenderDistance;
-            score -= DISTANCE(frontSq, pos.kpos[allied]) * PassedPawnAttackerDistance;
-        }
+        int frontSq = from + PAWN_MOVE_INC(allied);
+        score += DISTANCE(frontSq, pos.kpos[enemy]) * PassedPawnDefenderDistance;
+        score -= DISTANCE(frontSq, pos.kpos[allied]) * PassedPawnAttackerDistance;
         {
             int pFile = SQFILE(from);
             int qDist = 7 - rank - myMove;
@@ -773,7 +778,8 @@ void evalPassedvsKing(const position_t& pos, eval_info_t& ei, const int allied, 
             }
         }
 		//TODO consider removed the midgame element of this
-		ei.posScore[allied] += ComposeEvalScore(0, EndgamePassedMin + scale(score, rank));
+		ei.posScore[allied] += PassedMin;
+		ei.posScore[allied] += ComposeEvalScore(0, scale(score, rank));
 	} while (passedpawn_mask);
 
     fileDist = rightBestFile - leftBestFile;
@@ -834,7 +840,8 @@ void evalPassed(const position_t& pos, eval_info_t& ei, const int allied, uint64
                 ei.queening = true;
             }
         }
-		ei.posScore[allied] += ComposeEvalScore(MidgamePassedMin + scale(MidgamePassedMax, rank), EndgamePassedMin + scale(score, rank));
+		ei.posScore[allied] += PassedMin;
+		ei.posScore[allied] += ComposeEvalScore(scale(MidgamePassedMax, rank), scale(score, rank));
     } while (passedpawn_mask);
 }
 
@@ -933,12 +940,11 @@ int eval(const position_t& pos, Thread& sthread) {
         evalPawnPushes(pos, ei, BLACK);
 
         ei.queening = false;
-
         if (pos.color[WHITE] & ~pos.pawns & ~pos.kings) {//if white has a piece
             if (blackPassed) evalPassed(pos, ei, BLACK, blackPassed);
             evalThreats(pos, ei, WHITE);
             if (ei.MLindex[WHITE] >= MLQ + MLN) {
-                evalKingAttacked(pos, ei, BLACK);
+                evalKingAttacked(pos, ei, BLACK); //should be the last thing calculated for draw stuff to make sense
             }
         }
         else {
@@ -947,7 +953,7 @@ int eval(const position_t& pos, Thread& sthread) {
         if (pos.color[BLACK] & ~pos.pawns & ~pos.kings) { //if black has a piece
             if (whitePassed) evalPassed(pos, ei, WHITE, whitePassed);
             evalThreats(pos, ei, BLACK);
-            if (ei.MLindex[BLACK] >= MLQ + MLN) { // attacking the white king
+            if (ei.MLindex[BLACK] >= MLQ + MLN) { 
                 evalKingAttacked(pos, ei, WHITE);
             }
         }
@@ -963,15 +969,15 @@ int eval(const position_t& pos, Thread& sthread) {
         }
         // if there is an unstoppable pawn on the board, we cannot trust any of our draw estimates or endgame rules of thumb
         if (!ei.queening) {
-            int edge = score < DrawValue[WHITE];
-            int draw = ei.draw[edge]; //this is who is trying to draw
+            int attacker = score < DrawValue[WHITE];
+			int draw = ei.draw[attacker];
             if (SHOW_EVAL) {
                 PrintOutput() << "info string drawish was = " << draw << "\n";
             }
-            evalEndgame(edge, pos, ei, &score, &draw);
-			int lockedDraw = MAX(0, (ei.pawn_entry->locked - 8)) * 2; //hhh53
+            evalEndgame(attacker, pos, ei, &score, &draw);
+			int lockedDraw = MAX(0, (ei.pawn_entry->locked - 8)) * 2; 
 			draw += ((100 - draw) * lockedDraw) / 100;
-            draw = MIN(MAX_DRAW, draw); // max of 200 draw
+            draw = MIN(MAX_DRAW, draw); 
             if (SHOW_EVAL) {
                 PrintOutput() << "info string drawish is = " << draw << "\n";
             }
@@ -985,7 +991,92 @@ int eval(const position_t& pos, Thread& sthread) {
     entry->value = score;
     return score;
 }
+void InitKingSpecial() {
+	const int KingFileMul[8] = {
+		+3, +4, +2, +0, +0, +2, +4, +3,
+	};
+	const int KingRankMul[8] = {
+		+1, +0, -2, -3, -4, -5, -6, -7,
+	};
+	// lets do king shelter and indirect shelter
+	int i, j;
+	int ri, fi, rj, fj;
+	for (i = 0; i < 64; i++) {
+		kingShelter[WHITE][i] = 0;
+		kingIndirectShelter[WHITE][i] = 0;
+		kingShelter[BLACK][i] = 0;
+		kingIndirectShelter[BLACK][i] = 0;
+		ri = i / 8;
+		fi = i % 8;
+		for (j = 0; j < 64; j++) {
+			rj = j / 8;
+			fj = j % 8;
+			// WHITE
+			if (ri <= rj) {
+				//                if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1)
+				if (abs(ri - rj) <= 1 && abs(fi - fj) <= 1 && rj == Rank2) //only great protection on 2nd rate...example pawn on g2 protects Kg2/Kg1 equally
+				{
+					kingShelter[WHITE][i] |= BitMask[j];
+				}
+				//               if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1)
+				if (abs(ri - rj) <= 2 && abs(fi - fj) <= 1 && (rj <= Rank3 || abs(ri - rj) <= 1)) {
+					kingIndirectShelter[WHITE][i] |= BitMask[j];
+				}
+			}
+			// BLACK
+			if (ri >= rj) {
+				//                if (abs(ri-rj) <= 1 && abs(fi - fj) <= 1)
+				if (abs(ri - rj) <= 1 && abs(fi - fj) <= 1 && rj == Rank7) {
+					kingShelter[BLACK][i] |= BitMask[j];
+				}
+				//                if (abs(ri-rj) <= 2 && abs(fi - fj) <= 1)
+				if (abs(ri - rj) <= 2 && abs(fi - fj) <= 1 && (rj >= Rank6 || abs(ri - rj) <= 1)) {
+					kingIndirectShelter[BLACK][i] |= BitMask[j];
+				}
+			}
+		}
+	}
 
+	// deal with exceptions for white
+	for (i = 0; i < 7; i++) {
+		// king on A file protected by pawn on C file
+		kingIndirectShelter[WHITE][i * 8 + a1] |= BitMask[i * 8 + 8 + c1 - a1];
+		kingIndirectShelter[WHITE][i * 8 + a1] |= BitMask[i * 8 + c1 - a1];
+		// king on H file protected by pawn on F file
+		kingIndirectShelter[WHITE][i * 8 + h1] |= BitMask[i * 8 + 8 + h1 - f1];
+		kingIndirectShelter[WHITE][i * 8 + h1] |= BitMask[i * 8 + h1 - f1];
+		// the E and D files do not protect as well
+		kingShelter[WHITE][i * 8 + c1] &= ~BitMask[i * 8 + 8 + d1];
+		kingShelter[WHITE][i * 8 + d1] &= ~BitMask[i * 8 + 8 + d1];
+		kingShelter[WHITE][i * 8 + e1] &= ~BitMask[i * 8 + 8 + d1];
+		kingShelter[WHITE][i * 8 + d1] &= ~BitMask[i * 8 + 8 + e1];
+		kingShelter[WHITE][i * 8 + e1] &= ~BitMask[i * 8 + 8 + e1];
+		kingShelter[WHITE][i * 8 + f1] &= ~BitMask[i * 8 + 8 + e1];
+		// don't need to add back in indirect since its already there
+	}
+
+	// deal with exceptions for black
+	for (i = 1; i < 8; i++) {
+		// king on A file protected by pawn on C file
+		kingIndirectShelter[BLACK][i * 8 + a1] |= BitMask[i * 8 - 8 + c1 - a1];
+		kingIndirectShelter[BLACK][i * 8 + a1] |= BitMask[i * 8 + c1 - a1];
+		// king on H file protected by pawn on F file
+		kingIndirectShelter[BLACK][i * 8 + h1] |= BitMask[i * 8 - 8 + f1 - h1];
+		kingIndirectShelter[BLACK][i * 8 + h1] |= BitMask[i * 8 + f1 - h1];
+		// the E and D files do not protect as well
+		kingShelter[BLACK][i * 8 + c1] &= ~BitMask[i * 8 - 8 + d1];
+		kingShelter[BLACK][i * 8 + d1] &= ~BitMask[i * 8 - 8 + d1];
+		kingShelter[BLACK][i * 8 + e1] &= ~BitMask[i * 8 - 8 + d1];
+		kingShelter[BLACK][i * 8 + d1] &= ~BitMask[i * 8 - 8 + e1];
+		kingShelter[BLACK][i * 8 + e1] &= ~BitMask[i * 8 - 8 + e1];
+		kingShelter[BLACK][i * 8 + f1] &= ~BitMask[i * 8 - 8 + e1];
+	}
+	for (j = 0; j < 64; j++) {
+		int k = ((7 - SQRANK(j)) * 8) + SQFILE(j);
+		KingPosPenalty[WHITE][j] = (4 - KingFileMul[SQFILE(j)]) + (1 - KingRankMul[SQRANK(j)]);
+		KingPosPenalty[BLACK][k] = KingPosPenalty[WHITE][j];
+	}
+}
 void FillMobilityArray(double oWeight, double eWeight, int minGood, double oPenalty, double ePenalty, int numMoves, int a[]) {
     double mobilityArray[7 * 4 + 1];
     mobilityArray[0] = 0;
@@ -997,6 +1088,7 @@ void FillMobilityArray(double oWeight, double eWeight, int minGood, double oPena
         a[i] = round(mobilityArray[i]);
     }
 }
+
 void InitEval() {
     const double MxrayLow = 10;
     const double ExrayLow = 50;
@@ -1028,4 +1120,6 @@ void InitEval() {
 	FillMobilityArray(MidgameXrayRookMob, EndgameXrayRookMob, 3, MxrayLow, ExrayLow, 7 * 2 + 1, XrayRookMobArray);
 	FillMobilityArray(MidgameQueenMob, EndgameQueenMob, 2, Mlow, Elow, 7 * 4 + 1, QueenMobArray);
 	FillMobilityArray(MidgameXrayQueenMob, EndgameXrayQueenMob, 3, MxrayLow, ExrayLow, 7 * 4 + 1, XrayQueenMobArray);
+	InitKingSpecial();
+
 }
