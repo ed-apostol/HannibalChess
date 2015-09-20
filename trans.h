@@ -139,7 +139,7 @@ struct PawnEntry {
     int8 shelter[2];
     int8 kshelter[2];
     int8 qshelter[2];
-    int16 pawnWidthBonus; 
+    int16 pawnWidthBonus;
 };
 
 class PawnHashTable : public BaseHashTable < PawnEntry > {

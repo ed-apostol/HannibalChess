@@ -32,7 +32,7 @@
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
 const std::string Interface::year = "2015";
-const std::string Interface::version = "090915";
+const std::string Interface::version = "1.6e1";
 const std::string Interface::arch = "x64";
 
 void Interface::Info() {
@@ -215,21 +215,19 @@ void Interface::CheckSpeed() {
         LogAndPrintOutput() << fenPos[idxpos] << " starting\n";
         NewGame(cEngine);
         streamcmd = std::istringstream("fen " + fenPos[idxpos]);
-        Position(cEngine, input_pos, streamcmd);       
+        Position(cEngine, input_pos, streamcmd);
         streamcmd = std::istringstream("depth " + std::to_string(targetDepth[idxpos]));
         Go(cEngine, input_pos, streamcmd);
-        std::this_thread::sleep_for(std::chrono::milliseconds(5)); //SAM hack to let the engine start before the next line
         cEngine.WaitForThink();
         uint64 nodes = cEngine.ComputeNodes();
         if (nodes != targetNodes[idxpos]) {
             LogAndPrintOutput() << "ERROR DETECTED: node count wrong " << nodes << " != " << targetNodes[idxpos] << "\n";
-//            break;
+            //            break;
         }
         LogAndPrintOutput() << nodes << " nodes\n";
     }
     int64 spentTime = getTime() - startTime;
     LogAndPrintOutput() << spentTime << " total time\n";
-
 }
 void Interface::CheckSpeedup(std::istringstream& stream) {
     std::istringstream streamcmd;

@@ -26,23 +26,22 @@
 #include "init.h"
 /*
 void prefetch(char* addr) { //stockfish
-
 #  if defined(__INTEL_COMPILER)
-	// This hack prevents prefetches from being optimized away by
-	// Intel compiler. Both MSVC and gcc seem not be affected by this.
-	__asm__("");
+// This hack prevents prefetches from being optimized away by
+// Intel compiler. Both MSVC and gcc seem not be affected by this.
+__asm__("");
 #  endif
 
 #  if defined(__INTEL_COMPILER) || defined(_MSC_VER)
-	_mm_prefetch(addr, _MM_HINT_T0);
+_mm_prefetch(addr, _MM_HINT_T0);
 #  else
-	__builtin_prefetch(addr);
+__builtin_prefetch(addr);
 #  endif
 }
 */
 bool moveIsTactical(const uint32 m) { // TODO
     ASSERT(moveIsOk(m));
-    return (m & 0x01fe0000UL)!=0;
+    return (m & 0x01fe0000UL) != 0;
 }
 
 bool moveIsDangerousPawn(const position_t& pos, const uint32 move) {
@@ -107,19 +106,19 @@ void Search::initNode(Thread& sthread) {
 }
 bool Search::moveRefutesThreat(const position_t& pos, basic_move_t first, basic_move_t threat) {
     int m1from = moveFrom(first);
-	int threatfrom = moveFrom(threat);
+    int threatfrom = moveFrom(threat);
     int m1to = moveTo(first);
-	int threatto = moveTo(threat);
+    int threatto = moveTo(threat);
 
-	if (m1from == threatto) return true;
-	if (moveCapture(threat) && (PcValSEE[movePiece(threat)] >= PcValSEE[moveCapture(threat)] || movePiece(threat) == KING)) {
-		uint64 occ = pos.occupied ^ BitMask[m1from] ^ BitMask[m1to] ^ BitMask[threatfrom];
-		if (pieceAttacksFromBB(pos, movePiece(first), m1to, occ) & BitMask[threatto]) return true;
-		uint64 xray = rookAttacksBBX(threatto, occ) & (pos.queens | pos.rooks) & pos.color[pos.side];
-		xray |= bishopAttacksBBX(threatto, occ) & (pos.queens | pos.bishops) & pos.color[pos.side];
-		if (xray && (xray & ~queenAttacksBB(threatto, pos.occupied))) return true;
+    if (m1from == threatto) return true;
+    if (moveCapture(threat) && (PcValSEE[movePiece(threat)] >= PcValSEE[moveCapture(threat)] || movePiece(threat) == KING)) {
+        uint64 occ = pos.occupied ^ BitMask[m1from] ^ BitMask[m1to] ^ BitMask[threatfrom];
+        if (pieceAttacksFromBB(pos, movePiece(first), m1to, occ) & BitMask[threatto]) return true;
+        uint64 xray = rookAttacksBBX(threatto, occ) & (pos.queens | pos.rooks) & pos.color[pos.side];
+        xray |= bishopAttacksBBX(threatto, occ) & (pos.queens | pos.bishops) & pos.color[pos.side];
+        if (xray && (xray & ~queenAttacksBB(threatto, pos.occupied))) return true;
     }
-	if (InBetween[threatfrom][threatto] & BitMask[m1to] && swap(pos, first) >= 0) return true;
+    if (InBetween[threatfrom][threatto] & BitMask[m1to] && swap(pos, first) >= 0) return true;
     return false;
 }
 
@@ -219,10 +218,10 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
         }
         else {
             ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
-            if (!inPv && ssprev.moveGivesCheck &&  ss.bestvalue > -MAXEVAL && !ss.moveGivesCheck && swap(pos, move->m) < 0) continue; 
+            if (!inPv && ssprev.moveGivesCheck &&  ss.bestvalue > -MAXEVAL && !ss.moveGivesCheck && swap(pos, move->m) < 0) continue;
             if (prunable && move->m != ss.hashMove && !ss.moveGivesCheck && !moveIsDangerousPawn(pos, move->m)) {
-				int scoreAprox = ss.evalvalue + PawnValueEnd/2 + MaxPieceValue[moveCapture(move->m)]; 
-				if (scoreAprox < beta) continue;
+                int scoreAprox = ss.evalvalue + PawnValueEnd / 2 + MaxPieceValue[moveCapture(move->m)];
+                if (scoreAprox < beta) continue;
             }
             int newdepth = depth - !ss.moveGivesCheck;
             makeMove(pos, undo, move->m);
@@ -332,7 +331,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
 
         if (pos.ply >= MAXPLY - 1) return ss.evalvalue;
         updateEvalgains(pos, pos.posStore.lastmove, ssprev.evalvalue, ss.evalvalue, sthread);
-		
+
         if (!inPvNode(nt) && !inCheck) {
             static const int MaxRazorDepth = 10;
             int rvalue;
@@ -355,7 +354,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
 
                 makeNullMove(pos, undo);
                 ++sthread.nodes;
-                int score = -searchNode<false, false, false>(pos, -beta, -beta+1, nullDepth, ss, sthread, invertNode(nt)); //alpha = beta - 1 because not a PV node
+                int score = -searchNode<false, false, false>(pos, -beta, -beta + 1, nullDepth, ss, sthread, invertNode(nt)); //alpha = beta - 1 because not a PV node
                 ss.threatMove = ss.counterMove;
                 unmakeNullMove(pos, undo);
                 if (sthread.stop) return 0;
@@ -431,7 +430,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     move_t* move;
     while ((move = sortNext(sp, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
         int score = -INF;
-        int newdepth = depth-1;
+        int newdepth = depth - 1;
         if (inSplitPoint) {
             sp->movesplayedlock.lock();
             ss.playedMoves = ++sp->played;
@@ -461,7 +460,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                         }
                     }
                 }
-                makeMove(pos, undo, move->m); 
+                makeMove(pos, undo, move->m);
                 ++sthread.nodes;
                 score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, sthread, invertNode(nt));
             }
@@ -492,8 +491,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 }
                 int newdepthclone = newdepth - partialReduction;
                 makeMove(pos, undo, move->m);
-//				prefetch((char*)mTransTable.Entry(pos.posStore.hash)); //hhh3
-				++sthread.nodes;
+                //				prefetch((char*)mTransTable.Entry(pos.posStore.hash)); //hhh3
+                ++sthread.nodes;
                 if (inSplitPoint) alpha = sp->alpha;
                 ss.reducedMove = (newdepthclone < newdepth);
                 score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepthclone, ss, sthread, inCutNode(nt) ? AllNode : CutNode);
@@ -622,7 +621,7 @@ void Engine::PonderHit() { //no pondering in tuning
 }
 
 void Engine::SearchFromIdleLoop(SplitPoint& sp, Thread& sthread) {
-    position_t pos = sp.origpos;
+    position_t pos = *sp.origpos;
     if (sp.inRoot) search->searchNode<true, true, false>(pos, sp.alpha, sp.beta, sp.depth, *sp.ssprev, sthread, sp.nodeType);
     else search->searchNode<false, true, false>(pos, sp.alpha, sp.beta, sp.depth, *sp.ssprev, sthread, sp.nodeType);
 }
@@ -807,8 +806,6 @@ void Engine::GetBestMove(Thread& sthread) {
     ss.moveGivesCheck = kingIsInCheck(rootpos);
     ss.dcc = discoveredCheckCandidates(rootpos, rootpos.side);
 
-    SetThinkStarted();
-
     transtable.NewDate(transtable.Date());
     pvhashtable.NewDate(pvhashtable.Date());
 
@@ -842,7 +839,7 @@ void Engine::GetBestMove(Thread& sthread) {
             }
         }
         ss.hashMove = entry->pvMove();
-    }
+}
     // extend time when there is no hashmove from hashtable, this is useful when just out of the book
     if (ss.hashMove == EMPTY || (info.rootPV.moves[1] != rootpos.posStore.lastmove)) {
         info.time_limit_max += info.alloc_time / 4; // 25%
@@ -853,22 +850,22 @@ void Engine::GetBestMove(Thread& sthread) {
     // SMP
     InitVars();
     SetAllThreadsToWork();
-	for (id = 1; id < MAXPLY; id++) {
-		const int AspirationWindow = 12;
+    for (id = 1; id < MAXPLY; id++) {
+        const int AspirationWindow = 12;
         int faillow = 0, failhigh = 0;
         info.iteration = id;
         info.best_value = -INF;
         info.change = 0;
-        info.research = 0; 
-		for (info.multipvIdx = 0; info.multipvIdx < info.multipv; ++info.multipvIdx) {
-			if (id < 6) {
+        info.research = 0;
+        for (info.multipvIdx = 0; info.multipvIdx < info.multipv; ++info.multipvIdx) {
+            if (id < 6) {
                 alpha = -INF;
                 beta = INF;
             }
-            else { 
-				alpha = info.last_value - AspirationWindow;
-				beta = info.last_value + AspirationWindow;
-				if (alpha < -QueenValue) alpha = -INF;
+            else {
+                alpha = info.last_value - AspirationWindow;
+                beta = info.last_value + AspirationWindow;
+                if (alpha < -QueenValue) alpha = -INF;
                 if (beta > QueenValue) beta = INF;
             }
             while (true) {
@@ -885,15 +882,15 @@ void Engine::GetBestMove(Thread& sthread) {
                 }
                 if (info.stop_search) break;
                 if (info.best_value <= alpha) {
-					beta = (alpha + beta) / 2; 
+                    beta = (alpha + beta) / 2;
                     alpha = info.best_value - (AspirationWindow << ++faillow);
-                    if (alpha < -QueenValue) alpha = -INF; 
+                    if (alpha < -QueenValue) alpha = -INF;
                     info.research = 1;
                 }
                 else if (info.best_value >= beta) {
-					alpha = (alpha + beta) / 2;
-					beta = info.best_value + (AspirationWindow << ++failhigh);
-                    if (beta > QueenValue) beta = INF; 
+                    alpha = (alpha + beta) / 2;
+                    beta = info.best_value + (AspirationWindow << ++failhigh);
+                    if (beta > QueenValue) beta = INF;
                     info.research = 1;
                 }
                 else break;
@@ -921,6 +918,7 @@ void Engine::GetBestMove(Thread& sthread) {
 
 void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     WaitForThink();
+    SetThinkStarted();
 
     rootpos = pos;
     info.Init();

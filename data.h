@@ -63,8 +63,8 @@ extern int CastleMask[64];
 extern int KingPosPenalty[2][64];
 
 extern int DrawValue[2];
-extern uint64 kingShelter[2][64]; // provides good shelter for king 
-extern uint64 kingIndirectShelter[2][64]; // provides ok shelter for king 
+extern uint64 kingShelter[2][64]; // provides good shelter for king
+extern uint64 kingIndirectShelter[2][64]; // provides ok shelter for king
 
 // used in setting up the position and eval symmetry
 extern const char *FenString[];

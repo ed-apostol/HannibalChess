@@ -270,7 +270,7 @@ void MateNoPawn(int attacker, const position_t& pos, int *score) {
 void RookBishopEnding(int attacker, const position_t& pos, eval_info_t& ei, int *draw) {
     // opposite bishop endgames
     if (ei.oppBishops) {
-            *draw += 5;
+        *draw += 5;
         if ((ei.pawn_entry->passedbits & pos.color[attacker]) == 0) *draw += 10; // ones without passed are really drawish
         if (MaxOneBit(pos.pawns & pos.color[attacker])) *draw += 30; // can saq a bishop to get RB v. R endgame
     }
@@ -325,7 +325,7 @@ void BishopEnding(int attacker, const position_t& pos, eval_info_t& ei, int *sco
                 }
             }
             if (blockingAll) {
-                *draw += 40; //SAM FIX probably should check potential passed pawns some too 
+                *draw += 40; //SAM FIX probably should check potential passed pawns some too
                 if (ei.MLindex[attacker] == MLB + MLP * 2) { //2 pawn is drawn if not on at least the 6th rank
                     passed = ei.pawn_entry->passedbits & pos.color[attacker];
                     int sq = popFirstBit(&passed);
@@ -343,7 +343,7 @@ void BishopEnding(int attacker, const position_t& pos, eval_info_t& ei, int *sco
                 }
                 if (SHOW_EVAL) PrintOutput() << "info string oppo bishop king stopping all\n";
             }
-            else *draw += 10; 
+            else *draw += 10;
         }
     }
     // same color bishop
@@ -360,11 +360,10 @@ void BishopEnding(int attacker, const position_t& pos, eval_info_t& ei, int *sco
             const int defender = attacker ^ 1;
             const int pawnSq = GetOnlyBit(pos.pawns & pos.color[defender]);
             if (abs(SQFILE(pos.kpos[defender]) - SQFILE(pawnSq)) <= 1 && IN_FRONT(SQRANK(pos.kpos[defender]), SQRANK(pawnSq), attacker)) {
-                if (SHOW_EVAL) PrintOutput() << "info string drawish bishop endgame\n"; 
+                if (SHOW_EVAL) PrintOutput() << "info string drawish bishop endgame\n";
                 *draw = DRAWISH;
-	         }
-
-         }
+            }
+        }
     }
 }
 void DrawnNP(int attacker, const position_t& pos, eval_info_t& ei, int *draw) {
@@ -396,7 +395,7 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t& ei, int *score
         int raSq = GetOnlyBit(pos.rooks & pos.color[attacker]);
         int raFile = SQFILE(raSq);
         int behindRook = raSq + PAWN_MOVE_INC(defender);
-		if (singlePawn) {
+        if (singlePawn) {
             int sq = GetOnlyBit(pos.pawns & pos.color[attacker]);
             int sqFile = SQFILE(sq);
             // if the defender is closer to attacking the queening square then the defender its probably drawn
@@ -485,8 +484,8 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t& ei, int *score
             }
         }
     }
-	if (singlePawn) {
-		int sq = GetOnlyBit(pos.pawns & pos.color[attacker]);
+    if (singlePawn) {
+        int sq = GetOnlyBit(pos.pawns & pos.color[attacker]);
         // lets deal with rook pawn situations
         int sqFile = SQFILE(sq);
         if (abs(SQFILE(pos.kpos[defender]) - sqFile) <= 1 && IN_FRONT(SQRANK(pos.kpos[defender]), SQRANK(sq), attacker))
@@ -495,13 +494,13 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t& ei, int *score
     else if (passedA && MaxOneBit(passedA) && ei.MLindex[attacker] - ei.MLindex[defender] < 2) { //if attacker has one passed pawn and is not up by more than 1 pawn
         int passedSq = getFirstBit(passedA);
         int passedFile = SQFILE(passedSq);
-        if ((passedFile < FileD && ((ei.pawns[attacker] ^ passedA) & (FileABB | FileBBB | FileCBB | FileDBB | FileEBB)) == 0) || 
+        if ((passedFile < FileD && ((ei.pawns[attacker] ^ passedA) & (FileABB | FileBBB | FileCBB | FileDBB | FileEBB)) == 0) ||
             (passedFile > FileE && ((ei.pawns[attacker] ^ passedA) & (FileHBB | FileGBB | FileFBB | FileEBB | FileFBB)) == 0)) {
             if (SHOW_EVAL) PrintOutput() << "info string before draw " << *draw << "\n";
             *draw += 2 * abs(passedFile - SQFILE(pos.kpos[attacker]));
             if (SHOW_EVAL) PrintOutput() << "info string king dist " << abs(passedFile - SQFILE(pos.kpos[attacker])) << "\n";
-            
-            *draw -= (ei.MLindex[attacker]-MLR) * 3;
+
+            *draw -= (ei.MLindex[attacker] - MLR) * 3;
             if (SHOW_EVAL) PrintOutput() << "info string num attacker pawns " << (ei.MLindex[attacker] - MLR) << "\n";
             const int behind[] = { S, N };
             uint64 behindPawn = DirBitmap[behind[attacker]][passedSq];
@@ -514,7 +513,7 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t& ei, int *score
                 *draw += 10;
                 if (SHOW_EVAL) PrintOutput() << "info string defender behind\n";
             }
-            bool attackerRookBehind = (behindPawn & pos.rooks & pos.color[attacker])!=0;
+            bool attackerRookBehind = (behindPawn & pos.rooks & pos.color[attacker]) != 0;
             if (passedA & (FileABB | FileHBB)) {
                 *draw += attackerRookBehind ? 5 : 20;
                 if (SHOW_EVAL) PrintOutput() << "info string a file\n";
@@ -540,7 +539,7 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t& ei, int *score
         if ((QUEENSIDE & pawnking) == 0 || (KINGSIDE & pawnking) == 0) { //TODO consider using pawn width instead of king/queenside
             int pawnsTraded = MAX(4, 8 - (ei.MLindex[attacker] - MLR));
             // the less unguarded pawns, the more drawish it is
-			int unguarded = bitCnt(ei.pawns[defender] & ~(ei.atkkings[defender] | ei.atkpawns[defender] | adjacent(ei.pawns[defender])));
+            int unguarded = bitCnt(ei.pawns[defender] & ~(ei.atkkings[defender] | ei.atkpawns[defender] | adjacent(ei.pawns[defender])));
             if (unguarded == 0) {
                 *draw += pawnsTraded * 12;
             }
@@ -607,7 +606,7 @@ void RookvPawnsEnding(int attacker, const position_t& pos, int *score, int *draw
             if (newDraw > *draw) *draw = newDraw;
         }
         // this is drawish, but many times lost, so lets be conservative
-        else if (dkDist - defenderMove <  akDist) {
+        else if (dkDist - defenderMove < akDist) {
             int newDraw = DRAWISH - 10 + 2 * ((akDist + rDist) - dDist);
             *score = *score / 2;
             if (newDraw > *draw) *draw = newDraw;
@@ -640,7 +639,7 @@ void DrawnQvREnding(int attacker, const position_t& pos, eval_info_t& ei, int *s
         }
     }
 }
-//does not inlude bishop vs. bishop 
+//does not inlude bishop vs. bishop
 void MinorPawnvMinor(int attacker, const position_t& pos, eval_info_t& ei, int *draw) { //drawish if in front of pawn and knight safe
     const int pawnSq = GetOnlyBit(pos.pawns & pos.color[attacker]);
     const int defender = attacker ^ 1;
@@ -660,7 +659,7 @@ void MinorPawnvMinor(int attacker, const position_t& pos, eval_info_t& ei, int *
         }
     }
 }
-//does not inlude bishop vs. bishop 
+//does not inlude bishop vs. bishop
 void MinorPawnPawnvMinorPawn(int attacker, const position_t& pos, eval_info_t& ei, int *draw) { //drawish if in front of pawn and knight safe
     const uint64 passed = ei.pawn_entry->passedbits & pos.color[attacker];
     const int defender = attacker ^ 1;
@@ -710,13 +709,13 @@ static const int MIN_DRAW_EFFECT = 10;
 inline uint64 shiftExpand(const uint64 pawns, const int color) {
     static const int Shift[] = { 9, 7 };
     return (((*ShiftPtr[color])(pawns, Shift[color]) & ~FileABB) |
-        ((*ShiftPtr[color])(pawns, Shift[color^1]) & ~FileHBB) |
+        ((*ShiftPtr[color])(pawns, Shift[color ^ 1]) & ~FileHBB) |
         (ShiftPtr[color](pawns, 8)));
 }
 void BreakPawnReduction(const int color, const uint64 stopSquares, const position_t& pos, eval_info_t& ei, const bool fullLock, int *draw) {
     const uint64 passed = ei.pawn_entry->passedbits & pos.color[color];
     const uint64 targets = (ShiftPtr[color ^ 1](ei.potentialPawnAttack[color ^ 1], 8));
-    const uint64 potBreakPawns = ei.pawns[color] & ~(ShiftPtr[color ^ 1](stopSquares | pos.pawns | pos.color[color^1], 8)); //pawn not blocked
+    const uint64 potBreakPawns = ei.pawns[color] & ~(ShiftPtr[color ^ 1](stopSquares | pos.pawns | pos.color[color ^ 1], 8)); //pawn not blocked
     if (SHOW_EVAL) {
         PrintOutput() << "info string targets\n";
         PrintBitBoard(targets);
@@ -725,7 +724,7 @@ void BreakPawnReduction(const int color, const uint64 stopSquares, const positio
     }
     int numBreaks = bitCnt((potBreakPawns & targets) | passed);
     int score = fullLock ? MAX(PARTIAL_LOCK_DRAW, LOCK_DRAW * 2 / (numBreaks + 2))
-                        : MAX(MIN_DRAW_EFFECT, PARTIAL_LOCK_DRAW * 2 / (numBreaks + 2));
+        : MAX(MIN_DRAW_EFFECT, PARTIAL_LOCK_DRAW * 2 / (numBreaks + 2));
     if ((pos.color[color] & ~(pos.pawns | pos.kings)) != 0) score /= numBreaks + 1;
     *draw += score;
 }
@@ -737,7 +736,7 @@ void LockedPawns(int attacker, const position_t& pos, eval_info_t& ei, int *draw
         const int defender = attacker ^ 1;
         const uint64 pawnAttackLeft = (*ShiftPtr[defender])(ei.pawns[defender], Shift[attacker]) & ~FileHBB;
         const uint64 pawnAttackright = (*ShiftPtr[defender])(ei.pawns[defender], Shift[defender]) & ~FileABB;
-        const uint64 kingStopper = (passed!=0) ? 0 : (ei.atkkings[defender] | (pos.kings & pos.color[defender]));
+        const uint64 kingStopper = (passed != 0) ? 0 : (ei.atkkings[defender] | (pos.kings & pos.color[defender]));
         const uint64 pieceStopper = kingStopper | ei.atkbishops[defender] | ei.atkknights[defender] | ei.atkrooks[defender] | ei.atkqueens[defender];
         uint64 squashSquares = pawnAttackLeft & pawnAttackright;
         squashSquares |= (ei.atkpawns[defender] & ~ei.atkall[attacker]);
@@ -752,7 +751,7 @@ void LockedPawns(int attacker, const position_t& pos, eval_info_t& ei, int *draw
         }
         const uint64 relevantPawns = ei.pawns[defender] & (ei.atkall[defender] | ~ei.atkall[attacker]);
         const uint64 pawnGuards = (((*ShiftPtr[defender])(relevantPawns, Shift[defender]) & ~FileABB) | ((*ShiftPtr[defender])(relevantPawns, Shift[attacker]) & ~FileHBB));
-        const uint64 selfBlocked = ei.pawns[attacker] & (ShiftPtr[defender](relevantPawns | stopSquares, 8)); 
+        const uint64 selfBlocked = ei.pawns[attacker] & (ShiftPtr[defender](relevantPawns | stopSquares, 8));
         const uint64 blocked = selfBlocked | pawnGuards | kingStopper;
         const  uint64 enemyKing = pos.kings & pos.color[attacker];
         if (defender == WHITE) {
@@ -771,8 +770,8 @@ void LockedPawns(int attacker, const position_t& pos, eval_info_t& ei, int *draw
                 else if (SHOW_EVAL) PrintOutput() << "info string WHITE DRAW WALL king penetrated\n";
             }
             else if ((MaxOneBit(wall4missing) && (enemyKing & (Rank1BB | Rank2BB | wall3missing | wall4missing)) == 0) ||
-                    (MaxOneBit(wall5missing) && (enemyKing & (Rank1BB | Rank2BB | wall3missing | wall4missing | wall5missing)) == 0) ||
-                    (MaxOneBit(wall6missing) && (enemyKing & (Rank1BB | Rank2BB | wall3missing | wall4missing | wall5missing | wall6missing)) == 0)) {
+                (MaxOneBit(wall5missing) && (enemyKing & (Rank1BB | Rank2BB | wall3missing | wall4missing | wall5missing)) == 0) ||
+                (MaxOneBit(wall6missing) && (enemyKing & (Rank1BB | Rank2BB | wall3missing | wall4missing | wall5missing | wall6missing)) == 0)) {
                 if (SHOW_EVAL) PrintOutput() << "info string WHITE DRAW WALL partial wall\n";
                 BreakPawnReduction(attacker, stopSquares, pos, ei, false, draw);
             }
@@ -808,7 +807,7 @@ void LockedPawns(int attacker, const position_t& pos, eval_info_t& ei, int *draw
                 }
                 else if (SHOW_EVAL) PrintOutput() << "info string BLACK DRAW WALL king penetrated\n";
             }
-            else if ((MaxOneBit(wall5missing) && (enemyKing & (Rank8BB | Rank7BB | wall6missing | wall5missing)) == 0) || 
+            else if ((MaxOneBit(wall5missing) && (enemyKing & (Rank8BB | Rank7BB | wall6missing | wall5missing)) == 0) ||
                 (MaxOneBit(wall4missing) && (enemyKing & (Rank8BB | Rank7BB | wall6missing | wall5missing | wall4missing)) == 0) ||
                 (MaxOneBit(wall3missing) && (enemyKing & (Rank8BB | Rank7BB | wall6missing | wall5missing | wall4missing | wall6missing)) == 0)) {
                 if (SHOW_EVAL) PrintOutput() << "info string BLACK DRAW WALL partial wall\n";
@@ -823,86 +822,86 @@ void evalEndgame(int attacker, const position_t& pos, eval_info_t& ei, int *scor
     endIndex = ei.endFlags[attacker];
 
     switch (endIndex) {
-	case SinglePawnEnd: // single pawn endgames
+    case SinglePawnEnd: // single pawn endgames
         SinglePawnEnding(attacker, pos, ei, score, draw, pos.side);
         DrawnRookPawn(attacker, pos, draw, pos.side);
         break;
-	case RvREnd: // rook endings
-		RookEnding<false>(attacker, pos, ei, score, draw);
+    case RvREnd: // rook endings
+        RookEnding<false>(attacker, pos, ei, score, draw);
         if (SHOW_EVAL) PrintOutput() << "info string each side has a rook endgame (multiple attaker pawns)\n";
         break;
-	case BvBEnd: // bishop endings without enough pawns to lock things
+    case BvBEnd: // bishop endings without enough pawns to lock things
         if (SHOW_EVAL) PrintOutput() << "info string each side has a bishop endgame (cannot be locked)\n";
         BishopEnding(attacker, pos, ei, score, draw);
         DrawnRookPawn(attacker, pos, draw, pos.side);
         break;
-	case RvPEnd: // rook versus pawns endings
+    case RvPEnd: // rook versus pawns endings
         RookvPawnsEnding(attacker, pos, score, draw, pos.side);
         break;
-	case NPEnd: // knight + pawn
+    case NPEnd: // knight + pawn
         DrawnNP(attacker, pos, ei, draw);
         break;
-	case QvREnd: // Q vs. Rook + Pawn(s)
+    case QvREnd: // Q vs. Rook + Pawn(s)
         DrawnQvREnding(attacker, pos, ei, score, draw);
         break;
-	case BNEnd: // mate with knight and bishop
+    case BNEnd: // mate with knight and bishop
         KnightBishopMate(attacker, pos, score, draw);
         break;
-	case RBvRB:
+    case RBvRB:
         RookBishopEnding(attacker, pos, ei, draw);
         break;
-	case BPEnd: //pawn + bishop endgame
+    case BPEnd: //pawn + bishop endgame
         DrawnRookPawn(attacker, pos, draw, pos.side);
         if (SHOW_EVAL) PrintOutput() << "info string bishop and pawn vs. endgame\n";
         break;
-	case BEnd: //pawn endgames with more than 1 pawn
+    case BEnd: //pawn endgames with more than 1 pawn
         DrawnRookPawn(attacker, pos, draw, pos.side);
         PawnEnding(attacker, pos, draw, pos.side);
         if (SHOW_EVAL) PrintOutput() << "info string more than one pawn endgame\n";
         break;
-	case RvNEnd: //rook against knight
+    case RvNEnd: //rook against knight
         RookvKnight(attacker, pos, score, draw);
         break;
-	case QvPEnd: //queen against pawn
+    case QvPEnd: //queen against pawn
         QueenvPawn(attacker, pos, ei, score, draw);
         break;
-	case NoPawnEnd:
+    case NoPawnEnd:
         MateNoPawn(attacker, pos, score);
         break;
-	case RPvBEnd: //rook against bishop
+    case RPvBEnd: //rook against bishop
         DrawnRookPawnvBishop(attacker, pos, draw);
         break;
-	case BPvNEnd: //bishop and pawn vs knight
+    case BPvNEnd: //bishop and pawn vs knight
         MinorPawnvMinor(attacker, pos, ei, draw);
         DrawnRookPawn(attacker, pos, draw, pos.side);
         if (SHOW_EVAL) PrintOutput() << "info string bishop and pawn vs. knight endgame\n";
         break;
-	case BPvMEnd: //knight and pawn vs bishop or knight
+    case BPvMEnd: //knight and pawn vs bishop or knight
         MinorPawnvMinor(attacker, pos, ei, draw);
         if (SHOW_EVAL) PrintOutput() << "info string knight and pawn vs. minor endgame\n";
         break;
-	case MPPvMPEnd:
+    case MPPvMPEnd:
         MinorPawnPawnvMinorPawn(attacker, pos, ei, draw);
         break;
-	case BLockEnd:
+    case BLockEnd:
         PawnEnding(attacker, pos, draw, pos.side);
         DrawnRookPawn(attacker, pos, draw, pos.side);
         LockedPawns(attacker, pos, ei, draw);
         if (SHOW_EVAL) PrintOutput() << "info string more than one pawn endgame (might be locked)\n";
         break;
-	case BvBLockEnd: // bishop endings WITH enough pawns to lock things
+    case BvBLockEnd: // bishop endings WITH enough pawns to lock things
         if (SHOW_EVAL) PrintOutput() << "info string each side has a bishop endgame that might be locked\n";
         BishopEnding(attacker, pos, ei, score, draw);
         DrawnRookPawn(attacker, pos, draw, pos.side);
         LockedPawns(attacker, pos, ei, draw);
         break;
-	case MinorLock: // bishop endings WITH enough pawns to lock things
+    case MinorLock: // bishop endings WITH enough pawns to lock things
         if (SHOW_EVAL) PrintOutput() << "info string stronger side has b/n weaker side has b/n/r (not bvb) and might be locked\n";
         LockedPawns(attacker, pos, ei, draw);
         break;
-	case RPvREnd: // bishop endings WITH enough pawns to lock things
-		RookEnding<true>(attacker, pos, ei, score, draw);
-		if (SHOW_EVAL) PrintOutput() << "info string each side has a rook endgame (single attaker pawn)\n";
-		break;
-	}
+    case RPvREnd: // bishop endings WITH enough pawns to lock things
+        RookEnding<true>(attacker, pos, ei, score, draw);
+        if (SHOW_EVAL) PrintOutput() << "info string each side has a rook endgame (single attaker pawn)\n";
+        break;
+    }
 }

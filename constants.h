@@ -23,57 +23,57 @@ enum ranks {
     Rank1, Rank2, Rank3, Rank4, Rank5, Rank6, Rank7, Rank8
 };
 enum endgameFlags {
-	NoEnd = 0,
-	SinglePawnEnd = 1,
-	RvREnd = 2,
-	BvBEnd = 3,
-	RvPEnd = 4,
-	NPEnd = 5,
-	QvREnd = 6,
-	BNEnd = 7,
-	RBvRB = 8,
-	BPEnd = 9,
-	BEnd = 10,
-	RvNEnd = 11,
-	QvPEnd = 12,
-	NoPawnEnd = 13,
-	RPvBEnd = 14,
-	BPvNEnd = 15,
-	BPvMEnd = 16,
-	MPPvMPEnd = 17,
-	BLockEnd = 18,
-	BvBLockEnd = 19,
-	MinorLock = 20,
-	RPvREnd = 21
+    NoEnd = 0,
+    SinglePawnEnd = 1,
+    RvREnd = 2,
+    BvBEnd = 3,
+    RvPEnd = 4,
+    NPEnd = 5,
+    QvREnd = 6,
+    BNEnd = 7,
+    RBvRB = 8,
+    BPEnd = 9,
+    BEnd = 10,
+    RvNEnd = 11,
+    QvPEnd = 12,
+    NoPawnEnd = 13,
+    RPvBEnd = 14,
+    BPvNEnd = 15,
+    BPvMEnd = 16,
+    MPPvMPEnd = 17,
+    BLockEnd = 18,
+    BvBLockEnd = 19,
+    MinorLock = 20,
+    RPvREnd = 21
 };
 
-const int  PawnValueOpen = 89;	
-const int KnightValueOpen = 300;	
-const int BishopValueOpen = 311;	
-const int RookValueOpen = 454;	
-const int QueenValueOpen = 890;	
-const int BishopPairBonusOpen = 34;	
+const int  PawnValueOpen = 89;
+const int KnightValueOpen = 300;
+const int BishopValueOpen = 311;
+const int RookValueOpen = 454;
+const int QueenValueOpen = 890;
+const int BishopPairBonusOpen = 34;
 
-const int PawnValueMid1 = 89;	
+const int PawnValueMid1 = 89;
 const int KnightValueMid1 = 309;
 const int BishopValueMid1 = 311;
-const int RookValueMid1 = 466;	
-const int QueenValueMid1 = 890;	
+const int RookValueMid1 = 466;
+const int QueenValueMid1 = 890;
 const int BishopPairBonusMid1 = 41;
 
-const int PawnValueMid2 = 115;	
+const int PawnValueMid2 = 115;
 const int KnightValueMid2 = 348;
 const int BishopValueMid2 = 333;
-const int RookValueMid2 = 580 - 20;	
-const int QueenValueMid2 = 1080;	
-const int BishopPairBonusMid2 = 51;	
+const int RookValueMid2 = 580 - 20;
+const int QueenValueMid2 = 1080;
+const int BishopPairBonusMid2 = 51;
 
-const int PawnValueEnd = 125;	
+const int PawnValueEnd = 125;
 const int KnightValueEnd = 387;
 const int BishopValueEnd = 362;
-const int RookValueEnd = 612;	
-const int QueenValueEnd = 1150;	
-const int BishopPairBonusEnd = 55;	
+const int RookValueEnd = 612;
+const int QueenValueEnd = 1150;
+const int BishopPairBonusEnd = 55;
 
 const int KingValueOpen = 10000;
 const int KingValueMid1 = 10000;
