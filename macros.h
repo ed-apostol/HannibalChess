@@ -85,9 +85,8 @@ enum PieceTypes {
 #define MAX_MATERIAL             (2*3*3*3*9)
 #define U64(u)					 (u##ULL)
 
-#define PST(c,p,s,l)    (PcSqTb[(((c)<<10)|((p)<<7)|((s)<<1)|(l))])
-#define MIDGAME 0
-#define ENDGAME 1
+#define COMP(s1,s2) ((s1)+((s2) << 16))
+#define PST(c,p,s) (PieceSquareTable[c][p-1][s])
 
 enum ThinkingStatus {
     THINKING = 0,

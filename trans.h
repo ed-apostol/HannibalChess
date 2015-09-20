@@ -126,20 +126,19 @@ struct PawnEntry {
     PawnEntry() :
         hashlock(0),
         passedbits(0),
-        opn(0),
-        end(0) {
+        score(0) {
         shelter[0] = shelter[1] = 0;
         kshelter[0] = kshelter[1] = 0;
         qshelter[0] = qshelter[1] = 0;
     }
     uint32 hashlock;
-    int16 opn;
-    int16 end;
+    EvalScore score;
     uint64 passedbits;
     int8 shelter[2];
     int8 kshelter[2];
     int8 qshelter[2];
-    int16 pawnWidthBonus;
+    int8 pawnWidthBonus;
+    int8 locked;
 };
 
 class PawnHashTable : public BaseHashTable < PawnEntry > {

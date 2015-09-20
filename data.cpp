@@ -56,8 +56,7 @@ zero otherwise */
 int DirFromTo[64][64];
 
 /* used for pre-computed piece-square table */
-int PcSqTb[2048];
-int OutpostValue[2][64];
+EvalScore PieceSquareTable[2][KING][64];
 /* used in updating the castle status of the position */
 int CastleMask[64];
 /* used as initial king penalty */

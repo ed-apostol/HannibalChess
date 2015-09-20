@@ -70,6 +70,7 @@ enum HashMask {
 };
 
 typedef uint32 basic_move_t;
+typedef int32 EvalScore;
 
 struct continuation_t {
     basic_move_t moves[MAXPLY + 1];
@@ -107,8 +108,7 @@ struct pos_store_t {
     int fifty;
     int epsq;
     int pliesFromNull;
-    int open[2];
-    int end[2];
+    EvalScore posScore[2];
     int mat_summ[2];
     uint64 phash;
     uint64 hash;

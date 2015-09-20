@@ -683,6 +683,7 @@ void Engine::DisplayPV(continuation_t& pv, int multipvIdx, int depth, int alpha,
     time = getTime();
     info.last_time = time;
     time = info.last_time - info.start_time;
+    score = (score * 100) / PawnValueEnd; //this keeps output regular even after automated turning of material values and such
 
     log << "info depth " << depth;
     if (abs(score) < (INF - MAXPLY)) {
@@ -839,7 +840,7 @@ void Engine::GetBestMove(Thread& sthread) {
             }
         }
         ss.hashMove = entry->pvMove();
-}
+    }
     // extend time when there is no hashmove from hashtable, this is useful when just out of the book
     if (ss.hashMove == EMPTY || (info.rootPV.moves[1] != rootpos.posStore.lastmove)) {
         info.time_limit_max += info.alloc_time / 4; // 25%
@@ -915,7 +916,6 @@ void Engine::GetBestMove(Thread& sthread) {
 
     SendBestMove();
 }
-
 void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     WaitForThink();
     SetThinkStarted();
@@ -930,7 +930,6 @@ void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     info.mMaxActiveSplitsPerThread = uci_opt[ActiveSplitsStr].GetInt();
 
     int mytime = 0, t_inc = 0;
-
     if (data.infinite) {
         info.depth_is_limited = true;
         info.depth_limit = MAXPLY;
