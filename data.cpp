@@ -59,11 +59,6 @@ int DirFromTo[64][64];
 EvalScore PieceSquareTable[2][KING][64];
 /* used in updating the castle status of the position */
 int CastleMask[64];
-/* used as initial king penalty */
-int KingPosPenalty[2][64];
-uint64 kingShelter[2][64]; // provides good shelter for king
-uint64 kingIndirectShelter[2][64]; // provides ok shelter for king
-
 int DrawValue[2];
 
 // used in setting up the position and eval symmetry

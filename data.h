@@ -58,12 +58,7 @@ extern int DirFromTo[64][64];
 extern EvalScore PieceSquareTable[2][KING][64];
 /* used in updating the castle status of the position */
 extern int CastleMask[64];
-/* used as initial king penalty */
-extern int KingPosPenalty[2][64];
-
 extern int DrawValue[2];
-extern uint64 kingShelter[2][64]; // provides good shelter for king
-extern uint64 kingIndirectShelter[2][64]; // provides ok shelter for king
 
 // used in setting up the position and eval symmetry
 extern const char *FenString[];

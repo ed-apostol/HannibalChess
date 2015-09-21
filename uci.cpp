@@ -49,7 +49,7 @@ Interface::Interface() {
     initPST();
     InitMaterial();
     InitMateBoost();
-
+	InitEval();
     setPosition(input_pos, STARTPOS);
 }
 
