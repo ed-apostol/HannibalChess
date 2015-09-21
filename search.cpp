@@ -831,21 +831,21 @@ void Engine::GetBestMove(Thread& sthread) {
     if (nullptr != entry && entry->pvMove() && isLegal(rootpos, entry->pvMove(), ss.moveGivesCheck)) {
         ss.hashMove = entry->pvMove();
         // don't do easy move and instant recapture when analyzing or pondering
-        if (info.thinking_status == THINKING && info.rootPV.moves[1] == rootpos.posStore.lastmove && info.rootPV.moves[2] == ss.hashMove) {
-            bool instantMove = false;
+        if (info.thinking_status == THINKING) {
+            bool singular = false;
+            bool recapture = false;
             for (TransEntry *hentry = transtable.Entry(rootpos.posStore.hash), *end = hentry + transtable.BucketSize(); hentry != end; ++hentry) {
                 if (hentry->HashLock() == LOCK(rootpos.posStore.hash)) {
                     if (ss.hashMove == hentry->Move() && (hentry->Mask() & MSingular)) {
-                        instantMove = true;
+                        singular = true;
                     }
                     break;
                 }
             }
-            if (!instantMove && (moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(ss.hashMove)))
-                || MaxPieceValue[moveCapture(ss.hashMove)] > MaxPieceValue[movePiece(ss.hashMove)]) {
-                instantMove = true;
+            if (moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(ss.hashMove))) {
+                recapture = true;
             }
-            if (instantMove) {
+            if (singular && recapture) {
                 info.bestmove = ss.hashMove;
                 info.best_value = entry->pvScore();
                 ExtractPvMovesFromHash(rootpos, info.rootPV, ss.hashMove);
@@ -854,7 +854,14 @@ void Engine::GetBestMove(Thread& sthread) {
                 else info.pondermove = 0;
                 StopSearch();
                 SendBestMove();
+                PrintOutput() << "info string Easy move recapture singular!!!";
                 return;
+            }
+            if (singular || recapture) {
+                info.time_limit_max -= info.alloc_time;
+                info.alloc_time = info.alloc_time / 3;
+                info.time_limit_max += info.alloc_time;
+                PrintOutput() << "info string Easy move reduced time";
             }
         }
     }
