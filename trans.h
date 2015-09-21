@@ -26,7 +26,7 @@ public:
     Entity* Entry(const uint64 hash) const {
         return &mpTable[KEY(hash) & mMask];
     }
-    void Init(size_t targetMB, const int bucket_size) {
+    void Init(size_t targetMB, const size_t bucket_size) {
         size_t size = 2;
         mBucketSize = bucket_size;
         size_t halfTarget = MAX(1, targetMB) * (1024 * 1024) / 2;
@@ -243,11 +243,11 @@ public:
 
     virtual void Clear();
     void NewDate(int date);
-    void StoreLower(uint64 hash, basic_move_t move, int depth, int value);
+    void StoreLower(uint64 hash, basic_move_t move, int depth, int value, const bool singular);
     void StoreUpper(uint64 hash, int depth, int value);
     void StoreCutUpper(uint64 hash, int depth, int value);
-    void StoreAllLower(uint64 hash, basic_move_t move, int depth, int value);
-    void StoreExact(uint64 hash, basic_move_t move, int depth, int value);
+    void StoreAllLower(uint64 hash, basic_move_t move, int depth, int value, const bool singular);
+    void StoreExact(uint64 hash, basic_move_t move, int depth, int value, const bool singular);
     void StoreNoMoves(uint64 hash, int depth, int value);
 
     int32 Date() const {

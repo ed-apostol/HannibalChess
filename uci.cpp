@@ -32,7 +32,7 @@
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
 const std::string Interface::year = "2015";
-const std::string Interface::version = "1.6e1";
+const std::string Interface::version = "1.6e3";
 const std::string Interface::arch = "x64";
 
 void Interface::Info() {
@@ -109,7 +109,6 @@ void Interface::PonderHit(Engine& engine) {
 }
 
 void Interface::IsReady(Engine& engine) {
-    engine.WaitForThink();
     LogAndPrintOutput() << "readyok";
 }
 

@@ -246,12 +246,12 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     }
     if (ss.bestvalue >= beta) {
         ssprev.counterMove = ss.bestmove;
-        mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, pos.ply));
+        mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, pos.ply), false);
     }
     else {
         if (inPv && ss.bestmove != EMPTY) {
             ssprev.counterMove = ss.bestmove;
-            mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, pos.ply));
+            mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, pos.ply), false);
             mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, pos.ply));
         }
         else mTransTable.StoreUpper(pos.posStore.hash, -1, scoreToTrans(ss.bestvalue, pos.ply));
@@ -428,6 +428,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     }
     int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 2) : (depth * depth));
     move_t* move;
+    basic_move_t singularMove = EMPTY;
     while ((move = sortNext(sp, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
         int score = -INF;
         int newdepth = depth - 1;
@@ -456,7 +457,10 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                             int score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, exploreDepth, ssprev, sthread, nt);
                             if (sthread.stop) return 0;
                             ssprev.bannedMove = EMPTY;
-                            if (score <= targetScore) newdepth++;
+                            if (score <= targetScore) {
+                                singularMove = ss.hashMove;
+                                newdepth++;
+                            }
                         }
                     }
                 }
@@ -573,13 +577,13 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (ss.bestvalue >= beta) {
             ssprev.counterMove = ss.bestmove;
             UpdateHistory(pos, ss, sthread, depth);
-            if (inCutNode(nt)) mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
-            else mTransTable.StoreAllLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
+            if (inCutNode(nt)) mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply), bool(singularMove == ss.bestmove));
+            else mTransTable.StoreAllLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply), bool(singularMove == ss.bestmove));
         }
         else {
             if (inPvNode(nt) && ss.bestmove != EMPTY) {
                 ssprev.counterMove = ss.bestmove;
-                mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
+                mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply), bool(singularMove == ss.bestmove));
                 mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
             }
             else if (inCutNode(nt)) mTransTable.StoreCutUpper(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, pos.ply));
@@ -667,7 +671,7 @@ void Engine::RepopulateHash(position_t& pos, continuation_t& rootPV) {
         if (!move) break;
         PvHashEntry* entry = pvhashtable.pvEntryFromMove(pos.posStore.hash, move);
         if (nullptr == entry) break;
-        transtable.StoreExact(pos.posStore.hash, entry->pvMove(), entry->pvDepth(), entry->pvScore());
+        transtable.StoreExact(pos.posStore.hash, entry->pvMove(), entry->pvDepth(), entry->pvScore(), false);
         makeMove(pos, undo[moveOn], move);
     }
     for (moveOn = moveOn - 1; moveOn >= 0; moveOn--) {
@@ -825,12 +829,26 @@ void Engine::GetBestMove(Thread& sthread) {
 #endif
     PvHashEntry *entry = pvhashtable.pvEntry(rootpos.posStore.hash);
     if (nullptr != entry && entry->pvMove() && isLegal(rootpos, entry->pvMove(), ss.moveGivesCheck)) {
-        if (info.rootPV.moves[1] == rootpos.posStore.lastmove && info.rootPV.moves[2] == entry->pvMove()) {
-            if (info.thinking_status == THINKING && ((moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(entry->pvMove())))
-                || MaxPieceValue[moveCapture(entry->pvMove())] > MaxPieceValue[movePiece(entry->pvMove())])) {
-                info.bestmove = entry->pvMove();
+        ss.hashMove = entry->pvMove();
+        // don't do easy move and instant recapture when analyzing or pondering
+        if (info.thinking_status == THINKING && info.rootPV.moves[1] == rootpos.posStore.lastmove && info.rootPV.moves[2] == ss.hashMove) {
+            bool instantMove = false;
+            for (TransEntry *hentry = transtable.Entry(rootpos.posStore.hash), *end = hentry + transtable.BucketSize(); hentry != end; ++hentry) {
+                if (hentry->HashLock() == LOCK(rootpos.posStore.hash)) {
+                    if (ss.hashMove == hentry->Move() && (hentry->Mask() & MSingular)) {
+                        instantMove = true;
+                    }
+                    break;
+                }
+            }
+            if (!instantMove && (moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(ss.hashMove)))
+                || MaxPieceValue[moveCapture(ss.hashMove)] > MaxPieceValue[movePiece(ss.hashMove)]) {
+                instantMove = true;
+            }
+            if (instantMove) {
+                info.bestmove = ss.hashMove;
                 info.best_value = entry->pvScore();
-                ExtractPvMovesFromHash(rootpos, info.rootPV, entry->pvMove());
+                ExtractPvMovesFromHash(rootpos, info.rootPV, ss.hashMove);
                 DisplayPV(info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
                 if (info.rootPV.length > 1) info.pondermove = info.rootPV.moves[1];
                 else info.pondermove = 0;
@@ -839,8 +857,8 @@ void Engine::GetBestMove(Thread& sthread) {
                 return;
             }
         }
-        ss.hashMove = entry->pvMove();
     }
+
     // extend time when there is no hashmove from hashtable, this is useful when just out of the book
     if (ss.hashMove == EMPTY || (info.rootPV.moves[1] != rootpos.posStore.lastmove)) {
         info.time_limit_max += info.alloc_time / 4; // 25%
