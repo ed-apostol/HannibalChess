@@ -147,6 +147,7 @@ struct SearchStack {
     SearchStack() :
         reducedMove(false),
         moveGivesCheck(false),
+        hashmoveIsSingular(false),
         playedMoves(0),
         hisCnt(0),
         evalvalue(-INF),
@@ -166,6 +167,7 @@ struct SearchStack {
     basic_move_t bestmove;
     bool reducedMove;
     bool moveGivesCheck;
+    bool hashmoveIsSingular;
     int evalvalue;
     uint64 dcc;
     basic_move_t counterMove;

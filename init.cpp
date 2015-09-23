@@ -17,64 +17,64 @@
 #include "bitutils.h"
 
 EvalScore pawnSQ(int sq) {
-	EvalScore central[8] = { COMP(2, 0), COMP(1, 0), COMP(0, 0), COMP(-1, 0), COMP(-1, 0), COMP(-1, 0), COMP(-1, 0), COMP(-1, 0) };
-	EvalScore file[8] = { COMP(-16, -4), COMP(-7, -5), COMP(-1, -7), COMP(5, -8), COMP(5, -8), COMP(-1, -7), COMP(-7, -5), COMP(-16, -4) };
-	EvalScore rank[8] = { COMP(0, 0), COMP(-3, -2), COMP(-2, -3), COMP(0, 1), COMP(1, 4), COMP(2, 7), COMP(0, 1), COMP(0, 0) };
+    EvalScore central[8] = { COMP(2, 0), COMP(1, 0), COMP(0, 0), COMP(-1, 0), COMP(-1, 0), COMP(-1, 0), COMP(-1, 0), COMP(-1, 0) };
+    EvalScore file[8] = { COMP(-16, -4), COMP(-7, -5), COMP(-1, -7), COMP(5, -8), COMP(5, -8), COMP(-1, -7), COMP(-7, -5), COMP(-16, -4) };
+    EvalScore rank[8] = { COMP(0, 0), COMP(-3, -2), COMP(-2, -3), COMP(0, 1), COMP(1, 4), COMP(2, 7), COMP(0, 1), COMP(0, 0) };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
 }
 
 EvalScore knightSQ(int sq) {
-	EvalScore central[8] = { COMP(0, 3), COMP(0, 2), COMP(0, 1), COMP(0, 0), COMP(0, -2), COMP(0, -4), COMP(0, -6), COMP(0, -8) };
-	EvalScore file[8] = { COMP(-26, -10), COMP(-9, -3), COMP(2, 0), COMP(5, 2), COMP(5, 2), COMP(2, 0), COMP(-9, -3), COMP(-26, -10) };
-	EvalScore rank[8] = { COMP(-30, -10), COMP(-9, -4), COMP(6, -1), COMP(16, 2), COMP(20, 4), COMP(19, 6), COMP(11, 3), COMP(-11, -5) };
+    EvalScore central[8] = { COMP(0, 3), COMP(0, 2), COMP(0, 1), COMP(0, 0), COMP(0, -2), COMP(0, -4), COMP(0, -6), COMP(0, -8) };
+    EvalScore file[8] = { COMP(-26, -10), COMP(-9, -3), COMP(2, 0), COMP(5, 2), COMP(5, 2), COMP(2, 0), COMP(-9, -3), COMP(-26, -10) };
+    EvalScore rank[8] = { COMP(-30, -10), COMP(-9, -4), COMP(6, -1), COMP(16, 2), COMP(20, 4), COMP(19, 6), COMP(11, 3), COMP(-11, -5) };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
-	return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
+    return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
 }
 EvalScore bishopSQ(int sq) {
-	EvalScore central[8] = { COMP(11, 5), COMP(6, 3), COMP(2, 1), COMP(-2, 1), COMP(-4, -2), COMP(-6, -2), COMP(-7, -3), COMP(-11, -5) };
-	EvalScore rank[8] = { COMP(-7, 0), COMP(0, 0), COMP(0, 0), COMP(0, 0), COMP(0, 0), COMP(0, 0), COMP(0,0 ), COMP(-1, 0) };
+    EvalScore central[8] = { COMP(11, 5), COMP(6, 3), COMP(2, 1), COMP(-2, 1), COMP(-4, -2), COMP(-6, -2), COMP(-7, -3), COMP(-11, -5) };
+    EvalScore rank[8] = { COMP(-7, 0), COMP(0, 0), COMP(0, 0), COMP(0, 0), COMP(0, 0), COMP(0, 0), COMP(0, 0), COMP(-1, 0) };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)] + rank[r]);
 }
 EvalScore rookSQ(int sq) {
-	EvalScore file[8] = { COMP(-2, 0), COMP(1, 0), COMP(4, 0), COMP(7, 0), COMP(7, 0), COMP(4, 0), COMP(1, 0), COMP(-2, 0) };
+    EvalScore file[8] = { COMP(-2, 0), COMP(1, 0), COMP(4, 0), COMP(7, 0), COMP(7, 0), COMP(4, 0), COMP(1, 0), COMP(-2, 0) };
     int f = SQFILE(sq);
     return (file[f]);
 }
 EvalScore queenSQ(int sq) {
-	EvalScore central[8] = { COMP(4, 3), COMP(2, 2), COMP(0, 1), COMP(-1, -1), COMP(-2, -3), COMP(-4, -5), COMP(-6, -7), COMP(-9, -11) };
-	EvalScore file[8] = { COMP(-3, -3), COMP(0, 0), COMP(1, 1), COMP(3, 3), COMP(3, 3), COMP(1, 1), COMP(0, 0), COMP(-3, -3) };
-	EvalScore rank[8] = { COMP(-7, -3), COMP(0, 0), COMP(0, 1), COMP(1, 3), COMP(1, 3), COMP(0, 1), COMP(0, 0), COMP(-1, -3) };
+    EvalScore central[8] = { COMP(4, 3), COMP(2, 2), COMP(0, 1), COMP(-1, -1), COMP(-2, -3), COMP(-4, -5), COMP(-6, -7), COMP(-9, -11) };
+    EvalScore file[8] = { COMP(-3, -3), COMP(0, 0), COMP(1, 1), COMP(3, 3), COMP(3, 3), COMP(1, 1), COMP(0, 0), COMP(-3, -3) };
+    EvalScore rank[8] = { COMP(-7, -3), COMP(0, 0), COMP(0, 1), COMP(1, 3), COMP(1, 3), COMP(0, 1), COMP(0, 0), COMP(-1, -3) };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
     return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
-} 
+}
 EvalScore kingSQ(int sq) {
-	EvalScore central[8] = { COMP(0, 0), COMP(0, -2), COMP(0, -4), COMP(0, -7), COMP(0, -10), COMP(0, -14), COMP(0, -23), COMP(0, -32) };
-	EvalScore file[8] = { COMP(26, -13), COMP(30, 1), COMP(0, 11), COMP(-20, 16), COMP(-20, 16), COMP(0, 11), COMP(30, 1), COMP(26, -13) };
-	EvalScore rank[8] = { COMP(3, -29), COMP(0, -4), COMP(-5, 1), COMP(-9, 6), COMP(-13, 10), COMP(-17, 6), COMP(-17, 1), COMP(-17, -10) };
+    EvalScore central[8] = { COMP(0, 0), COMP(0, -2), COMP(0, -4), COMP(0, -7), COMP(0, -10), COMP(0, -14), COMP(0, -23), COMP(0, -32) };
+    EvalScore file[8] = { COMP(26, -13), COMP(30, 1), COMP(0, 11), COMP(-20, 16), COMP(-20, 16), COMP(0, 11), COMP(30, 1), COMP(26, -13) };
+    EvalScore rank[8] = { COMP(3, -29), COMP(0, -4), COMP(-5, 1), COMP(-9, 6), COMP(-13, 10), COMP(-17, 6), COMP(-17, 1), COMP(-17, -10) };
     int f = SQFILE(sq);
     int r = SQRANK(sq);
-	return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
+    return (central[abs(f - r)] + central[abs(f + r - 7)] + file[f] + rank[r]);
 }
 
 void initPST() {
     int i, j, k;
 
     for (i = 0; i < 64; i++) {
-		PST(WHITE, PAWN, i) = pawnSQ(i);
-		PST(WHITE, KNIGHT, i) = knightSQ(i);
-		PST(WHITE, BISHOP, i) = bishopSQ(i);
-		PST(WHITE, ROOK, i) = rookSQ(i);
-		PST(WHITE, QUEEN, i) = queenSQ(i);
-		PST(WHITE, KING, i) = kingSQ(i);
+        PST(WHITE, PAWN, i) = pawnSQ(i);
+        PST(WHITE, KNIGHT, i) = knightSQ(i);
+        PST(WHITE, BISHOP, i) = bishopSQ(i);
+        PST(WHITE, ROOK, i) = rookSQ(i);
+        PST(WHITE, QUEEN, i) = queenSQ(i);
+        PST(WHITE, KING, i) = kingSQ(i);
     }
 
-	for (i = PAWN; i <= KING; i++) {
+    for (i = PAWN; i <= KING; i++) {
         for (j = 0; j < 64; j++) {
             k = ((7 - SQRANK(j)) * 8) + SQFILE(j);
             PST(BLACK, i, k) = PST(WHITE, i, j);

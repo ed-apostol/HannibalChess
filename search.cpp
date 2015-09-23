@@ -315,6 +315,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (entry->Move() != EMPTY && entry->LowerDepth() > ss.hashDepth) {
                     ss.hashMove = entry->Move();
                     ss.hashDepth = entry->LowerDepth();
+                    if (entry->Mask() & MSingular) ss.hashmoveIsSingular = true;
                 }
                 if (entry->LowerDepth() > evalDepth) {
                     evalDepth = entry->LowerDepth();
@@ -391,6 +392,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (sthread.stop) return 0;
                 ss.evalvalue = score;
                 if (score > alpha) {
+                    if (ss.hashmoveIsSingular && ss.hashMove != ssprev.counterMove) ss.hashmoveIsSingular = false;
                     ss.hashMove = ssprev.counterMove;
                     ss.hashDepth = newdepth;
                 }
@@ -453,10 +455,14 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                         int exploreDepth = depth / 2;
                         if (ss.hashDepth >= exploreDepth) { //two reasons to extend are: a) tree is likely smaller than normal and/or b) tree is likely critical
                             int targetScore = ss.evalvalue - EXPLORE_BASE_CUTOFF - depth * EXPLORE_MULT_CUTOFF;
-                            ssprev.bannedMove = ss.hashMove;
-                            int score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, exploreDepth, ssprev, sthread, nt);
-                            if (sthread.stop) return 0;
-                            ssprev.bannedMove = EMPTY;
+                            int score = INF;
+                            if (ss.hashmoveIsSingular) score = targetScore;
+                            else {
+                                ssprev.bannedMove = ss.hashMove;
+                                score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, exploreDepth, ssprev, sthread, nt);
+                                ssprev.bannedMove = EMPTY; 
+                                if (sthread.stop) return 0;
+                            }
                             if (score <= targetScore) {
                                 singularMove = ss.hashMove;
                                 newdepth++;
