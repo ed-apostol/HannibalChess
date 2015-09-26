@@ -390,6 +390,7 @@ private:
     std::vector<Thread*> mThreads;
     TimerThread* mTimerThread;
     Book mPolyBook;
+	basic_move_t easyMove;
 };
 
 extern inline bool moveIsTactical(uint32 m);

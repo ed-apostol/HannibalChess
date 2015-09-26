@@ -446,28 +446,32 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (anyRepNoMove(pos, move->m)) {
             score = DrawValue[pos.side];
         }
-        else {
+		else {
+			
             ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
             if (ss.bestvalue == -INF) { //TODO remove this from loop and do it first
                 if (!inRoot && !inSingular && !inSplitPoint) {
                     if (inCheck && ss.mvlist->size == 1) newdepth++;
-                    else if (ss.hashMove == move->m && depth >= (inPvNode(nt) ? 6 : 8)) {
-                        int exploreDepth = depth / 2;
-                        if (ss.hashDepth >= exploreDepth) { //two reasons to extend are: a) tree is likely smaller than normal and/or b) tree is likely critical
-                            int targetScore = ss.evalvalue - EXPLORE_BASE_CUTOFF - depth * EXPLORE_MULT_CUTOFF;
-                            int score = INF;
-                            if (ss.hashmoveIsSingular) score = targetScore;
-                            else {
-                                ssprev.bannedMove = ss.hashMove;
-                                score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, exploreDepth, ssprev, sthread, nt);
-                                ssprev.bannedMove = EMPTY; 
-                                if (sthread.stop) return 0;
-                            }
-                            if (score <= targetScore) {
-                                singularMove = ss.hashMove;
-                                newdepth++;
-                            }
-                        }
+					else if (ss.hashMove == move->m && depth >= (inPvNode(nt) ? 6 : 8)) {
+						if (ss.hashmoveIsSingular && ss.hashDepth >= depth && ss.evalvalue >= alpha) {
+							singularMove = ss.hashMove;
+							newdepth++;
+						}
+						else {
+							int exploreDepth = depth / 2;
+							// if you have previously determined this should be extended, don't re-check as often
+							if (ss.hashDepth >= exploreDepth) { //two reasons to extend are: a) tree is likely smaller than normal and/or b) tree is likely critical
+								int targetScore = ss.evalvalue - EXPLORE_BASE_CUTOFF - depth * EXPLORE_MULT_CUTOFF;
+								ssprev.bannedMove = ss.hashMove;
+								int score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, exploreDepth, ssprev, sthread, nt);
+								ssprev.bannedMove = EMPTY;
+								if (sthread.stop) return 0;
+								if (score <= targetScore) {
+									singularMove = ss.hashMove;
+									newdepth++;
+								}
+							}
+						}
                     }
                 }
                 makeMove(pos, undo, move->m);
@@ -628,6 +632,9 @@ void Engine::StopSearch() {
 void Engine::PonderHit() { //no pondering in tuning
     info.thinking_status = THINKING;
     LogInfo() << "info string Switch from pondering to thinking";
+	if (info.time_is_limited && easyMove && easyMove == info.bestmove) {
+		StopSearch();
+	}
 }
 
 void Engine::SearchFromIdleLoop(SplitPoint& sp, Thread& sthread) {
@@ -810,143 +817,128 @@ void Engine::SendBestMove() {
 }
 
 void Engine::GetBestMove(Thread& sthread) {
-    int id;
-    int alpha, beta;
-    SearchStack ss;
-    SplitPoint rootsp;
-    ss.moveGivesCheck = kingIsInCheck(rootpos);
-    ss.dcc = discoveredCheckCandidates(rootpos, rootpos.side);
+	int id;
+	int alpha, beta;
+	SearchStack ss;
+	SplitPoint rootsp;
+	ss.moveGivesCheck = kingIsInCheck(rootpos);
+	ss.dcc = discoveredCheckCandidates(rootpos, rootpos.side);
 
-    transtable.NewDate(transtable.Date());
-    pvhashtable.NewDate(pvhashtable.Date());
+	transtable.NewDate(transtable.Date());
+	pvhashtable.NewDate(pvhashtable.Date());
 
-    if (info.thinking_status == THINKING && uci_opt[OwnBookStr].GetInt() && !anyRep(rootpos)) {
-        if ((info.bestmove = mPolyBook.getBookMove(rootpos)) != EMPTY) {
-            StopSearch();
-            SendBestMove();
-            return;
-        }
-    }
+	if (info.thinking_status == THINKING && uci_opt[OwnBookStr].GetInt() && !anyRep(rootpos)) {
+		if ((info.bestmove = mPolyBook.getBookMove(rootpos)) != EMPTY) {
+			StopSearch();
+			SendBestMove();
+			return;
+		}
+	}
 #ifdef EVAL_DEBUG
-    SHOW_EVAL = true;
-    int tscore = eval(rootpos, sthread);
-    SHOW_EVAL = false;
-    PrintOutput() << "info string score = " << tscore << "\n";
+	SHOW_EVAL = true;
+	int tscore = eval(rootpos, sthread);
+	SHOW_EVAL = false;
+	PrintOutput() << "info string score = " << tscore << "\n";
 #endif
-    PvHashEntry *entry = pvhashtable.pvEntry(rootpos.posStore.hash);
-    if (nullptr != entry && entry->pvMove() && isLegal(rootpos, entry->pvMove(), ss.moveGivesCheck)) {
-        ss.hashMove = entry->pvMove();
-        // don't do easy move and instant recapture when analyzing or pondering
-        if (info.thinking_status == THINKING) {
-            bool singular = false;
-            bool recapture = false;
-            for (TransEntry *hentry = transtable.Entry(rootpos.posStore.hash), *end = hentry + transtable.BucketSize(); hentry != end; ++hentry) {
-                if (hentry->HashLock() == LOCK(rootpos.posStore.hash)) {
-                    if (ss.hashMove == hentry->Move() && (hentry->Mask() & MSingular)) {
-                        singular = true;
-                    }
-                    break;
-                }
-            }
-            if (moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(ss.hashMove))) {
-                recapture = true;
-            }
-            if (singular && recapture) {
-                info.bestmove = ss.hashMove;
-                info.best_value = entry->pvScore();
-                ExtractPvMovesFromHash(rootpos, info.rootPV, ss.hashMove);
-                DisplayPV(info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
-                if (info.rootPV.length > 1) info.pondermove = info.rootPV.moves[1];
-                else info.pondermove = 0;
-                StopSearch();
-                SendBestMove();
-                PrintOutput() << "info string Easy move recapture singular!!!";
-                return;
-            }
-            if (singular || recapture) {
-                info.time_limit_max -= info.alloc_time;
-                info.alloc_time = info.alloc_time / 3;
-                info.time_limit_max += info.alloc_time;
-                PrintOutput() << "info string Easy move reduced time";
-            }
-        }
-    }
+	easyMove = 0;
+	PvHashEntry *entry = pvhashtable.pvEntry(rootpos.posStore.hash);
+	if (nullptr != entry && entry->pvMove() && isLegal(rootpos, entry->pvMove(), ss.moveGivesCheck)) {
+		ss.hashMove = entry->pvMove();
+		if (info.rootPV.moves[1] == rootpos.posStore.lastmove && info.rootPV.moves[2] == ss.hashMove) {
+			for (TransEntry *hentry = transtable.Entry(rootpos.posStore.hash), *end = hentry + transtable.BucketSize(); hentry != end; ++hentry) {
+				if (hentry->HashLock() == LOCK(rootpos.posStore.hash)) {
+					if (ss.hashMove == hentry->Move() && (hentry->Mask() & MSingular)) {
+						easyMove = ss.hashMove;
+						if (info.thinking_status == THINKING && info.time_is_limited) {
+							info.bestmove = ss.hashMove;
+							info.best_value = entry->pvScore();
+							ExtractPvMovesFromHash(rootpos, info.rootPV, ss.hashMove);
+							DisplayPV(info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
+							if (info.rootPV.length > 1) info.pondermove = info.rootPV.moves[1];
+							else info.pondermove = 0;
+							StopSearch();
+							SendBestMove();
+							return;
+						}
+					}
+					break;
+				}
+			}
+		}
+	}
+	// extend time when there is no hashmove from hashtable, this is useful when just out of the book
+	if (ss.hashMove == EMPTY || (info.rootPV.moves[1] != rootpos.posStore.lastmove)) {
+		info.time_limit_max += info.alloc_time / 4; // 25%
+		if (info.time_limit_max > info.time_limit_abs)
+			info.time_limit_max = info.time_limit_abs;
+	}
+	// SMP
+	InitVars();
+	SetAllThreadsToWork();
+	for (id = 1; id < MAXPLY; id++) {
+		const int AspirationWindow = 12;
+		int faillow = 0, failhigh = 0;
+		info.iteration = id;
+		info.best_value = -INF;
+		info.change = 0;
+		info.research = 0;
+		for (info.multipvIdx = 0; info.multipvIdx < info.multipv; ++info.multipvIdx) {
+			if (id < 6) {
+				alpha = -INF;
+				beta = INF;
+			}
+			else {
+				alpha = info.last_value - AspirationWindow;
+				beta = info.last_value + AspirationWindow;
+				if (alpha < -QueenValue) alpha = -INF;
+				if (beta > QueenValue) beta = INF;
+			}
+			while (true) {
+				search->searchNode<true, false, false>(rootpos, alpha, beta, id, ss, sthread, PVNode);
 
-    // extend time when there is no hashmove from hashtable, this is useful when just out of the book
-    if (ss.hashMove == EMPTY || (info.rootPV.moves[1] != rootpos.posStore.lastmove)) {
-        info.time_limit_max += info.alloc_time / 4; // 25%
-        if (info.time_limit_max > info.time_limit_abs)
-            info.time_limit_max = info.time_limit_abs;
-    }
-
-    // SMP
-    InitVars();
-    SetAllThreadsToWork();
-    for (id = 1; id < MAXPLY; id++) {
-        const int AspirationWindow = 12;
-        int faillow = 0, failhigh = 0;
-        info.iteration = id;
-        info.best_value = -INF;
-        info.change = 0;
-        info.research = 0;
-        for (info.multipvIdx = 0; info.multipvIdx < info.multipv; ++info.multipvIdx) {
-            if (id < 6) {
-                alpha = -INF;
-                beta = INF;
-            }
-            else {
-                alpha = info.last_value - AspirationWindow;
-                beta = info.last_value + AspirationWindow;
-                if (alpha < -QueenValue) alpha = -INF;
-                if (beta > QueenValue) beta = INF;
-            }
-            while (true) {
-                search->searchNode<true, false, false>(rootpos, alpha, beta, id, ss, sthread, PVNode);
-
-                if (!info.stop_search || info.best_value != -INF) {
-                    if (info.best_value > alpha && info.best_value < beta) {
-                        ExtractPvMovesFromHash(rootpos, info.rootPV, ss.counterMove);
-                        RepopulateHash(rootpos, info.rootPV);
-                    }
-                    if (SHOW_SEARCH && id >= 8) {
-                        DisplayPV(info.rootPV, info.multipvIdx, id, alpha, beta, info.best_value);
-                    }
-                }
-                if (info.stop_search) break;
-                if (info.best_value <= alpha) {
-                    beta = (alpha + beta) / 2;
-                    alpha = info.best_value - (AspirationWindow << ++faillow);
-                    if (alpha < -QueenValue) alpha = -INF;
-                    info.research = 1;
-                }
-                else if (info.best_value >= beta) {
-                    alpha = (alpha + beta) / 2;
-                    beta = info.best_value + (AspirationWindow << ++failhigh);
-                    if (beta > QueenValue) beta = INF;
-                    info.research = 1;
-                }
-                else break;
-            }
-            if (info.stop_search) break;
-        }
-        if (!info.stop_search) TimeManagement(id);
-        if (info.stop_search) break;
-        if (info.best_value != -INF) info.last_value = info.best_value;
-    }
-    if (!info.stop_search) {
-        if ((info.depth_is_limited || info.time_is_limited) && info.thinking_status == THINKING) {
-            LogInfo() << "info string Aborting search: end of GetBestMove: id = " << id << ", best_value = " << info.best_value << " sp = " << rootpos.sp << ", ply = " << rootpos.ply;
-        }
-        else {
-            LogAndPrintInfo() << "info string Waiting for stop, quit, or PonderHit";
-            while (!info.stop_search && info.thinking_status != THINKING);
-            LogInfo() << "info string Aborting search: end of waiting for stop/quit/PonderHit";
-        }
-        StopSearch();
-    }
-
-    SendBestMove();
-}
+				if (!info.stop_search || info.best_value != -INF) {
+					if (info.best_value > alpha && info.best_value < beta) {
+						ExtractPvMovesFromHash(rootpos, info.rootPV, ss.counterMove);
+						RepopulateHash(rootpos, info.rootPV);
+					}
+					if (SHOW_SEARCH && id >= 8) {
+						DisplayPV(info.rootPV, info.multipvIdx, id, alpha, beta, info.best_value);
+					}
+				}
+				if (info.stop_search) break;
+				if (info.best_value <= alpha) {
+					beta = (alpha + beta) / 2;
+					alpha = info.best_value - (AspirationWindow << ++faillow);
+					if (alpha < -QueenValue) alpha = -INF;
+					info.research = 1;
+				}
+				else if (info.best_value >= beta) {
+					alpha = (alpha + beta) / 2;
+					beta = info.best_value + (AspirationWindow << ++failhigh);
+					if (beta > QueenValue) beta = INF;
+					info.research = 1;
+				}
+				else break;
+			}
+			if (info.stop_search) break;
+		}
+		if (!info.stop_search) TimeManagement(id);
+		if (info.stop_search) break;
+		if (info.best_value != -INF) info.last_value = info.best_value;
+	}
+	if (!info.stop_search) {
+		if ((info.depth_is_limited || info.time_is_limited) && info.thinking_status == THINKING) {
+			LogInfo() << "info string Aborting search: end of GetBestMove: id = " << id << ", best_value = " << info.best_value << " sp = " << rootpos.sp << ", ply = " << rootpos.ply;
+		}
+		else {
+			LogAndPrintInfo() << "info string Waiting for stop, quit, or PonderHit";
+			while (!info.stop_search && info.thinking_status != THINKING);
+			LogInfo() << "info string Aborting search: end of waiting for stop/quit/PonderHit";
+		}
+		StopSearch();
+	}
+	SendBestMove();
+	}
 void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     WaitForThink();
     SetThinkStarted();
