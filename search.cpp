@@ -396,6 +396,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     ss.hashMove = ssprev.counterMove;
                     ss.hashDepth = newdepth;
                 }
+                else if (ss.hashmoveIsSingular) ss.hashmoveIsSingular = false;
             }
         }
     }
@@ -460,7 +461,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                             else {
                                 ssprev.bannedMove = ss.hashMove;
                                 score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, exploreDepth, ssprev, sthread, nt);
-                                ssprev.bannedMove = EMPTY; 
+                                ssprev.bannedMove = EMPTY;
                                 if (sthread.stop) return 0;
                             }
                             if (score <= targetScore) {
@@ -529,21 +530,19 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             move->s = score;
         }
         if (score > (inSplitPoint ? sp->bestvalue : ss.bestvalue)) {
-            ss.bestvalue = inSplitPoint ? sp->bestvalue = score : score;
-            if (inRoot) {
-                ssprev.counterMove = move->m;
-                mInfo.best_value = ss.bestvalue;
-                if (mInfo.iteration > 1 && mInfo.bestmove != move->m) mInfo.change = 1;
-            }
+            if (inRoot) mInfo.best_value = score;
+            if (inSplitPoint) sp->bestvalue = score;
+            ss.bestvalue = score;
             if (ss.bestvalue > (inSplitPoint ? sp->alpha : alpha)) {
-                ss.bestmove = inSplitPoint ? sp->bestmove = move->m : move->m;
                 if (inRoot) {
-                    mInfo.bestmove = ss.bestmove;
-                    if (mInfo.rootPV.length > 1) mInfo.pondermove = mInfo.rootPV.moves[1];
-                    else mInfo.pondermove = 0;
+                    if (mInfo.iteration > 1 && mInfo.bestmove != move->m) mInfo.change = 1;
+                    mInfo.bestmove = move->m;
                 }
+                if (inSplitPoint) sp->bestmove = move->m;
+                ss.bestmove = move->m;
                 if (inPvNode(nt) && ss.bestvalue < beta) {
-                    alpha = inSplitPoint ? sp->alpha = ss.bestvalue : ss.bestvalue;
+                    if (inSplitPoint) sp->alpha = ss.bestvalue;
+                    alpha = ss.bestvalue;
                 }
                 else {
                     if (inRoot) {
@@ -659,8 +658,8 @@ void Engine::ExtractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_m
         basic_move_t hashMove = entry->pvMove();
         if (hashMove == EMPTY) break;
         if (!isLegal(pos, hashMove, kingIsInCheck(pos))) break;
-        if (anyRep(pos)) break; // break on repetition to avoid long pv display
         pv.moves[pv.length++] = hashMove;
+        if (anyRep(pos)) break; // break on repetition to avoid long pv display
         makeMove(pos, undo[ply++], hashMove);
         if (ply >= MAXPLY) break;
     }
@@ -689,19 +688,18 @@ void Engine::DisplayPV(continuation_t& pv, int multipvIdx, int depth, int alpha,
     uint64 time;
     uint64 sumnodes = 0;
     PrintOutput log;
-
+    int scoreToDisplay = (score * 100) / PawnValueEnd;
     time = getTime();
     info.last_time = time;
     time = info.last_time - info.start_time;
-    score = (score * 100) / PawnValueEnd; //this keeps output regular even after automated turning of material values and such
-
+    
     log << "info depth " << depth;
     if (abs(score) < (INF - MAXPLY)) {
         if (score < beta) {
-            if (score <= alpha) log << " score cp " << score << " upperbound";
-            else log << " score cp " << score;
+            if (score <= alpha) log << " score cp " << scoreToDisplay << " upperbound";
+            else log << " score cp " << scoreToDisplay;
         }
-        else log << " score cp " << score << " lowerbound";
+        else log << " score cp " << scoreToDisplay << " lowerbound";
     }
     else {
         log << " score mate " << ((score > 0) ? (INF - score + 1) / 2 : -(INF + score) / 2);
@@ -803,8 +801,15 @@ void Engine::SendBestMove() {
     else {
         LogAndPrintOutput log;
         log << "bestmove " << move2Str(info.bestmove);
-        if (info.pondermove) log << " ponder " << move2Str(info.pondermove);
+        if (info.rootPV.moves[0] == info.bestmove && info.rootPV.length > 1 && info.rootPV.moves[1])
+            log << " ponder " << move2Str(info.rootPV.moves[1]);
     }
+
+    if (!info.pondering) {
+        if (info.rootPV.length > 1) info.expectedmove = info.rootPV.moves[1];
+        if (info.rootPV.length > 2) info.easymove = info.rootPV.moves[2];
+    }
+
     //PrintThreadStats();
     SetThinkFinished();
 }
@@ -837,7 +842,7 @@ void Engine::GetBestMove(Thread& sthread) {
     if (nullptr != entry && entry->pvMove() && isLegal(rootpos, entry->pvMove(), ss.moveGivesCheck)) {
         ss.hashMove = entry->pvMove();
         // don't do easy move and instant recapture when analyzing or pondering
-        if (info.thinking_status == THINKING) {
+        if (info.thinking_status == THINKING && rootpos.posStore.lastmove == info.expectedmove && ss.hashMove == info.easymove) {
             bool singular = false;
             bool recapture = false;
             for (TransEntry *hentry = transtable.Entry(rootpos.posStore.hash), *end = hentry + transtable.BucketSize(); hentry != end; ++hentry) {
@@ -851,23 +856,15 @@ void Engine::GetBestMove(Thread& sthread) {
             if (moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(ss.hashMove))) {
                 recapture = true;
             }
-            if (singular && recapture) {
+            if (recapture/* || singular*/) {
+                StopSearch();
                 info.bestmove = ss.hashMove;
                 info.best_value = entry->pvScore();
                 ExtractPvMovesFromHash(rootpos, info.rootPV, ss.hashMove);
                 DisplayPV(info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
-                if (info.rootPV.length > 1) info.pondermove = info.rootPV.moves[1];
-                else info.pondermove = 0;
-                StopSearch();
                 SendBestMove();
                 PrintOutput() << "info string Easy move recapture singular!!!";
                 return;
-            }
-            if (singular || recapture) {
-                info.time_limit_max -= info.alloc_time;
-                info.alloc_time = info.alloc_time / 3;
-                info.time_limit_max += info.alloc_time;
-                PrintOutput() << "info string Easy move reduced time";
             }
         }
     }
@@ -905,7 +902,7 @@ void Engine::GetBestMove(Thread& sthread) {
 
                 if (!info.stop_search || info.best_value != -INF) {
                     if (info.best_value > alpha && info.best_value < beta) {
-                        ExtractPvMovesFromHash(rootpos, info.rootPV, ss.counterMove);
+                        ExtractPvMovesFromHash(rootpos, info.rootPV, info.bestmove);
                         RepopulateHash(rootpos, info.rootPV);
                     }
                     if (SHOW_SEARCH && id >= 8) {
@@ -914,13 +911,11 @@ void Engine::GetBestMove(Thread& sthread) {
                 }
                 if (info.stop_search) break;
                 if (info.best_value <= alpha) {
-                    beta = (alpha + beta) / 2;
                     alpha = info.best_value - (AspirationWindow << ++faillow);
                     if (alpha < -QueenValue) alpha = -INF;
                     info.research = 1;
                 }
                 else if (info.best_value >= beta) {
-                    alpha = (alpha + beta) / 2;
                     beta = info.best_value + (AspirationWindow << ++failhigh);
                     if (beta > QueenValue) beta = INF;
                     info.research = 1;
@@ -1007,7 +1002,10 @@ void Engine::StartThinking(GoCmdData& data, position_t& pos) {
         if (mytime < 0) mytime = 0;
         if (data.movestogo <= 0 || data.movestogo > 32) data.movestogo = 32;
         info.time_limit_max = (mytime / data.movestogo) + ((t_inc * 4) / 5);
-        if (data.ponder) info.time_limit_max += info.time_limit_max / 4;
+        if (data.ponder) {
+            info.pondering = true;
+            info.time_limit_max += info.time_limit_max / 4;
+        }
 
         if (info.time_limit_max > mytime) info.time_limit_max = mytime;
         info.time_limit_abs = ((mytime * 3) / 10) + ((t_inc * 4) / 5);

@@ -131,6 +131,7 @@ private:
 struct SearchInfo {
     void Init() {
         thinking_status = THINKING;
+        pondering = false;
         stop_search = false;
         depth_is_limited = false;
         depth_limit = MAXPLY;
@@ -147,8 +148,7 @@ struct SearchInfo {
         change = 0;
         research = 0;
         iteration = 0;
-        bestmove = 0;
-        pondermove = 0;
+        bestmove = EMPTY;
         mate_found = 0;
         currmovenumber = 0;
         multipvIdx = 0;
@@ -163,6 +163,7 @@ struct SearchInfo {
     }
     volatile int thinking_status;
     volatile bool stop_search; // TODO: replace with sthread.stop?
+    bool pondering;
 
     int time_buffer;
     int contempt;
@@ -197,7 +198,8 @@ struct SearchInfo {
 
     int legalmoves;
     basic_move_t bestmove;
-    basic_move_t pondermove;
+    basic_move_t expectedmove;
+    basic_move_t easymove;
 
     basic_move_t moves[MAXMOVES];
     bool mvlist_initialized;
