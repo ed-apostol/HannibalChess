@@ -692,7 +692,7 @@ void Engine::DisplayPV(continuation_t& pv, int multipvIdx, int depth, int alpha,
     time = getTime();
     info.last_time = time;
     time = info.last_time - info.start_time;
-    
+
     log << "info depth " << depth;
     if (abs(score) < (INF - MAXPLY)) {
         if (score < beta) {
@@ -719,6 +719,8 @@ void Engine::DisplayPV(continuation_t& pv, int multipvIdx, int depth, int alpha,
 void Engine::TimeManagement(int depth) {
     static const int WORSE_TIME_BONUS = 20; //how many points more than 20 it takes to increase time by alloc to a maximum of 2*alloc
     static const int CHANGE_TIME_BONUS = 50; //what percentage of alloc to increase if the last move is a change move
+    static const int SINGULAR_TIME_CUTOFF = 15;
+    static const int EXTEND_OR_STOP_TIME_CUTOFF = 65;
 
     if (info.best_value > INF - MAXPLY) info.mate_found++;
     if (info.thinking_status == THINKING && info.time_is_limited) {
@@ -730,7 +732,12 @@ void Engine::TimeManagement(int depth) {
                 return;
             }
         }
-        if (timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * 65) / 100))) {
+        if (info.singular && timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * SINGULAR_TIME_CUTOFF) / 100))) {
+            StopSearch();
+            LogAndPrintOutput() << "info string Aborting search: Easymove: " << timeElapsed - info.start_time;
+            return;
+        }
+        if (timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * EXTEND_OR_STOP_TIME_CUTOFF) / 100))) {
             int64 addTime = 0;
             if (timeElapsed < info.time_limit_abs) {
                 if ((info.best_value + WORSE_SCORE_CUTOFF) <= info.last_value) {
@@ -805,9 +812,11 @@ void Engine::SendBestMove() {
             log << " ponder " << move2Str(info.rootPV.moves[1]);
     }
 
-    if (!info.pondering) {
+    if (!info.pondering && info.rootPV.length >= 1 && info.rootPV.moves[0] == info.bestmove) {
         if (info.rootPV.length > 1) info.expectedmove = info.rootPV.moves[1];
+        else info.expectedmove = EMPTY;
         if (info.rootPV.length > 2) info.easymove = info.rootPV.moves[2];
+        else info.easymove = EMPTY;
     }
 
     //PrintThreadStats();
@@ -827,6 +836,7 @@ void Engine::GetBestMove(Thread& sthread) {
 
     if (info.thinking_status == THINKING && uci_opt[OwnBookStr].GetInt() && !anyRep(rootpos)) {
         if ((info.bestmove = mPolyBook.getBookMove(rootpos)) != EMPTY) {
+            info.rootPV.length = 0;
             StopSearch();
             SendBestMove();
             return;
@@ -843,28 +853,23 @@ void Engine::GetBestMove(Thread& sthread) {
         ss.hashMove = entry->pvMove();
         // don't do easy move and instant recapture when analyzing or pondering
         if (info.thinking_status == THINKING && rootpos.posStore.lastmove == info.expectedmove && ss.hashMove == info.easymove) {
-            bool singular = false;
-            bool recapture = false;
-            for (TransEntry *hentry = transtable.Entry(rootpos.posStore.hash), *end = hentry + transtable.BucketSize(); hentry != end; ++hentry) {
-                if (hentry->HashLock() == LOCK(rootpos.posStore.hash)) {
-                    if (ss.hashMove == hentry->Move() && (hentry->Mask() & MSingular)) {
-                        singular = true;
-                    }
-                    break;
-                }
-            }
             if (moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(ss.hashMove))) {
-                recapture = true;
-            }
-            if (recapture/* || singular*/) {
                 StopSearch();
                 info.bestmove = ss.hashMove;
                 info.best_value = entry->pvScore();
                 ExtractPvMovesFromHash(rootpos, info.rootPV, ss.hashMove);
                 DisplayPV(info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
                 SendBestMove();
-                PrintOutput() << "info string Easy move recapture singular!!!";
+                PrintOutput() << "info string Easy move at the root!!!";
                 return;
+            }
+            for (TransEntry *hentry = transtable.Entry(rootpos.posStore.hash), *end = hentry + transtable.BucketSize(); hentry != end; ++hentry) {
+                if (hentry->HashLock() == LOCK(rootpos.posStore.hash)) {
+                    if (info.easymove == hentry->Move() && (hentry->Mask() & MSingular)) {
+                        info.singular = true;
+                    }
+                    break;
+                }
             }
         }
     }
@@ -911,11 +916,13 @@ void Engine::GetBestMove(Thread& sthread) {
                 }
                 if (info.stop_search) break;
                 if (info.best_value <= alpha) {
+                    beta = (alpha + beta) / 2;
                     alpha = info.best_value - (AspirationWindow << ++faillow);
                     if (alpha < -QueenValue) alpha = -INF;
                     info.research = 1;
                 }
                 else if (info.best_value >= beta) {
+                    alpha = (alpha + beta) / 2;
                     beta = info.best_value + (AspirationWindow << ++failhigh);
                     if (beta > QueenValue) beta = INF;
                     info.research = 1;
@@ -924,6 +931,7 @@ void Engine::GetBestMove(Thread& sthread) {
             }
             if (info.stop_search) break;
         }
+        if (info.singular && info.bestmove != info.easymove) info.singular = false;
         if (!info.stop_search) TimeManagement(id);
         if (info.stop_search) break;
         if (info.best_value != -INF) info.last_value = info.best_value;

@@ -131,6 +131,7 @@ private:
 struct SearchInfo {
     void Init() {
         thinking_status = THINKING;
+        singular = false;
         pondering = false;
         stop_search = false;
         depth_is_limited = false;
@@ -164,6 +165,7 @@ struct SearchInfo {
     volatile int thinking_status;
     volatile bool stop_search; // TODO: replace with sthread.stop?
     bool pondering;
+    bool singular;
 
     int time_buffer;
     int contempt;
