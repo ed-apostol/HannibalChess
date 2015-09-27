@@ -315,7 +315,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (entry->Move() != EMPTY && entry->LowerDepth() > ss.hashDepth) {
                     ss.hashMove = entry->Move();
                     ss.hashDepth = entry->LowerDepth();
-                    if (entry->Mask() & MSingular) ss.hashmoveIsSingular = true;
+                    //////////if (entry->Mask() & MSingular) ss.hashmoveIsSingular = true;
                 }
                 if (entry->LowerDepth() > evalDepth) {
                     evalDepth = entry->LowerDepth();
@@ -876,14 +876,14 @@ void Engine::GetBestMove(Thread& sthread) {
                 PrintOutput() << "info string Easy move at the root!!!";
                 return;
             }
-            for (TransEntry *hentry = transtable.Entry(rootpos.posStore.hash), *end = hentry + transtable.BucketSize(); hentry != end; ++hentry) {
-                if (hentry->HashLock() == LOCK(rootpos.posStore.hash)) {
-                    if (info.easymove == hentry->Move() && (hentry->Mask() & MSingular)) {
-                        info.singular = true;
-                    }
-                    break;
-                }
-            }
+            //////////for (TransEntry *hentry = transtable.Entry(rootpos.posStore.hash), *end = hentry + transtable.BucketSize(); hentry != end; ++hentry) {
+            //////////    if (hentry->HashLock() == LOCK(rootpos.posStore.hash)) {
+            //////////        if (info.easymove == hentry->Move() && (hentry->Mask() & MSingular)) {
+            //////////            info.singular = true;
+            //////////        }
+            //////////        break;
+            //////////    }
+            //////////}
         }
     }
 

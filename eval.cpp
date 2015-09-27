@@ -946,8 +946,8 @@ int eval(const position_t& pos, Thread& sthread) {
     evalPieces(pos, ei, WHITE);
     evalPieces(pos, ei, BLACK);
 
-    evalSpace(pos, ei, WHITE);
-    evalSpace(pos, ei, BLACK);
+    //////////evalSpace(pos, ei, WHITE);
+    //////////evalSpace(pos, ei, BLACK);
 
     if (QuickStalemate(pos, ei, pos.side)) {
         score = DrawValue[pos.side];
