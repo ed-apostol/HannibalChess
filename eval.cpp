@@ -110,11 +110,11 @@ const EvalScore  DOUBLE_TARGET_OPEN = COMP(4, 6);
 
 //passed pawns
 const EvalScore PassedMin = (20, 10);
+const EvalScore CandidatePawnMin = COMP(10, 5);
 
 const int UnstoppablePassedPawn = 700;
 const int EndgamePassedMax = 60;
 const int MidgamePassedMax = 120;
-const EvalScore CandidatePawnMin = COMP(10, 5);
 const int MidgameCandidatePawnMax = 90;
 const int EndgameCandidatePawnMax = 45;
 const int ProtectedPasser = 10;
@@ -143,19 +143,18 @@ const int KnightSafeCheckValue = 2;
 const int DiscoveredCheckValue = 3;
 
 // piece attacks
-const int QueenAttacked = 4;
-const int RookAttacked = 3;
-const int BishopAttacked = 2;
-const int KnightAttacked = 2;
+const EvalScore QueenAttacked = COMP(16, 12);
+const EvalScore QueenXrayAttacked = COMP(8, 6);
+const EvalScore RookAttacked = COMP(12, 9);
+const EvalScore RookXrayAttacked = COMP(6, 4);
+const EvalScore BishopAttacked = COMP(8, 6);
+const EvalScore KnightAttacked = COMP(8,6);
 
 const int QueenAttackPower = 1;
 const int RookAttackPower = 2;
 const int BishopAttackPower = 3;
 const int KnightAttackPower = 3;
 const int PawnAttackPower = 5;
-
-const int PieceAttackMulMid = 4;
-const int PieceAttackMulEnd = 3;
 
 const EvalScore ThreatBonus[] = { COMP(8, 8), COMP(88, 88), COMP(108, 108), COMP(128, 128), COMP(138, 138), COMP(148, 148), COMP(178, 178), COMP(188, 188) };
 
@@ -385,6 +384,7 @@ inline EvalScore outpost(eval_info_t& ei, const int color, const int sq, bool kn
     bool supported = (BitMask[sq] & ei.atkpawns[color]) != 0;
     return OutpostValue[knight][supported];
 }
+
 void evalPawnPushes(const position_t& pos, eval_info_t& ei, const int color) {
     static const uint64 Rank4[] = { Rank4BB, Rank5BB };
     uint64 frontSquares = (*ShiftPtr[color])(ei.pawns[color], 8) & ~(pos.occupied)  & ~ei.atkpawns[color ^ 1];
@@ -405,7 +405,6 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
     uint64 mobileSquare;
     const uint64 notOwnColor = ~pos.color[color];
     uint64 notOwnSkeleton;
-    int threatScore = 0;
     uint64 boardSkeleton = pos.pawns;
     const uint64 maybeTrapped = bewareTrapped[color] & ~ei.atkpawns[color];
     uint64 pawnTargets = ei.pawns[enemy] & ~ei.atkpawns[enemy];
@@ -448,7 +447,7 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         if ((fromMask & boardSide[color]) && (BitMask[from + PAWN_MOVE_INC(color)] & pos.pawns)) ei.posScore[color] += MINOR_BLOCKER;
         if ((maybeTrapped & fromMask) && temp1 < 2) //trapped piece if you are in opponent area and you have very few safe moves
             ei.posScore[color] -= TRAPPED_PENALTY;
-    }
+	}
     ei.kingatkbishops[color] = 0;
     pc_bits = pos.bishops & pos.color[color];
     if (pc_bits) {
@@ -480,10 +479,10 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
                 ei.posScore[color] += BishopPawnPressure * numPawnsPressured;
             }
             if (xtemp64 & notOwnColor & (pos.kings | pos.queens)) {
-                threatScore += (BishopAttackPower * QueenAttacked) / 2;
+				ei.posScore[color] += BishopAttackPower * QueenXrayAttacked;
             }
             if (xtemp64 & notOwnColor & pos.rooks) {
-                threatScore += (BishopAttackPower * RookAttacked) / 2;
+				ei.posScore[color] += BishopAttackPower * RookXrayAttacked;
             }
             temp1 = bitCnt(xtemp64);
             ei.posScore[color] += XrayBishopMobArray[temp1];
@@ -492,7 +491,7 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
                 ei.posScore[color] += outpost(ei, color, from, false);
             }
             if ((fromMask & boardSide[color]) && (BitMask[from + PAWN_MOVE_INC(color)] & pos.pawns)) ei.posScore[color] += ComposeEvalScore(MINOR_BLOCKER, 0);
-        } while (pc_bits);
+		} while (pc_bits);
     }
     pc_bits = pos.rooks & pos.color[color];
     ei.kingatkrooks[color] = 0;
@@ -510,7 +509,7 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         xtemp64 = rookAttacksBB(from, boardSkeleton) & notOwnSkeleton;
         temp1 = bitCnt(xtemp64);
         if (xtemp64 & notOwnColor & (pos.kings | pos.queens)) {
-            threatScore += (RookAttackPower * QueenAttacked) / 2;
+			ei.posScore[color] += RookAttackPower * QueenXrayAttacked;
         }
         ei.posScore[color] += XrayRookMobArray[temp1];
         //its good to be lined up with a lot of enemy pawns (7th rank most common example)
@@ -524,7 +523,7 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         if ((BitMask[from] & Rank7ByColorBB[color]) && (BitMask[pos.kpos[enemy]] & Rank8ByColorBB[color])) {
             ei.posScore[color] += Rook7th;
         }
-    }
+	}
     pc_bits = pos.queens & pos.color[color];
     while (pc_bits) {
         from = popFirstBit(&pc_bits);
@@ -543,7 +542,7 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         ei.posScore[color] += XrayQueenMobArray[temp1];
 
         if (xtemp64 & notOwnColor & pos.kings) {
-            threatScore += (QueenAttackPower * QueenAttacked) / 2;
+			ei.posScore[color] += QueenAttackPower * QueenXrayAttacked;
         }
         if ((BitMask[from] & Rank7ByColorBB[color]) && (BitMask[pos.kpos[enemy]] & Rank8ByColorBB[color])) {
             ei.posScore[color] += Queen7th;
@@ -552,7 +551,6 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
     ei.atkall[color] = ei.atkpawns[color] | ei.atkknights[color] | ei.atkbishops[color] | ei.atkrooks[color] | ei.atkqueens[color];
     ei.atkkings[color] = KingMoves[pos.kpos[color]];
     ei.atkall[color] |= ei.atkkings[color];
-    ei.posScore[color] += threatScore * ComposeEvalScore(PieceAttackMulMid, PieceAttackMulEnd);
 }
 
 void evalThreats(const position_t& pos, eval_info_t& ei, const int color) {
@@ -565,42 +563,41 @@ void evalThreats(const position_t& pos, eval_info_t& ei, const int color) {
     enemy_pcs = pos.color[color ^ 1] & ~(pos.pawns | pos.kings);
 
     not_guarded = ~ei.atkpawns[color ^ 1];
+	
     temp64 = ei.atkpawns[color] & enemy_pcs;
     if (temp64) {
-        temp1 += PawnAttackPower * QueenAttacked * ((temp64 & pos.queens) != 0);
-        temp1 += PawnAttackPower * RookAttacked* ((temp64 & pos.rooks) != 0);
-        temp1 += PawnAttackPower * BishopAttacked* ((temp64 & pos.bishops) != 0);
-        temp1 += PawnAttackPower * KnightAttacked* ((temp64 & pos.knights) != 0);
-    }
+		ei.posScore[color] += PawnAttackPower * QueenAttacked * ((temp64 & pos.queens) != 0);
+		ei.posScore[color] += PawnAttackPower * RookAttacked* ((temp64 & pos.rooks) != 0);
+		ei.posScore[color] += PawnAttackPower * BishopAttacked* ((temp64 & pos.bishops) != 0);
+		ei.posScore[color] += PawnAttackPower * KnightAttacked* ((temp64 & pos.knights) != 0);
+	}
 
     temp64 = ei.atkknights[color] & enemy_pcs;
     if (temp64) {
-        temp1 += KnightAttackPower * QueenAttacked *((temp64 & pos.queens) != 0);
-        temp1 += KnightAttackPower * RookAttacked *((temp64 & pos.rooks) != 0);
-        temp1 += KnightAttackPower * BishopAttacked *((temp64 & pos.bishops & not_guarded) != 0);
+		ei.posScore[color] += KnightAttackPower * QueenAttacked *((temp64 & pos.queens) != 0);
+		ei.posScore[color] += KnightAttackPower * RookAttacked *((temp64 & pos.rooks) != 0);
+		ei.posScore[color] += KnightAttackPower * BishopAttacked *((temp64 & pos.bishops & not_guarded) != 0);
     }
 
     temp64 = ei.atkbishops[color] & enemy_pcs;
     if (temp64) {
-        temp1 += BishopAttackPower * QueenAttacked * ((temp64 & pos.queens) != 0);
-        temp1 += BishopAttackPower * RookAttacked * ((temp64 & pos.rooks) != 0);
-        temp1 += BishopAttackPower * KnightAttacked * ((temp64 & pos.knights & not_guarded) != 0);
+		ei.posScore[color] += BishopAttackPower * QueenAttacked * ((temp64 & pos.queens) != 0);
+		ei.posScore[color] += BishopAttackPower * RookAttacked * ((temp64 & pos.rooks) != 0);
+		ei.posScore[color] += BishopAttackPower * KnightAttacked * ((temp64 & pos.knights & not_guarded) != 0);
     }
     temp64 = ei.atkrooks[color] & enemy_pcs;
     if (temp64) {
-        temp1 += RookAttackPower * QueenAttacked * ((temp64 & pos.queens) != 0);
-        temp1 += RookAttackPower * BishopAttacked * ((temp64 & pos.bishops & not_guarded) != 0);
-        temp1 += RookAttackPower * KnightAttacked * ((temp64 & pos.knights & not_guarded) != 0);
+		ei.posScore[color] += RookAttackPower * QueenAttacked * ((temp64 & pos.queens) != 0);
+		ei.posScore[color] += RookAttackPower * BishopAttacked * ((temp64 & pos.bishops & not_guarded) != 0);
+		ei.posScore[color] += RookAttackPower * KnightAttacked * ((temp64 & pos.knights & not_guarded) != 0);
     }
 
     temp64 = ei.atkqueens[color] & enemy_pcs;
     if (temp64) {
-        temp1 += QueenAttackPower * RookAttacked * ((temp64 & pos.rooks & not_guarded) != 0);
-        temp1 += QueenAttackPower * BishopAttacked * ((temp64 & pos.bishops & not_guarded) != 0);
-        temp1 += QueenAttackPower * KnightAttacked * ((temp64 & pos.knights & not_guarded) != 0);
+		ei.posScore[color] += QueenAttackPower * RookAttacked * ((temp64 & pos.rooks & not_guarded) != 0);
+		ei.posScore[color] += QueenAttackPower * BishopAttacked * ((temp64 & pos.bishops & not_guarded) != 0);
+		ei.posScore[color] += QueenAttackPower * KnightAttacked * ((temp64 & pos.knights & not_guarded) != 0);
     }
-
-    ei.posScore[color] += temp1 * ComposeEvalScore(PieceAttackMulMid, PieceAttackMulEnd);
     ///now some serious threats
     uint64 unprotected = enemy_pcs & ~ei.atkall[color ^ 1];
     //undefended minors get penalty
@@ -868,6 +865,7 @@ bool QuickStalemate(const position_t& pos, eval_info_t& ei, const int color) {
     uint64 pawnMoves = (*ShiftPtr[color])(ei.pawns[color], 8) & ~pos.occupied;
     return (pawnMoves == 0);
 }
+
 int eval(const position_t& pos, Thread& sthread) {
     eval_info_t ei;
     material_info_t *mat;
