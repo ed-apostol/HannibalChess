@@ -126,7 +126,9 @@ struct PawnEntry {
     PawnEntry() :
         hashlock(0),
         passedbits(0),
-        score(0) {
+        score(0),
+		pawnWidthBonus(0),
+		locked(0) {
         shelter[0] = shelter[1] = 0;
         kshelter[0] = kshelter[1] = 0;
         qshelter[0] = qshelter[1] = 0;

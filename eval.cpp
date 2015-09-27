@@ -100,8 +100,7 @@ const EvalScore SAFE_PPUSH = COMP(4, 5);
 const EvalScore PPUSH_THREAT = COMP(8, 8);
 const EvalScore DOUBLED = COMP(2, 4);
 const EvalScore DOUBLED_OPEN = COMP(2, 4);
-const EvalScore ISOLATED = COMP(4, 4);
-const EvalScore TARGET = COMP(5, 8);
+const EvalScore TARGET = COMP(5, 8); //includes isolated
 const EvalScore TARGET_NOTRP = COMP(2, 4);
 const EvalScore  TARGET_OPEN = COMP(10, 12);
 const EvalScore  TARGET_NOTRP_OPEN = COMP(3, 4);
@@ -109,7 +108,7 @@ const EvalScore  DOUBLE_TARGET = COMP(2, 4);
 const EvalScore  DOUBLE_TARGET_OPEN = COMP(4, 6);
 
 //passed pawns
-const EvalScore PassedMin = (20, 10);
+const EvalScore PassedMin = COMP(20, 10);
 const EvalScore CandidatePawnMin = COMP(10, 5);
 
 const int UnstoppablePassedPawn = 700;
@@ -555,13 +554,9 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
 
 void evalThreats(const position_t& pos, eval_info_t& ei, const int color) {
     uint64 temp64, not_guarded, enemy_pcs;
-    int temp1;
-
     ASSERT(colorIsOk(color));
 
-    temp1 = 0;
     enemy_pcs = pos.color[color ^ 1] & ~(pos.pawns | pos.kings);
-
     not_guarded = ~ei.atkpawns[color ^ 1];
 	
     temp64 = ei.atkpawns[color] & enemy_pcs;
