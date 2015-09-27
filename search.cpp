@@ -228,8 +228,8 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
             ++sthread.nodes;
             score = -qSearch<inPv>(pos, -beta, -alpha, newdepth, ss, sthread);
             unmakeMove(pos, undo);
-        }
-        if (sthread.stop) return 0;
+			if (sthread.stop) return 0;
+		}
         if (score > ss.bestvalue) {
             ss.bestvalue = score;
             if (score > alpha) {

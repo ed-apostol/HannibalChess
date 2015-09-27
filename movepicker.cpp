@@ -68,7 +68,8 @@ bool captureIsGood(const position_t& pos, const basic_move_t m) {
     if (prom != EMPTY && prom != QUEEN) return false;
     if (capt != EMPTY) {
         if (prom != EMPTY) return true;
-        if (capt >= pc) return true;
+        if (capt >= pc) return true; //TODO try see value of pieces (so knight and bishop are the same)
+//		if (capt == PAWN && MaxOneBit(pos.color[pos.side ^ 1] & pos.pawns)) return true; ////Hc
     }
     return (swap(pos, m) >= 0);
 }

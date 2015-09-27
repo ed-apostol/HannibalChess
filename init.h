@@ -16,7 +16,7 @@
 #define PV_REDUCE_SCALE 3
 
 #define LATE_PRUNE_MIN 3
-#define FUTILITY_SCALE 18
+#define FUTILITY_SCALE 15
 
 extern void initPST();
 extern void initArr();
