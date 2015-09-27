@@ -33,6 +33,11 @@ const uint64 QCSQ[2] = { (0x0000000000000004ULL | 0x0000000000000008ULL), (0x040
 const int KScastleTo[2] = { g1, g8 };
 const int QScastleTo[2] = { c1, c8 };
 
+const uint64 SpaceMask[2] = {
+    (FileCBB | FileDBB | FileEBB | FileFBB) & (Rank2BB | Rank3BB | Rank4BB),
+    (FileCBB | FileDBB | FileEBB | FileFBB) & (Rank7BB | Rank6BB | Rank5BB)
+};
+
 const EvalScore TEMPO = COMP(20, 10);
 /*
 class Personality {
@@ -868,6 +873,16 @@ bool QuickStalemate(const position_t& pos, eval_info_t& ei, const int color) {
     uint64 pawnMoves = (*ShiftPtr[color])(ei.pawns[color], 8) & ~pos.occupied;
     return (pawnMoves == 0);
 }
+
+void evalSpace(const position_t& pos, eval_info_t& ei, const int color){
+    static const int SpaceWeight = 3;
+    const int enemy = color ^ 1;
+    uint64 safe = SpaceMask[color] & ~(pos.color[color] & pos.pawns) & (ei.atkall[color] | ~ei.atkall[enemy]);
+    uint64 behind = (*FillPtr2[enemy])(pos.color[color] & pos.pawns);
+    int bonus = bitCnt(safe) + bitCnt(behind & safe);
+    ei.posScore[color] += ComposeEvalScore(bonus * SpaceWeight, 0);
+}
+
 int eval(const position_t& pos, Thread& sthread) {
     eval_info_t ei;
     material_info_t *mat;
@@ -930,6 +945,10 @@ int eval(const position_t& pos, Thread& sthread) {
     }
     evalPieces(pos, ei, WHITE);
     evalPieces(pos, ei, BLACK);
+
+    evalSpace(pos, ei, WHITE);
+    evalSpace(pos, ei, BLACK);
+
     if (QuickStalemate(pos, ei, pos.side)) {
         score = DrawValue[pos.side];
         if (SHOW_EVAL) PrintOutput() << "info string stalemate detected";
