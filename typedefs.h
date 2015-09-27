@@ -159,10 +159,12 @@ struct SearchStack {
         bannedMove(EMPTY),
         hashMove(EMPTY),
         hashDepth(-2),
-        mvlist(&movelist) {}
+        mvlist(&movelist),
+        hisMoves(&hisTable[0]) {}
     int playedMoves;
     int hisCnt;
-    basic_move_t hisMoves[64];
+    basic_move_t hisTable[64];
+    basic_move_t* hisMoves;
     int bestvalue;
     basic_move_t bestmove;
     bool reducedMove;

@@ -149,6 +149,7 @@ void Thread::SearchSplitPoint(position_t& pos, SearchStack* ss, SearchStack* ssp
     ss->bestvalue = active_sp->bestvalue;
     ss->bestmove = active_sp->bestmove;
     ss->playedMoves = active_sp->played;
+    ss->hisCnt = active_sp->hisCount;
     activeSplitPoint = active_sp->parent;
 
     if (!doSleep) stop = false;

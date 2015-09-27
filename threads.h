@@ -47,6 +47,7 @@ struct SplitPoint {
         beta = 0;
         bestvalue = 0;
         played = 0;
+        hisCount = 0;
         bestmove = EMPTY;
         workersBitMask = 0;
         allWorkersBitMask = 0;
@@ -72,6 +73,7 @@ struct SplitPoint {
     volatile int beta;
     volatile int bestvalue;
     volatile int played;
+    volatile int hisCount;
     volatile basic_move_t bestmove;
     volatile uint64 workersBitMask;
     volatile uint64 allWorkersBitMask;

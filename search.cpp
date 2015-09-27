@@ -403,7 +403,13 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
 
     if (inSplitPoint) {
         sp = sthread.activeSplitPoint;
-        ss = *sp->sscurr; // ss.mvlist points to master ss.mvlist, copied the entire searchstack also
+        // copy only necessary values
+        ss.bestvalue = sp->sscurr->bestvalue;
+        ss.evalvalue = sp->sscurr->evalvalue;
+        ss.dcc = sp->sscurr->dcc;
+        ss.threatMove = sp->sscurr->threatMove;
+        ss.hisMoves = sp->sscurr->hisMoves;
+        ss.mvlist = sp->sscurr->mvlist;
     }
     else {
         if (inRoot) {
@@ -436,14 +442,21 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         int score = -INF;
         int newdepth = depth - 1;
         if (inSplitPoint) {
-            sp->movesplayedlock.lock();
-            ss.playedMoves = ++sp->played;
+            std::lock_guard<Spinlock> lck(sp->movesplayedlock);
+            sp->played += 1;
+            ss.playedMoves = sp->played;
+            ss.hisCnt = sp->hisCount;
+            if (ss.hisCnt < 64 && !moveIsTactical(move->m)) {
+                ss.hisMoves[ss.hisCnt] = move->m;
+                sp->hisCount += 1;
+            }
         }
-        else ++ss.playedMoves;
-        if (ss.hisCnt < 64 && !moveIsTactical(move->m)) {
-            ss.hisMoves[ss.hisCnt++] = move->m;
+        else {
+            ++ss.playedMoves;
+            if (ss.hisCnt < 64 && !moveIsTactical(move->m)) {
+                ss.hisMoves[ss.hisCnt++] = move->m;
+            }
         }
-        if (inSplitPoint) sp->movesplayedlock.unlock();
         if (anyRepNoMove(pos, move->m)) {
             score = DrawValue[pos.side];
         }
@@ -949,7 +962,7 @@ void Engine::GetBestMove(Thread& sthread) {
     }
 
     SendBestMove();
-}
+    }
 void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     WaitForThink();
     SetThinkStarted();
