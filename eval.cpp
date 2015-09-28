@@ -98,7 +98,7 @@ int KingPosPenalty[2][64];/* used as initial king penalty */
 //pawn specific evaluttion
 const EvalScore SAFE_PPUSH = COMP(4, 5);
 const EvalScore PPUSH_THREAT = COMP(8, 8);
-const EvalScore DOUBLED = COMP(2, 4);
+const EvalScore DOUBLED = COMP(2, 6);
 const EvalScore DOUBLED_OPEN = COMP(2, 4);
 const EvalScore TARGET = COMP(5, 8); //includes isolated
 const EvalScore TARGET_NOTRP = COMP(2, 4);
