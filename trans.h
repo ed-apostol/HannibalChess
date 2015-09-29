@@ -245,11 +245,11 @@ public:
 
     virtual void Clear();
     void NewDate(int date);
-    void StoreLower(uint64 hash, basic_move_t move, int depth, int value, const bool singular);
+    void StoreLower(uint64 hash, basic_move_t move, int depth, int value);
     void StoreUpper(uint64 hash, int depth, int value);
     void StoreCutUpper(uint64 hash, int depth, int value);
-    void StoreAllLower(uint64 hash, basic_move_t move, int depth, int value, const bool singular);
-    void StoreExact(uint64 hash, basic_move_t move, int depth, int value, const bool singular);
+    void StoreAllLower(uint64 hash, basic_move_t move, int depth, int value);
+    void StoreExact(uint64 hash, basic_move_t move, int depth, int value);
     void StoreNoMoves(uint64 hash, int depth, int value);
 
     int32 Date() const {

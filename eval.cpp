@@ -114,7 +114,7 @@ const EvalScore  DOUBLE_TARGET = COMP(2, 4);
 const EvalScore  DOUBLE_TARGET_OPEN = COMP(4, 6);
 
 //passed pawns
-const EvalScore PassedMin = (20, 10);
+const EvalScore PassedMin = COMP(20, 10);
 
 const int UnstoppablePassedPawn = 700;
 const int EndgamePassedMax = 60;

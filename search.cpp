@@ -246,12 +246,12 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     }
     if (ss.bestvalue >= beta) {
         ssprev.counterMove = ss.bestmove;
-        mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, pos.ply), false);
+        mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, pos.ply));
     }
     else {
         if (inPv && ss.bestmove != EMPTY) {
             ssprev.counterMove = ss.bestmove;
-            mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, pos.ply), false);
+            mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, pos.ply));
             mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, pos.ply));
         }
         else mTransTable.StoreUpper(pos.posStore.hash, -1, scoreToTrans(ss.bestvalue, pos.ply));
@@ -315,7 +315,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (entry->Move() != EMPTY && entry->LowerDepth() > ss.hashDepth) {
                     ss.hashMove = entry->Move();
                     ss.hashDepth = entry->LowerDepth();
-                    //////////if (entry->Mask() & MSingular) ss.hashmoveIsSingular = true;
                 }
                 if (entry->LowerDepth() > evalDepth) {
                     evalDepth = entry->LowerDepth();
@@ -437,7 +436,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     }
     int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 2) : (depth * depth));
     move_t* move;
-    basic_move_t singularMove = EMPTY;
     while ((move = sortNext(sp, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
         int score = -INF;
         int newdepth = depth - 1;
@@ -469,18 +467,11 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                         int exploreDepth = depth / 2;
                         if (ss.hashDepth >= exploreDepth) { //two reasons to extend are: a) tree is likely smaller than normal and/or b) tree is likely critical
                             int targetScore = ss.evalvalue - EXPLORE_BASE_CUTOFF - depth * EXPLORE_MULT_CUTOFF;
-                            int score = INF;
-                            if (ss.hashmoveIsSingular) score = targetScore;
-                            else {
-                                ssprev.bannedMove = ss.hashMove;
-                                score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, exploreDepth, ssprev, sthread, nt);
-                                ssprev.bannedMove = EMPTY;
-                                if (sthread.stop) return 0;
-                            }
-                            if (score <= targetScore) {
-                                singularMove = ss.hashMove;
-                                newdepth++;
-                            }
+                            ssprev.bannedMove = ss.hashMove;
+                            score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, exploreDepth, ssprev, sthread, nt);
+                            ssprev.bannedMove = EMPTY;
+                            if (sthread.stop) return 0;
+                            if (score <= targetScore) newdepth++;
                         }
                     }
                 }
@@ -595,13 +586,13 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (ss.bestvalue >= beta) {
             ssprev.counterMove = ss.bestmove;
             UpdateHistory(pos, ss, sthread, depth);
-            if (inCutNode(nt)) mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply), bool(singularMove == ss.bestmove));
-            else mTransTable.StoreAllLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply), bool(singularMove == ss.bestmove));
+            if (inCutNode(nt)) mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
+            else mTransTable.StoreAllLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
         }
         else {
             if (inPvNode(nt) && ss.bestmove != EMPTY) {
                 ssprev.counterMove = ss.bestmove;
-                mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply), bool(singularMove == ss.bestmove));
+                mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
                 mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
             }
             else if (inCutNode(nt)) mTransTable.StoreCutUpper(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, pos.ply));
@@ -689,7 +680,7 @@ void Engine::RepopulateHash(position_t& pos, continuation_t& rootPV) {
         if (!move) break;
         PvHashEntry* entry = pvhashtable.pvEntryFromMove(pos.posStore.hash, move);
         if (nullptr == entry) break;
-        transtable.StoreExact(pos.posStore.hash, entry->pvMove(), entry->pvDepth(), entry->pvScore(), false);
+        transtable.StoreExact(pos.posStore.hash, entry->pvMove(), entry->pvDepth(), entry->pvScore());
         makeMove(pos, undo[moveOn], move);
     }
     for (moveOn = moveOn - 1; moveOn >= 0; moveOn--) {
@@ -732,7 +723,7 @@ void Engine::DisplayPV(continuation_t& pv, int multipvIdx, int depth, int alpha,
 void Engine::TimeManagement(int depth) {
     static const int WORSE_TIME_BONUS = 20; //how many points more than 20 it takes to increase time by alloc to a maximum of 2*alloc
     static const int CHANGE_TIME_BONUS = 50; //what percentage of alloc to increase if the last move is a change move
-    static const int SINGULAR_TIME_CUTOFF = 15;
+    static const int SINGULAR_TIME_CUTOFF = 30;
     static const int EXTEND_OR_STOP_TIME_CUTOFF = 65;
 
     if (info.best_value > INF - MAXPLY) info.mate_found++;
@@ -745,12 +736,11 @@ void Engine::TimeManagement(int depth) {
                 return;
             }
         }
-        if (info.singular && timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * SINGULAR_TIME_CUTOFF) / 100))) {
-            StopSearch();
-            LogAndPrintOutput() << "info string Aborting search: Easymove: " << timeElapsed - info.start_time;
-            return;
-        }
-        if (timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * EXTEND_OR_STOP_TIME_CUTOFF) / 100))) {
+        bool singularcutoff = false;
+        bool extendcutoff = false;
+        if (info.singular && timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * SINGULAR_TIME_CUTOFF) / 100))) singularcutoff = true;
+        else if (timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * EXTEND_OR_STOP_TIME_CUTOFF) / 100))) extendcutoff = true;
+        if (singularcutoff || extendcutoff) {
             int64 addTime = 0;
             if (timeElapsed < info.time_limit_abs) {
                 if ((info.best_value + WORSE_SCORE_CUTOFF) <= info.last_value) {
@@ -763,15 +753,19 @@ void Engine::TimeManagement(int depth) {
                     LogInfo() << "info string Extending time (root change): " << addTime;
                 }
             }
-            if (addTime > 0) {
-                info.time_limit_max += addTime;
-                if (info.time_limit_max > info.time_limit_abs)
-                    info.time_limit_max = info.time_limit_abs;
-            }
-            else { // if we are unlikely to get deeper, save our time
+            if (addTime <= 0) { // if we are unlikely to get deeper, save our time
                 StopSearch();
-                LogInfo() << "info string Aborting search: root time limit 1: " << timeElapsed - info.start_time;
+                if (singularcutoff) LogAndPrintOutput() << "info string Aborting search: Easymove: " << timeElapsed - info.start_time;
+                else LogInfo() << "info string Aborting search: root time limit 1: " << timeElapsed - info.start_time;
                 return;
+            } else {
+                if (singularcutoff) 
+                    info.singular = false;
+                if (extendcutoff) {
+                    info.time_limit_max += addTime;
+                    if (info.time_limit_max > info.time_limit_abs)
+                        info.time_limit_max = info.time_limit_abs;
+                }
             }
         }
     }
@@ -876,14 +870,7 @@ void Engine::GetBestMove(Thread& sthread) {
                 PrintOutput() << "info string Easy move at the root!!!";
                 return;
             }
-            //////////for (TransEntry *hentry = transtable.Entry(rootpos.posStore.hash), *end = hentry + transtable.BucketSize(); hentry != end; ++hentry) {
-            //////////    if (hentry->HashLock() == LOCK(rootpos.posStore.hash)) {
-            //////////        if (info.easymove == hentry->Move() && (hentry->Mask() & MSingular)) {
-            //////////            info.singular = true;
-            //////////        }
-            //////////        break;
-            //////////    }
-            //////////}
+            info.singular = true;
         }
     }
 
