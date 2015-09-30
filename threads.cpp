@@ -20,9 +20,6 @@
 void Thread::Init() {
     ThreadBase::Init();
     nodes = 0;
-    numsplits = 1;
-    numsplits2 = 1;
-    workers2 = 0;
     num_sp = 0;
     activeSplitPoint = nullptr;
     for (int Idx = 0; Idx < MaxNumSplitPointsPerThread; ++Idx) {
@@ -53,6 +50,8 @@ void Thread::IdleLoop() {
             CBSearchFromIdleLoop(*sp, *this);
             std::lock_guard<Spinlock> lck(sp->updatelock);
             sp->workersBitMask &= ~((uint64)1 << thread_id);
+            sp->workAvailable = false;
+            activeSplitPoint = nullptr;
             stop = true;
         }
         if (master_sp != nullptr && (!master_sp->workersBitMask || doSleep)) return;
@@ -60,7 +59,7 @@ void Thread::IdleLoop() {
 }
 
 void Thread::GetWork(SplitPoint* const master_sp) {
-    int best_depth = 0;
+    int best_weight = 0;
     Thread* thread_to_help = nullptr;
     SplitPoint* best_split_point = nullptr;
 
@@ -84,14 +83,15 @@ void Thread::GetWork(SplitPoint* const master_sp) {
             if (sp->cutoff) break;
             // only search those with all threads still searching,
             // otherwise there is no more work in that splitpoint that needs help
-            if (sp->workersBitMask != sp->allWorkersBitMask) continue;
+            if (!sp->workAvailable) continue;
             // deeper is better; the higher the depth, the bigger the workload,
             // bigger workload means better efficiency as we avoid joining splitpoints too much
             // which is inefficient as we copy splitpoint data like position structure
             // and joining a splitpoint in general takes computation time
-            if (sp->depth > best_depth) {
+            int weight = (sp->depth << 10) - sp->played;
+            if (weight > best_weight) {
                 best_split_point = sp;
-                best_depth = sp->depth;
+                best_weight = weight;
                 thread_to_help = th;
             }
             // only check the first valid splitpoint in every thread, it is always the deepest, saves time
@@ -105,11 +105,10 @@ void Thread::GetWork(SplitPoint* const master_sp) {
         // check if the splitpoint has not cutoff yet
         if (!best_split_point->cutoff
             // check if all helper threads are still searching this splitpoint
-            && (best_split_point->workersBitMask == best_split_point->allWorkersBitMask)
+            && best_split_point->workAvailable
             // check if this is a helpful master and if the helper thread is still working for it
             && (master_sp == nullptr || (master_sp->workersBitMask & ((uint64)1 << thread_to_help->thread_id)))) {
             best_split_point->workersBitMask |= ((uint64)1 << thread_id);
-            best_split_point->allWorkersBitMask |= ((uint64)1 << thread_id);
             activeSplitPoint = best_split_point;
             stop = false;
         }
@@ -135,11 +134,10 @@ void Thread::SearchSplitPoint(position_t& pos, SearchStack* ss, SearchStack* ssp
     active_sp->ssprev = ssprev;
     active_sp->origpos = &pos;
     active_sp->workersBitMask = ((uint64)1 << thread_id);
-    active_sp->allWorkersBitMask = ((uint64)1 << thread_id);
+    active_sp->workAvailable = true;
     activeSplitPoint = active_sp;
     stop = false;
     ++num_sp;
-    ++numsplits;
     active_sp->updatelock.unlock();
 
     IdleLoop();
@@ -151,15 +149,7 @@ void Thread::SearchSplitPoint(position_t& pos, SearchStack* ss, SearchStack* ssp
     ss->playedMoves = active_sp->played;
     ss->hisCnt = active_sp->hisCount;
     activeSplitPoint = active_sp->parent;
-
     if (!doSleep) stop = false;
-
-    // threads statistics
-    int cnt = bitCnt(active_sp->allWorkersBitMask);
-    if (cnt > 1) {
-        numsplits2++;
-        workers2 += cnt;
-    }
     active_sp->updatelock.unlock();
 }
 
@@ -167,7 +157,7 @@ void TimerThread::IdleLoop() {
     while (!exit_flag) {
         std::unique_lock<std::mutex> lk(threadLock);
         auto now = std::chrono::system_clock::now();
-        sleepCondition.wait_until(lk, stop ? now + std::chrono::hours(INT_MAX) : now + std::chrono::milliseconds(5));
+        sleepCondition.wait_until(lk, stop ? now + std::chrono::hours(INT_MAX) : now + std::chrono::milliseconds(50));
         if (!exit_flag && !stop) CBFuncCheckTimer();
     }
 }

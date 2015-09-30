@@ -278,16 +278,6 @@ public:
         InitPawnHash(uci_opt[PawnHashStr].GetInt());
         InitEvalHash(uci_opt[EvalCacheStr].GetInt());
     }
-    void PrintThreadStats() {
-        LogInfo() << "================================================================";
-        for (Thread* th : mThreads) {
-            LogInfo() << "thread_id: " << th->thread_id
-                << " nodes: " << th->nodes
-                << " joined_split: " << double(th->numsplits2 * 100.0) / double(th->numsplits)
-                << " threads_per_split: " << double(th->workers2) / double(th->numsplits2);
-        }
-        LogInfo() << "================================================================";
-    }
     void WaitForThink() {
         while (mThinking) {
             std::this_thread::sleep_for(std::chrono::milliseconds(5));

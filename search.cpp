@@ -564,7 +564,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         }
         if (inSplitPoint) sp->updatelock.unlock();
         if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < mInfo.mMaxActiveSplitsPerThread
-            && mEngine.ThreadNum() > 1 && depth >= mInfo.mMinSplitDepth) {
+            && mEngine.ThreadNum() > 1 && depth >= mInfo.mMinSplitDepth
+            && (!sthread.activeSplitPoint || !sthread.activeSplitPoint->workAvailable || (sthread.activeSplitPoint->depth - depth <= 1))) {
             sthread.SearchSplitPoint(pos, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot);
             if (sthread.stop) return 0;
             break;
@@ -758,8 +759,9 @@ void Engine::TimeManagement(int depth) {
                 if (singularcutoff) LogAndPrintOutput() << "info string Aborting search: Easymove: " << timeElapsed - info.start_time;
                 else LogInfo() << "info string Aborting search: root time limit 1: " << timeElapsed - info.start_time;
                 return;
-            } else {
-                if (singularcutoff) 
+            }
+            else {
+                if (singularcutoff)
                     info.singular = false;
                 if (extendcutoff) {
                     info.time_limit_max += addTime;
@@ -949,7 +951,7 @@ void Engine::GetBestMove(Thread& sthread) {
     }
 
     SendBestMove();
-    }
+}
 void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     WaitForThink();
     SetThinkStarted();
