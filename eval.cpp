@@ -874,7 +874,7 @@ bool QuickStalemate(const position_t& pos, eval_info_t& ei, const int color) {
     return (pawnMoves == 0);
 }
 
-void evalSpace(const position_t& pos, eval_info_t& ei, const int color){
+void evalSpace(const position_t& pos, eval_info_t& ei, const int color) {
     static const int SpaceWeight = 3;
     const int enemy = color ^ 1;
     uint64 safe = SpaceMask[color] & ~(pos.color[color] & pos.pawns) & (ei.atkall[color] | ~ei.atkall[enemy]);

@@ -724,7 +724,7 @@ void Engine::DisplayPV(continuation_t& pv, int multipvIdx, int depth, int alpha,
 void Engine::TimeManagement(int depth) {
     static const int WORSE_TIME_BONUS = 20; //how many points more than 20 it takes to increase time by alloc to a maximum of 2*alloc
     static const int CHANGE_TIME_BONUS = 50; //what percentage of alloc to increase if the last move is a change move
-    static const int SINGULAR_TIME_CUTOFF = 30;
+    static const int EASYMOVE_TIME_CUTOFF = 20;
     static const int EXTEND_OR_STOP_TIME_CUTOFF = 65;
 
     if (info.best_value > INF - MAXPLY) info.mate_found++;
@@ -737,11 +737,11 @@ void Engine::TimeManagement(int depth) {
                 return;
             }
         }
-        bool singularcutoff = false;
+        bool easymovecutoff = false;
         bool extendcutoff = false;
-        if (info.singular && timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * SINGULAR_TIME_CUTOFF) / 100))) singularcutoff = true;
+        if (info.is_easymove && timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * EASYMOVE_TIME_CUTOFF) / 100))) easymovecutoff = true;
         else if (timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * EXTEND_OR_STOP_TIME_CUTOFF) / 100))) extendcutoff = true;
-        if (singularcutoff || extendcutoff) {
+        if (easymovecutoff || extendcutoff) {
             int64 addTime = 0;
             if (timeElapsed < info.time_limit_abs) {
                 if ((info.best_value + WORSE_SCORE_CUTOFF) <= info.last_value) {
@@ -756,13 +756,16 @@ void Engine::TimeManagement(int depth) {
             }
             if (addTime <= 0) { // if we are unlikely to get deeper, save our time
                 StopSearch();
-                if (singularcutoff) LogAndPrintOutput() << "info string Aborting search: Easymove: " << timeElapsed - info.start_time;
+                if (easymovecutoff) {
+                    info.easymoves.Init();
+                    LogAndPrintOutput() << "info string Aborting search: Easymove: " << timeElapsed - info.start_time;
+                }
                 else LogInfo() << "info string Aborting search: root time limit 1: " << timeElapsed - info.start_time;
                 return;
             }
             else {
-                if (singularcutoff)
-                    info.singular = false;
+                if (easymovecutoff)
+                    info.is_easymove = false;
                 if (extendcutoff) {
                     info.time_limit_max += addTime;
                     if (info.time_limit_max > info.time_limit_abs)
@@ -820,14 +823,6 @@ void Engine::SendBestMove() {
         if (info.rootPV.moves[0] == info.bestmove && info.rootPV.length > 1 && info.rootPV.moves[1])
             log << " ponder " << move2Str(info.rootPV.moves[1]);
     }
-
-    if (!info.pondering && info.rootPV.length >= 1 && info.rootPV.moves[0] == info.bestmove) {
-        if (info.rootPV.length > 1) info.expectedmove = info.rootPV.moves[1];
-        else info.expectedmove = EMPTY;
-        if (info.rootPV.length > 2) info.easymove = info.rootPV.moves[2];
-        else info.easymove = EMPTY;
-    }
-
     //PrintThreadStats();
     SetThinkFinished();
 }
@@ -837,6 +832,7 @@ void Engine::GetBestMove(Thread& sthread) {
     int alpha, beta;
     SearchStack ss;
     SplitPoint rootsp;
+    basic_move_t easymove = EMPTY;
     ss.moveGivesCheck = kingIsInCheck(rootpos);
     ss.dcc = discoveredCheckCandidates(rootpos, rootpos.side);
 
@@ -861,18 +857,20 @@ void Engine::GetBestMove(Thread& sthread) {
     if (nullptr != entry && entry->pvMove() && isLegal(rootpos, entry->pvMove(), ss.moveGivesCheck)) {
         ss.hashMove = entry->pvMove();
         // don't do easy move and instant recapture when analyzing or pondering
-        if (info.thinking_status == THINKING && rootpos.posStore.lastmove == info.expectedmove && ss.hashMove == info.easymove) {
+        if (info.thinking_status == THINKING && rootpos.posStore.lastmove == info.easymoves.m[1] && ss.hashMove == info.easymoves.m[2]) {
             if (moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(ss.hashMove))) {
                 StopSearch();
                 info.bestmove = ss.hashMove;
                 info.best_value = entry->pvScore();
                 ExtractPvMovesFromHash(rootpos, info.rootPV, ss.hashMove);
                 DisplayPV(info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
+                info.easymoves.Init();
                 SendBestMove();
                 PrintOutput() << "info string Easy move at the root!!!";
                 return;
             }
-            info.singular = true;
+            info.is_easymove = true;
+            easymove = info.easymoves.m[2];
         }
     }
 
@@ -882,6 +880,9 @@ void Engine::GetBestMove(Thread& sthread) {
         if (info.time_limit_max > info.time_limit_abs)
             info.time_limit_max = info.time_limit_abs;
     }
+
+    // easy moves        
+    info.easymoves.Init();
 
     // SMP
     InitVars();
@@ -933,7 +934,9 @@ void Engine::GetBestMove(Thread& sthread) {
             }
             if (info.stop_search) break;
         }
-        if (info.singular && info.bestmove != info.easymove) info.singular = false;
+        if (info.is_easymove && info.bestmove != easymove) info.is_easymove = false;
+        if (info.easymoves.Equal(info.rootPV)) ++info.easymoves.cnt;
+        else info.easymoves.Assign(info.rootPV);
         if (!info.stop_search) TimeManagement(id);
         if (info.stop_search) break;
         if (info.best_value != -INF) info.last_value = info.best_value;
@@ -949,6 +952,9 @@ void Engine::GetBestMove(Thread& sthread) {
         }
         StopSearch();
     }
+
+    // easy moves
+    if (info.easymoves.cnt < 5) info.easymoves.Init();
 
     SendBestMove();
 }

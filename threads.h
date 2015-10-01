@@ -52,6 +52,7 @@ struct SplitPoint {
         workersBitMask = 0;
         workAvailable = false;
         cutoff = false;
+        joinedthreads = 0;
     }
     bool cutoffOccurred() {
         if (cutoff) return true;
@@ -78,6 +79,7 @@ struct SplitPoint {
     volatile uint64 workersBitMask;
     volatile bool workAvailable;
     volatile bool cutoff;
+    volatile uint64 joinedthreads;
     Spinlock movelistlock;
     Spinlock updatelock;
     Spinlock movesplayedlock;
@@ -153,6 +155,9 @@ public:
     void GetWork(SplitPoint* const master_sp);
     void SearchSplitPoint(position_t& pos, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot);
 
+    uint64 numsplits;
+    uint64 numsplitsjoined;
+    uint64 numworkers;
     uint64 nodes;
 
     volatile int num_sp;

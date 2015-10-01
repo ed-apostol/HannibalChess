@@ -21,6 +21,9 @@ void Thread::Init() {
     ThreadBase::Init();
     nodes = 0;
     num_sp = 0;
+    numsplits = 0;
+    numsplitsjoined = 0;
+    numworkers = 0;
     activeSplitPoint = nullptr;
     for (int Idx = 0; Idx < MaxNumSplitPointsPerThread; ++Idx) {
         sptable[Idx].Init();
@@ -110,6 +113,7 @@ void Thread::GetWork(SplitPoint* const master_sp) {
             && (master_sp == nullptr || (master_sp->workersBitMask & ((uint64)1 << thread_to_help->thread_id)))) {
             best_split_point->workersBitMask |= ((uint64)1 << thread_id);
             activeSplitPoint = best_split_point;
+            activeSplitPoint->joinedthreads += 1;
             stop = false;
         }
     }
@@ -135,9 +139,11 @@ void Thread::SearchSplitPoint(position_t& pos, SearchStack* ss, SearchStack* ssp
     active_sp->origpos = &pos;
     active_sp->workersBitMask = ((uint64)1 << thread_id);
     active_sp->workAvailable = true;
+    active_sp->joinedthreads = 1;
     activeSplitPoint = active_sp;
     stop = false;
     ++num_sp;
+    ++numsplits;
     active_sp->updatelock.unlock();
 
     IdleLoop();
@@ -150,6 +156,11 @@ void Thread::SearchSplitPoint(position_t& pos, SearchStack* ss, SearchStack* ssp
     ss->hisCnt = active_sp->hisCount;
     activeSplitPoint = active_sp->parent;
     if (!doSleep) stop = false;
+
+    if (active_sp->joinedthreads > 1) {
+        ++numsplitsjoined;
+        numworkers += active_sp->joinedthreads;
+    }
     active_sp->updatelock.unlock();
 }
 

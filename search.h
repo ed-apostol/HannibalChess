@@ -127,11 +127,32 @@ private:
     std::vector<std::string> mKeys;
 };
 
+struct EasyMove {
+    bool Equal(continuation_t& pv) {
+        return (pv.length >= 3 && m[0] == pv.moves[0] && m[1] == pv.moves[1] && m[2] == pv.moves[2]);
+    }
+    void Assign(continuation_t& pv) {
+        if (pv.length >= 3) {
+            m[0] = pv.moves[0];
+            m[1] = pv.moves[1];
+            m[2] = pv.moves[2];
+            cnt = 0;
+        }
+        else Init();
+    }
+    void Init() {
+        m[0] = m[1] = m[2] = EMPTY;
+        cnt = 0;
+    }
+    basic_move_t m[3];
+    int cnt;
+};
+
 /* the search data structure */
 struct SearchInfo {
     void Init() {
         thinking_status = THINKING;
-        singular = false;
+        is_easymove = false;
         pondering = false;
         stop_search = false;
         depth_is_limited = false;
@@ -165,7 +186,7 @@ struct SearchInfo {
     volatile int thinking_status;
     volatile bool stop_search; // TODO: replace with sthread.stop?
     bool pondering;
-    bool singular;
+    bool is_easymove;
 
     int time_buffer;
     int contempt;
@@ -200,8 +221,7 @@ struct SearchInfo {
 
     int legalmoves;
     basic_move_t bestmove;
-    basic_move_t expectedmove;
-    basic_move_t easymove;
+    EasyMove easymoves;
 
     basic_move_t moves[MAXMOVES];
     bool mvlist_initialized;
@@ -277,6 +297,17 @@ public:
         }
         InitPawnHash(uci_opt[PawnHashStr].GetInt());
         InitEvalHash(uci_opt[EvalCacheStr].GetInt());
+    }
+    void PrintThreadStats() {
+        PrintOutput() << "================================================================";
+        for (Thread* th : mThreads) {
+            PrintOutput() << "thread_id: " << th->thread_id
+                << " nodes: " << th->nodes
+                << " splits: " << double(th->numsplits * 100.0) / double(th->nodes)
+                << " joined: " << double(th->numsplitsjoined * 100.0) / double(th->numsplits)
+                << " threads: " << double(th->numworkers) / double(th->numsplitsjoined);
+        }
+        PrintOutput() << "================================================================";
     }
     void WaitForThink() {
         while (mThinking) {
