@@ -159,6 +159,7 @@ struct SearchInfo {
         depth_limit = MAXPLY;
         moves_is_limited = false;
         time_is_limited = false;
+        time_is_fixed = false;
         time_limit_max = 0;
         time_limit_abs = 0;
         node_is_limited = false;
@@ -198,6 +199,7 @@ struct SearchInfo {
     int depth_limit;
     bool moves_is_limited;
     bool time_is_limited;
+    bool time_is_fixed;
 
     volatile int64 time_limit_max;
     int64 time_limit_abs;
@@ -299,15 +301,15 @@ public:
         InitEvalHash(uci_opt[EvalCacheStr].GetInt());
     }
     void PrintThreadStats() {
-        PrintOutput() << "================================================================";
+        LogAndPrintOutput() << "================================================================";
         for (Thread* th : mThreads) {
-            PrintOutput() << "thread_id: " << th->thread_id
+            LogAndPrintOutput() << "thread_id: " << th->thread_id
                 << " nodes: " << th->nodes
                 << " splits: " << double(th->numsplits * 100.0) / double(th->nodes)
                 << " joined: " << double(th->numsplitsjoined * 100.0) / double(th->numsplits)
                 << " threads: " << double(th->numworkers) / double(th->numsplitsjoined);
         }
-        PrintOutput() << "================================================================";
+        LogAndPrintOutput() << "================================================================";
     }
     void WaitForThink() {
         while (mThinking) {

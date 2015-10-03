@@ -565,7 +565,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (inSplitPoint) sp->updatelock.unlock();
         if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < mInfo.mMaxActiveSplitsPerThread
             && mEngine.ThreadNum() > 1 && depth >= mInfo.mMinSplitDepth
-            && (!sthread.activeSplitPoint || !sthread.activeSplitPoint->workAvailable || (sthread.activeSplitPoint->depth - depth <= 1))) {
+            && (!sthread.activeSplitPoint || !sthread.activeSplitPoint->workAvailable 
+            || ((sthread.activeSplitPoint->depth - depth <= 1) && sthread.num_sp < 2))) {
             sthread.SearchSplitPoint(pos, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot);
             if (sthread.stop) return 0;
             break;
@@ -809,6 +810,12 @@ void Engine::CheckTime() {
                 StopSearch();
                 LogInfo() << "info string Aborting search: time limit 1: " << time2 - info.start_time;
             }
+        }
+    }
+    if (info.thinking_status == THINKING && info.time_is_fixed) {
+        if (time2 > info.time_limit_max) {
+            StopSearch();
+            LogInfo() << "info string Aborting search: fixed time: " << time2 - info.start_time;
         }
     }
 }
