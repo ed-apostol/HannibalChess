@@ -1005,7 +1005,7 @@ void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     }
 
     if (data.movetime > 0) {
-        info.time_is_limited = true;
+        info.time_is_fixed = true;
         info.alloc_time = data.movetime;
         info.time_limit_max = info.start_time + data.movetime;
         info.time_limit_abs = info.start_time + data.movetime;
