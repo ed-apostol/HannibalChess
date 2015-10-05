@@ -168,7 +168,7 @@ void TimerThread::IdleLoop() {
     while (!exit_flag) {
         std::unique_lock<std::mutex> lk(threadLock);
         auto now = std::chrono::system_clock::now();
-        sleepCondition.wait_until(lk, stop ? now + std::chrono::hours(INT_MAX) : now + std::chrono::milliseconds(5));
+        sleepCondition.wait_until(lk, stop ? now + std::chrono::hours(INT_MAX) : now + std::chrono::milliseconds(50));
         if (!exit_flag && !stop) CBFuncCheckTimer();
     }
 }

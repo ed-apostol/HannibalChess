@@ -455,7 +455,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 ss.hisMoves[ss.hisCnt++] = move->m;
             }
         }
-        if (anyRepNoMove(pos, move->m)) {
+        if (alpha < 0 && anyRepNoMove(pos, move->m)) { // accept only repetition if it improves alpha
             score = DrawValue[pos.side];
         }
         else {
