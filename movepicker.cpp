@@ -20,16 +20,15 @@
 extern bool moveIsTactical(uint32 m);
 extern int historyIndex(uint32 side, uint32 move);
 
-void sortInit(const position_t& pos, movelist_t& mvlist, uint64 pinned, uint32 hashmove, int scout, int eval, int depth, int type, Thread& sthread) {
+void sortInit(const position_t& pos, movelist_t& mvlist, uint64 pinned, uint32 hashmove, int scout, int eval, int depth, int type, ThreadStack& ts) {
     mvlist.transmove = hashmove;
-    mvlist.killer1 = sthread.ts[pos.ply].killer1;
-    mvlist.killer2 = sthread.ts[pos.ply].killer2;
+    mvlist.killer1 = ts.killer1;
+    mvlist.killer2 = ts.killer2;
     mvlist.evalvalue = eval;
     mvlist.pos = 0;
     mvlist.size = 0;
     mvlist.pinned = pinned;
     mvlist.scout = scout;
-    mvlist.ply = pos.ply;
     mvlist.side = pos.side;
     mvlist.depth = depth;
     mvlist.phase = type;
