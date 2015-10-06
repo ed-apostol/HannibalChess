@@ -46,7 +46,8 @@ enum endgameFlags {
     BvBLockEnd = 19,
     MinorLock = 20,
     RPvREnd = 21,
-    QPvQEnd = 22
+    QPvQEnd = 22,
+	NNvPEnd = 23
 };
 
 const int  PawnValueOpen = 89;

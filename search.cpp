@@ -246,12 +246,12 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     }
     if (ss.bestvalue >= beta) {
         ssprev.counterMove = ss.bestmove;
-        mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, pos.ply));
+        mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, pos.ply),false);
     }
     else {
         if (inPv && ss.bestmove != EMPTY) {
             ssprev.counterMove = ss.bestmove;
-            mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, pos.ply));
+            mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, pos.ply),false);
             mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, pos.ply));
         }
         else mTransTable.StoreUpper(pos.posStore.hash, -1, scoreToTrans(ss.bestvalue, pos.ply));
@@ -276,6 +276,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     SplitPoint* sp = nullptr;
     SearchStack ss;
     pos_store_t undo;
+	bool skipSingularSearch = false;
 
     ASSERT(alpha < beta);
     ASSERT(depth >= 1);
@@ -315,7 +316,9 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (entry->Move() != EMPTY && entry->LowerDepth() > ss.hashDepth) {
                     ss.hashMove = entry->Move();
                     ss.hashDepth = entry->LowerDepth();
-                }
+					ss.hashmoveIsSingular = ((entry->Mask() & MSingular) != 0);
+					skipSingularSearch = (entry->LowerDepth() >= depth - depth % 2);
+				}
                 if (entry->LowerDepth() > evalDepth) {
                     evalDepth = entry->LowerDepth();
                     ss.evalvalue = scoreFromTrans(entry->LowerValue(), pos.ply);
@@ -391,11 +394,10 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (sthread.stop) return 0;
                 ss.evalvalue = score;
                 if (score > alpha) {
-                    if (ss.hashmoveIsSingular && ss.hashMove != ssprev.counterMove) ss.hashmoveIsSingular = false;
+					skipSingularSearch = (ss.hashMove == ssprev.counterMove);
                     ss.hashMove = ssprev.counterMove;
                     ss.hashDepth = newdepth;
                 }
-                else if (ss.hashmoveIsSingular) ss.hashmoveIsSingular = false;
             }
         }
     }
@@ -436,7 +438,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     }
     int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 2) : (depth * depth));
     move_t* move;
-    while ((move = sortNext(sp, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
+	basic_move_t singularMove = EMPTY;
+	while ((move = sortNext(sp, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
         int score = -INF;
         int newdepth = depth - 1;
         if (inSplitPoint) {
@@ -455,26 +458,38 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 ss.hisMoves[ss.hisCnt++] = move->m;
             }
         }
-        if (alpha < 0 && anyRepNoMove(pos, move->m)) { // accept only repetition if it improves alpha
+        if (anyRepNoMove(pos, move->m)) { // accept only repetition if it improves alpha
             score = DrawValue[pos.side];
         }
         else {
             ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
             if (ss.bestvalue == -INF) { //TODO remove this from loop and do it first
-                if (!inRoot && !inSingular && !inSplitPoint) {
-                    if (inCheck && ss.mvlist->size == 1) newdepth++;
-                    else if (ss.hashMove == move->m && depth >= (inPvNode(nt) ? 6 : 8)) {
-                        int exploreDepth = depth / 2;
-                        if (ss.hashDepth >= exploreDepth) { //two reasons to extend are: a) tree is likely smaller than normal and/or b) tree is likely critical
-                            int targetScore = ss.evalvalue - EXPLORE_BASE_CUTOFF - depth * EXPLORE_MULT_CUTOFF;
-                            ssprev.bannedMove = ss.hashMove;
-                            score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, exploreDepth, ssprev, sthread, nt);
-                            ssprev.bannedMove = EMPTY;
-                            if (sthread.stop) return 0;
-                            if (score <= targetScore) newdepth++;
-                        }
-                    }
-                }
+				if (!inRoot && !inSingular && !inSplitPoint) {
+					if (inCheck && ss.mvlist->size == 1) newdepth++;
+					else if (ss.hashMove == move->m && depth >= (inPvNode(nt) ? 6 : 8)) {
+						if (skipSingularSearch) {
+							if (ss.hashmoveIsSingular) {
+								singularMove = ss.hashMove;
+								newdepth++;
+							}
+						}
+						else {
+							int exploreDepth = depth / 2;
+							// if you have previously determined this should be extended, don't re-check as often
+							if (ss.hashDepth >= exploreDepth) { //two reasons to extend are: a) tree is likely smaller than normal and/or b) tree is likely critical
+								int targetScore = ss.evalvalue - EXPLORE_BASE_CUTOFF - depth * EXPLORE_MULT_CUTOFF;
+								ssprev.bannedMove = ss.hashMove;
+								int score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, exploreDepth, ssprev, sthread, nt);
+								ssprev.bannedMove = EMPTY;
+								if (sthread.stop) return 0;
+								if (score <= targetScore) {
+									singularMove = ss.hashMove;
+									newdepth++;
+								}
+							}
+						}
+					}
+				}
                 makeMove(pos, undo, move->m);
                 ++sthread.nodes;
                 score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, sthread, invertNode(nt));
@@ -588,14 +603,14 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (ss.bestvalue >= beta) {
             ssprev.counterMove = ss.bestmove;
             UpdateHistory(pos, ss, sthread, depth);
-            if (inCutNode(nt)) mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
-            else mTransTable.StoreAllLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
-        }
+			if (inCutNode(nt)) mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply), bool(singularMove == ss.bestmove));
+			else mTransTable.StoreAllLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply), bool(singularMove == ss.bestmove));
+		}
         else {
             if (inPvNode(nt) && ss.bestmove != EMPTY) {
                 ssprev.counterMove = ss.bestmove;
-                mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
-                mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
+				mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply), bool(singularMove == ss.bestmove));
+				mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, pos.ply));
             }
             else if (inCutNode(nt)) mTransTable.StoreCutUpper(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, pos.ply));
             else mTransTable.StoreUpper(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, pos.ply));
@@ -682,8 +697,8 @@ void Engine::RepopulateHash(position_t& pos, continuation_t& rootPV) {
         if (!move) break;
         PvHashEntry* entry = pvhashtable.pvEntryFromMove(pos.posStore.hash, move);
         if (nullptr == entry) break;
-        transtable.StoreExact(pos.posStore.hash, entry->pvMove(), entry->pvDepth(), entry->pvScore());
-        makeMove(pos, undo[moveOn], move);
+		transtable.StoreExact(pos.posStore.hash, entry->pvMove(), entry->pvDepth(), entry->pvScore(), false);
+		makeMove(pos, undo[moveOn], move);
     }
     for (moveOn = moveOn - 1; moveOn >= 0; moveOn--) {
         unmakeMove(pos, undo[moveOn]);
@@ -725,7 +740,7 @@ void Engine::DisplayPV(continuation_t& pv, int multipvIdx, int depth, int alpha,
 void Engine::TimeManagement(int depth) {
     static const int WORSE_TIME_BONUS = 20; //how many points more than 20 it takes to increase time by alloc to a maximum of 2*alloc
     static const int CHANGE_TIME_BONUS = 50; //what percentage of alloc to increase if the last move is a change move
-    static const int EASYMOVE_TIME_CUTOFF = 20;
+    static const int EASYMOVE_TIME_CUTOFF = 30;
     static const int EXTEND_OR_STOP_TIME_CUTOFF = 65;
 
     if (info.best_value > INF - MAXPLY) info.mate_found++;
@@ -739,9 +754,10 @@ void Engine::TimeManagement(int depth) {
             }
         }
         bool easymovecutoff = false;
-        bool extendcutoff = false;
-        if (info.is_easymove && timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * EASYMOVE_TIME_CUTOFF) / 100))) easymovecutoff = true;
-        else if (timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * EXTEND_OR_STOP_TIME_CUTOFF) / 100))) extendcutoff = true;
+        bool extendcutoff = false;////Han_2 added easyMove
+//		if (info.is_easymove && timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * EASYMOVE_TIME_CUTOFF) / 100))) easymovecutoff = true;
+		if ((info.legalmoves < 3 || easyMove) && timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * EASYMOVE_TIME_CUTOFF) / 100))) easymovecutoff = true;
+		else if (timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * EXTEND_OR_STOP_TIME_CUTOFF) / 100))) extendcutoff = true;
         if (easymovecutoff || extendcutoff) {
             int64 addTime = 0;
             if (timeElapsed < info.time_limit_abs) {
@@ -758,15 +774,15 @@ void Engine::TimeManagement(int depth) {
             if (addTime <= 0) { // if we are unlikely to get deeper, save our time
                 StopSearch();
                 if (easymovecutoff) {
-                    info.easymoves.Init();
+//                    info.easymoves.Init();
                     LogAndPrintOutput() << "info string Aborting search: Easymove: " << timeElapsed - info.start_time;
                 }
                 else LogInfo() << "info string Aborting search: root time limit 1: " << timeElapsed - info.start_time;
                 return;
             }
             else {
-                if (easymovecutoff)
-                    info.is_easymove = false;
+//                if (easymovecutoff)
+//                    info.is_easymove = false;
                 if (extendcutoff) {
                     info.time_limit_max += addTime;
                     if (info.time_limit_max > info.time_limit_abs)
@@ -839,7 +855,7 @@ void Engine::GetBestMove(Thread& sthread) {
     int alpha, beta;
     SearchStack ss;
     SplitPoint rootsp;
-    basic_move_t easymove = EMPTY;
+//    basic_move_t easymove = EMPTY;
     ss.moveGivesCheck = kingIsInCheck(rootpos);
     ss.dcc = discoveredCheckCandidates(rootpos, rootpos.side);
 
@@ -860,11 +876,12 @@ void Engine::GetBestMove(Thread& sthread) {
     SHOW_EVAL = false;
     PrintOutput() << "info string score = " << tscore << "\n";
 #endif
-    PvHashEntry *entry = pvhashtable.pvEntry(rootpos.posStore.hash);
+	easyMove = 0;
+	PvHashEntry *entry = pvhashtable.pvEntry(rootpos.posStore.hash);
     if (nullptr != entry && entry->pvMove() && isLegal(rootpos, entry->pvMove(), ss.moveGivesCheck)) {
         ss.hashMove = entry->pvMove();
         // don't do easy move and instant recapture when analyzing or pondering
-        if (info.thinking_status == THINKING && rootpos.posStore.lastmove == info.easymoves.m[1] && ss.hashMove == info.easymoves.m[2]) {
+/*        if (info.thinking_status == THINKING && rootpos.posStore.lastmove == info.easymoves.m[1] && ss.hashMove == info.easymoves.m[2]) {
             if (moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(ss.hashMove))) {
                 StopSearch();
                 info.bestmove = ss.hashMove;
@@ -878,8 +895,32 @@ void Engine::GetBestMove(Thread& sthread) {
             }
             info.is_easymove = true;
             easymove = info.easymoves.m[2];
-        }
-    }
+        }*/
+
+		bool recapture = (((moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(entry->pvMove())))
+			|| (PcValSEE[moveCapture(entry->pvMove())] > PcValSEE[movePiece(entry->pvMove())])));
+		if (recapture) easyMove = ss.hashMove;
+		else {
+			for (TransEntry *hentry = transtable.Entry(rootpos.posStore.hash), *end = hentry + transtable.BucketSize(); hentry != end; ++hentry) {
+				if (hentry->HashLock() == LOCK(rootpos.posStore.hash)) {
+					if (ss.hashMove == hentry->Move() && (hentry->Mask() & MSingular)) {
+						easyMove = ss.hashMove;
+					}
+					break;
+				}
+			}
+		}
+		if (easyMove && info.thinking_status == THINKING && info.time_is_limited &&
+			info.rootPV.moves[1] == rootpos.posStore.lastmove && info.rootPV.moves[2] == ss.hashMove) {
+			info.bestmove = ss.hashMove;
+			info.best_value = entry->pvScore();
+			ExtractPvMovesFromHash(rootpos, info.rootPV, ss.hashMove);
+			DisplayPV(info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
+			StopSearch();
+			SendBestMove();
+			return;
+		}
+	}
 
     // extend time when there is no hashmove from hashtable, this is useful when just out of the book
     if (ss.hashMove == EMPTY || (info.rootPV.moves[1] != rootpos.posStore.lastmove)) {
@@ -889,7 +930,7 @@ void Engine::GetBestMove(Thread& sthread) {
     }
 
     // easy moves        
-    info.easymoves.Init();
+//    info.easymoves.Init();
 
     // SMP
     InitVars();
@@ -941,9 +982,9 @@ void Engine::GetBestMove(Thread& sthread) {
             }
             if (info.stop_search) break;
         }
-        if (info.is_easymove && info.bestmove != easymove) info.is_easymove = false;
-        if (info.easymoves.Equal(info.rootPV)) ++info.easymoves.cnt;
-        else info.easymoves.Assign(info.rootPV);
+//        if (info.is_easymove && info.bestmove != easymove) info.is_easymove = false;
+//        if (info.easymoves.Equal(info.rootPV)) ++info.easymoves.cnt;
+//        else info.easymoves.Assign(info.rootPV);
         if (!info.stop_search) TimeManagement(id);
         if (info.stop_search) break;
         if (info.best_value != -INF) info.last_value = info.best_value;
@@ -961,7 +1002,7 @@ void Engine::GetBestMove(Thread& sthread) {
     }
 
     // easy moves
-    if (info.easymoves.cnt < 5) info.easymoves.Init();
+//    if (info.easymoves.cnt < 5) info.easymoves.Init();
 
     SendBestMove();
 }
@@ -1023,7 +1064,7 @@ void Engine::StartThinking(GoCmdData& data, position_t& pos) {
         info.time_is_limited = true;
         mytime -= info.time_buffer;
         if (mytime < 0) mytime = 0;
-        if (data.movestogo <= 0 || data.movestogo > 32) data.movestogo = 32;
+        if (data.movestogo <= 0 || data.movestogo > 30) data.movestogo = 30;
         info.time_limit_max = (mytime / data.movestogo) + ((t_inc * 4) / 5);
         if (data.ponder) {
             info.pondering = true;

@@ -110,6 +110,7 @@ const EvalScore TARGET_NOTRP = COMP(2, 4);
 const EvalScore  TARGET_OPEN = COMP(10, 12);
 const EvalScore  TARGET_NOTRP_OPEN = COMP(3, 4);
 const EvalScore  DOUBLE_TARGET = COMP(2, 4);
+//const EvalScore  DOUBLE_TARGET = COMP(4, 8);
 const EvalScore  DOUBLE_TARGET_OPEN = COMP(4, 6);
 
 //passed pawns
