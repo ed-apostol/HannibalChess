@@ -83,7 +83,7 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
         else if (wq == 0 && wr == 0 && wminors == 2) {
             if (wn == 2) {
                 if (bp == 0 || bminors || br || bq) drawn += DRAWN;
-                else drawn += (DRAWN+DRAWN1)/2;
+                else drawn += (DRAWN + DRAWN1) / 2;
             }
             else if (wb == 2 && bq == 0 && br == 0 && bn == 1) drawn += DRAWN8;
             else if (bq || br || bminors) drawn += DRAWN1;
@@ -437,9 +437,9 @@ void InitMaterial(void) {
 
                                                 // reduce piece value if we are winning but mating is tough or impossible
                                                 if (wq == 0 && wr == 0 && wminors == 1 && wp == 0 && bq == 0 && br == 0 && bminors == 0) win -= KnightValueEnd / 2; //only 1 piece
-												if (wq == 0 && wr == 0 && wb == 0 && wn == 2 && wp == 0 && bq == 0 && br == 0 && win > 0) {
-													win = MAX(0, (win - KnightValueEnd/2))/2; // 2 knights
-												}
+                                                if (wq == 0 && wr == 0 && wb == 0 && wn == 2 && wp == 0 && bq == 0 && br == 0 && win > 0) {
+                                                    win = MAX(0, (win - KnightValueEnd / 2)) / 2; // 2 knights
+                                                }
                                                 if (wp == 0 && win > 0 && ((wq - bq) * 9 + (wr - br) * 5 + (wminors - bminors) * 3) <= 3) win /= 2; //max of a piece up
                                                 if (bp == 0 && win < 0 && ((bq - wq) * 9 + (br - wr) * 5 + (bminors - wminors) * 3) <= 3) win /= 2; //max of a piece up
 
@@ -566,9 +566,9 @@ void InitMaterial(void) {
                                                 if (bq == 1 && br == 0 && bminors == 0 && bp == 1 && wq) {
                                                     bflag = QPvQEnd;
                                                 }
-												if (wn == 2 && wb == 0 && wp == 0 && wr == 0 && wq == 0 && bp && bn == 0 && bb == 0 && br == 0 && bq == 0) {
-													wflag = NNvPEnd;
-												}
+                                                if (wn == 2 && wb == 0 && wp == 0 && wr == 0 && wq == 0 && bp && bn == 0 && bb == 0 && br == 0 && bq == 0) {
+                                                    wflag = NNvPEnd;
+                                                }
                                                 //TODO consider expanding to include more pieces (rook, queen, more minors, etc.
                                                 if (wflag == NoEnd && win > 40 && wp == 0 && wdraw < MAX_DRAW) {
                                                     wflag = NoPawnEnd; // try to mate with no pawns (do not supercede other things like NB v. King)

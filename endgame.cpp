@@ -703,19 +703,18 @@ void DrawnRookPawnvBishop(int attacker, const position_t& pos, int *draw) {
     }
 }
 void TwoKnightsvPawn(int attacker, const position_t& pos, int *draw) {
-	uint64 pawnBB = pos.pawns;
-	int TroitzkyLine[] = { 4, 6, 5, 4, 4, 5, 6, 4 };
-	int drawish = 1;
-	do {
-		int pSq = popFirstBit(&pawnBB);
-		int pRank = PAWN_RANK(pSq,attacker^1);
-		int pFile = SQFILE(pSq);
-		drawish += MAX(0,TroitzkyLine[pFile] - pRank);
-		if (SHOW_EVAL) PrintOutput() << "info string rank " << pRank + 1 << " tline " << TroitzkyLine[pFile] + 1 << "\n";
-	} while (pawnBB);
-	if (SHOW_EVAL) PrintOutput() << "info string drawish " << drawish << "\n";
-	*draw = *draw / drawish;
-	
+    uint64 pawnBB = pos.pawns;
+    int TroitzkyLine[] = { 4, 6, 5, 4, 4, 5, 6, 4 };
+    int drawish = 1;
+    do {
+        int pSq = popFirstBit(&pawnBB);
+        int pRank = PAWN_RANK(pSq, attacker ^ 1);
+        int pFile = SQFILE(pSq);
+        drawish += MAX(0, TroitzkyLine[pFile] - pRank);
+        if (SHOW_EVAL) PrintOutput() << "info string rank " << pRank + 1 << " tline " << TroitzkyLine[pFile] + 1 << "\n";
+    } while (pawnBB);
+    if (SHOW_EVAL) PrintOutput() << "info string drawish " << drawish << "\n";
+    *draw = *draw / drawish;
 }
 void QueenPawnvQueen(int attacker, const position_t& pos, int *draw) {
     uint64 const pawnBB = pos.pawns & pos.color[attacker];
@@ -929,9 +928,9 @@ void evalEndgame(const int attacker, const position_t& pos, eval_info_t& ei, int
     case QPvQEnd: // queen and pawn vs. queen endgame
         QueenPawnvQueen(attacker, pos, draw);
         if (SHOW_EVAL) PrintOutput() << "info string queen and pawn vs. queen\n";
-	case NNvPEnd: //two knights against pawn(s)
-		TwoKnightsvPawn(attacker, pos, draw);
-		MateNoPawn(attacker, pos, score);
-		break;
-	}
+    case NNvPEnd: //two knights against pawn(s)
+        TwoKnightsvPawn(attacker, pos, draw);
+        MateNoPawn(attacker, pos, score);
+        break;
+    }
 }
