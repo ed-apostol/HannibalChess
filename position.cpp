@@ -17,10 +17,7 @@
 
 /* this undos the null move done */
 void unmakeNullMove(position_t& pos, pos_store_t& undo) {
-    --pos.ply;
-    --pos.sp;
     pos.side ^= 1;
-
     pos.posStore = undo;
 }
 
@@ -37,8 +34,6 @@ void makeNullMove(position_t& pos, pos_store_t& undo) {
     if (undo.epsq != -1) pos.posStore.hash ^= ZobEpsq[SQFILE(undo.epsq)];
 
     pos.posStore.hash ^= ZobColor;
-    ++pos.ply;
-    ++pos.sp;
     pos.side ^= 1;
 }
 
@@ -47,9 +42,6 @@ void unmakeMove(position_t& pos, pos_store_t& undo) {
     unsigned int side, xside, m, rook_from = 0, rook_to = 0, epsq = 0, from, to;
 
     m = pos.posStore.lastmove;
-
-    --pos.ply;
-    --pos.sp;
     xside = pos.side;
     side = xside ^ 1;
     pos.side = side;
@@ -424,9 +416,6 @@ void makeMove(position_t& pos, pos_store_t& undo, basic_move_t m) {
     pos.pieces[from] = EMPTY;
     pos.color[side] ^= (BitMask[from] | BitMask[to]);
     pos.occupied = pos.color[side] | pos.color[xside];
-    ++pos.ply;
-    ASSERT(pos.sp + 1 < MAX_HASH_STORE);
-    ++pos.sp;
     pos.side = xside;
 #ifdef DEBUG
     positionIsOk(pos);
@@ -450,8 +439,6 @@ void setPosition(position_t& pos, const char *fen) {
     pos.color[WHITE] = EmptyBoardBB;
     pos.color[BLACK] = EmptyBoardBB;
     pos.side = WHITE;
-    pos.ply = 0;
-    pos.sp = 0;
     pos.kpos[WHITE] = 0;
     pos.kpos[BLACK] = 0;
     for (sq = a1; sq <= h8; sq++) pos.pieces[sq] = EMPTY;
@@ -622,7 +609,6 @@ void setPosition(position_t& pos, const char *fen) {
             sscanf_s(fen, "%d", &fiftyInt);
             if (fiftyInt >= 0 && fiftyInt <= 100) {
                 pos.posStore.fifty = (uint32)fiftyInt;
-                pos.sp = pos.posStore.fifty;
             }
         }
     }

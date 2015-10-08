@@ -139,6 +139,7 @@ void Interface::Go(Engine& engine, position_t& pos, std::istringstream& stream) 
 void Interface::Position(Engine& engine, position_t& pos, std::istringstream& stream) {
     basic_move_t m;
     std::string token, fen;
+    int sp = 0;
 
     stream >> token;
     if (token == "startpos") {
@@ -159,11 +160,9 @@ void Interface::Position(Engine& engine, position_t& pos, std::istringstream& st
         movelist_t ml;
         genLegal(pos, ml, true);
         m = parseMove(ml, token.c_str());
-        if (m) makeMove(pos, engine.UndoStack[pos.sp], m);
+        if (m) makeMove(pos, engine.UndoStack[sp++], m);
         else break;
-        if (pos.posStore.fifty == 0) pos.sp = 0;
     }
-    pos.ply = 0;
 }
 
 void Interface::SetOption(Engine& engine, std::istringstream& stream) {

@@ -77,7 +77,7 @@ struct continuation_t {
     int length;
 };
 
-///* the move structure */
+/* the move structure */
 struct move_t {
     basic_move_t m;
     int32 s;
@@ -90,19 +90,19 @@ struct movelist_t {
     basic_move_t killer2;
     int32 evalvalue;
     int32 scout;
-    int32 ply;
     int32 depth;
     int32 side;
     volatile uint32 phase;
     volatile int32 pos;
     volatile int32 size;
     volatile int32 startBad;
-    uint64 pinned;
+    uint64 pinned; // TODO: move to SS
     move_t list[MAXMOVES];
 };
 
 /* the undo structure */
 struct pos_store_t {
+    pos_store_t() : previous(nullptr) {}
     uint32 lastmove;
     int castle;
     int fifty;
@@ -128,10 +128,7 @@ struct position_t {
     int pieces[64];
     int kpos[2];
     pos_store_t posStore;
-
     int side;
-    int ply;
-    int sp;
 };
 
 typedef uint8 mflag_t;
@@ -144,7 +141,7 @@ struct material_info_t {
 };
 
 struct SearchStack {
-    SearchStack() :
+    SearchStack(int _ply) :
         reducedMove(false),
         moveGivesCheck(false),
         hashmoveIsSingular(false),
@@ -159,6 +156,7 @@ struct SearchStack {
         bannedMove(EMPTY),
         hashMove(EMPTY),
         hashDepth(-2),
+        ply(_ply),
         mvlist(&movelist),
         hisMoves(&hisTable[0]) {}
     int playedMoves;
@@ -177,6 +175,7 @@ struct SearchStack {
     basic_move_t bannedMove;
     basic_move_t hashMove;
     int hashDepth;
+    int ply;
 
     movelist_t movelist;
     movelist_t* mvlist;
