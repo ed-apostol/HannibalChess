@@ -28,8 +28,9 @@ void TranspositionTable::StoreLower(const uint64 hash, basic_move_t move, const 
             entry->SetMove(move);
             entry->SetLowerDepth(depth);
             entry->SetLowerValue(value);
-            entry->SetMask(MLower | (singular ? MSingular : 0));
             entry->RemMask(MAllLower);
+            entry->RemMask(MSingular);
+            entry->SetMask(MLower | (singular ? MSingular : 0));
             return;
         }
         score = (mAge[entry->Age()] * 256) - MAX(entry->UpperDepth(), entry->LowerDepth());
@@ -97,6 +98,7 @@ void TranspositionTable::StoreAllLower(const uint64 hash, basic_move_t move, con
             entry->SetMove(move);
             entry->SetLowerDepth(depth);
             entry->SetLowerValue(value);
+            entry->RemMask(MSingular);
             entry->SetMask(MLower | MAllLower | (singular ? MSingular : 0));
             return;
         }

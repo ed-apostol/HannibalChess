@@ -276,7 +276,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     SplitPoint* sp = nullptr;
     SearchStack ss;
     pos_store_t undo;
-    bool skipSingularSearch = false;
 
     ASSERT(alpha < beta);
     ASSERT(depth >= 1);
@@ -316,8 +315,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (entry->Move() != EMPTY && entry->LowerDepth() > ss.hashDepth) {
                     ss.hashMove = entry->Move();
                     ss.hashDepth = entry->LowerDepth();
-                    ss.hashmoveIsSingular = ((entry->Mask() & MSingular) != 0);
-                    skipSingularSearch = (entry->LowerDepth() >= depth - depth % 2);
+                    ss.hashmoveIsSingular = ((entry->Mask() & MSingular) && (entry->LowerDepth() >= depth));
                 }
                 if (entry->LowerDepth() > evalDepth) {
                     evalDepth = entry->LowerDepth();
@@ -394,7 +392,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (sthread.stop) return 0;
                 ss.evalvalue = score;
                 if (score > alpha) {
-                    skipSingularSearch = (ss.hashMove == ssprev.counterMove);
+                    ss.hashmoveIsSingular = (ss.hashmoveIsSingular && (ss.hashMove == ssprev.counterMove));
                     ss.hashMove = ssprev.counterMove;
                     ss.hashDepth = newdepth;
                 }
@@ -467,11 +465,9 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (!inRoot && !inSingular && !inSplitPoint) {
                     if (inCheck && ss.mvlist->size == 1) newdepth++;
                     else if (ss.hashMove == move->m && depth >= (inPvNode(nt) ? 6 : 8)) {
-                        if (skipSingularSearch) {
-                            if (ss.hashmoveIsSingular) {
-                                singularMove = ss.hashMove;
-                                newdepth++;
-                            }
+                        if (ss.hashmoveIsSingular) {
+                            singularMove = ss.hashMove;
+                            newdepth++;
                         }
                         else {
                             int exploreDepth = depth / 2;
@@ -521,7 +517,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 }
                 int newdepthclone = newdepth - partialReduction;
                 makeMove(pos, undo, move->m);
-                //				prefetch((char*)mTransTable.Entry(pos.posStore.hash)); //hhh3
                 ++sthread.nodes;
                 if (inSplitPoint) alpha = sp->alpha;
                 ss.reducedMove = (newdepthclone < newdepth);
@@ -754,9 +749,7 @@ void Engine::TimeManagement(int depth) {
             }
         }
         bool easymovecutoff = false;
-        bool extendcutoff = false;////Han_2 added easyMove
-        //		if (info.is_easymove && timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * EASYMOVE_TIME_CUTOFF) / 100))) easymovecutoff = true;
-        if ((info.legalmoves < 3 || easyMove) && timeElapsed >(info.start_time + (((info.time_limit_max - info.start_time) * EASYMOVE_TIME_CUTOFF) / 100))) easymovecutoff = true;
+        bool extendcutoff = false; if ((info.legalmoves < 3 || info.is_easymove) && timeElapsed >(info.start_time + (((info.time_limit_max - info.start_time) * EASYMOVE_TIME_CUTOFF) / 100))) easymovecutoff = true;
         else if (timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * EXTEND_OR_STOP_TIME_CUTOFF) / 100))) extendcutoff = true;
         if (easymovecutoff || extendcutoff) {
             int64 addTime = 0;
@@ -774,15 +767,15 @@ void Engine::TimeManagement(int depth) {
             if (addTime <= 0) { // if we are unlikely to get deeper, save our time
                 StopSearch();
                 if (easymovecutoff) {
-                    //                    info.easymoves.Init();
                     LogAndPrintOutput() << "info string Aborting search: Easymove: " << timeElapsed - info.start_time;
                 }
                 else LogInfo() << "info string Aborting search: root time limit 1: " << timeElapsed - info.start_time;
                 return;
             }
             else {
-                //                if (easymovecutoff)
-                //                    info.is_easymove = false;
+                // TODO: consider adding this back
+                //if (easymovecutoff)
+                //    info.is_easymove = false;
                 if (extendcutoff) {
                     info.time_limit_max += addTime;
                     if (info.time_limit_max > info.time_limit_abs)
@@ -876,61 +869,46 @@ void Engine::GetBestMove(Thread& sthread) {
     SHOW_EVAL = false;
     PrintOutput() << "info string score = " << tscore << "\n";
 #endif
-    easyMove = 0;
     PvHashEntry *entry = pvhashtable.pvEntry(rootpos.posStore.hash);
     if (nullptr != entry && entry->pvMove() && isLegal(rootpos, entry->pvMove(), ss.moveGivesCheck)) {
         ss.hashMove = entry->pvMove();
-        // don't do easy move and instant recapture when analyzing or pondering
-        /*        if (info.thinking_status == THINKING && rootpos.posStore.lastmove == info.easymoves.m[1] && ss.hashMove == info.easymoves.m[2]) {
-                    if (moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(ss.hashMove))) {
-                    StopSearch();
-                    info.bestmove = ss.hashMove;
-                    info.best_value = entry->pvScore();
-                    ExtractPvMovesFromHash(rootpos, info.rootPV, ss.hashMove);
-                    DisplayPV(info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
-                    info.easymoves.Init();
-                    SendBestMove();
-                    PrintOutput() << "info string Easy move at the root!!!";
-                    return;
-                    }
-                    info.is_easymove = true;
-                    easymove = info.easymoves.m[2];
-                    }*/
-
-        bool recapture = (((moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(entry->pvMove())))
-            || (PcValSEE[moveCapture(entry->pvMove())] > PcValSEE[movePiece(entry->pvMove())])));
-        if (recapture) easyMove = ss.hashMove;
+        if (((moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(ss.hashMove)))
+            || (PcValSEE[moveCapture(ss.hashMove)] > PcValSEE[movePiece(ss.hashMove)]))) {
+            info.is_easymove = true;
+        }
         else {
             for (TransEntry *hentry = transtable.Entry(rootpos.posStore.hash), *end = hentry + transtable.BucketSize(); hentry != end; ++hentry) {
                 if (hentry->HashLock() == LOCK(rootpos.posStore.hash)) {
                     if (ss.hashMove == hentry->Move() && (hentry->Mask() & MSingular)) {
-                        easyMove = ss.hashMove;
+                        info.is_easymove = true;
                     }
                     break;
                 }
             }
         }
-        if (easyMove && info.thinking_status == THINKING && info.time_is_limited &&
-            info.rootPV.moves[1] == rootpos.posStore.lastmove && info.rootPV.moves[2] == ss.hashMove) {
+        if (info.is_easymove && info.thinking_status == THINKING && info.time_is_limited &&
+            info.easymoves.m[1] == rootpos.posStore.lastmove && info.easymoves.m[2] == ss.hashMove) {
             info.bestmove = ss.hashMove;
             info.best_value = entry->pvScore();
+            info.easymoves.Init();
             ExtractPvMovesFromHash(rootpos, info.rootPV, ss.hashMove);
             DisplayPV(info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
             StopSearch();
             SendBestMove();
+            PrintOutput() << "info string Easy move at the root!!!";
             return;
         }
     }
 
     // extend time when there is no hashmove from hashtable, this is useful when just out of the book
-    if (ss.hashMove == EMPTY || (info.rootPV.moves[1] != rootpos.posStore.lastmove)) {
+    if (ss.hashMove == EMPTY || (info.easymoves.m[1] != rootpos.posStore.lastmove)) {
         info.time_limit_max += info.alloc_time / 4; // 25%
         if (info.time_limit_max > info.time_limit_abs)
             info.time_limit_max = info.time_limit_abs;
     }
 
     // easy moves
-    //    info.easymoves.Init();
+    info.easymoves.Init();
 
     // SMP
     InitVars();
@@ -982,9 +960,6 @@ void Engine::GetBestMove(Thread& sthread) {
             }
             if (info.stop_search) break;
         }
-        //        if (info.is_easymove && info.bestmove != easymove) info.is_easymove = false;
-        //        if (info.easymoves.Equal(info.rootPV)) ++info.easymoves.cnt;
-        //        else info.easymoves.Assign(info.rootPV);
         if (!info.stop_search) TimeManagement(id);
         if (info.stop_search) break;
         if (info.best_value != -INF) info.last_value = info.best_value;
@@ -1002,7 +977,8 @@ void Engine::GetBestMove(Thread& sthread) {
     }
 
     // easy moves
-    //    if (info.easymoves.cnt < 5) info.easymoves.Init();
+    if (info.thinking_status == THINKING)
+        info.easymoves.Assign(info.rootPV);
 
     SendBestMove();
 }
