@@ -46,7 +46,7 @@ static const int DefaultTimeBuffer = 1000;
 static const std::string ThreadsStr = "Threads";
 static const int MinThreads = 1;
 static const int MaxThreads = 64;
-static const int DefaultThreads = 1;
+static const int DefaultThreads = 8;
 
 static const std::string MinSplitDepthStr = "Min Split Depth";
 static const int MinSplitDepth = 1;
@@ -134,9 +134,9 @@ struct EasyMove {
             m[1] = pv.moves[1];
             m[2] = pv.moves[2];
         }
-        else Init();
+        else Reset();
     }
-    void Init() {
+    void Reset() {
         m[0] = m[1] = m[2] = EMPTY;
     }
     basic_move_t m[3];

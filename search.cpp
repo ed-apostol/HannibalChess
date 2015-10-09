@@ -750,7 +750,8 @@ void Engine::TimeManagement(int depth) {
             }
         }
         bool easymovecutoff = false;
-        bool extendcutoff = false; if ((info.legalmoves < 3 || info.is_easymove) && timeElapsed >(info.start_time + (((info.time_limit_max - info.start_time) * EASYMOVE_TIME_CUTOFF) / 100))) easymovecutoff = true;
+        bool extendcutoff = false;
+        if ((info.legalmoves < 3 || info.is_easymove) && timeElapsed >(info.start_time + (((info.time_limit_max - info.start_time) * EASYMOVE_TIME_CUTOFF) / 100))) easymovecutoff = true;
         else if (timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * EXTEND_OR_STOP_TIME_CUTOFF) / 100))) extendcutoff = true;
         if (easymovecutoff || extendcutoff) {
             int64 addTime = 0;
@@ -774,9 +775,8 @@ void Engine::TimeManagement(int depth) {
                 return;
             }
             else {
-                // TODO: consider adding this back
-                //if (easymovecutoff)
-                //    info.is_easymove = false;
+                if (easymovecutoff)
+                    info.is_easymove = false;
                 if (extendcutoff) {
                     info.time_limit_max += addTime;
                     if (info.time_limit_max > info.time_limit_abs)
@@ -859,6 +859,7 @@ void Engine::GetBestMove(Thread& sthread) {
     if (info.thinking_status == THINKING && uci_opt[OwnBookStr].GetInt() && !anyRep(rootpos)) {
         if ((info.bestmove = mPolyBook.getBookMove(rootpos)) != EMPTY) {
             info.rootPV.length = 0;
+            info.easymoves.Reset();
             StopSearch();
             SendBestMove();
             return;
@@ -891,7 +892,7 @@ void Engine::GetBestMove(Thread& sthread) {
             info.easymoves.m[1] == rootpos.posStore.lastmove && info.easymoves.m[2] == ss.hashMove) {
             info.bestmove = ss.hashMove;
             info.best_value = entry->pvScore();
-            info.easymoves.Init();
+            info.easymoves.Reset(); // no 2 consecutive easy moves
             ExtractPvMovesFromHash(rootpos, info.rootPV, ss.hashMove);
             DisplayPV(info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
             StopSearch();
@@ -907,9 +908,6 @@ void Engine::GetBestMove(Thread& sthread) {
         if (info.time_limit_max > info.time_limit_abs)
             info.time_limit_max = info.time_limit_abs;
     }
-
-    // easy moves
-    info.easymoves.Init();
 
     // SMP
     InitVars();
@@ -980,6 +978,8 @@ void Engine::GetBestMove(Thread& sthread) {
     // easy moves
     if (info.thinking_status == THINKING)
         info.easymoves.Assign(info.rootPV);
+    else
+        info.easymoves.Reset();
 
     SendBestMove();
 }
