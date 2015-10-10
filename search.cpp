@@ -245,15 +245,15 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     }
     if (ss.bestvalue >= beta) {
         ssprev.counterMove = ss.bestmove;
-        mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, ss.ply), false);
+        mTransTable.StoreCutNodeFailHigh(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, ss.ply), false);
     }
     else {
         if (inPv && ss.bestmove != EMPTY) {
             ssprev.counterMove = ss.bestmove;
-            mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, ss.ply), false);
+            mTransTable.StorePVNode(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, ss.ply), false);
             mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, ss.ply));
         }
-        else mTransTable.StoreUpper(pos.posStore.hash, -1, scoreToTrans(ss.bestvalue, ss.ply));
+        else mTransTable.StoreAllNodeFailLow(pos.posStore.hash, -1, scoreToTrans(ss.bestvalue, ss.ply));
     }
     return ss.bestvalue;
 }
@@ -298,7 +298,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     else return DrawValue[pos.side];
                 }
                 if (!inPvNode(nt)) {
-                    if ((!inCutNode(nt) || !(entry->Mask() & MAllLower)) && entry->LowerDepth() >= depth && (entry->Move() != EMPTY || pos.posStore.lastmove == EMPTY)) {
+                    if ((!inCutNode(nt) || !(entry->Mask() & MAllNodeFailHigh)) && entry->LowerDepth() >= depth && (entry->Move() != EMPTY || pos.posStore.lastmove == EMPTY)) {
                         int score = scoreFromTrans(entry->LowerValue(), ss.ply);
                         if (score > alpha) {
                             ss.bestmove = ssprev.counterMove = entry->Move();
@@ -306,7 +306,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                             return score;
                         }
                     }
-                    if ((!inAllNode(nt) || !(entry->Mask() & MCutUpper)) && entry->UpperDepth() >= depth) {
+                    if ((!inAllNode(nt) || !(entry->Mask() & MCutNodeFailLow)) && entry->UpperDepth() >= depth) {
                         int score = scoreFromTrans(entry->UpperValue(), ss.ply);
                         ASSERT(valueIsOk(score));
                         if (score < beta) return score;
@@ -597,17 +597,17 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (ss.bestvalue >= beta) {
             ssprev.counterMove = ss.bestmove;
             UpdateHistory(pos, ss, sthread, depth);
-            if (inCutNode(nt)) mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove));
-            else mTransTable.StoreAllLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove));
+            if (inCutNode(nt)) mTransTable.StoreCutNodeFailHigh(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove));
+            else mTransTable.StoreAllNodeFailHigh(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove));
         }
         else {
             if (inPvNode(nt) && ss.bestmove != EMPTY) {
                 ssprev.counterMove = ss.bestmove;
-                mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove));
+                mTransTable.StorePVNode(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove));
                 mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply));
             }
-            else if (inCutNode(nt)) mTransTable.StoreCutUpper(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, ss.ply));
-            else mTransTable.StoreUpper(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, ss.ply));
+            else if (inCutNode(nt)) mTransTable.StoreCutNodeFailLow(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, ss.ply));
+            else mTransTable.StoreAllNodeFailLow(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, ss.ply));
         }
     }
     return ss.bestvalue;
@@ -691,7 +691,7 @@ void Engine::RepopulateHash(position_t& pos, continuation_t& rootPV) {
         if (!move) break;
         PvHashEntry* entry = pvhashtable.pvEntryFromMove(pos.posStore.hash, move);
         if (nullptr == entry) break;
-        transtable.StoreExact(pos.posStore.hash, entry->pvMove(), entry->pvDepth(), entry->pvScore(), false);
+        transtable.StorePVNode(pos.posStore.hash, entry->pvMove(), entry->pvDepth(), entry->pvScore(), false);
         makeMove(pos, undo[moveOn], move);
     }
     for (moveOn = moveOn - 1; moveOn >= 0; moveOn--) {

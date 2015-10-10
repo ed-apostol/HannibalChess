@@ -66,7 +66,7 @@ enum HashType {
 };
 
 enum HashMask {
-    MLower = 1, MUpper = 2, MCutUpper = 4, MAllLower = 8, MExact = 16, MNoMoves = 32, MSingular = 64
+    MCutNodeFailHigh = 1, MAllNodeFailLow = 2, MCutNodeFailLow = 4, MAllNodeFailHigh = 8, MExact = 16, MNoMoves = 32, MSingular = 64
 };
 
 typedef uint32 basic_move_t;

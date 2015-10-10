@@ -14,7 +14,7 @@
 #include "trans.h"
 #include "utils.h"
 
-void TranspositionTable::StoreLower(const uint64 hash, basic_move_t move, const int depth, const int value, const bool singular) {
+void TranspositionTable::StoreCutNodeFailHigh(const uint64 hash, basic_move_t move, const int depth, const int value, const bool singular) {
     int worst = -INF, t, score;
     TransEntry *replace, *entry;
 
@@ -29,9 +29,9 @@ void TranspositionTable::StoreLower(const uint64 hash, basic_move_t move, const 
                 entry->SetMove(move);
                 entry->SetLowerDepth(depth);
                 entry->SetLowerValue(value);
-                entry->RemMask(MAllLower);
+                entry->RemMask(MAllNodeFailHigh);
                 entry->RemMask(MSingular);
-                entry->SetMask(MLower | (singular ? MSingular : 0));
+                entry->SetMask(MCutNodeFailHigh | (singular ? MSingular : 0));
                 return;
             }
             mUsed++;
@@ -50,10 +50,10 @@ void TranspositionTable::StoreLower(const uint64 hash, basic_move_t move, const 
     replace->SetUpperValue(0);
     replace->SetLowerDepth(depth);
     replace->SetLowerValue(value);
-    replace->ReplaceMask(MLower | (singular ? MSingular : 0));
+    replace->ReplaceMask(MCutNodeFailHigh | (singular ? MSingular : 0));
 }
 
-void TranspositionTable::StoreUpper(const uint64 hash, const int depth, const int value) {
+void TranspositionTable::StoreAllNodeFailLow(const uint64 hash, const int depth, const int value) {
     int worst = -INF, t, score;
     TransEntry *replace, *entry;
 
@@ -67,8 +67,8 @@ void TranspositionTable::StoreUpper(const uint64 hash, const int depth, const in
                 entry->SetAge(mDate);
                 entry->SetUpperDepth(depth);
                 entry->SetUpperValue(value);
-                entry->SetMask(MUpper);
-                entry->RemMask(MCutUpper);
+                entry->SetMask(MAllNodeFailLow);
+                entry->RemMask(MCutNodeFailLow);
                 return;
             }
             mUsed++;
@@ -87,10 +87,10 @@ void TranspositionTable::StoreUpper(const uint64 hash, const int depth, const in
     replace->SetUpperValue(value);
     replace->SetLowerDepth(0);
     replace->SetLowerValue(0);
-    replace->ReplaceMask(MUpper);
+    replace->ReplaceMask(MAllNodeFailLow);
 }
 
-void TranspositionTable::StoreAllLower(const uint64 hash, basic_move_t move, const int depth, const int value, const bool singular) {
+void TranspositionTable::StoreAllNodeFailHigh(const uint64 hash, basic_move_t move, const int depth, const int value, const bool singular) {
     int worst = -INF, t, score;
     TransEntry *replace, *entry;
 
@@ -100,13 +100,13 @@ void TranspositionTable::StoreAllLower(const uint64 hash, basic_move_t move, con
 
     for (t = 0; t < mBucketSize; t++, entry++) {
         if (entry->HashLock() == LOCK(hash)) {
-            if (depth >= entry->LowerDepth() && ((entry->LowerDepth() == 0) || (entry->Mask() & MAllLower))) {
+            if (depth >= entry->LowerDepth() && ((entry->LowerDepth() == 0) || (entry->Mask() & MAllNodeFailHigh))) {
                 entry->SetAge(mDate);
                 entry->SetMove(move);
                 entry->SetLowerDepth(depth);
                 entry->SetLowerValue(value);
                 entry->RemMask(MSingular);
-                entry->SetMask(MLower | MAllLower | (singular ? MSingular : 0));
+                entry->SetMask(MCutNodeFailHigh | MAllNodeFailHigh | (singular ? MSingular : 0));
                 return;
             }
             mUsed++;
@@ -125,10 +125,10 @@ void TranspositionTable::StoreAllLower(const uint64 hash, basic_move_t move, con
     replace->SetUpperValue(0);
     replace->SetLowerDepth(depth);
     replace->SetLowerValue(value);
-    replace->ReplaceMask(MLower | MAllLower | (singular ? MSingular : 0));
+    replace->ReplaceMask(MCutNodeFailHigh | MAllNodeFailHigh | (singular ? MSingular : 0));
 }
 
-void TranspositionTable::StoreCutUpper(const uint64 hash, const int depth, const int value) {
+void TranspositionTable::StoreCutNodeFailLow(const uint64 hash, const int depth, const int value) {
     int worst = -INF, t, score;
     TransEntry *replace, *entry;
 
@@ -138,11 +138,11 @@ void TranspositionTable::StoreCutUpper(const uint64 hash, const int depth, const
 
     for (t = 0; t < mBucketSize; t++, entry++) {
         if (entry->HashLock() == LOCK(hash)) {
-            if (depth >= entry->UpperDepth() && ((entry->UpperDepth() == 0) || (entry->Mask() & MCutUpper))) {
+            if (depth >= entry->UpperDepth() && ((entry->UpperDepth() == 0) || (entry->Mask() & MCutNodeFailLow))) {
                 entry->SetAge(mDate);
                 entry->SetUpperDepth(depth);
                 entry->SetUpperValue(value);
-                entry->SetMask(MUpper | MCutUpper);
+                entry->SetMask(MAllNodeFailLow | MCutNodeFailLow);
                 return;
             }
             mUsed++;
@@ -161,10 +161,10 @@ void TranspositionTable::StoreCutUpper(const uint64 hash, const int depth, const
     replace->SetUpperValue(value);
     replace->SetLowerDepth(0);
     replace->SetLowerValue(0);
-    replace->ReplaceMask(MUpper | MCutUpper);
+    replace->ReplaceMask(MAllNodeFailLow | MCutNodeFailLow);
 }
 
-void TranspositionTable::StoreExact(const uint64 hash, basic_move_t move, const int depth, const int value, const bool singular) {
+void TranspositionTable::StorePVNode(const uint64 hash, basic_move_t move, const int depth, const int value, const bool singular) {
     int worst = -INF, t, score;
     TransEntry *replace, *entry;
 

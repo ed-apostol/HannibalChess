@@ -247,11 +247,11 @@ public:
     TranspositionTable() : mDate(0), mUsed(0) {}
     virtual void Clear();
     void NewDate(int date);
-    void StoreLower(uint64 hash, basic_move_t move, int depth, int value, const bool singular);
-    void StoreUpper(uint64 hash, int depth, int value);
-    void StoreCutUpper(uint64 hash, int depth, int value);
-    void StoreAllLower(uint64 hash, basic_move_t move, int depth, int value, const bool singular);
-    void StoreExact(uint64 hash, basic_move_t move, int depth, int value, const bool singular);
+    void StoreCutNodeFailHigh(uint64 hash, basic_move_t move, int depth, int value, const bool singular);
+    void StoreAllNodeFailLow(uint64 hash, int depth, int value);
+    void StoreCutNodeFailLow(uint64 hash, int depth, int value);
+    void StoreAllNodeFailHigh(uint64 hash, basic_move_t move, int depth, int value, const bool singular);
+    void StorePVNode(uint64 hash, basic_move_t move, int depth, int value, const bool singular);
     void StoreNoMoves(uint64 hash, int depth, int value);
 
     int32 Date() const {
