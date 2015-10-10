@@ -167,12 +167,12 @@ public:
     TransEntry() :
         mHashlock(0),
         mMove(0),
-        mUpperValue(0),
-        mLowerValue(0),
+        mFailLowValue(0),
+        mFailHighValue(0),
         mMask(0),
         mAge(0),
-        mUpperDepth(0),
-        mLowerDepth(0) {}
+        mFailLowDepth(0),
+        mFailHighDepth(0) {}
     inline uint32 HashLock() const {
         return mHashlock;
     }
@@ -185,17 +185,17 @@ public:
     inline int Mask() const {
         return mMask;
     }
-    inline int LowerDepth() const {
-        return mLowerDepth;
+    inline int FailHighDepth() const {
+        return mFailHighDepth;
     }
-    inline int UpperDepth() const {
-        return mUpperDepth;
+    inline int FailLowDepth() const {
+        return mFailLowDepth;
     }
-    inline int LowerValue() const {
-        return mLowerValue;
+    inline int FailHighValue() const {
+        return mFailHighValue;
     }
-    inline int UpperValue() const {
-        return mUpperValue;
+    inline int FailLowValue() const {
+        return mFailLowValue;
     }
 
     inline void SetHashLock(const uint32 hashlock) {
@@ -216,27 +216,27 @@ public:
     inline void ReplaceMask(const uint8 mask) {
         mMask = mask;
     }
-    inline void SetLowerDepth(const int8 lowerdepth) {
-        mLowerDepth = lowerdepth;
+    inline void SetFailHighDepth(const int8 lowerdepth) {
+        mFailHighDepth = lowerdepth;
     }
-    inline void SetUpperDepth(const int8 upperdepth) {
-        mUpperDepth = upperdepth;
+    inline void SetFailLowDepth(const int8 upperdepth) {
+        mFailLowDepth = upperdepth;
     }
-    inline void SetLowerValue(const int16 lowervalue) {
-        mLowerValue = lowervalue;
+    inline void SetFailHighValue(const int16 lowervalue) {
+        mFailHighValue = lowervalue;
     }
-    inline void SetUpperValue(const int16 uppervalue) {
-        mUpperValue = uppervalue;
+    inline void SetFailLowValue(const int16 uppervalue) {
+        mFailLowValue = uppervalue;
     }
 private:
     uint32 mHashlock;
     uint32 mMove;
-    int16 mUpperValue;
-    int16 mLowerValue;
+    int16 mFailLowValue;
+    int16 mFailHighValue;
     uint8 mMask;
     uint8 mAge;
-    int8 mUpperDepth;
-    int8 mLowerDepth;
+    int8 mFailLowDepth;
+    int8 mFailHighDepth;
 };
 
 class TranspositionTable : public BaseHashTable < TransEntry > {

@@ -169,20 +169,20 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
         if (entry->HashLock() == LOCK(pos.posStore.hash)) {
             entry->SetAge(mTransTable.Date());
             if (!inPv) { // TODO: re-use values from here to evalvalue?
-                if (entry->LowerDepth() != 0) {
-                    int score = scoreFromTrans(entry->LowerValue(), ss.ply);
+                if (entry->FailHighDepth() != 0) {
+                    int score = scoreFromTrans(entry->FailHighValue(), ss.ply);
                     if (score > alpha) {
                         ssprev.counterMove = entry->Move();
                         return score;
                     }
                 }
-                if (entry->UpperDepth() != 0) {
-                    int score = scoreFromTrans(entry->UpperValue(), ss.ply);
+                if (entry->FailLowDepth() != 0) {
+                    int score = scoreFromTrans(entry->FailLowValue(), ss.ply);
                     if (score < beta) return score;
                 }
             }
-            if (entry->Move() != EMPTY && entry->LowerDepth() > ss.hashDepth && moveIsTactical(entry->Move())) {
-                ss.hashDepth = entry->LowerDepth();
+            if (entry->Move() != EMPTY && entry->FailHighDepth() > ss.hashDepth && moveIsTactical(entry->Move())) {
+                ss.hashDepth = entry->FailHighDepth();
                 ss.hashMove = entry->Move();
             }
         }
@@ -298,32 +298,32 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     else return DrawValue[pos.side];
                 }
                 if (!inPvNode(nt)) {
-                    if ((!inCutNode(nt) || !(entry->Mask() & MAllNodeFailHigh)) && entry->LowerDepth() >= depth && (entry->Move() != EMPTY || pos.posStore.lastmove == EMPTY)) {
-                        int score = scoreFromTrans(entry->LowerValue(), ss.ply);
+                    if ((!inCutNode(nt) || !(entry->Mask() & MAllNodeFailHigh)) && entry->FailHighDepth() >= depth && (entry->Move() != EMPTY || pos.posStore.lastmove == EMPTY)) {
+                        int score = scoreFromTrans(entry->FailHighValue(), ss.ply);
                         if (score > alpha) {
                             ss.bestmove = ssprev.counterMove = entry->Move();
                             UpdateHistory(pos, ss, sthread, depth);
                             return score;
                         }
                     }
-                    if ((!inAllNode(nt) || !(entry->Mask() & MCutNodeFailLow)) && entry->UpperDepth() >= depth) {
-                        int score = scoreFromTrans(entry->UpperValue(), ss.ply);
+                    if ((!inAllNode(nt) || !(entry->Mask() & MCutNodeFailLow)) && entry->FailLowDepth() >= depth) {
+                        int score = scoreFromTrans(entry->FailLowValue(), ss.ply);
                         ASSERT(valueIsOk(score));
                         if (score < beta) return score;
                     }
                 }
-                if (entry->Move() != EMPTY && entry->LowerDepth() > ss.hashDepth) {
+                if (entry->Move() != EMPTY && entry->FailHighDepth() > ss.hashDepth) {
                     ss.hashMove = entry->Move();
-                    ss.hashDepth = entry->LowerDepth();
-                    ss.hashmoveIsSingular = ((entry->Mask() & MSingular) && (entry->LowerDepth() >= depth));
+                    ss.hashDepth = entry->FailHighDepth();
+                    ss.hashmoveIsSingular = ((entry->Mask() & MSingular) && (entry->FailHighDepth() >= depth));
                 }
-                if (entry->LowerDepth() > evalDepth) {
-                    evalDepth = entry->LowerDepth();
-                    ss.evalvalue = scoreFromTrans(entry->LowerValue(), ss.ply);
+                if (entry->FailHighDepth() > evalDepth) {
+                    evalDepth = entry->FailHighDepth();
+                    ss.evalvalue = scoreFromTrans(entry->FailHighValue(), ss.ply);
                 }
-                if (entry->UpperDepth() > evalDepth) {
-                    evalDepth = entry->UpperDepth();
-                    ss.evalvalue = scoreFromTrans(entry->UpperValue(), ss.ply);
+                if (entry->FailLowDepth() > evalDepth) {
+                    evalDepth = entry->FailLowDepth();
+                    ss.evalvalue = scoreFromTrans(entry->FailLowValue(), ss.ply);
                 }
             }
         }
