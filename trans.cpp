@@ -24,14 +24,17 @@ void TranspositionTable::StoreLower(const uint64 hash, basic_move_t move, const 
 
     for (t = 0; t < mBucketSize; t++, entry++) {
         if (entry->HashLock() == LOCK(hash)) {
-            entry->SetAge(mDate);
-            entry->SetMove(move);
-            entry->SetLowerDepth(depth);
-            entry->SetLowerValue(value);
-            entry->RemMask(MAllLower);
-            entry->RemMask(MSingular);
-            entry->SetMask(MLower | (singular ? MSingular : 0));
-            return;
+            if (depth >= entry->LowerDepth() && !(entry->Mask() & MExact)) {
+                entry->SetAge(mDate);
+                entry->SetMove(move);
+                entry->SetLowerDepth(depth);
+                entry->SetLowerValue(value);
+                entry->RemMask(MAllLower);
+                entry->RemMask(MSingular);
+                entry->SetMask(MLower | (singular ? MSingular : 0));
+                return;
+            }
+            mUsed++;
         }
         score = (mAge[entry->Age()] * 256) - MAX(entry->UpperDepth(), entry->LowerDepth());
         if (score > worst) {
@@ -60,12 +63,15 @@ void TranspositionTable::StoreUpper(const uint64 hash, const int depth, const in
 
     for (t = 0; t < mBucketSize; t++, entry++) {
         if (entry->HashLock() == LOCK(hash)) {
-            entry->SetAge(mDate);
-            entry->SetUpperDepth(depth);
-            entry->SetUpperValue(value);
-            entry->SetMask(MUpper);
-            entry->RemMask(MCutUpper);
-            return;
+            if (depth >= entry->UpperDepth() && !(entry->Mask() & MExact)) {
+                entry->SetAge(mDate);
+                entry->SetUpperDepth(depth);
+                entry->SetUpperValue(value);
+                entry->SetMask(MUpper);
+                entry->RemMask(MCutUpper);
+                return;
+            }
+            mUsed++;
         }
         score = (mAge[entry->Age()] * 256) - MAX(entry->UpperDepth(), entry->LowerDepth());
         if (score > worst) {
@@ -94,13 +100,16 @@ void TranspositionTable::StoreAllLower(const uint64 hash, basic_move_t move, con
 
     for (t = 0; t < mBucketSize; t++, entry++) {
         if (entry->HashLock() == LOCK(hash)) {
-            entry->SetAge(mDate);
-            entry->SetMove(move);
-            entry->SetLowerDepth(depth);
-            entry->SetLowerValue(value);
-            entry->RemMask(MSingular);
-            entry->SetMask(MLower | MAllLower | (singular ? MSingular : 0));
-            return;
+            if (depth >= entry->LowerDepth() && ((entry->LowerDepth() == 0) || (entry->Mask() & MAllLower))) {
+                entry->SetAge(mDate);
+                entry->SetMove(move);
+                entry->SetLowerDepth(depth);
+                entry->SetLowerValue(value);
+                entry->RemMask(MSingular);
+                entry->SetMask(MLower | MAllLower | (singular ? MSingular : 0));
+                return;
+            }
+            mUsed++;
         }
         score = (mAge[entry->Age()] * 256) - MAX(entry->UpperDepth(), entry->LowerDepth());
         if (score > worst) {
@@ -129,11 +138,14 @@ void TranspositionTable::StoreCutUpper(const uint64 hash, const int depth, const
 
     for (t = 0; t < mBucketSize; t++, entry++) {
         if (entry->HashLock() == LOCK(hash)) {
-            entry->SetAge(mDate);
-            entry->SetUpperDepth(depth);
-            entry->SetUpperValue(value);
-            entry->SetMask(MUpper | MCutUpper);
-            return;
+            if (depth >= entry->UpperDepth() && ((entry->UpperDepth() == 0) || (entry->Mask() & MCutUpper))) {
+                entry->SetAge(mDate);
+                entry->SetUpperDepth(depth);
+                entry->SetUpperValue(value);
+                entry->SetMask(MUpper | MCutUpper);
+                return;
+            }
+            mUsed++;
         }
         score = (mAge[entry->Age()] * 256) - MAX(entry->UpperDepth(), entry->LowerDepth());
         if (score > worst) {
@@ -162,14 +174,24 @@ void TranspositionTable::StoreExact(const uint64 hash, basic_move_t move, const 
 
     for (t = 0; t < mBucketSize; t++, entry++) {
         if (entry->HashLock() == LOCK(hash)) {
-            entry->SetMove(move);
-            entry->SetAge(mDate);
-            entry->SetUpperDepth(depth);
-            entry->SetUpperValue(value);
-            entry->SetLowerDepth(depth);
-            entry->SetLowerValue(value);
-            entry->ReplaceMask(MExact | (singular ? MSingular : 0));
-            return;
+            if (depth >= MAX(entry->UpperDepth(), entry->LowerDepth())) {
+                entry->SetMove(move);
+                entry->SetAge(mDate);
+                entry->SetUpperDepth(depth);
+                entry->SetUpperValue(value);
+                entry->SetLowerDepth(depth);
+                entry->SetLowerValue(value);
+                entry->ReplaceMask(MExact | (singular ? MSingular : 0));
+                for (int x = t + 1; x < mBucketSize; x++) {
+                    entry++;
+                    if (entry->HashLock() == LOCK(hash)) {
+                        memset(entry, 0, sizeof(TransEntry));
+                        entry->SetAge((mDate + 1) % DATESIZE);
+                    }
+                }
+                return;
+            }
+            mUsed++;
         }
         score = (mAge[entry->Age()] * 256) - MAX(entry->UpperDepth(), entry->LowerDepth());
         if (score > worst) {
@@ -217,7 +239,7 @@ void TranspositionTable::StoreNoMoves(const uint64 hash, const int depth, const 
 void TranspositionTable::NewDate(int date) {
     mDate = (date + 1) % DATESIZE;
     for (date = 0; date < DATESIZE; date++) {
-        mAge[date] = mDate - date + ((mDate < date) ? DATESIZE : 0);
+        mAge[date] = (DATESIZE + mDate - date) % DATESIZE;
     }
     mUsed = 1;
 }
@@ -230,7 +252,7 @@ void TranspositionTable::Clear() {
 void PvHashTable::NewDate(int date) {
     mDate = (date + 1) % DATESIZE;
     for (date = 0; date < DATESIZE; date++) {
-        mAge[date] = mDate - date + ((mDate < date) ? DATESIZE : 0);
+        mAge[date] = (DATESIZE + mDate - date) % DATESIZE;
     }
 }
 

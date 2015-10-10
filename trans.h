@@ -106,6 +106,7 @@ public:
     static const int DATESIZE = 256;
     static const int BUCKET = 8;
 
+    PvHashTable() : mDate(0) {}
     virtual void Clear();
     void NewDate(int date);
     void pvStore(uint64 hash, basic_move_t move, int depth, int16 value);
@@ -243,6 +244,7 @@ public:
     static const int DATESIZE = 256;
     static const int BUCKET = 4;
 
+    TranspositionTable() : mDate(0), mUsed(0) {}
     virtual void Clear();
     void NewDate(int date);
     void StoreLower(uint64 hash, basic_move_t move, int depth, int value, const bool singular);

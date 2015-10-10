@@ -185,7 +185,6 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
                 ss.hashDepth = entry->LowerDepth();
                 ss.hashMove = entry->Move();
             }
-            break;
         }
     }
     if (ss.ply >= MAXPLY - 1) return eval(pos, sthread);
@@ -326,7 +325,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     evalDepth = entry->UpperDepth();
                     ss.evalvalue = scoreFromTrans(entry->UpperValue(), ss.ply);
                 }
-                break;
             }
         }
         if (ss.evalvalue == -INF) ss.evalvalue = eval(pos, sthread);
