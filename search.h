@@ -134,9 +134,9 @@ struct EasyMove {
             m[1] = pv.moves[1];
             m[2] = pv.moves[2];
         }
-        else Reset();
+        else Init();
     }
-    void Reset() {
+    void Init() {
         m[0] = m[1] = m[2] = EMPTY;
     }
     basic_move_t m[3];
