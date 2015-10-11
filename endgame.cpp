@@ -260,6 +260,7 @@ void InitMateBoost() {
         }
     }
 }
+//TODO consider proximity of defender knight to king (or other pieces?)
 void MateNoPawn(int attacker, const position_t& pos, int *score) {
     int defender = attacker ^ 1;
     int boostKing = mate_square[pos.kpos[defender]];
