@@ -748,7 +748,8 @@ void Engine::TimeManagement(int depth) {
             }
         }
         bool easymovecutoff = false;
-        bool extendcutoff = false; if ((info.legalmoves < 3 || info.is_easymove) && timeElapsed >(info.start_time + (((info.time_limit_max - info.start_time) * EASYMOVE_TIME_CUTOFF) / 100))) easymovecutoff = true;
+        bool extendcutoff = false; 
+        if ((info.legalmoves < 3 || info.is_easymove) && timeElapsed >(info.start_time + (((info.time_limit_max - info.start_time) * EASYMOVE_TIME_CUTOFF) / 100))) easymovecutoff = true;
         else if (timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * EXTEND_OR_STOP_TIME_CUTOFF) / 100))) extendcutoff = true;
         if (easymovecutoff || extendcutoff) {
             int64 addTime = 0;
@@ -766,15 +767,13 @@ void Engine::TimeManagement(int depth) {
             if (addTime <= 0) { // if we are unlikely to get deeper, save our time
                 StopSearch();
                 if (easymovecutoff) {
+                    info.easymoves.Reset(); // no 2 consecutive easy moves
                     LogAndPrintOutput() << "info string Aborting search: Easymove: " << timeElapsed - info.start_time;
                 }
                 else LogInfo() << "info string Aborting search: root time limit 1: " << timeElapsed - info.start_time;
                 return;
             }
             else {
-                // TODO: consider adding this back
-                //if (easymovecutoff)
-                //    info.is_easymove = false;
                 if (extendcutoff) {
                     info.time_limit_max += addTime;
                     if (info.time_limit_max > info.time_limit_abs)
@@ -847,7 +846,6 @@ void Engine::GetBestMove(Thread& sthread) {
     int alpha, beta;
     SearchStack ss(0);
     SplitPoint rootsp;
-    //    basic_move_t easymove = EMPTY;
     ss.moveGivesCheck = kingIsInCheck(rootpos);
     ss.dcc = discoveredCheckCandidates(rootpos, rootpos.side);
 
@@ -871,25 +869,21 @@ void Engine::GetBestMove(Thread& sthread) {
     PvHashEntry *entry = pvhashtable.pvEntry(rootpos.posStore.hash);
     if (nullptr != entry && entry->pvMove() && isLegal(rootpos, entry->pvMove(), ss.moveGivesCheck)) {
         ss.hashMove = entry->pvMove();
-        if (((moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(ss.hashMove)))
-            || (PcValSEE[moveCapture(ss.hashMove)] > PcValSEE[movePiece(ss.hashMove)]))) {
-            info.is_easymove = true;
-        }
-        else {
-            for (TransEntry *hentry = transtable.Entry(rootpos.posStore.hash), *end = hentry + transtable.BucketSize(); hentry != end; ++hentry) {
-                if (hentry->HashLock() == LOCK(rootpos.posStore.hash)) {
-                    if (ss.hashMove == hentry->Move() && (hentry->Mask() & MSingular)) {
-                        info.is_easymove = true;
-                    }
-                    break;
+        bool easycapture = ((moveCapture(rootpos.posStore.lastmove) && (moveTo(rootpos.posStore.lastmove) == moveTo(ss.hashMove)))
+            || (PcValSEE[moveCapture(ss.hashMove)] > PcValSEE[movePiece(ss.hashMove)]));
+        bool singularmove = false;
+        for (TransEntry *hentry = transtable.Entry(rootpos.posStore.hash), *end = hentry + transtable.BucketSize(); hentry != end; ++hentry) {
+            if (hentry->HashLock() == LOCK(rootpos.posStore.hash)) {
+                if (ss.hashMove == hentry->Move() && (hentry->Mask() & MSingular)) {
+                    singularmove = true;
                 }
             }
         }
-        if (info.is_easymove && info.thinking_status == THINKING && info.time_is_limited &&
-            info.easymoves.m[1] == rootpos.posStore.lastmove && info.easymoves.m[2] == ss.hashMove) {
+        bool expectedmove = (info.easymoves.m[1] == rootpos.posStore.lastmove && info.easymoves.m[2] == ss.hashMove);
+        if (info.thinking_status == THINKING && info.time_is_limited && (easycapture || singularmove) && expectedmove) {
             info.bestmove = ss.hashMove;
             info.best_value = entry->pvScore();
-            info.easymoves.Init();
+            info.easymoves.Reset(); // no 2 consecutive instant moves
             ExtractPvMovesFromHash(rootpos, info.rootPV, ss.hashMove);
             DisplayPV(info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
             StopSearch();
@@ -897,6 +891,7 @@ void Engine::GetBestMove(Thread& sthread) {
             PrintOutput() << "info string Easy move at the root!!!";
             return;
         }
+        if (easycapture || singularmove || expectedmove) info.is_easymove = true;
     }
 
     // extend time when there is no hashmove from hashtable, this is useful when just out of the book
@@ -907,7 +902,7 @@ void Engine::GetBestMove(Thread& sthread) {
     }
 
     // easy moves
-    info.easymoves.Init();
+    if (!info.pondering) info.easymoves.Reset();
 
     // SMP
     InitVars();
@@ -959,10 +954,16 @@ void Engine::GetBestMove(Thread& sthread) {
             }
             if (info.stop_search) break;
         }
+        if (!info.pondering) info.easymoves.Update(info.rootPV);
         if (!info.stop_search) TimeManagement(id);
         if (info.stop_search) break;
         if (info.best_value != -INF) info.last_value = info.best_value;
     }
+
+    // easy moves
+    if (!info.pondering && info.easymoves.cnt < 3)
+        info.easymoves.Reset();
+
     if (!info.stop_search) {
         if ((info.depth_is_limited || info.time_is_limited) && info.thinking_status == THINKING) {
             LogInfo() << "info string Aborting search: end of GetBestMove: id = " << id << ", best_value = " << info.best_value << " ply = " << ss.ply;
@@ -974,10 +975,6 @@ void Engine::GetBestMove(Thread& sthread) {
         }
         StopSearch();
     }
-
-    // easy moves
-    if (info.thinking_status == THINKING)
-        info.easymoves.Assign(info.rootPV);
 
     SendBestMove();
 }

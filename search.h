@@ -128,18 +128,31 @@ private:
 };
 
 struct EasyMove {
-    void Assign(continuation_t& pv) {
-        if (pv.length >= 3) {
-            m[0] = pv.moves[0];
-            m[1] = pv.moves[1];
-            m[2] = pv.moves[2];
-        }
-        else Init();
+    EasyMove() {
+        Reset();
     }
-    void Init() {
+    void Reset() {
         m[0] = m[1] = m[2] = EMPTY;
+        cnt = 0;
+    }
+    void Update(continuation_t& pv) {
+        if (pv.length >= 3) { 
+            if (m[0] == pv.moves[0] &&
+                m[1] == pv.moves[1] &&
+                m[2] == pv.moves[2]) {
+                ++cnt;
+            } 
+            else {
+                m[0] = pv.moves[0];
+                m[1] = pv.moves[1];
+                m[2] = pv.moves[2];
+                cnt = 1;
+            }
+        }
+        else Reset();
     }
     basic_move_t m[3];
+    int cnt;
 };
 
 /* the search data structure */
@@ -217,10 +230,10 @@ struct SearchInfo {
 
     int legalmoves;
     basic_move_t bestmove;
-    EasyMove easymoves;
     basic_move_t moves[MAXMOVES];
     bool mvlist_initialized;
     continuation_t rootPV;
+    EasyMove easymoves;
 };
 
 class Search;
