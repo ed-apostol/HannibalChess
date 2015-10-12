@@ -315,7 +315,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (entry->Move() != EMPTY && entry->FailHighDepth() > ss.hashDepth) {
                     ss.hashMove = entry->Move();
                     ss.hashDepth = entry->FailHighDepth();
-                    ss.hashmoveIsSingular = ((entry->Mask() & MSingular) && (entry->FailHighDepth() >= depth));
+                    ss.singular = (entry->Mask() & MSingular);
                 }
                 if (entry->FailHighDepth() > evalDepth) {
                     evalDepth = entry->FailHighDepth();
@@ -391,7 +391,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (sthread.stop) return 0;
                 ss.evalvalue = score;
                 if (score > alpha) {
-                    ss.hashmoveIsSingular = (ss.hashmoveIsSingular && (ss.hashMove == ssprev.counterMove));
                     ss.hashMove = ssprev.counterMove;
                     ss.hashDepth = newdepth;
                 }
@@ -462,27 +461,27 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
             if (ss.bestvalue == -INF) {
                 if (!inRoot && !inSingular && !inSplitPoint) {
+                    int exploreDepth = depth / 2;
                     if (inCheck && ss.mvlist->size == 1) newdepth++;
-                    else if (ss.hashMove == move->m && depth >= (inPvNode(nt) ? 6 : 8)) {
-                        if (ss.hashmoveIsSingular) {
+                    else if (ss.hashMove == move->m  && ss.hashDepth >= exploreDepth && depth >= (inPvNode(nt) ? 6 : 8)) {
+                        if (ss.singular > 0 && ss.hashDepth >= depth) {
                             singularMove = ss.hashMove;
                             newdepth++;
+                            //PrintOutput() << "Gone here 1";
                         }
                         else {
-                            int exploreDepth = depth / 2;
-                            // if you have previously determined this should be extended, don't re-check as often
-                            if (ss.hashDepth >= exploreDepth) { //two reasons to extend are: a) tree is likely smaller than normal and/or b) tree is likely critical
-                                int targetScore = ss.evalvalue - EXPLORE_BASE_CUTOFF - depth * EXPLORE_MULT_CUTOFF;
-                                ssprev.bannedMove = ss.hashMove;
-                                int score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, exploreDepth, ssprev, sthread, nt);
-                                ssprev.bannedMove = EMPTY;
-                                if (sthread.stop) return 0;
-                                if (score <= targetScore) {
-                                    singularMove = ss.hashMove;
-                                    newdepth++;
-                                }
+                            int targetScore = ss.evalvalue - EXPLORE_BASE_CUTOFF - depth * EXPLORE_MULT_CUTOFF;
+                            ssprev.bannedMove = ss.hashMove;
+                            int score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, exploreDepth, ssprev, sthread, nt);
+                            ssprev.bannedMove = EMPTY;
+                            if (sthread.stop) return 0;
+                            if (score <= targetScore) {
+                                singularMove = ss.hashMove;
+                                newdepth++;
                             }
+                            //PrintOutput() << "Gone here 2";
                         }
+                        //else PrintOutput() << "Gone here 3";
                     }
                 }
                 makeMove(pos, undo, move->m);
@@ -748,7 +747,7 @@ void Engine::TimeManagement(int depth) {
             }
         }
         bool easymovecutoff = false;
-        bool extendcutoff = false; 
+        bool extendcutoff = false;
         if ((info.legalmoves < 3 || info.is_easymove) && timeElapsed >(info.start_time + (((info.time_limit_max - info.start_time) * EASYMOVE_TIME_CUTOFF) / 100))) easymovecutoff = true;
         else if (timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * EXTEND_OR_STOP_TIME_CUTOFF) / 100))) extendcutoff = true;
         if (easymovecutoff || extendcutoff) {
