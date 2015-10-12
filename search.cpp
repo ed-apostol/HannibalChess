@@ -276,7 +276,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     SplitPoint* sp = nullptr;
     SearchStack ss(ssprev.ply + 1);
     pos_store_t undo;
-
+	bool skipSingularSearch = false;
     ASSERT(alpha < beta);
     ASSERT(depth >= 1);
     ASSERT(!inSingular || ssprev.bannedMove != 0);
@@ -316,7 +316,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (entry->Move() != EMPTY && entry->LowerDepth() > ss.hashDepth) {
                     ss.hashMove = entry->Move();
                     ss.hashDepth = entry->LowerDepth();
-                    ss.hashmoveIsSingular = ((entry->Mask() & MSingular) && (entry->LowerDepth() >= depth));
+					ss.hashmoveIsSingular = ((entry->Mask() & MSingular) != 0);
+					skipSingularSearch = (entry->LowerDepth() >= depth - depth % 2);
                 }
                 if (entry->LowerDepth() > evalDepth) {
                     evalDepth = entry->LowerDepth();
@@ -392,8 +393,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 int score = searchNode<false, false, false>(pos, alpha, beta, newdepth, ssprev, sthread, nt);
                 if (sthread.stop) return 0;
                 ss.evalvalue = score;
-                if (score > alpha) {
-                    ss.hashmoveIsSingular = (ss.hashmoveIsSingular && (ss.hashMove == ssprev.counterMove));
+                if (score > alpha) { //no need to adjust singular search here, since it would not research if conditions for skipping search were met
                     ss.hashMove = ssprev.counterMove;
                     ss.hashDepth = newdepth;
                 }
@@ -466,10 +466,12 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (!inRoot && !inSingular && !inSplitPoint) {
                     if (inCheck && ss.mvlist->size == 1) newdepth++;
                     else if (ss.hashMove == move->m && depth >= (inPvNode(nt) ? 6 : 8)) {
-                        if (ss.hashmoveIsSingular) {
-                            singularMove = ss.hashMove;
-                            newdepth++;
-                        }
+						if (skipSingularSearch) {
+							if (ss.hashmoveIsSingular) {
+								singularMove = ss.hashMove;
+								newdepth++;
+							}
+						}
                         else {
                             int exploreDepth = depth / 2;
                             // if you have previously determined this should be extended, don't re-check as often
@@ -750,7 +752,8 @@ void Engine::TimeManagement(int depth) {
             }
         }
         bool easymovecutoff = false;
-        bool extendcutoff = false; if ((info.legalmoves < 3 || info.is_easymove) && timeElapsed >(info.start_time + (((info.time_limit_max - info.start_time) * EASYMOVE_TIME_CUTOFF) / 100))) easymovecutoff = true;
+        bool extendcutoff = false; 
+		if ((info.legalmoves < 3 || info.is_easymove) && timeElapsed >(info.start_time + (((info.time_limit_max - info.start_time) * EASYMOVE_TIME_CUTOFF) / 100))) easymovecutoff = true;
         else if (timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * EXTEND_OR_STOP_TIME_CUTOFF) / 100))) extendcutoff = true;
         if (easymovecutoff || extendcutoff) {
             int64 addTime = 0;
@@ -849,7 +852,6 @@ void Engine::GetBestMove(Thread& sthread) {
     int alpha, beta;
     SearchStack ss(0);
     SplitPoint rootsp;
-    //    basic_move_t easymove = EMPTY;
     ss.moveGivesCheck = kingIsInCheck(rootpos);
     ss.dcc = discoveredCheckCandidates(rootpos, rootpos.side);
 
@@ -896,7 +898,6 @@ void Engine::GetBestMove(Thread& sthread) {
             DisplayPV(info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
             StopSearch();
             SendBestMove();
-            PrintOutput() << "info string Easy move at the root!!!";
             return;
         }
     }
