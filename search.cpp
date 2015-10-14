@@ -628,6 +628,7 @@ Engine::Engine() {
 }
 
 Engine::~Engine() {
+    mUndoStack.clear();
     delete search;
     SetNumThreads(0);
     delete mTimerThread;

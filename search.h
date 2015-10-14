@@ -410,7 +410,7 @@ public:
     }
 
     UCIOptions uci_opt;
-    pos_store_t UndoStack[MAX_HASH_STORE];
+    std::vector<pos_store_t*> mUndoStack;
 private:
     static const int WORSE_SCORE_CUTOFF = 20;
 
