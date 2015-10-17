@@ -57,16 +57,12 @@ typedef unsigned __int64	uint64;
 typedef unsigned int		uint;
 #endif
 
-enum NodeType {
-    CutNode = -1, PVNode = 0, AllNode
-};
-
 enum HashType {
     HTLower, HTUpper, HTCutUpper, HTAllLower, HTExact, HTNoMoves
 };
 
 enum HashMask {
-    MCutNodeFailHigh = 1, MAllNodeFailLow = 2, MCutNodeFailLow = 4, MAllNodeFailHigh = 8, MExact = 16, MNoMoves = 32, MSingular = 64
+    MNoMoves = 1, MSingular = 2
 };
 
 typedef uint32 basic_move_t;

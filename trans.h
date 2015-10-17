@@ -24,7 +24,7 @@ public:
         memset(mpTable, 0, mSize * sizeof(Entity));
     }
     Entity* Entry(const uint64 hash) const {
-        return &mpTable[KEY(hash) & mMask];
+        return ((Entity*)(&mpTable[KEY(hash) & mMask]));
     }
     void Init(size_t targetMB, const size_t bucket_size) {
         size_t size = 2;
@@ -167,12 +167,12 @@ public:
     TransEntry() :
         mHashlock(0),
         mMove(0),
-        mFailLowValue(0),
-        mFailHighValue(0),
+        mUpperboundValue(0),
+        mLowerboundValue(0),
         mMask(0),
         mAge(0),
-        mFailLowDepth(0),
-        mFailHighDepth(0) {}
+        mUpperboundDepth(0),
+        mLowerboundDepth(0) {}
     inline uint32 HashLock() const {
         return mHashlock;
     }
@@ -185,17 +185,17 @@ public:
     inline int Mask() const {
         return mMask;
     }
-    inline int FailHighDepth() const {
-        return mFailHighDepth;
+    inline int LowerboundDepth() const {
+        return mLowerboundDepth;
     }
-    inline int FailLowDepth() const {
-        return mFailLowDepth;
+    inline int UpperboundDepth() const {
+        return mUpperboundDepth;
     }
-    inline int FailHighValue() const {
-        return mFailHighValue;
+    inline int LowerboundValue() const {
+        return mLowerboundValue;
     }
-    inline int FailLowValue() const {
-        return mFailLowValue;
+    inline int UpperboundValue() const {
+        return mUpperboundValue;
     }
 
     inline void SetHashLock(const uint32 hashlock) {
@@ -216,27 +216,27 @@ public:
     inline void ReplaceMask(const uint8 mask) {
         mMask = mask;
     }
-    inline void SetFailHighDepth(const int8 lowerdepth) {
-        mFailHighDepth = lowerdepth;
+    inline void SetLowerboundDepth(const int8 lowerdepth) {
+        mLowerboundDepth = lowerdepth;
     }
-    inline void SetFailLowDepth(const int8 upperdepth) {
-        mFailLowDepth = upperdepth;
+    inline void SetUpperboundDepth(const int8 upperdepth) {
+        mUpperboundDepth = upperdepth;
     }
-    inline void SetFailHighValue(const int16 lowervalue) {
-        mFailHighValue = lowervalue;
+    inline void SetLowerboundValue(const int16 lowervalue) {
+        mLowerboundValue = lowervalue;
     }
-    inline void SetFailLowValue(const int16 uppervalue) {
-        mFailLowValue = uppervalue;
+    inline void SetUpperboundValue(const int16 uppervalue) {
+        mUpperboundValue = uppervalue;
     }
 private:
     uint32 mHashlock;
     uint32 mMove;
-    int16 mFailLowValue;
-    int16 mFailHighValue;
+    int16 mUpperboundValue;
+    int16 mLowerboundValue;
     uint8 mMask;
     uint8 mAge;
-    int8 mFailLowDepth;
-    int8 mFailHighDepth;
+    int8 mUpperboundDepth;
+    int8 mLowerboundDepth;
 };
 
 class TranspositionTable : public BaseHashTable < TransEntry > {
@@ -247,11 +247,10 @@ public:
     TranspositionTable() : mDate(0), mUsed(0) {}
     virtual void Clear();
     void NewDate(int date);
-    void StoreCutNodeFailHigh(uint64 hash, basic_move_t move, int depth, int value, const bool singular);
-    void StoreAllNodeFailLow(uint64 hash, int depth, int value);
-    void StoreCutNodeFailLow(uint64 hash, int depth, int value);
-    void StoreAllNodeFailHigh(uint64 hash, basic_move_t move, int depth, int value, const bool singular);
-    void StorePVNode(uint64 hash, basic_move_t move, int depth, int value, const bool singular);
+    TransEntry* GetHashEntry(uint64 hash);
+    void StoreLowerbound(uint64 hash, basic_move_t move, int depth, int value, const bool singular);
+    void StoreUpperbound(uint64 hash, int depth, int value);
+    void StoreExact(uint64 hash, basic_move_t move, int depth, int value, const bool singular);
     void StoreNoMoves(uint64 hash, int depth, int value);
 
     int32 Date() const {

@@ -14,226 +14,130 @@
 #include "trans.h"
 #include "utils.h"
 
-void TranspositionTable::StoreCutNodeFailHigh(const uint64 hash, basic_move_t move, const int depth, const int value, const bool singular) {
-    int worst = -INF, t, score;
+TransEntry* TranspositionTable::GetHashEntry(uint64 hash) {
+    TransEntry* entry = Entry(hash);
+    for (int t = 0; t < mBucketSize; t++, entry++) {
+        if (entry->HashLock() == LOCK(hash)) return entry;
+    }
+    return nullptr;
+}
+
+void TranspositionTable::StoreLowerbound(const uint64 hash, basic_move_t move, const int depth, const int value, const bool singular) {
+    int worst = -INF;
     TransEntry *replace, *entry;
-
-    ASSERT(valueIsOk(value));
-
     replace = entry = Entry(hash);
-
-    for (t = 0; t < mBucketSize; t++, entry++) {
+    for (int t = 0; t < mBucketSize; t++, entry++) {
         if (entry->HashLock() == LOCK(hash)) {
-            if (depth >= entry->FailHighDepth() && !(entry->Mask() & MExact)) {
-                entry->SetAge(mDate);
+            entry->SetAge(mDate);
+            if (depth >= entry->LowerboundDepth()) {
                 entry->SetMove(move);
-                entry->SetFailHighDepth(depth);
-                entry->SetFailHighValue(value);
-                entry->RemMask(MAllNodeFailHigh);
+                entry->SetLowerboundDepth(depth);
+                entry->SetLowerboundValue(value);
                 entry->RemMask(MSingular);
-                entry->SetMask(MCutNodeFailHigh | (singular ? MSingular : 0));
-                return;
+                entry->SetMask(singular ? MSingular : 0);
             }
-            mUsed++;
+            return;
         }
-        score = (mAge[entry->Age()] * 256) - MAX(entry->FailLowDepth(), entry->FailHighDepth());
+        int score = (mAge[entry->Age()] << 8) - MAX(entry->UpperboundDepth(), entry->LowerboundDepth());
         if (score > worst) {
             worst = score;
             replace = entry;
         }
     }
-
     replace->SetHashLock(LOCK(hash));
     replace->SetAge(mDate);
     replace->SetMove(move);
-    replace->SetFailLowDepth(0);
-    replace->SetFailLowValue(0);
-    replace->SetFailHighDepth(depth);
-    replace->SetFailHighValue(value);
-    replace->ReplaceMask(MCutNodeFailHigh | (singular ? MSingular : 0));
+    replace->SetUpperboundDepth(0);
+    replace->SetUpperboundValue(0);
+    replace->SetLowerboundDepth(depth);
+    replace->SetLowerboundValue(value);
+    replace->ReplaceMask(singular ? MSingular : 0);
 }
 
-void TranspositionTable::StoreAllNodeFailLow(const uint64 hash, const int depth, const int value) {
-    int worst = -INF, t, score;
+void TranspositionTable::StoreUpperbound(const uint64 hash, const int depth, const int value) {
+    int worst = -INF;
     TransEntry *replace, *entry;
-
-    ASSERT(valueIsOk(value));
-
     replace = entry = Entry(hash);
-
-    for (t = 0; t < mBucketSize; t++, entry++) {
+    for (int t = 0; t < mBucketSize; t++, entry++) {
         if (entry->HashLock() == LOCK(hash)) {
-            if (depth >= entry->FailLowDepth() && !(entry->Mask() & MExact)) {
-                entry->SetAge(mDate);
-                entry->SetFailLowDepth(depth);
-                entry->SetFailLowValue(value);
-                entry->SetMask(MAllNodeFailLow);
-                entry->RemMask(MCutNodeFailLow);
-                return;
+            entry->SetAge(mDate);
+            if (depth >= entry->UpperboundDepth()) {
+                entry->SetUpperboundDepth(depth);
+                entry->SetUpperboundValue(value);
             }
-            mUsed++;
+            return;
         }
-        score = (mAge[entry->Age()] * 256) - MAX(entry->FailLowDepth(), entry->FailHighDepth());
+        int score = (mAge[entry->Age()] << 8) - MAX(entry->UpperboundDepth(), entry->LowerboundDepth());
         if (score > worst) {
             worst = score;
             replace = entry;
         }
     }
-
     replace->SetHashLock(LOCK(hash));
     replace->SetAge(mDate);
     replace->SetMove(EMPTY);
-    replace->SetFailLowDepth(depth);
-    replace->SetFailLowValue(value);
-    replace->SetFailHighDepth(0);
-    replace->SetFailHighValue(0);
-    replace->ReplaceMask(MAllNodeFailLow);
+    replace->SetUpperboundDepth(depth);
+    replace->SetUpperboundValue(value);
+    replace->SetLowerboundDepth(0);
+    replace->SetLowerboundValue(0);
+    replace->ReplaceMask(0);
 }
 
-void TranspositionTable::StoreAllNodeFailHigh(const uint64 hash, basic_move_t move, const int depth, const int value, const bool singular) {
-    int worst = -INF, t, score;
+void TranspositionTable::StoreExact(const uint64 hash, basic_move_t move, const int depth, const int value, const bool singular) {
+    int worst = -INF;
     TransEntry *replace, *entry;
-
-    ASSERT(valueIsOk(value));
-
     replace = entry = Entry(hash);
-
-    for (t = 0; t < mBucketSize; t++, entry++) {
+    for (int t = 0; t < mBucketSize; t++, entry++) {
         if (entry->HashLock() == LOCK(hash)) {
-            if (depth >= entry->FailHighDepth() && ((entry->FailHighDepth() == 0) || (entry->Mask() & MAllNodeFailHigh))) {
-                entry->SetAge(mDate);
+            entry->SetAge(mDate);
+            if (depth >= entry->LowerboundDepth()) {
                 entry->SetMove(move);
-                entry->SetFailHighDepth(depth);
-                entry->SetFailHighValue(value);
+                entry->SetLowerboundDepth(depth);
+                entry->SetLowerboundValue(value);
                 entry->RemMask(MSingular);
-                entry->SetMask(MCutNodeFailHigh | MAllNodeFailHigh | (singular ? MSingular : 0));
-                return;
+                entry->SetMask((singular ? MSingular : 0));
             }
-            mUsed++;
+            if (depth >= entry->UpperboundDepth()) {
+                entry->SetUpperboundDepth(depth);
+                entry->SetUpperboundValue(value);
+            }
+            return;
         }
-        score = (mAge[entry->Age()] * 256) - MAX(entry->FailLowDepth(), entry->FailHighDepth());
+        int score = (mAge[entry->Age()] << 8) - MAX(entry->UpperboundDepth(), entry->LowerboundDepth());
         if (score > worst) {
             worst = score;
             replace = entry;
         }
     }
-
     replace->SetHashLock(LOCK(hash));
     replace->SetAge(mDate);
     replace->SetMove(move);
-    replace->SetFailLowDepth(0);
-    replace->SetFailLowValue(0);
-    replace->SetFailHighDepth(depth);
-    replace->SetFailHighValue(value);
-    replace->ReplaceMask(MCutNodeFailHigh | MAllNodeFailHigh | (singular ? MSingular : 0));
-}
-
-void TranspositionTable::StoreCutNodeFailLow(const uint64 hash, const int depth, const int value) {
-    int worst = -INF, t, score;
-    TransEntry *replace, *entry;
-
-    ASSERT(valueIsOk(value));
-
-    replace = entry = Entry(hash);
-
-    for (t = 0; t < mBucketSize; t++, entry++) {
-        if (entry->HashLock() == LOCK(hash)) {
-            if (depth >= entry->FailLowDepth() && ((entry->FailLowDepth() == 0) || (entry->Mask() & MCutNodeFailLow))) {
-                entry->SetAge(mDate);
-                entry->SetFailLowDepth(depth);
-                entry->SetFailLowValue(value);
-                entry->SetMask(MAllNodeFailLow | MCutNodeFailLow);
-                return;
-            }
-            mUsed++;
-        }
-        score = (mAge[entry->Age()] * 256) - MAX(entry->FailLowDepth(), entry->FailHighDepth());
-        if (score > worst) {
-            worst = score;
-            replace = entry;
-        }
-    }
-
-    replace->SetHashLock(LOCK(hash));
-    replace->SetAge(mDate);
-    replace->SetMove(EMPTY);
-    replace->SetFailLowDepth(depth);
-    replace->SetFailLowValue(value);
-    replace->SetFailHighDepth(0);
-    replace->SetFailHighValue(0);
-    replace->ReplaceMask(MAllNodeFailLow | MCutNodeFailLow);
-}
-
-void TranspositionTable::StorePVNode(const uint64 hash, basic_move_t move, const int depth, const int value, const bool singular) {
-    int worst = -INF, t, score;
-    TransEntry *replace, *entry;
-
-    ASSERT(valueIsOk(value));
-
-    replace = entry = Entry(hash);
-
-    for (t = 0; t < mBucketSize; t++, entry++) {
-        if (entry->HashLock() == LOCK(hash)) {
-            if (depth >= MAX(entry->FailLowDepth(), entry->FailHighDepth())) {
-                entry->SetMove(move);
-                entry->SetAge(mDate);
-                entry->SetFailLowDepth(depth);
-                entry->SetFailLowValue(value);
-                entry->SetFailHighDepth(depth);
-                entry->SetFailHighValue(value);
-                entry->ReplaceMask(MExact | (singular ? MSingular : 0));
-                for (int x = t + 1; x < mBucketSize; x++) {
-                    entry++;
-                    if (entry->HashLock() == LOCK(hash)) {
-                        memset(entry, 0, sizeof(TransEntry));
-                        entry->SetAge((mDate + 1) % DATESIZE);
-                    }
-                }
-                return;
-            }
-            mUsed++;
-        }
-        score = (mAge[entry->Age()] * 256) - MAX(entry->FailLowDepth(), entry->FailHighDepth());
-        if (score > worst) {
-            worst = score;
-            replace = entry;
-        }
-    }
-
-    replace->SetHashLock(LOCK(hash));
-    replace->SetAge(mDate);
-    replace->SetMove(move);
-    replace->SetFailLowDepth(depth);
-    replace->SetFailLowValue(value);
-    replace->SetFailHighDepth(depth);
-    replace->SetFailHighValue(value);
-    replace->ReplaceMask(MExact | (singular ? MSingular : 0));
+    replace->SetUpperboundDepth(depth);
+    replace->SetUpperboundValue(value);
+    replace->SetLowerboundDepth(depth);
+    replace->SetLowerboundValue(value);
+    replace->ReplaceMask(singular ? MSingular : 0);
 }
 
 void TranspositionTable::StoreNoMoves(const uint64 hash, const int depth, const int value) {
-    int worst = -INF, t, score;
+    int worst = -INF;
     TransEntry *replace, *entry;
-
-    ASSERT(valueIsOk(value));
-
     replace = entry = Entry(hash);
-
-    for (t = 0; t < mBucketSize; t++, entry++) {
-        score = (mAge[entry->Age()] * 256) - MAX(entry->FailLowDepth(), entry->FailHighDepth());
+    for (int t = 0; t < mBucketSize; t++, entry++) {
+        int score = (mAge[entry->Age()] << 8) - MAX(entry->UpperboundDepth(), entry->LowerboundDepth());
         if (score > worst) {
             worst = score;
             replace = entry;
         }
     }
-
     replace->SetHashLock(LOCK(hash));
     replace->SetAge(mDate);
     replace->SetMove(EMPTY);
-    replace->SetFailLowDepth(depth);
-    replace->SetFailLowValue(value);
-    replace->SetFailHighDepth(depth);
-    replace->SetFailHighValue(value);
-    replace->ReplaceMask(MExact | MNoMoves);
+    replace->SetUpperboundDepth(depth);
+    replace->SetUpperboundValue(value);
+    replace->SetLowerboundDepth(depth);
+    replace->SetLowerboundValue(value);
+    replace->ReplaceMask(MNoMoves);
 }
 
 void TranspositionTable::NewDate(int date) {
@@ -282,11 +186,10 @@ PvHashEntry* PvHashTable::pvEntryFromMove(const uint64 hash, basic_move_t move) 
 }
 
 void PvHashTable::pvStore(const uint64 hash, const basic_move_t move, const int depth, const int16 value) {
-    int worst = -INF, t, score;
+    int worst = -INF;
     PvHashEntry *replace, *entry;
-
     replace = entry = &mpTable[(KEY(hash) & mMask)];
-    for (t = 0; t < mBucketSize; t++, entry++) {
+    for (int t = 0; t < mBucketSize; t++, entry++) {
         if (entry->pvHashLock() == LOCK(hash)) {
             entry->pvSetAge(Date());
             entry->pvSetMove(move);
@@ -294,7 +197,7 @@ void PvHashTable::pvStore(const uint64 hash, const basic_move_t move, const int 
             entry->pvSetValue(value);
             return;
         }
-        score = (Age(entry->pvAge()) * 256) - entry->pvDepth();
+        int score = (Age(entry->pvAge()) << 8) - entry->pvDepth();
         if (score > worst) {
             worst = score;
             replace = entry;

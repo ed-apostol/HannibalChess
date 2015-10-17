@@ -136,12 +136,12 @@ struct EasyMove {
         cnt = 0;
     }
     void Update(continuation_t& pv) {
-        if (pv.length >= 3) { 
+        if (pv.length >= 3) {
             if (m[0] == pv.moves[0] &&
                 m[1] == pv.moves[1] &&
                 m[2] == pv.moves[2]) {
                 ++cnt;
-            } 
+            }
             else {
                 m[0] = pv.moves[0];
                 m[1] = pv.moves[1];

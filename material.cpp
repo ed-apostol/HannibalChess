@@ -85,9 +85,9 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
                 if (bp == 0 || bminors || br || bq) drawn += DRAWN;
                 else drawn += (DRAWN + DRAWN1) / 2;
             }
-			else if (wb == 2 && bq == 0 && br == 0 && bn == 1) {
-				drawn += DRAWN8 + 20*bp;
-			}
+            else if (wb == 2 && bq == 0 && br == 0 && bn == 1) {
+                drawn += DRAWN8 + 20 * bp;
+            }
             else if (bq || br || bminors) drawn += DRAWN1;
         }
         // R and N against R (RB vs. R already taken care of

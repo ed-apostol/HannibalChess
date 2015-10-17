@@ -119,7 +119,7 @@ void Thread::GetWork(SplitPoint* const master_sp) {
     }
 }
 
-void Thread::SearchSplitPoint(position_t& pos, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot) {
+void Thread::SearchSplitPoint(position_t& pos, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, int depth, bool inCheck, bool inRoot, bool inPv) {
     SplitPoint* const active_sp = &sptable[num_sp];
 
     active_sp->updatelock.lock();
@@ -127,12 +127,12 @@ void Thread::SearchSplitPoint(position_t& pos, SearchStack* ss, SearchStack* ssp
     active_sp->depth = depth;
     active_sp->alpha = alpha;
     active_sp->beta = beta;
-    active_sp->nodeType = nt;
     active_sp->bestvalue = ss->bestvalue;
     active_sp->bestmove = ss->bestmove;
     active_sp->played = ss->playedMoves;
     active_sp->inCheck = inCheck;
     active_sp->inRoot = inRoot;
+    active_sp->inPv = inPv;
     active_sp->cutoff = false;
     active_sp->sscurr = ss;
     active_sp->ssprev = ssprev;
