@@ -28,11 +28,11 @@ void Thread::Init() {
     for (int Idx = 0; Idx < MaxNumSplitPointsPerThread; ++Idx) {
         sptable[Idx].Init();
     }
-    for (int Idx = 0; Idx < MAXPLY; ++Idx) {
-        ts[Idx].Init();
-    }
+    memset(killer1, 0, sizeof(killer1));
+    memset(killer2, 0, sizeof(killer2));
     memset(history, 0, sizeof(history));
     memset(evalgains, 0, sizeof(evalgains));
+    memset(refutation, 0, sizeof(refutation));
 }
 
 void Thread::IdleLoop() {
