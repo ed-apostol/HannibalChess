@@ -148,19 +148,6 @@ public:
     static const int BUCKET = 1;
 };
 
-struct EvalEntry {
-    EvalEntry() :
-        hashlock(0),
-        value(0) {}
-    uint32 hashlock;
-    int32 value;
-};
-
-class EvalHashTable : public BaseHashTable < EvalEntry > {
-public:
-    static const int BUCKET = 1;
-};
-
 struct TransEntry {
 public:
     TransEntry() :
@@ -196,7 +183,9 @@ public:
     inline int UpperValue() const {
         return mUpperValue;
     }
-
+	inline int EvalValue() const {
+		return evalValue;
+	}
     inline void SetHashLock(const uint32 hashlock) {
         mHashlock = hashlock;
     }
@@ -227,15 +216,19 @@ public:
     inline void SetUpperValue(const int16 uppervalue) {
         mUpperValue = uppervalue;
     }
+	inline void SetEvalValue(const int16 evalvalue) {
+		evalValue = evalvalue;
+	}
 private:
     uint32 mHashlock;
-    uint32 mMove;
+    uint32 mMove; //REALLY need this to be size 16 now that evalValue is in here
     int16 mUpperValue;
     int16 mLowerValue;
     uint8 mMask;
     uint8 mAge;
     int8 mUpperDepth;
     int8 mLowerDepth;
+	int16 evalValue;
 };
 
 class TranspositionTable : public BaseHashTable < TransEntry > {
@@ -245,12 +238,12 @@ public:
 
     virtual void Clear();
     void NewDate(int date);
-    void StoreLower(uint64 hash, basic_move_t move, int depth, int value, const bool singular);
-    void StoreUpper(uint64 hash, int depth, int value);
-    void StoreCutUpper(uint64 hash, int depth, int value);
-    void StoreAllLower(uint64 hash, basic_move_t move, int depth, int value, const bool singular);
-    void StoreExact(uint64 hash, basic_move_t move, int depth, int value, const bool singular);
-    void StoreNoMoves(uint64 hash, int depth, int value);
+	void StoreLower(const uint64 hash, const basic_move_t move, const int depth, const int value, const bool singular, const int staticEvalValue);
+	void StoreUpper(const uint64 hash, const int depth, const int value, const int staticEvalValue);
+	void StoreCutUpper(const uint64 hash, const int depth, const int value, const int staticEvalValue);
+	void StoreAllLower(const uint64 hash, const basic_move_t move, const int depth, const int value, const bool singular, const int staticEvalValue);
+	void StoreExact(const uint64 hash, const basic_move_t move, const int depth, const int value, const bool singular, const int staticEvalValue);
+	void StoreNoMoves(const uint64 hash, const int depth, const int value);
 
     int32 Date() const {
         return mDate;

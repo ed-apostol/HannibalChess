@@ -32,7 +32,7 @@
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
 const std::string Interface::year = "2015";
-const std::string Interface::version = "101715";
+const std::string Interface::version = "Hannibal101815";
 const std::string Interface::arch = "x64";
 
 void Interface::Info() {
@@ -176,7 +176,6 @@ void Interface::SetOption(Engine& engine, std::istringstream& stream) {
 
 void Interface::NewGame(Engine& engine) {
     engine.ClearPawnHash();
-    engine.ClearEvalHash();
     engine.ClearTTHash();
     engine.ClearPVTTHash();
 }

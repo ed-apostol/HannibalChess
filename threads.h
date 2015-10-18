@@ -165,7 +165,6 @@ public:
     ThreadStack ts[MAXPLY];
     int32 evalgains[1024];
     int32 history[1024];
-    EvalHashTable et;
     PawnHashTable pt;
 private:
     SplitPoint sptable[MaxNumSplitPointsPerThread];

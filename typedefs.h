@@ -148,6 +148,7 @@ struct SearchStack {
         playedMoves(0),
         hisCnt(0),
         evalvalue(-INF),
+		staticEvalValue(-INF),
         bestvalue(-INF),
         bestmove(EMPTY),
         dcc(0),
@@ -169,6 +170,7 @@ struct SearchStack {
     bool moveGivesCheck;
     bool hashmoveIsSingular;
     int evalvalue;
+	int staticEvalValue;
     uint64 dcc;
     basic_move_t counterMove;
     basic_move_t threatMove;
