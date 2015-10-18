@@ -344,14 +344,12 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             }
             if (depth < MaxRazorDepth && pos.posStore.lastmove != EMPTY
                 && ss.evalvalue < (rvalue = beta - FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
-                if (depth <= 2 && ss.evalvalue < rvalue - 100) {
-                    return searchNode<false, false, false>(pos, alpha, beta, 0, ssprev, sthread, nt);
+				if (depth <= 2) {
+					return searchNode<false, false, false>(pos, alpha, beta, 0, ssprev, sthread, nt);
                 }
-                else {
-                    int score = searchNode<false, false, false>(pos, rvalue - 1, rvalue, 0, ssprev, sthread, nt);
-                    if (score < rvalue) return score;
-                }
-            }
+				int score = searchNode<false, false, false>(pos, rvalue - 1, rvalue, 0, ssprev, sthread, nt);
+				if (score < rvalue) return score;
+			}
             if (depth >= 2 && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && ss.evalvalue >= beta) {
                 int nullDepth = depth - (4 + (depth / 5) + MIN(3, ((ss.evalvalue - beta) / PawnValue)));
 
@@ -368,25 +366,26 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     if (score2 >= beta) return score;
                 }
             }
-        }
-        if (!inCheck && !inPvNode(nt) && depth >= 5) { // if we have a no-brainer capture we should just do it
-            sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseQuiescence, sthread.ts[ss.ply]); //h109
-            move_t* move;
-            int target = beta + 200;
-            int minCapture = target - ss.evalvalue;
-            int newdepth = depth - 5;
-            while ((move = sortNext(nullptr, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
-                int score;
-                if (MaxPieceValue[moveCapture(move->m)] < minCapture || swap(pos, move->m) < minCapture) continue;
-                ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
-                makeMove(pos, undo, move->m);
-                ++sthread.nodes;
-                score = -searchNode<false, false, false>(pos, -target - 1, -target, newdepth, ss, sthread, inCutNode(nt) ? AllNode : CutNode);
-                unmakeMove(pos, undo);
-                if (sthread.stop) return 0;
-                if (score > target) return score;
-            }
-        }
+			if (depth >= 5) { // if we have a no-brainer capture we should just do it
+				sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseQuiescence, sthread.ts[ss.ply]); //h109
+				move_t* move;
+				int target = beta + 200;
+				int minCapture = target - ss.evalvalue;
+				int newdepth = depth - 5;
+				while ((move = sortNext(nullptr, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
+					int score;
+					if (MaxPieceValue[moveCapture(move->m)] < minCapture || swap(pos, move->m) < minCapture) continue;
+					ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
+					makeMove(pos, undo, move->m);
+					++sthread.nodes;
+					score = -searchNode<false, false, false>(pos, -target - 1, -target, newdepth, ss, sthread, inCutNode(nt) ? AllNode : CutNode);
+					unmakeMove(pos, undo);
+					if (sthread.stop) return 0;
+					if (score > target) return score;
+				}
+			}
+		}
+
         if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt) ? 6 : 8)) { // IID
             int newdepth = inPvNode(nt) ? depth - 2 : depth / 2;
             if (ss.hashMove == EMPTY || ss.hashDepth < newdepth) {
@@ -707,7 +706,7 @@ void Engine::DisplayPV(continuation_t& pv, int multipvIdx, int depth, int alpha,
     uint64 time;
     uint64 sumnodes = 0;
     PrintOutput log;
-    int scoreToDisplay = (score * 100) / PawnValueEnd;
+	int scoreToDisplay = ((score * 100) / PawnValueEnd) + info.contempt;
     time = getTime();
     info.last_time = time;
     time = info.last_time - info.start_time;
@@ -992,7 +991,7 @@ void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     info.Init();
 
     info.time_buffer = uci_opt[TimeBufferStr].GetInt();
-    info.contempt = uci_opt[ContemptStr].GetInt();
+	info.contempt = (PawnValueEnd * uci_opt[ContemptStr].GetInt()) / 100; //adjust to correspond with expecation that pawn is worth 100
     info.multipv = uci_opt[MultiPVStr].GetInt();
     info.mMinSplitDepth = uci_opt[MinSplitDepthStr].GetInt();
     info.mMaxActiveSplitsPerThread = uci_opt[ActiveSplitsStr].GetInt();
