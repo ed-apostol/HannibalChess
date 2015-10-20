@@ -162,10 +162,12 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
         }
         if (br) {
             if (wr) {
-                int pGone;
-                if (wr > 1 || br > 1) pGone = Drawish(wp, bp, wn, bn, wb, bb, wr - 1, br - 1, wq, bq, 0) - 5;
-                else pGone = Drawish(wp, bp, wn, bn, wb, bb, wr - 1, br - 1, wq, bq, 0) - 8;
-                if (pGone > drawn) drawn = pGone;
+				if (wminors - bminors < 2 && wr<= br && wq <= bq) {
+					int pGone;
+					if (wr > 1 || br > 1) pGone = Drawish(wp, bp, wn, bn, wb, bb, wr - 1, br - 1, wq, bq, 0) - 5;
+					else pGone = Drawish(wp, bp, wn, bn, wb, bb, wr - 1, br - 1, wq, bq, 0) - 8;
+					if (pGone > drawn) drawn = pGone;
+				}
             }
             else if (wb) {
                 int pGone = Drawish(wp, bp, wn, bn, wb - 1, bb, wr, br - 1, wq, bq, 0) - 10;

@@ -156,7 +156,7 @@ void Search::UpdateHistory(position_t& pos, SearchStack& ss, Thread& sthread, co
 const int MaxPieceValue[] = { 0, PawnValueEnd, KnightValueEnd, BishopValueEnd, RookValueEnd, QueenValueEnd, 10000 };
 template<bool inPv>
 int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread) {
-    SearchStack ss(ssprev.ply + 1);
+    SearchStack ss(ssprev.ply + 1,&ssprev);
     pos_store_t undo;
 
     ASSERT(alpha < beta);
@@ -279,7 +279,7 @@ int Search::searchNode(position_t& pos, int alpha, int beta, const int depth, Se
 template<bool inRoot, bool inSplitPoint, bool inCheck, bool inSingular>
 int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt) {
     SplitPoint* sp = nullptr;
-    SearchStack ss(ssprev.ply + 1);
+    SearchStack ss(ssprev.ply + 1,&ssprev);
     pos_store_t undo;
 	bool skipSingularSearch = false;
     ASSERT(alpha < beta);
@@ -345,7 +345,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
 		}
         if (ss.ply >= MAXPLY - 1) return ss.evalvalue;
 		updateEvalgains(pos, pos.posStore.lastmove, ssprev.staticEvalValue, ss.staticEvalValue, sthread);
-
         if (!inPvNode(nt) && !inCheck) {
             static const int MaxRazorDepth = 10;
             int rvalue;
@@ -450,6 +449,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 2) : (depth * depth));
     move_t* move;
     basic_move_t singularMove = EMPTY;
+//	const bool noProgress = ss.ssprev && ss.ssprev->ssprev && (ss.staticEvalValue < ss.ssprev->ssprev->staticEvalValue);
     while ((move = sortNext(sp, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
         int score = -INF;
         int newdepth = depth - 1;
@@ -528,6 +528,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                         bool skipFutility = (inCheck || (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsDangerousPawn(pos, move->m));
                         int reduction = ReductionTable[(inPvNode(nt) ? 0 : 1)][MIN(depth, 63)][MIN(ss.playedMoves, 63)];
                         partialReduction += skipFutility ? (reduction + 1) / 2 : reduction;
+//						if (noProgress && partialReduction > 1) partialReduction++;
+
                     }
                 }
                 int newdepthclone = newdepth - partialReduction;
@@ -862,7 +864,7 @@ void Engine::SendBestMove() {
 void Engine::GetBestMove(Thread& sthread) {
     int id;
     int alpha, beta;
-    SearchStack ss(0);
+    SearchStack ss(0,0);
     SplitPoint rootsp;
     ss.moveGivesCheck = kingIsInCheck(rootpos);
     ss.dcc = discoveredCheckCandidates(rootpos, rootpos.side);

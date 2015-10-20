@@ -141,7 +141,7 @@ struct material_info_t {
 };
 
 struct SearchStack {
-    SearchStack(int _ply) :
+    SearchStack(int _ply, SearchStack *prev) :
         reducedMove(false),
         moveGivesCheck(false),
         hashmoveIsSingular(false),
@@ -158,7 +158,8 @@ struct SearchStack {
         hashMove(EMPTY),
         hashDepth(-2),
         ply(_ply),
-        mvlist(&movelist),
+		ssprev(prev),
+		mvlist(&movelist),
         hisMoves(&hisTable[0]) {}
     int playedMoves;
     int hisCnt;
@@ -178,7 +179,7 @@ struct SearchStack {
     basic_move_t hashMove;
     int hashDepth;
     int ply;
-
+	SearchStack *ssprev;
     movelist_t movelist;
     movelist_t* mvlist;
 };
