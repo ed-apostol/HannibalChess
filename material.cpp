@@ -278,7 +278,7 @@ void InitMaterial(void) {
                                             if (wp*MLP + wn*MLN + wb*MLN + wr*MLR + wq*MLQ >
                                                 bp + bn*MLN + bb*MLN + br*MLR + bq*MLQ ||
                                                 (wp + wn*MLN + wb*MLN + wr*MLR + wq*MLQ ==
-                                                wp + wn*MLN + wb*MLN + wr*MLR + wq*MLQ && windex >= bindex)) {
+                                                    wp + wn*MLN + wb*MLN + wr*MLR + wq*MLQ && windex >= bindex)) {
                                                 phase = SetPhase(wn + wb + bn + bb, wr + br, wq + bq);
                                                 //                                                if (wq && bq) PrintOutput() << wn + wb + bn + bb << " minors " << wr + br << " rooks " << wq + bq << " queens: " << phase << "\n";
                                                 openscore =
@@ -312,7 +312,7 @@ void InitMaterial(void) {
                                                     + ((wn - bn) * KnightValueMid2)
                                                     + ((wp - bp) * (PawnValueMid2
 
-                                                    )) + ((wb >= 2) * BishopPairBonusMid2)
+                                                        )) + ((wb >= 2) * BishopPairBonusMid2)
                                                     - ((bb >= 2) * BishopPairBonusMid2)
                                                     + ((wp - 5) * wn * 4) - ((bp - 5) * bn * 4)
                                                     - ((wp - 5) * wr * 2) + ((bp - 5) * br * 2)
@@ -327,7 +327,7 @@ void InitMaterial(void) {
                                                     + ((wn - bn) * KnightValueEnd)
                                                     + ((wp - bp) * (PawnValueEnd
 
-                                                    )) + ((wb >= 2) * BishopPairBonusEnd)
+                                                        )) + ((wb >= 2) * BishopPairBonusEnd)
                                                     - ((bb >= 2) * BishopPairBonusEnd)
                                                     + ((wp - 5) * wn * 5) - ((bp - 5) * bn * 5)
                                                     - ((wp - 5) * wr * 0) + ((bp - 5) * br * 0)

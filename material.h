@@ -45,6 +45,6 @@
 #define DRAWISH (DRAWN2)
 #define PRETTY_DRAWISH ((DRAWN2+DRAWN1)/2 )
 #define VERY_DRAWISH (DRAWN1 )
-#define SUPER_DRAWISH (((DRAWN1+DRAWN)/2))
+#define SUBER_DRAWISH (((DRAWN1+DRAWN)/2))
 
 extern  void InitMaterial(void);

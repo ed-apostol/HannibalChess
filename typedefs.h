@@ -9,9 +9,7 @@
 
 #pragma once
 
-//#define DEBUG
 //#define EVAL_DEBUG true
-//#define DEBUG_INDEPTH true
 #define SHOW_SEARCH true
 
 #if defined(__x86_64) || defined(_WIN64)
@@ -62,10 +60,11 @@ enum HashType {
 };
 
 enum HashMask {
-    MNoMoves = 1, MSingular = 2
+    MUpperbound = 1, MLowerbound = 2, MNoMoves = 4, MSingular = 8
 };
 
 typedef uint32 basic_move_t;
+typedef uint16 hash_move_t;
 typedef int32 EvalScore;
 
 struct continuation_t {
@@ -153,6 +152,7 @@ struct SearchStack {
         bannedMove(EMPTY),
         hashMove(EMPTY),
         hashDepth(-2),
+        staticEval(-INF),
         ply(_ply),
         mvlist(&movelist),
         hisMoves(&hisTable[0]) {}
@@ -172,6 +172,7 @@ struct SearchStack {
     basic_move_t bannedMove;
     basic_move_t hashMove;
     int hashDepth;
+    int staticEval;
     int ply;
 
     movelist_t movelist;

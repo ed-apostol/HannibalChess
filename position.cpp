@@ -417,12 +417,6 @@ void makeMove(position_t& pos, pos_store_t& undo, basic_move_t m) {
     pos.color[side] ^= (BitMask[from] | BitMask[to]);
     pos.occupied = pos.color[side] | pos.color[xside];
     pos.side = xside;
-#ifdef DEBUG
-    positionIsOk(pos);
-#endif
-#ifdef DEBUG_INDEPTH
-    ASSERT(evalSymmetryIsOk(pos));
-#endif
 }
 
 /* sets position from a FEN string*/
@@ -628,13 +622,6 @@ void setPosition(position_t& pos, const char *fen) {
     if (pos.side == WHITE) pos.posStore.hash ^= ZobColor;
     pos.posStore.hash ^= ZobCastle[pos.posStore.castle];
     pos.posStore.phash ^= ZobCastle[pos.posStore.castle];
-
-#ifdef DEBUG
-    positionIsOk(pos);
-#endif
-#ifdef EVAL_DEBUG
-    ASSERT(evalSymmetryIsOk(pos));
-#endif
 }
 
 char *positionToFEN(const position_t& pos) {

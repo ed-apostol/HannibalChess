@@ -14,31 +14,33 @@
 #include "trans.h"
 #include "utils.h"
 
-TransEntry* TranspositionTable::GetHashEntry(uint64 hash) {
+TransEntry* TransTable::GetHashEntry(uint64 hash) {
     TransEntry* entry = Entry(hash);
     for (int t = 0; t < mBucketSize; t++, entry++) {
-        if (entry->HashLock() == LOCK(hash)) return entry;
+        if (entry->LockFound(hash)) return entry;
     }
     return nullptr;
 }
 
-void TranspositionTable::StoreLowerbound(const uint64 hash, basic_move_t move, const int depth, const int value, const bool singular) {
+void TransTable::StoreLB(const uint64 hash, const basic_move_t move, const int depth, const int value, const int ply, const int evalvalue, const bool singular) {
     int worst = -INF;
+    ASSERT(evalvalue != -INF);
     TransEntry *replace, *entry;
     replace = entry = Entry(hash);
     for (int t = 0; t < mBucketSize; t++, entry++) {
-        if (entry->HashLock() == LOCK(hash)) {
+        if (entry->LockFound(hash)) {
             entry->SetAge(mDate);
-            if (depth >= entry->LowerboundDepth()) {
+            entry->SetEvalValue(evalvalue);
+            if (depth >= entry->LBDepth()) {
                 entry->SetMove(move);
-                entry->SetLowerboundDepth(depth);
-                entry->SetLowerboundValue(value);
+                entry->SetLBDepth(depth);
+                entry->SetLBValue(value, ply);
                 entry->RemMask(MSingular);
-                entry->SetMask(singular ? MSingular : 0);
+                entry->SetMask(MLowerbound | (singular ? MSingular : 0));
             }
             return;
         }
-        int score = (mAge[entry->Age()] << 8) - MAX(entry->UpperboundDepth(), entry->LowerboundDepth());
+        int score = (mAge[entry->Age()] << 8) - MAX(entry->UBDepth(), entry->LBDepth());
         if (score > worst) {
             worst = score;
             replace = entry;
@@ -47,27 +49,31 @@ void TranspositionTable::StoreLowerbound(const uint64 hash, basic_move_t move, c
     replace->SetHashLock(LOCK(hash));
     replace->SetAge(mDate);
     replace->SetMove(move);
-    replace->SetUpperboundDepth(0);
-    replace->SetUpperboundValue(0);
-    replace->SetLowerboundDepth(depth);
-    replace->SetLowerboundValue(value);
-    replace->ReplaceMask(singular ? MSingular : 0);
+    replace->SetUBDepth(0);
+    replace->SetUBValue(0, ply);
+    replace->SetLBDepth(depth);
+    replace->SetLBValue(value, ply);
+    replace->SetEvalValue(evalvalue);
+    replace->ReplaceMask(MLowerbound | (singular ? MSingular : 0));
 }
 
-void TranspositionTable::StoreUpperbound(const uint64 hash, const int depth, const int value) {
+void TransTable::StoreUB(const uint64 hash, const int depth, const int value, const int ply, const int evalvalue) {
     int worst = -INF;
+    ASSERT(evalvalue != -INF);
     TransEntry *replace, *entry;
     replace = entry = Entry(hash);
     for (int t = 0; t < mBucketSize; t++, entry++) {
-        if (entry->HashLock() == LOCK(hash)) {
+        if (entry->LockFound(hash)) {
             entry->SetAge(mDate);
-            if (depth >= entry->UpperboundDepth()) {
-                entry->SetUpperboundDepth(depth);
-                entry->SetUpperboundValue(value);
+            entry->SetEvalValue(evalvalue);
+            if (depth >= entry->UBDepth()) {
+                entry->SetUBDepth(depth);
+                entry->SetUBValue(value, ply);
+                entry->SetMask(MUpperbound);
             }
             return;
         }
-        int score = (mAge[entry->Age()] << 8) - MAX(entry->UpperboundDepth(), entry->LowerboundDepth());
+        int score = (mAge[entry->Age()] << 8) - MAX(entry->UBDepth(), entry->LBDepth());
         if (score > worst) {
             worst = score;
             replace = entry;
@@ -76,34 +82,38 @@ void TranspositionTable::StoreUpperbound(const uint64 hash, const int depth, con
     replace->SetHashLock(LOCK(hash));
     replace->SetAge(mDate);
     replace->SetMove(EMPTY);
-    replace->SetUpperboundDepth(depth);
-    replace->SetUpperboundValue(value);
-    replace->SetLowerboundDepth(0);
-    replace->SetLowerboundValue(0);
-    replace->ReplaceMask(0);
+    replace->SetUBDepth(depth);
+    replace->SetUBValue(value, ply);
+    replace->SetLBDepth(0);
+    replace->SetLBValue(0, ply);
+    replace->SetEvalValue(evalvalue);
+    replace->ReplaceMask(MUpperbound);
 }
 
-void TranspositionTable::StoreExact(const uint64 hash, basic_move_t move, const int depth, const int value, const bool singular) {
+void TransTable::StoreExact(const uint64 hash, const basic_move_t move, const int depth, const int value, const int ply, const int evalvalue, const bool singular) {
     int worst = -INF;
+    ASSERT(evalvalue != -INF);
     TransEntry *replace, *entry;
     replace = entry = Entry(hash);
     for (int t = 0; t < mBucketSize; t++, entry++) {
-        if (entry->HashLock() == LOCK(hash)) {
+        if (entry->LockFound(hash)) {
             entry->SetAge(mDate);
-            if (depth >= entry->LowerboundDepth()) {
+            entry->SetEvalValue(evalvalue);
+            if (depth >= entry->LBDepth()) {
                 entry->SetMove(move);
-                entry->SetLowerboundDepth(depth);
-                entry->SetLowerboundValue(value);
+                entry->SetLBDepth(depth);
+                entry->SetLBValue(value, ply);
                 entry->RemMask(MSingular);
-                entry->SetMask((singular ? MSingular : 0));
+                entry->SetMask(MLowerbound | (singular ? MSingular : 0));
             }
-            if (depth >= entry->UpperboundDepth()) {
-                entry->SetUpperboundDepth(depth);
-                entry->SetUpperboundValue(value);
+            if (depth >= entry->UBDepth()) {
+                entry->SetUBDepth(depth);
+                entry->SetUBValue(value, ply);
+                entry->SetMask(MUpperbound);
             }
             return;
         }
-        int score = (mAge[entry->Age()] << 8) - MAX(entry->UpperboundDepth(), entry->LowerboundDepth());
+        int score = (mAge[entry->Age()] << 8) - MAX(entry->UBDepth(), entry->LBDepth());
         if (score > worst) {
             worst = score;
             replace = entry;
@@ -112,19 +122,21 @@ void TranspositionTable::StoreExact(const uint64 hash, basic_move_t move, const 
     replace->SetHashLock(LOCK(hash));
     replace->SetAge(mDate);
     replace->SetMove(move);
-    replace->SetUpperboundDepth(depth);
-    replace->SetUpperboundValue(value);
-    replace->SetLowerboundDepth(depth);
-    replace->SetLowerboundValue(value);
-    replace->ReplaceMask(singular ? MSingular : 0);
+    replace->SetUBDepth(depth);
+    replace->SetUBValue(value, ply);
+    replace->SetLBDepth(depth);
+    replace->SetLBValue(value, ply);
+    replace->SetEvalValue(evalvalue);
+    replace->ReplaceMask(MLowerbound | MUpperbound | (singular ? MSingular : 0));
 }
 
-void TranspositionTable::StoreNoMoves(const uint64 hash, const int depth, const int value) {
+void TransTable::StoreNoMoves(const uint64 hash, const int depth, const int value, const int ply) {
     int worst = -INF;
+    ASSERT(evalvalue != -INF);
     TransEntry *replace, *entry;
     replace = entry = Entry(hash);
     for (int t = 0; t < mBucketSize; t++, entry++) {
-        int score = (mAge[entry->Age()] << 8) - MAX(entry->UpperboundDepth(), entry->LowerboundDepth());
+        int score = (mAge[entry->Age()] << 8) - MAX(entry->UBDepth(), entry->LBDepth());
         if (score > worst) {
             worst = score;
             replace = entry;
@@ -133,14 +145,15 @@ void TranspositionTable::StoreNoMoves(const uint64 hash, const int depth, const 
     replace->SetHashLock(LOCK(hash));
     replace->SetAge(mDate);
     replace->SetMove(EMPTY);
-    replace->SetUpperboundDepth(depth);
-    replace->SetUpperboundValue(value);
-    replace->SetLowerboundDepth(depth);
-    replace->SetLowerboundValue(value);
+    replace->SetUBDepth(depth);
+    replace->SetUBValue(value, ply);
+    replace->SetLBDepth(depth);
+    replace->SetLBValue(value, ply);
+    replace->SetEvalValue(-MAXEVAL);
     replace->ReplaceMask(MNoMoves);
 }
 
-void TranspositionTable::NewDate(int date) {
+void TransTable::NewDate(int date) {
     mDate = (date + 1) % DATESIZE;
     for (date = 0; date < DATESIZE; date++) {
         mAge[date] = (DATESIZE + mDate - date) % DATESIZE;
@@ -148,7 +161,7 @@ void TranspositionTable::NewDate(int date) {
     mUsed = 1;
 }
 
-void TranspositionTable::Clear() {
+void TransTable::Clear() {
     BaseHashTable<TransEntry>::Clear();
     mDate = 0;
 }
@@ -178,7 +191,7 @@ PvHashEntry* PvHashTable::pvEntry(const uint64 hash) const {
 PvHashEntry* PvHashTable::pvEntryFromMove(const uint64 hash, basic_move_t move) const {
     PvHashEntry *entry = &mpTable[(KEY(hash) & mMask)];
     for (int t = 0; t < mBucketSize; t++, entry++) {
-        if (entry->pvHashLock() == LOCK(hash) && entry->pvMove() == move) {
+        if (entry->LockFound(hash) && entry->pvMove() == move) {
             return entry;
         }
     }
@@ -190,7 +203,7 @@ void PvHashTable::pvStore(const uint64 hash, const basic_move_t move, const int 
     PvHashEntry *replace, *entry;
     replace = entry = &mpTable[(KEY(hash) & mMask)];
     for (int t = 0; t < mBucketSize; t++, entry++) {
-        if (entry->pvHashLock() == LOCK(hash)) {
+        if (entry->LockFound(hash)) {
             entry->pvSetAge(Date());
             entry->pvSetMove(move);
             entry->pvSetDepth(depth);

@@ -328,7 +328,7 @@ void evalPawnsByColor(const position_t& pos, eval_info_t& ei, EvalScore& pawnSco
         bool permWeak =
             (BitMask[sq + PAWN_MOVE_INC(color)] & (ei.atkpawns[enemy])) || //enemy adjacent pawn within 1
             ((BitMask[sq + PAWN_MOVE_INC(color) * 2] & ei.atkpawns[enemy]) && //enemy adjacent pawn within 2
-            (BitMask[sq + PAWN_MOVE_INC(color)] & ei.atkpawns[color]) == 0); //support pawn within 1
+                (BitMask[sq + PAWN_MOVE_INC(color)] & ei.atkpawns[color]) == 0); //support pawn within 1
         if (permWeak) targetBitMap |= BitMask[sq];
     }
     //lets look through all the passed pawns and give them their static bonuses
@@ -879,13 +879,7 @@ int eval(const position_t& pos, Thread& sthread) {
     eval_info_t ei;
     material_info_t *mat;
     int open, end, score;
-    EvalEntry *entry;
     uint64 whitePassed, blackPassed;
-
-    entry = sthread.et.Entry(pos.posStore.hash);
-    if (entry->hashlock == LOCK(pos.posStore.hash)) {
-        return entry->value;
-    }
 
     ei.MLindex[WHITE] = pos.posStore.mat_summ[WHITE];
     ei.MLindex[BLACK] = pos.posStore.mat_summ[BLACK];
@@ -930,7 +924,7 @@ int eval(const position_t& pos, Thread& sthread) {
         MaxOneBit((pos.bishops & pos.color[WHITE])) &&
         MaxOneBit((pos.bishops & pos.color[BLACK])) &&
         (((pos.bishops & pos.color[WHITE] & WhiteSquaresBB) == 0) !=
-        ((pos.bishops & pos.color[BLACK] & WhiteSquaresBB) == 0));
+            ((pos.bishops & pos.color[BLACK] & WhiteSquaresBB) == 0));
     if (ei.oppBishops) {
         ei.draw[WHITE] += OB_WEIGHT;
         ei.draw[BLACK] += OB_WEIGHT;
@@ -997,8 +991,6 @@ int eval(const position_t& pos, Thread& sthread) {
         if (score < -MAXEVAL) score = -MAXEVAL;
         else if (score > MAXEVAL) score = MAXEVAL;
     }
-    entry->hashlock = LOCK(pos.posStore.hash);
-    entry->value = score;
     return score;
 }
 void InitKingSpecial() {

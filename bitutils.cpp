@@ -26,10 +26,10 @@ static INLINE unsigned char _BitScanForward64(unsigned int* const Index, const U
     U64 Ret;
     __asm__
         (
-        "bsfq %[Mask], %[Ret]"
-        :[Ret] "=r" (Ret)
-        : [Mask] "mr" (Mask)
-        );
+            "bsfq %[Mask], %[Ret]"
+            :[Ret] "=r" (Ret)
+            : [Mask] "mr" (Mask)
+            );
     *Index = (unsigned int)Ret;
     return Mask ? 1 : 0;
 }
@@ -37,10 +37,10 @@ static INLINE unsigned char _BitScanReverse64(unsigned int* const Index, const U
     U64 Ret;
     __asm__
         (
-        "bsrq %[Mask], %[Ret]"
-        :[Ret] "=r" (Ret)
-        : [Mask] "mr" (Mask)
-        );
+            "bsrq %[Mask], %[Ret]"
+            :[Ret] "=r" (Ret)
+            : [Mask] "mr" (Mask)
+            );
     *Index = (unsigned int)Ret;
     return Mask ? 1 : 0;
 }
