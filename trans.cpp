@@ -22,7 +22,7 @@ TransEntry* TransTable::GetHashEntry(uint64 hash) {
     return nullptr;
 }
 
-void TransTable::StoreLB(const uint64 hash, const basic_move_t move, const int depth, const int value, const int ply, const int evalvalue, const bool singular) {
+void TransTable::StoreLB(const uint64 hash, const basic_move_t move, const int depth, const int value, const int ply, const bool singular) {
     int worst = -INF;
     ASSERT(evalvalue != -INF);
     TransEntry *replace, *entry;
@@ -30,7 +30,6 @@ void TransTable::StoreLB(const uint64 hash, const basic_move_t move, const int d
     for (int t = 0; t < mBucketSize; t++, entry++) {
         if (entry->LockFound(hash)) {
             entry->SetAge(mDate);
-            entry->SetEvalValue(evalvalue);
             if (depth >= entry->LBDepth()) {
                 entry->SetMove(move);
                 entry->SetLBDepth(depth);
@@ -53,11 +52,10 @@ void TransTable::StoreLB(const uint64 hash, const basic_move_t move, const int d
     replace->SetUBValue(0, ply);
     replace->SetLBDepth(depth);
     replace->SetLBValue(value, ply);
-    replace->SetEvalValue(evalvalue);
     replace->ReplaceMask(MLowerbound | (singular ? MSingular : 0));
 }
 
-void TransTable::StoreUB(const uint64 hash, const int depth, const int value, const int ply, const int evalvalue) {
+void TransTable::StoreUB(const uint64 hash, const int depth, const int value, const int ply) {
     int worst = -INF;
     ASSERT(evalvalue != -INF);
     TransEntry *replace, *entry;
@@ -65,7 +63,6 @@ void TransTable::StoreUB(const uint64 hash, const int depth, const int value, co
     for (int t = 0; t < mBucketSize; t++, entry++) {
         if (entry->LockFound(hash)) {
             entry->SetAge(mDate);
-            entry->SetEvalValue(evalvalue);
             if (depth >= entry->UBDepth()) {
                 entry->SetUBDepth(depth);
                 entry->SetUBValue(value, ply);
@@ -86,11 +83,10 @@ void TransTable::StoreUB(const uint64 hash, const int depth, const int value, co
     replace->SetUBValue(value, ply);
     replace->SetLBDepth(0);
     replace->SetLBValue(0, ply);
-    replace->SetEvalValue(evalvalue);
     replace->ReplaceMask(MUpperbound);
 }
 
-void TransTable::StoreExact(const uint64 hash, const basic_move_t move, const int depth, const int value, const int ply, const int evalvalue, const bool singular) {
+void TransTable::StoreExact(const uint64 hash, const basic_move_t move, const int depth, const int value, const int ply, const bool singular) {
     int worst = -INF;
     ASSERT(evalvalue != -INF);
     TransEntry *replace, *entry;
@@ -98,7 +94,6 @@ void TransTable::StoreExact(const uint64 hash, const basic_move_t move, const in
     for (int t = 0; t < mBucketSize; t++, entry++) {
         if (entry->LockFound(hash)) {
             entry->SetAge(mDate);
-            entry->SetEvalValue(evalvalue);
             if (depth >= entry->LBDepth()) {
                 entry->SetMove(move);
                 entry->SetLBDepth(depth);
@@ -126,7 +121,6 @@ void TransTable::StoreExact(const uint64 hash, const basic_move_t move, const in
     replace->SetUBValue(value, ply);
     replace->SetLBDepth(depth);
     replace->SetLBValue(value, ply);
-    replace->SetEvalValue(evalvalue);
     replace->ReplaceMask(MLowerbound | MUpperbound | (singular ? MSingular : 0));
 }
 
@@ -149,7 +143,6 @@ void TransTable::StoreNoMoves(const uint64 hash, const int depth, const int valu
     replace->SetUBValue(value, ply);
     replace->SetLBDepth(depth);
     replace->SetLBValue(value, ply);
-    replace->SetEvalValue(-MAXEVAL);
     replace->ReplaceMask(MNoMoves);
 }
 

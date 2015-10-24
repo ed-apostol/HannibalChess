@@ -151,6 +151,19 @@ public:
     static const int BUCKET = 1;
 };
 
+struct EvalEntry {
+    EvalEntry() :
+        hashlock(0),
+        value(0) {}
+    uint32 hashlock;
+    int32 value;
+};
+
+class EvalHashTable : public BaseHashTable < EvalEntry > {
+public:
+    static const int BUCKET = 1;
+};
+
 struct TransEntry {
 public:
     TransEntry() :
@@ -158,7 +171,6 @@ public:
         mMove(0),
         mUBValue(0),
         mLBValue(0),
-        mEvalValue(0),
         mMask(0),
         mAge(0),
         mUBDepth(0),
@@ -166,22 +178,11 @@ public:
     inline uint32 HashLock() const {
         return mHashlock;
     }
+    inline basic_move_t Move() const {
+        return mMove;
+    }
     inline bool LockFound(uint64 hash) const {
         return (mHashlock == LOCK(hash));
-    }
-    inline basic_move_t Move(const position_t& pos) {
-        if (mMove == EMPTY) return EMPTY;
-        basic_move_t m = (mMove & 0xfff) | (pos.pieces[moveFrom(mMove)] << 12) | (pos.pieces[moveTo(mMove)] << 18);
-        switch (mMove >> 12) {
-        case H_CASTLE:	m |= (M_CASTLE << 15);	break;
-        case H_PAWN2:	m |= (M_PAWN2 << 15);	break;
-        case H_EP:		m |= ((M_EP << 15) | (PAWN << 18)); break;
-        case H_PROMN:	m |= (M_PROMN << 15);	break;
-        case H_PROMB:	m |= (M_PROMB << 15);	break;
-        case H_PROMR:	m |= (M_PROMR << 15);	break;
-        case H_PROMQ:	m |= (M_PROMQ << 15);	break;
-        }
-        return m;
     }
     inline int Age() const {
         return mAge;
@@ -213,23 +214,11 @@ public:
     inline int UBValue(const int ply) const {
         return scoreFromTrans(mUBValue, ply);
     }
-    inline int EvalValue() const {
-        return mEvalValue;
-    }
     inline void SetHashLock(const uint32 hashlock) {
         mHashlock = hashlock;
     }
-    inline void SetMove(const basic_move_t m) {
-        mMove = m & 0xfff;
-        switch ((m >> 15) & 0x3C7) {
-        case M_CASTLE:	mMove |= (H_CASTLE << 12);	break;
-        case M_PAWN2:	mMove |= (H_PAWN2 << 12);	break;
-        case M_EP:		mMove |= (H_EP << 12);		break;
-        case M_PROMN:	mMove |= (H_PROMN << 12);	break;
-        case M_PROMB:	mMove |= (H_PROMB << 12);	break;
-        case M_PROMR:	mMove |= (H_PROMR << 12);	break;
-        case M_PROMQ:	mMove |= (H_PROMQ << 12);	break;
-        }
+    inline void SetMove(const basic_move_t move) {
+        mMove = move;
     }
     inline void SetAge(const uint8 date) {
         mAge = date;
@@ -255,16 +244,7 @@ public:
     inline void SetUBValue(const int16 uppervalue, const int ply) {
         mUBValue = scoreToTrans(uppervalue, ply);
     }
-    inline void SetEvalValue(const int16 evalvalue) {
-        mEvalValue = evalvalue;
-    }
 private:
-    enum {
-        H_CASTLE = 1, H_PAWN2, H_EP, H_PROMN, H_PROMB, H_PROMR, H_PROMQ
-    };
-    enum {
-        M_CASTLE = 0x1, M_PAWN2 = 0x2, M_EP = 0x40, M_PROMN = 0x104, M_PROMB = 0x184, M_PROMR = 0x204, M_PROMQ = 0x284
-    };
     inline static int scoreFromTrans(int score, int ply) {
         return (score > MAXEVAL) ? (score - ply) : ((score < -MAXEVAL) ? (score + ply) : score);
     }
@@ -272,10 +252,9 @@ private:
         return (score > MAXEVAL) ? (score + ply) : ((score < -MAXEVAL) ? (score - ply) : score);
     }
     uint32 mHashlock;
-    hash_move_t mMove;
+    basic_move_t mMove;
     int16 mUBValue;
     int16 mLBValue;
-    int16 mEvalValue;
     uint8 mMask;
     uint8 mAge;
     uint8 mUBDepth;
@@ -291,9 +270,9 @@ public:
     virtual void Clear();
     void NewDate(int date);
     TransEntry* GetHashEntry(uint64 hash);
-    void StoreLB(uint64 hash, basic_move_t move, int depth, int value, int ply, int evalvalue, const bool singular);
-    void StoreUB(uint64 hash, int depth, int value, int ply, int evalvalue);
-    void StoreExact(uint64 hash, basic_move_t move, int depth, int value, int ply, int evalvalue, const bool singular);
+    void StoreLB(uint64 hash, basic_move_t move, int depth, int value, int ply, const bool singular);
+    void StoreUB(uint64 hash, int depth, int value, int ply);
+    void StoreExact(uint64 hash, basic_move_t move, int depth, int value, int ply, const bool singular);
     void StoreNoMoves(uint64 hash, int depth, int value, int ply);
     int32 Date() const {
         return mDate;

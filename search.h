@@ -27,6 +27,12 @@ static const int MaxPHash = 1024;
 //static const int DefaultPHash = 64; //TCEC
 static const int DefaultPHash = 32;
 
+static const std::string EvalCacheStr = "Eval Cache";
+static const int MinEvalCache = 1;
+static const int MaxEvalCache = 1024;
+//static const int DefaultEvalCache = 128; //TCEC
+static const int DefaultEvalCache = 64;
+
 static const std::string MultiPVStr = "MultiPV";
 static const int MinMultiPV = 1;
 static const int MaxMultiPV = 128;
@@ -258,6 +264,9 @@ public:
     void InitPawnHash(size_t size) {
         for (Thread* th : mThreads) th->pt.Init(size, th->pt.BUCKET);
     }
+    void InitEvalHash(size_t size) {
+        for (Thread* th : mThreads) th->et.Init(size, th->et.BUCKET);
+    }
     void ClearTTHash() {
         transtable.Clear();
     }
@@ -266,6 +275,9 @@ public:
     }
     void ClearPawnHash() {
         for (Thread* th : mThreads) th->pt.Clear();
+    }
+    void ClearEvalHash() {
+        for (Thread* th : mThreads) th->et.Clear();
     }
 
     // threads
@@ -292,6 +304,7 @@ public:
             mThreads.pop_back();
         }
         InitPawnHash(uci_opt[PawnHashStr].GetInt());
+        InitEvalHash(uci_opt[EvalCacheStr].GetInt());
     }
     void PrintThreadStats() {
         LogAndPrintOutput() << "================================================================";
@@ -340,6 +353,7 @@ public:
     // UCI options
     void OnClearHash() {
         ClearPawnHash();
+        ClearEvalHash();
         ClearTTHash();
         ClearPVTTHash();
     }
@@ -348,6 +362,9 @@ public:
     }
     void OnPawnHashChange() {
         InitPawnHash(uci_opt[PawnHashStr].GetInt());
+    }
+    void OnEvalCacheChange() {
+        InitEvalHash(uci_opt[EvalCacheStr].GetInt());
     }
     void OnMultiPvChange() {
         info.multipv = uci_opt[MultiPVStr].GetInt();
@@ -375,6 +392,7 @@ public:
     void InitUCIOptions() {
         uci_opt[HashStr] = Options(DefaultHash, MinHash, MaxHash, std::bind(&Engine::OnHashChange, this));
         uci_opt[PawnHashStr] = Options(DefaultPHash, MinPHash, MaxPHash, std::bind(&Engine::OnPawnHashChange, this));
+        uci_opt[EvalCacheStr] = Options(DefaultEvalCache, MinEvalCache, MaxEvalCache, std::bind(&Engine::OnEvalCacheChange, this));
         uci_opt[MultiPVStr] = Options(DefaultMultiPV, MinMultiPV, MaxMultiPV, std::bind(&Engine::OnMultiPvChange, this));
         uci_opt[ClearHashStr] = Options(std::bind(&Engine::OnClearHash, this));
         uci_opt[OwnBookStr] = Options(false, std::bind(&Engine::OnDummyChange, this));

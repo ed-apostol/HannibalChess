@@ -157,25 +157,26 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     if (sthread.stop) return 0;
 
     if (TransEntry* entry = mTransTable.GetHashEntry(pos.posStore.hash)) {
-        basic_move_t hmove = entry->Move(pos);
+        basic_move_t hmove = entry->Move();
         entry->SetAge(mTransTable.Date());
+        int evaldepth = -INF;
         if (entry->IsNoMoves()) {
             if (ssprev.moveGivesCheck) return -INF + ss.ply;
             else return DrawValue[pos.side];
         }
-        ss.evalvalue = ss.staticEval = entry->EvalValue();
         if (entry->IsLowerbound()) {
             int score = entry->LBValue(ss.ply);
             if (!inPv && score > alpha) {
                 ssprev.counterMove = hmove;
                 return score;
-            }
-            if (score > ss.evalvalue) {
-                ss.evalvalue = score;
-            }
+            }            
             if (hmove != EMPTY && moveIsTactical(hmove)) {
                 ss.hashDepth = entry->LBDepth();
                 ss.hashMove = hmove;
+            }
+            if (entry->LBDepth() > evaldepth) {
+                ss.evalvalue = score;
+                evaldepth = entry->LBDepth();
             }
         }
         if (entry->IsUpperbound()) {
@@ -183,13 +184,15 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
             if (!inPv && score < beta) {
                 return score;
             }
-            if (score < ss.evalvalue) {
+            if (entry->UBDepth() > evaldepth) {
                 ss.evalvalue = score;
+                evaldepth = entry->UBDepth();
             }
+
         }
     }
-    if (ss.staticEval == -INF) {
-        ss.evalvalue = ss.staticEval = eval(pos, sthread);
+    if (ss.evalvalue == -INF) {
+        ss.evalvalue = eval(pos, sthread);
     }
     updateEvalgains(pos, pos.posStore.lastmove, ssprev.evalvalue, ss.evalvalue, sthread);
 
@@ -252,15 +255,15 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     }
     if (ss.bestvalue >= beta) {
         ssprev.counterMove = ss.bestmove;
-        mTransTable.StoreLB(pos.posStore.hash, ss.bestmove, 0, ss.bestvalue, ss.ply, ss.staticEval, false);
+        mTransTable.StoreLB(pos.posStore.hash, ss.bestmove, 0, ss.bestvalue, ss.ply, false);
     }
     else {
         if (inPv && ss.bestmove != EMPTY) {
             ssprev.counterMove = ss.bestmove;
-            mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, 0, ss.bestvalue, ss.ply, ss.staticEval, false);
+            mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, 0, ss.bestvalue, ss.ply, false);
             mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, 0, ss.bestvalue);
         }
-        else mTransTable.StoreUB(pos.posStore.hash, 0, ss.bestvalue, ss.ply, ss.staticEval);
+        else mTransTable.StoreUB(pos.posStore.hash, 0, ss.bestvalue, ss.ply);
     }
     return ss.bestvalue;
 }
@@ -295,14 +298,13 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (alpha >= beta) return alpha;
 
         if (TransEntry* entry = mTransTable.GetHashEntry(pos.posStore.hash)) {
-            basic_move_t hmove = entry->Move(pos);
+            basic_move_t hmove = entry->Move();
             entry->SetAge(mTransTable.Date());
             int evaldepth = -INF;
             if (entry->IsNoMoves()) {
                 if (inCheck) return -INF + ss.ply;
                 else return DrawValue[pos.side];
             }
-            ss.evalvalue = ss.staticEval = entry->EvalValue();
             if (entry->IsLowerbound()) {
                 int score = entry->LBValue(ss.ply);
                 if (!inPv && score > alpha && entry->LBDepth() >= depth) {
@@ -331,8 +333,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 }
             }
         }
-        if (ss.staticEval == -INF) {
-            ss.evalvalue = ss.staticEval = eval(pos, sthread);
+        if (ss.evalvalue == -INF) {
+            ss.evalvalue = eval(pos, sthread);
         }
         updateEvalgains(pos, pos.posStore.lastmove, ssprev.evalvalue, ss.evalvalue, sthread);
 
@@ -600,15 +602,15 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (ss.bestvalue >= beta) {
             ssprev.counterMove = ss.bestmove;
             UpdateHistory(pos, ss, sthread, depth);
-            mTransTable.StoreLB(pos.posStore.hash, ss.bestmove, depth, ss.bestvalue, ss.ply, ss.staticEval, bool(singularMove == ss.bestmove));
+            mTransTable.StoreLB(pos.posStore.hash, ss.bestmove, depth, ss.bestvalue, ss.ply, bool(singularMove == ss.bestmove));
         }
         else {
             if (inPv && ss.bestmove != EMPTY) {
                 ssprev.counterMove = ss.bestmove;
-                mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, ss.bestvalue, ss.ply, ss.staticEval, bool(singularMove == ss.bestmove));
+                mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, ss.bestvalue, ss.ply, bool(singularMove == ss.bestmove));
                 mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, ss.bestvalue);
             }
-            else mTransTable.StoreUB(pos.posStore.hash, depth, ss.bestvalue, ss.ply, ss.staticEval);
+            else mTransTable.StoreUB(pos.posStore.hash, depth, ss.bestvalue, ss.ply);
         }
     }
     return ss.bestvalue;
@@ -699,7 +701,7 @@ void Engine::RepopulateHash(position_t& pos, continuation_t& rootPV) {
         if (!move) break;
         PvHashEntry* entry = pvhashtable.pvEntryFromMove(pos.posStore.hash, move);
         if (nullptr == entry) break;
-        transtable.StoreExact(pos.posStore.hash, entry->pvMove(), entry->pvDepth(), entry->pvScore(), moveOn, entry->pvScore(), false);
+        transtable.StoreExact(pos.posStore.hash, entry->pvMove(), entry->pvDepth(), entry->pvScore(), moveOn, false);
         makeMove(pos, undo[moveOn], move);
     }
     for (moveOn = moveOn - 1; moveOn >= 0; moveOn--) {
@@ -882,7 +884,7 @@ void Engine::GetBestMove(Thread& sthread) {
         bool singularmove = false;
         for (TransEntry *hentry = transtable.Entry(rootpos.posStore.hash), *end = hentry + transtable.BucketSize(); hentry != end; ++hentry) {
             if (hentry->HashLock() == LOCK(rootpos.posStore.hash)) {
-                if (ss.hashMove == hentry->Move(rootpos) && (hentry->Mask() & MSingular)) {
+                if (ss.hashMove == hentry->Move() && (hentry->Mask() & MSingular)) {
                     singularmove = true;
                 }
             }

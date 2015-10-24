@@ -879,7 +879,13 @@ int eval(const position_t& pos, Thread& sthread) {
     eval_info_t ei;
     material_info_t *mat;
     int open, end, score;
+    EvalEntry *entry;
     uint64 whitePassed, blackPassed;
+
+    entry = sthread.et.Entry(pos.posStore.hash);
+    if (entry->hashlock == LOCK(pos.posStore.hash)) {
+        return entry->value;
+    }
 
     ei.MLindex[WHITE] = pos.posStore.mat_summ[WHITE];
     ei.MLindex[BLACK] = pos.posStore.mat_summ[BLACK];
@@ -991,6 +997,8 @@ int eval(const position_t& pos, Thread& sthread) {
         if (score < -MAXEVAL) score = -MAXEVAL;
         else if (score > MAXEVAL) score = MAXEVAL;
     }
+    entry->hashlock = LOCK(pos.posStore.hash);
+    entry->value = score;
     return score;
 }
 void InitKingSpecial() {

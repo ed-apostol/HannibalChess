@@ -64,7 +64,6 @@ enum HashMask {
 };
 
 typedef uint32 basic_move_t;
-typedef uint16 hash_move_t;
 typedef int32 EvalScore;
 
 struct continuation_t {
@@ -152,7 +151,6 @@ struct SearchStack {
         bannedMove(EMPTY),
         hashMove(EMPTY),
         hashDepth(-2),
-        staticEval(-INF),
         ply(_ply),
         mvlist(&movelist),
         hisMoves(&hisTable[0]) {}
@@ -172,7 +170,6 @@ struct SearchStack {
     basic_move_t bannedMove;
     basic_move_t hashMove;
     int hashDepth;
-    int staticEval;
     int ply;
 
     movelist_t movelist;
