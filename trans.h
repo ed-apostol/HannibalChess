@@ -26,11 +26,11 @@ public:
     Entity* Entry(const uint64 hash) const {
         return &mpTable[KEY(hash) & mMask];
     }
-    void Init(size_t targetMB, const size_t bucket_size) {
+    void Init(const size_t targetMB, const size_t bucket_size) {
         size_t size = 2;
+        size_t target = targetMB << 19;
         mBucketSize = bucket_size;
-        size_t halfTarget = MAX(1, targetMB) * (1024 * 1024) / 2;
-        while (size * sizeof(Entity) <= halfTarget) size *= 2;
+        while ((size * sizeof(Entity)) <= target) size *= 2;
         if (size + bucket_size - 1 == mSize) {
             Clear();
         }
@@ -50,8 +50,8 @@ public:
 protected:
     Entity* mpTable;
     size_t mSize;
-    uint64 mMask;
-    uint64 mBucketSize;
+    size_t mMask;
+    size_t mBucketSize;
 };
 
 struct PvHashEntry {
