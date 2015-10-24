@@ -240,8 +240,6 @@ public:
     void NewDate(int date);
     void StoreLower(const uint64 hash, const basic_move_t move, const int depth, const int value, const bool singular, const int staticEvalValue);
     void StoreUpper(const uint64 hash, const int depth, const int value, const int staticEvalValue);
-    void StoreCutUpper(const uint64 hash, const int depth, const int value, const int staticEvalValue);
-    void StoreAllLower(const uint64 hash, const basic_move_t move, const int depth, const int value, const bool singular, const int staticEvalValue);
     void StoreExact(const uint64 hash, const basic_move_t move, const int depth, const int value, const bool singular, const int staticEvalValue);
     void StoreNoMoves(const uint64 hash, const int depth, const int value);
 

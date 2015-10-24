@@ -304,7 +304,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     else return DrawValue[pos.side];
                 }
                 if (!inPvNode(nt)) {
-                    if ((!inCutNode(nt) || !(entry->Mask() & MAllLower)) && entry->LowerDepth() >= depth && (entry->Move() != EMPTY || pos.posStore.lastmove == EMPTY)) {
+                    if (entry->LowerDepth() >= depth && (entry->Move() != EMPTY || pos.posStore.lastmove == EMPTY)) {
                         int score = scoreFromTrans(entry->LowerValue(), ss.ply);
                         if (score > alpha) {
                             ss.bestmove = ssprev.counterMove = entry->Move();
@@ -312,7 +312,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                             return score;
                         }
                     }
-                    if ((!inAllNode(nt) || !(entry->Mask() & MCutUpper)) && entry->UpperDepth() >= depth) {
+                    if (entry->UpperDepth() >= depth) {
                         int score = scoreFromTrans(entry->UpperValue(), ss.ply);
                         ASSERT(valueIsOk(score));
                         if (score < beta) return score;
@@ -398,7 +398,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             }
         }
 
-        if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt) ? 6 : 8) /*&& (inPvNode(nt) || ss.staticEvalValue + 100 > beta)*/) { // IID
+        if (!inCheck && depth >= (inPvNode(nt) ? 6 : 8) /*&& (inPvNode(nt) || ss.staticEvalValue + 100 > beta)*/) { // IID
             int newdepth = inPvNode(nt) ? depth - 2 : depth / 2;
             if (ss.hashMove == EMPTY || ss.hashDepth < newdepth) {
                 int score = searchNode<false, false, false>(pos, alpha, beta, newdepth, ssprev, sthread, nt);
@@ -446,7 +446,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             else sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), sthread.ts[ss.ply]);
         }
     }
-    int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 2) : (depth * depth));
+    int lateMove = LATE_PRUNE_MIN + (depth * depth);
     move_t* move;
     basic_move_t singularMove = EMPTY;
     //	const bool noProgress = ss.ssprev && ss.ssprev->ssprev && (ss.staticEvalValue < ss.ssprev->ssprev->staticEvalValue);
@@ -614,8 +614,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (ss.bestvalue >= beta) {
             ssprev.counterMove = ss.bestmove;
             UpdateHistory(pos, ss, sthread, depth);
-            if (inCutNode(nt)) mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove), ss.staticEvalValue);
-            else mTransTable.StoreAllLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove), ss.staticEvalValue);
+            mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove), ss.staticEvalValue);
         }
         else {
             if (inPvNode(nt) && ss.bestmove != EMPTY) {
@@ -623,8 +622,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove), ss.staticEvalValue);
                 mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply));
             }
-            else if (inCutNode(nt)) mTransTable.StoreCutUpper(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, ss.ply), ss.staticEvalValue);
-            else mTransTable.StoreUpper(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, ss.ply), ss.staticEvalValue);
+            mTransTable.StoreUpper(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, ss.ply), ss.staticEvalValue);
         }
     }
     return ss.bestvalue;
