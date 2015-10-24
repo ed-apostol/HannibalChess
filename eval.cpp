@@ -414,13 +414,14 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
     uint64 pawnTargets = ei.pawns[enemy] & ~ei.atkpawns[enemy];
     uint64 attackBlockers = ((pos.pawns | pos.kings) & pos.color[color]) | (ei.pawns[enemy] & ei.atkpawns[enemy]);
     uint64 outpostMask = outpostBB[color] & ~ei.potentialPawnAttack[color ^ 1];
+/*	uint64 myBlockedPawns = ei.pawns[color] & (*ShiftPtr[color ^ 1])(pos.pawns, 8) & ~ei.atkpawns[color^1] & ~(FileABB | FileHBB | Rank1BB | Rank8BB);
     if (SHOW_EVAL) {
-        if (color == WHITE) PrintOutput() << "info string WHITE outposts\n";
-        PrintOutput() << "info string BLACK outposts\n";
-        PrintBitBoard(outpostMask);
+        if (color == WHITE) PrintOutput() << "info string WHITE blockedpawns\n";
+        PrintOutput() << "info string BLACK blockedpawns\n";
+		PrintBitBoard(myBlockedPawns);
         PrintOutput() << "end outpost\n";
     }
-
+	*/
     if (0 == (pos.posStore.castle & Castle[color])) boardSkeleton |= (pos.kings & pos.color[color]);
     notOwnSkeleton = ~(boardSkeleton & pos.color[color]);
 
@@ -476,8 +477,12 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
             const uint64 fromMask = BitMask[from];
             if ((maybeTrapped & fromMask) && temp1 < 2) //trapped piece if you are in opponent area and you have very few safe moves
                 ei.posScore[color] -= TRAPPED_PENALTY;
-            xtemp64 = bishopAttacksBB(from, boardSkeleton) & notOwnSkeleton;
-            uint64 pawnsPressured = xtemp64 & pawnTargets;
+
+			xtemp64 = bishopAttacksBB(from, boardSkeleton);
+//			ei.posScore[color] -= bitCnt(xtemp64 & myBlockedPawns) * COMP(6, 6);
+			xtemp64 &= notOwnSkeleton;
+			ei.posScore[color] += XrayBishopMobArray[bitCnt(xtemp64)];
+			uint64 pawnsPressured = xtemp64 & pawnTargets;
             if (pawnsPressured) {
                 int numPawnsPressured = bitCnt(pawnsPressured);
                 ei.posScore[color] += BishopPawnPressure * numPawnsPressured;
@@ -488,8 +493,6 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
             if (xtemp64 & notOwnColor & pos.rooks) {
                 ei.posScore[color] += BishopAttackPower * RookXrayAttacked;
             }
-            temp1 = bitCnt(xtemp64);
-            ei.posScore[color] += XrayBishopMobArray[temp1];
 
             if (fromMask & outpostMask) {
                 ei.posScore[color] += outpost(ei, color, from, false);
@@ -510,12 +513,13 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         temp1 = bitCnt(safeMoves);
         ei.posScore[color] += RookMobArray[temp1];
 
-        xtemp64 = rookAttacksBB(from, boardSkeleton) & notOwnSkeleton;
-        temp1 = bitCnt(xtemp64);
-        if (xtemp64 & notOwnColor & (pos.kings | pos.queens)) {
+        xtemp64 = rookAttacksBB(from, boardSkeleton);
+//		ei.posScore[color] -= bitCnt(xtemp64 & myBlockedPawns) * COMP(5, 5);
+		xtemp64 &= notOwnSkeleton;
+		ei.posScore[color] += XrayRookMobArray[bitCnt(xtemp64)];
+		if (xtemp64 & notOwnColor & (pos.kings | pos.queens)) {
             ei.posScore[color] += RookAttackPower * QueenXrayAttacked;
         }
-        ei.posScore[color] += XrayRookMobArray[temp1];
         //its good to be lined up with a lot of enemy pawns (7th rank most common example)
         uint64 pressured = rookAttacksBB(from, attackBlockers);
         uint64 pawnsPressured = pressured & pawnTargets;
@@ -541,9 +545,9 @@ void evalPieces(const position_t& pos, eval_info_t& ei, const int color) {
         temp1 = bitCnt(temp64 & mobileSquare);
         ei.posScore[color] += QueenMobArray[temp1];
 
-        xtemp64 = queenAttacksBB(from, boardSkeleton) & notOwnSkeleton;
-        temp1 = bitCnt(xtemp64);
-        ei.posScore[color] += XrayQueenMobArray[temp1];
+        xtemp64 = queenAttacksBB(from, boardSkeleton);
+		xtemp64 &= notOwnSkeleton;
+		ei.posScore[color] += XrayQueenMobArray[bitCnt(xtemp64)];
 
         if (xtemp64 & notOwnColor & pos.kings) {
             ei.posScore[color] += QueenAttackPower * QueenXrayAttacked;

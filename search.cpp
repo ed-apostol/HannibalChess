@@ -350,14 +350,14 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             }
             if (depth < MaxRazorDepth && pos.posStore.lastmove != EMPTY
                 && ss.evalvalue < (rvalue = beta - FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
-                if (depth <= 2 && ss.evalvalue < rvalue - 100) {
+                if (depth <= 2) {
                     return searchNode<false, false, false, false>(pos, alpha, beta, 0, ssprev, sthread);
                 }
                 else {
                     int score = searchNode<false, false, false, false>(pos, rvalue - 1, rvalue, 0, ssprev, sthread);
                     if (score < rvalue) return score;
                 }
-            }
+			}
             if (depth >= 2 && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && ss.evalvalue >= beta) {
                 int nullDepth = depth - (4 + (depth / 5) + MIN(3, ((ss.evalvalue - beta) / PawnValue)));
 
@@ -374,23 +374,23 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     if (score >= beta) return score;
                 }
             }
-        }
-        if (!inPv && !inCheck && depth >= 5) { // if we have a no-brainer capture we should just do it
-            sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseQuiescence, ss.ply, sthread); //h109
-            move_t* move;
-            int target = beta + 200;
-            int minCapture = target - ss.evalvalue;
-            int newdepth = depth - 5;
-            while ((move = sortNext(nullptr, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
-                int score;
-                if (MaxPieceValue[moveCapture(move->m)] < minCapture || swap(pos, move->m) < minCapture) continue;
-                ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
-                makeMove(pos, undo, move->m);
-                ++sthread.nodes;
-                score = -searchNode<false, false, false, false>(pos, -target - 1, -target, newdepth, ss, sthread);
-                unmakeMove(pos, undo);
-                if (sthread.stop) return 0;
-                if (score > target) return score;
+            if (depth >= 5) { // if we have a no-brainer capture we should just do it
+                sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseQuiescence, ss.ply, sthread); //h109
+                move_t* move;
+                int target = beta + 200;
+                int minCapture = target - ss.evalvalue;
+                int newdepth = depth - 5;
+                while ((move = sortNext(nullptr, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
+                    int score;
+                    if (MaxPieceValue[moveCapture(move->m)] < minCapture || swap(pos, move->m) < minCapture) continue;
+                    ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
+                    makeMove(pos, undo, move->m);
+                    ++sthread.nodes;
+                    score = -searchNode<false, false, false, false>(pos, -target - 1, -target, newdepth, ss, sthread);
+                    unmakeMove(pos, undo);
+                    if (sthread.stop) return 0;
+                    if (score > target) return score;
+                }
             }
         }
         if (!inCheck && depth >= (inPv ? 6 : 8)) { // IID
