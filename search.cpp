@@ -297,6 +297,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (TransEntry* entry = mTransTable.GetHashEntry(pos.posStore.hash)) {
             basic_move_t hmove = entry->Move(pos);
             entry->SetAge(mTransTable.Date());
+            int evaldepth = -INF;
             if (entry->IsNoMoves()) {
                 if (inCheck) return -INF + ss.ply;
                 else return DrawValue[pos.side];
@@ -309,13 +310,14 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     UpdateHistory(pos, ss, sthread, depth);
                     return score;
                 }
-                if (score > ss.evalvalue) {
-                    ss.evalvalue = score;
-                }
                 if (hmove != EMPTY) {
                     ss.hashMove = hmove;
                     ss.hashDepth = entry->LBDepth();
                     ss.singular = entry->IsSingular();
+                }
+                if (entry->LBDepth() > evaldepth) {
+                    evaldepth = entry->LBDepth();
+                    ss.evalvalue = score;
                 }
             }
             if (entry->IsUpperbound()) {
@@ -323,7 +325,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (!inPv && score < beta && entry->UBDepth() >= depth) {
                     return score;
                 }
-                if (score < ss.evalvalue) {
+                if (entry->UBDepth() > evaldepth) {
+                    evaldepth = entry->UBDepth();
                     ss.evalvalue = score;
                 }
             }
