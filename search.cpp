@@ -156,7 +156,7 @@ void Search::UpdateHistory(position_t& pos, SearchStack& ss, Thread& sthread, co
 const int MaxPieceValue[] = { 0, PawnValueEnd, KnightValueEnd, BishopValueEnd, RookValueEnd, QueenValueEnd, 10000 };
 template<bool inPv>
 int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread) {
-    SearchStack ss(ssprev.ply + 1,&ssprev);
+    SearchStack ss(ssprev.ply + 1, &ssprev);
     pos_store_t undo;
 
     ASSERT(alpha < beta);
@@ -185,21 +185,21 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
                 ss.hashDepth = entry->LowerDepth();
                 ss.hashMove = entry->Move();
             }
-			ss.staticEvalValue = entry->EvalValue();
-			break;
+            ss.staticEvalValue = entry->EvalValue();
+            break;
         }
     }
     if (ss.ply >= MAXPLY - 1) return eval(pos, sthread);
     if (!ssprev.moveGivesCheck) {
-		if (ss.staticEvalValue == -INF) {
-			ss.staticEvalValue = eval(pos, sthread); //TODO consider hashing this
-		}
-		ss.evalvalue = ss.bestvalue = ss.staticEvalValue;
-		updateEvalgains(pos, pos.posStore.lastmove, ssprev.staticEvalValue, ss.staticEvalValue, sthread);
+        if (ss.staticEvalValue == -INF) {
+            ss.staticEvalValue = eval(pos, sthread); //TODO consider hashing this
+        }
+        ss.evalvalue = ss.bestvalue = ss.staticEvalValue;
+        updateEvalgains(pos, pos.posStore.lastmove, ssprev.staticEvalValue, ss.staticEvalValue, sthread);
         if (ss.bestvalue > alpha) {
             if (ss.bestvalue >= beta) {
                 ASSERT(valueIsOk(ss.bestvalue));
-				mTransTable.StoreLower(pos.posStore.hash, ss.hashMove, -1, ss.bestvalue, false, ss.staticEvalValue);
+                mTransTable.StoreLower(pos.posStore.hash, ss.hashMove, -1, ss.bestvalue, false, ss.staticEvalValue);
                 return ss.bestvalue;
             }
             alpha = ss.bestvalue;
@@ -251,15 +251,15 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     }
     if (ss.bestvalue >= beta) {
         ssprev.counterMove = ss.bestmove;
-        mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, ss.ply), false,ss.staticEvalValue);
+        mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, ss.ply), false, ss.staticEvalValue);
     }
     else {
         if (inPv && ss.bestmove != EMPTY) {
             ssprev.counterMove = ss.bestmove;
-			mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, ss.ply), false, ss.staticEvalValue);
+            mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, ss.ply), false, ss.staticEvalValue);
             mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, ss.ply));
         }
-		else mTransTable.StoreUpper(pos.posStore.hash, -1, scoreToTrans(ss.bestvalue, ss.ply), ss.staticEvalValue);
+        else mTransTable.StoreUpper(pos.posStore.hash, -1, scoreToTrans(ss.bestvalue, ss.ply), ss.staticEvalValue);
     }
     return ss.bestvalue;
 }
@@ -279,9 +279,9 @@ int Search::searchNode(position_t& pos, int alpha, int beta, const int depth, Se
 template<bool inRoot, bool inSplitPoint, bool inCheck, bool inSingular>
 int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt) {
     SplitPoint* sp = nullptr;
-    SearchStack ss(ssprev.ply + 1,&ssprev);
+    SearchStack ss(ssprev.ply + 1, &ssprev);
     pos_store_t undo;
-	bool skipSingularSearch = false;
+    bool skipSingularSearch = false;
     ASSERT(alpha < beta);
     ASSERT(depth >= 1);
     ASSERT(!inSingular || ssprev.bannedMove != 0);
@@ -321,8 +321,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (entry->Move() != EMPTY && entry->LowerDepth() > ss.hashDepth) {
                     ss.hashMove = entry->Move();
                     ss.hashDepth = entry->LowerDepth();
-					ss.hashmoveIsSingular = ((entry->Mask() & MSingular) != 0);
-					skipSingularSearch = (entry->LowerDepth() >= depth - depth % 2);
+                    ss.hashmoveIsSingular = ((entry->Mask() & MSingular) != 0);
+                    skipSingularSearch = (entry->LowerDepth() >= depth - depth % 2);
                 }
                 if (entry->LowerDepth() > evalDepth) {
                     evalDepth = entry->LowerDepth();
@@ -332,36 +332,36 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     evalDepth = entry->UpperDepth();
                     ss.evalvalue = scoreFromTrans(entry->UpperValue(), ss.ply);
                 }
-				ss.staticEvalValue = entry->EvalValue();
+                ss.staticEvalValue = entry->EvalValue();
                 break;
             }
         }
-		if (ss.staticEvalValue == -INF) {
-			ss.staticEvalValue = eval(pos, sthread);
-			mTransTable.StoreLower(pos.posStore.hash, ss.hashMove, -1, ss.staticEvalValue, false, ss.staticEvalValue); //make sure we have Eval
-		}
-		if (ss.evalvalue == -INF) {
-			ss.evalvalue = ss.staticEvalValue;
-		}
+        if (ss.staticEvalValue == -INF) {
+            ss.staticEvalValue = eval(pos, sthread);
+            mTransTable.StoreLower(pos.posStore.hash, ss.hashMove, -1, ss.staticEvalValue, false, ss.staticEvalValue); //make sure we have Eval
+        }
+        if (ss.evalvalue == -INF) {
+            ss.evalvalue = ss.staticEvalValue;
+        }
         if (ss.ply >= MAXPLY - 1) return ss.evalvalue;
-		updateEvalgains(pos, pos.posStore.lastmove, ssprev.staticEvalValue, ss.staticEvalValue, sthread);
+        updateEvalgains(pos, pos.posStore.lastmove, ssprev.staticEvalValue, ss.staticEvalValue, sthread);
         if (!inPvNode(nt) && !inCheck) {
             static const int MaxRazorDepth = 10;
             int rvalue;
             if (depth < MaxRazorDepth && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && beta <= MAXEVAL
-				&& ss.evalvalue >(rvalue = beta + FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
-				return rvalue; //consider enforcing a max of MAXEVAL
+                && ss.evalvalue >(rvalue = beta + FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
+                return rvalue; //consider enforcing a max of MAXEVAL
             }
             if (depth < MaxRazorDepth && pos.posStore.lastmove != EMPTY
                 && ss.evalvalue < (rvalue = beta - FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
-				if (depth <= 2) {
-					return searchNode<false, false, false>(pos, alpha, beta, 0, ssprev, sthread, nt);
+                if (depth <= 2) {
+                    return searchNode<false, false, false>(pos, alpha, beta, 0, ssprev, sthread, nt);
                 }
-				int score = searchNode<false, false, false>(pos, rvalue - 1, rvalue, 0, ssprev, sthread, nt);
-				if (score < rvalue) {
-					return score;
-				}
-			}
+                int score = searchNode<false, false, false>(pos, rvalue - 1, rvalue, 0, ssprev, sthread, nt);
+                if (score < rvalue) {
+                    return score;
+                }
+            }
             if (depth >= 2 && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && ss.evalvalue >= beta) {
                 int nullDepth = depth - (4 + (depth / 5) + MIN(3, ((ss.evalvalue - beta) / PawnValue)));
 
@@ -378,25 +378,25 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     if (score2 >= beta) return score;
                 }
             }
-			if (depth >= 5) { // if we have a no-brainer capture we should just do it
-				sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseQuiescence, sthread.ts[ss.ply]); //h109
-				move_t* move;
-				int target = beta + 200;
-				int minCapture = target - ss.staticEvalValue;
-				int newdepth = depth - 5;
-				while ((move = sortNext(nullptr, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
-					int score;
-					if (MaxPieceValue[moveCapture(move->m)] < minCapture || swap(pos, move->m) < minCapture) continue;
-					ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
-					makeMove(pos, undo, move->m);
-					++sthread.nodes;
-					score = -searchNode<false, false, false>(pos, -target - 1, -target, newdepth, ss, sthread, inCutNode(nt) ? AllNode : CutNode);
-					unmakeMove(pos, undo);
-					if (sthread.stop) return 0;
-					if (score > target) return score;
-				}
-			}
-		}
+            if (depth >= 5) { // if we have a no-brainer capture we should just do it
+                sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseQuiescence, sthread.ts[ss.ply]); //h109
+                move_t* move;
+                int target = beta + 200;
+                int minCapture = target - ss.staticEvalValue;
+                int newdepth = depth - 5;
+                while ((move = sortNext(nullptr, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
+                    int score;
+                    if (MaxPieceValue[moveCapture(move->m)] < minCapture || swap(pos, move->m) < minCapture) continue;
+                    ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
+                    makeMove(pos, undo, move->m);
+                    ++sthread.nodes;
+                    score = -searchNode<false, false, false>(pos, -target - 1, -target, newdepth, ss, sthread, inCutNode(nt) ? AllNode : CutNode);
+                    unmakeMove(pos, undo);
+                    if (sthread.stop) return 0;
+                    if (score > target) return score;
+                }
+            }
+        }
 
         if (!inAllNode(nt) && !inCheck && depth >= (inPvNode(nt) ? 6 : 8) /*&& (inPvNode(nt) || ss.staticEvalValue + 100 > beta)*/) { // IID
             int newdepth = inPvNode(nt) ? depth - 2 : depth / 2;
@@ -449,7 +449,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     int lateMove = LATE_PRUNE_MIN + (inCutNode(nt) ? ((depth * depth) / 2) : (depth * depth));
     move_t* move;
     basic_move_t singularMove = EMPTY;
-//	const bool noProgress = ss.ssprev && ss.ssprev->ssprev && (ss.staticEvalValue < ss.ssprev->ssprev->staticEvalValue);
+    //	const bool noProgress = ss.ssprev && ss.ssprev->ssprev && (ss.staticEvalValue < ss.ssprev->ssprev->staticEvalValue);
     while ((move = sortNext(sp, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
         int score = -INF;
         int newdepth = depth - 1;
@@ -478,12 +478,12 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (!inRoot && !inSingular && !inSplitPoint) {
                     if (inCheck && ss.mvlist->size == 1) newdepth++;
                     else if (ss.hashMove == move->m && depth >= (inPvNode(nt) ? 6 : 8)) {
-						if (skipSingularSearch) {
-							if (ss.hashmoveIsSingular) {
-								singularMove = ss.hashMove;
-								newdepth++;
-							}
-						}
+                        if (skipSingularSearch) {
+                            if (ss.hashmoveIsSingular) {
+                                singularMove = ss.hashMove;
+                                newdepth++;
+                            }
+                        }
                         else {
                             int exploreDepth = depth / 2;
                             // if you have previously determined this should be extended, don't re-check as often
@@ -513,8 +513,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                         if (ss.playedMoves > lateMove) continue;
                         int const predictedDepth = MAX(0, newdepth - ReductionTable[1][MIN(depth, 63)][MIN(ss.playedMoves, 63)]);
                         int const gain = sthread.evalgains[historyIndex(pos.side, move->m)];
-						int const scoreAprox = ss.staticEvalValue + FutilityMarginTable[MIN(predictedDepth, MAX_FUT_MARGIN)][MIN(ss.playedMoves, 63)]
-							+ gain;
+                        int const scoreAprox = ss.staticEvalValue + FutilityMarginTable[MIN(predictedDepth, MAX_FUT_MARGIN)][MIN(ss.playedMoves, 63)]
+                            + gain;
                         if (scoreAprox < beta) {
                             if (predictedDepth < 8) continue;
                             partialReduction++;
@@ -528,8 +528,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                         bool skipFutility = (inCheck || (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsDangerousPawn(pos, move->m));
                         int reduction = ReductionTable[(inPvNode(nt) ? 0 : 1)][MIN(depth, 63)][MIN(ss.playedMoves, 63)];
                         partialReduction += skipFutility ? (reduction + 1) / 2 : reduction;
-//						if (noProgress && partialReduction > 1) partialReduction++;
-
+                        //						if (noProgress && partialReduction > 1) partialReduction++;
                     }
                 }
                 int newdepthclone = newdepth - partialReduction;
@@ -615,17 +614,17 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (ss.bestvalue >= beta) {
             ssprev.counterMove = ss.bestmove;
             UpdateHistory(pos, ss, sthread, depth);
-			if (inCutNode(nt)) mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove), ss.staticEvalValue);
-			else mTransTable.StoreAllLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove), ss.staticEvalValue);
+            if (inCutNode(nt)) mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove), ss.staticEvalValue);
+            else mTransTable.StoreAllLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove), ss.staticEvalValue);
         }
         else {
             if (inPvNode(nt) && ss.bestmove != EMPTY) {
                 ssprev.counterMove = ss.bestmove;
-				mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove), ss.staticEvalValue);
+                mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove), ss.staticEvalValue);
                 mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply));
             }
-			else if (inCutNode(nt)) mTransTable.StoreCutUpper(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, ss.ply), ss.staticEvalValue);
-			else mTransTable.StoreUpper(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, ss.ply), ss.staticEvalValue);
+            else if (inCutNode(nt)) mTransTable.StoreCutUpper(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, ss.ply), ss.staticEvalValue);
+            else mTransTable.StoreUpper(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, ss.ply), ss.staticEvalValue);
         }
     }
     return ss.bestvalue;
@@ -701,7 +700,7 @@ void Engine::ExtractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_m
     }
 }
 
-void Engine::RepopulateHash(position_t& pos, continuation_t& rootPV) { 
+void Engine::RepopulateHash(position_t& pos, continuation_t& rootPV) {
     int moveOn;
     pos_store_t undo[MAXPLY];
     for (moveOn = 0; moveOn + 1 <= rootPV.length; moveOn++) {
@@ -709,7 +708,7 @@ void Engine::RepopulateHash(position_t& pos, continuation_t& rootPV) {
         if (!move) break;
         PvHashEntry* entry = pvhashtable.pvEntryFromMove(pos.posStore.hash, move);
         if (nullptr == entry) break;
-        transtable.StoreExact(pos.posStore.hash, entry->pvMove(), entry->pvDepth(), entry->pvScore(), false,-INF);
+        transtable.StoreExact(pos.posStore.hash, entry->pvMove(), entry->pvDepth(), entry->pvScore(), false, -INF);
         makeMove(pos, undo[moveOn], move);
     }
     for (moveOn = moveOn - 1; moveOn >= 0; moveOn--) {
@@ -721,7 +720,7 @@ void Engine::DisplayPV(continuation_t& pv, int multipvIdx, int depth, int alpha,
     uint64 time;
     uint64 sumnodes = 0;
     PrintOutput log;
-	int scoreToDisplay = ((score * 100) / PawnValueEnd) - DrawValue[rootpos.side];
+    int scoreToDisplay = ((score * 100) / PawnValueEnd) - DrawValue[rootpos.side];
     time = getTime();
     info.last_time = time;
     time = info.last_time - info.start_time;
@@ -766,8 +765,8 @@ void Engine::TimeManagement(int depth) {
             }
         }
         bool easymovecutoff = false;
-        bool extendcutoff = false; 
-		if ((info.legalmoves < 3 || info.is_easymove) && timeElapsed >(info.start_time + (((info.time_limit_max - info.start_time) * EASYMOVE_TIME_CUTOFF) / 100))) easymovecutoff = true;
+        bool extendcutoff = false;
+        if ((info.legalmoves < 3 || info.is_easymove) && timeElapsed >(info.start_time + (((info.time_limit_max - info.start_time) * EASYMOVE_TIME_CUTOFF) / 100))) easymovecutoff = true;
         else if (timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * EXTEND_OR_STOP_TIME_CUTOFF) / 100))) extendcutoff = true;
         if (easymovecutoff || extendcutoff) {
             int64 addTime = 0;
@@ -864,7 +863,7 @@ void Engine::SendBestMove() {
 void Engine::GetBestMove(Thread& sthread) {
     int id;
     int alpha, beta;
-    SearchStack ss(0,0);
+    SearchStack ss(0, 0);
     SplitPoint rootsp;
     ss.moveGivesCheck = kingIsInCheck(rootpos);
     ss.dcc = discoveredCheckCandidates(rootpos, rootpos.side);
@@ -1006,7 +1005,7 @@ void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     info.Init();
 
     info.time_buffer = uci_opt[TimeBufferStr].GetInt();
-	info.contempt = (PawnValueEnd * uci_opt[ContemptStr].GetInt()) / 100; //adjust to correspond with expecation that pawn is worth 100
+    info.contempt = (PawnValueEnd * uci_opt[ContemptStr].GetInt()) / 100; //adjust to correspond with expecation that pawn is worth 100
     info.multipv = uci_opt[MultiPVStr].GetInt();
     info.mMinSplitDepth = uci_opt[MinSplitDepthStr].GetInt();
     info.mMaxActiveSplitsPerThread = uci_opt[ActiveSplitsStr].GetInt();
@@ -1090,16 +1089,16 @@ void Engine::StartThinking(GoCmdData& data, position_t& pos) {
         info.thinking_status = THINKING;
         LogInfo() << "info string Search status is THINKING";
     }
-	int phase;
-	if (pos.posStore.mat_summ[WHITE] < MAX_MATERIAL && pos.posStore.mat_summ[BLACK] < MAX_MATERIAL) {
-		phase = MaterialTable[pos.posStore.mat_summ[WHITE]][pos.posStore.mat_summ[BLACK]].phase;
-	}
-	else {
-		phase = 10;
-	}
-	int adjustedContempt = (info.contempt * (32 - phase)) / 32;
-	DrawValue[rootpos.side] = -adjustedContempt;
-	DrawValue[rootpos.side ^ 1] = adjustedContempt;
+    int phase;
+    if (pos.posStore.mat_summ[WHITE] < MAX_MATERIAL && pos.posStore.mat_summ[BLACK] < MAX_MATERIAL) {
+        phase = MaterialTable[pos.posStore.mat_summ[WHITE]][pos.posStore.mat_summ[BLACK]].phase;
+    }
+    else {
+        phase = 10;
+    }
+    int adjustedContempt = (info.contempt * (32 - phase)) / 32;
+    DrawValue[rootpos.side] = -adjustedContempt;
+    DrawValue[rootpos.side ^ 1] = adjustedContempt;
 
     ThreadFromIdx(0).TriggerCondition();
 }

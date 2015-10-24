@@ -64,14 +64,14 @@ const int RookValueMid1 = 466;
 const int QueenValueMid1 = 890;
 const int BishopPairBonusMid1 = 41;
 
-const int PawnValueMid2 = 110; 
+const int PawnValueMid2 = 110;
 const int KnightValueMid2 = 348;
 const int BishopValueMid2 = 333;
 const int RookValueMid2 = 560;
 const int QueenValueMid2 = 1080;
 const int BishopPairBonusMid2 = 51;
 
-const int PawnValueEnd = 120; 
+const int PawnValueEnd = 120;
 const int KnightValueEnd = 387;
 const int BishopValueEnd = 362;
 const int RookValueEnd = 612;

@@ -148,7 +148,7 @@ struct SearchStack {
         playedMoves(0),
         hisCnt(0),
         evalvalue(-INF),
-		staticEvalValue(-INF),
+        staticEvalValue(-INF),
         bestvalue(-INF),
         bestmove(EMPTY),
         dcc(0),
@@ -158,8 +158,8 @@ struct SearchStack {
         hashMove(EMPTY),
         hashDepth(-2),
         ply(_ply),
-		ssprev(prev),
-		mvlist(&movelist),
+        ssprev(prev),
+        mvlist(&movelist),
         hisMoves(&hisTable[0]) {}
     int playedMoves;
     int hisCnt;
@@ -171,7 +171,7 @@ struct SearchStack {
     bool moveGivesCheck;
     bool hashmoveIsSingular;
     int evalvalue;
-	int staticEvalValue;
+    int staticEvalValue;
     uint64 dcc;
     basic_move_t counterMove;
     basic_move_t threatMove;
@@ -179,7 +179,7 @@ struct SearchStack {
     basic_move_t hashMove;
     int hashDepth;
     int ply;
-	SearchStack *ssprev;
+    SearchStack *ssprev;
     movelist_t movelist;
     movelist_t* mvlist;
 };
