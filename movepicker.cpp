@@ -20,10 +20,14 @@
 extern bool moveIsTactical(uint32 m);
 extern int historyIndex(uint32 side, uint32 move);
 
-void sortInit(const position_t& pos, movelist_t& mvlist, uint64 pinned, uint32 hashmove, int scout, int eval, int depth, int type, ThreadStack& ts) {
+void sortInit(const position_t& pos, movelist_t& mvlist, uint64 pinned, uint32 hashmove, int scout, int eval, int depth, int type, int ply, Thread& sthread) {
     mvlist.transmove = hashmove;
-    mvlist.killer1 = ts.killer1;
-    mvlist.killer2 = ts.killer2;
+    mvlist.killer1 = sthread.killer1[ply];
+    mvlist.killer2 = sthread.killer2[ply];
+    if (pos.posStore.lastmove != EMPTY)
+        mvlist.refutationmove = sthread.refutation[historyIndex(pos.side, pos.posStore.lastmove)];
+    else
+        mvlist.refutationmove = EMPTY;
     mvlist.evalvalue = eval;
     mvlist.pos = 0;
     mvlist.size = 0;
@@ -106,6 +110,7 @@ void scoreEvasion(const position_t& pos, movelist_t& mvlist, Thread& sthread) {
                 }
                 else if (m->m == mvlist.killer1) m->s = MAXHIST + 4;
                 else if (m->m == mvlist.killer2) m->s = MAXHIST + 2;
+                else if (m->m == mvlist.refutationmove) m->s = MAXHIST + 1;
                 else m->s = scoreNonTactical(mvlist.side, m->m, sthread);
             }
         }
@@ -170,12 +175,14 @@ move_t* sortNext(SplitPoint* sp, SearchInfo& info, position_t& pos, movelist_t& 
                 if (move->m == mvlist.transmove) continue;
                 if (move->m == mvlist.killer1) continue;
                 if (move->m == mvlist.killer2) continue;
+                if (move->m == mvlist.refutationmove) continue;
                 if (!moveIsLegal(pos, move->m, mvlist.pinned, false)) continue;
                 break;
             case PH_NONTACTICAL_CHECKS:
                 if (move->m == mvlist.transmove) continue;
                 if (move->m == mvlist.killer1) continue;
-                if (move->m == mvlist.killer2) continue;
+                if (move->m == mvlist.killer2) continue;                
+                if (move->m == mvlist.refutationmove) continue;
                 if (!moveIsLegal(pos, move->m, mvlist.pinned, false)) continue;
                 break;
             case PH_NONTACTICAL_CHECKS_WIN:
@@ -245,6 +252,11 @@ move_t* sortNext(SplitPoint* sp, SearchInfo& info, position_t& pos, movelist_t& 
             if (mvlist.killer2 != EMPTY) {
                 mvlist.list[mvlist.size].m = mvlist.killer2;
                 mvlist.list[mvlist.size].s = MAXHIST - 1;
+                mvlist.size++;
+            }
+            if (mvlist.refutationmove != EMPTY && mvlist.refutationmove != mvlist.killer1 && mvlist.refutationmove != mvlist.killer2) {
+                mvlist.list[mvlist.size].m = mvlist.refutationmove;
+                mvlist.list[mvlist.size].s = MAXHIST - 2;
                 mvlist.size++;
             }
             break;
