@@ -85,9 +85,9 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
                 if (bp == 0 || bminors || br || bq) drawn += DRAWN;
                 else drawn += (DRAWN + DRAWN1) / 2;
             }
-			else if (wb == 2 && bq == 0 && br == 0 && bn == 1) {
-				drawn += DRAWN8 + 20*bp;
-			}
+            else if (wb == 2 && bq == 0 && br == 0 && bn == 1) {
+                drawn += DRAWN8 + 20 * bp;
+            }
             else if (bq || br || bminors) drawn += DRAWN1;
         }
         // R and N against R (RB vs. R already taken care of
@@ -162,12 +162,12 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
         }
         if (br) {
             if (wr) {
-				if (wminors - bminors < 2 && wr<= br && wq <= bq) {
-					int pGone;
-					if (wr > 1 || br > 1) pGone = Drawish(wp, bp, wn, bn, wb, bb, wr - 1, br - 1, wq, bq, 0) - 5;
-					else pGone = Drawish(wp, bp, wn, bn, wb, bb, wr - 1, br - 1, wq, bq, 0) - 8;
-					if (pGone > drawn) drawn = pGone;
-				}
+                if (wminors - bminors < 2 && wr <= br && wq <= bq) {
+                    int pGone;
+                    if (wr > 1 || br > 1) pGone = Drawish(wp, bp, wn, bn, wb, bb, wr - 1, br - 1, wq, bq, 0) - 5;
+                    else pGone = Drawish(wp, bp, wn, bn, wb, bb, wr - 1, br - 1, wq, bq, 0) - 8;
+                    if (pGone > drawn) drawn = pGone;
+                }
             }
             else if (wb) {
                 int pGone = Drawish(wp, bp, wn, bn, wb - 1, bb, wr, br - 1, wq, bq, 0) - 10;

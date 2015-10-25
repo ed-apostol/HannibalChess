@@ -185,7 +185,7 @@ move_t* sortNext(SplitPoint* sp, SearchInfo& info, position_t& pos, movelist_t& 
                 if (!moveIsLegal(pos, move->m, mvlist.pinned, false)) continue;
                 break;
             default:
-                // can't get here
+            // can't get here
                 if (sp != nullptr) sp->movelistlock.unlock();
                 return nullptr;
             }
