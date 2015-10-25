@@ -863,7 +863,7 @@ void Engine::SendBestMove() {
 void Engine::GetBestMove(Thread& sthread) {
     int id;
     int alpha, beta;
-    SearchStack ss(0, 0);
+    SearchStack ss(-1, 0);
     SplitPoint rootsp;
     ss.moveGivesCheck = kingIsInCheck(rootpos);
     ss.dcc = discoveredCheckCandidates(rootpos, rootpos.side);
