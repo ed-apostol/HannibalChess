@@ -162,8 +162,21 @@ public:
     inline uint32 HashLock() const {
         return mHashlock;
     }
-    inline basic_move_t Move() const {
-        return mMove;
+    inline basic_move_t Move(const position_t& pos) const {
+        basic_move_t nm = EMPTY;
+        if (mMove != EMPTY) {
+            nm = (mMove & 0xfff) | (pos.pieces[moveFrom(mMove)] << 12) | (pos.pieces[moveTo(mMove)] << 18);
+            switch (mMove >> 12) {
+            case H_CASTLE:  nm |= (M_CASTLE << 15);  break;
+            case H_PAWN2:   nm |= (M_PAWN2 << 15);   break;
+            case H_EP:      nm |= ((M_EP << 15) | (PAWN << 18)); break;
+            case H_PROMN:   nm |= (M_PROMN << 15);   break;
+            case H_PROMB:   nm |= (M_PROMB << 15);   break;
+            case H_PROMR:   nm |= (M_PROMR << 15);   break;
+            case H_PROMQ:   nm |= (M_PROMQ << 15);   break;
+            }
+        }
+        return nm;
     }
     inline int Age() const {
         return mAge;
@@ -190,7 +203,16 @@ public:
         mHashlock = hashlock;
     }
     inline void SetMove(const basic_move_t move) {
-        mMove = move;
+        mMove = move & 0xfff;
+        switch ((move >> 15) & 0x3C7) {
+        case M_CASTLE:  mMove |= (H_CASTLE << 12);  break;
+        case M_PAWN2:   mMove |= (H_PAWN2 << 12);   break;
+        case M_EP:      mMove |= (H_EP << 12);      break;
+        case M_PROMN:   mMove |= (H_PROMN << 12);   break;
+        case M_PROMB:   mMove |= (H_PROMB << 12);   break;
+        case M_PROMR:   mMove |= (H_PROMR << 12);   break;
+        case M_PROMQ:   mMove |= (H_PROMQ << 12);   break;
+        }
     }
     inline void SetAge(const uint8 date) {
         mAge = date;
@@ -220,8 +242,14 @@ public:
         evalValue = evalvalue;
     }
 private:
+    enum {
+        H_CASTLE = 1, H_PAWN2, H_EP, H_PROMN, H_PROMB, H_PROMR, H_PROMQ
+    };
+    enum {
+        M_CASTLE = 0x1, M_PAWN2 = 0x2, M_EP = 0x40, M_PROMN = 0x104, M_PROMB = 0x184, M_PROMR = 0x204, M_PROMQ = 0x284
+    };
     uint32 mHashlock;
-    uint32 mMove; //REALLY need this to be size 16 now that evalValue is in here
+    uint16 mMove;
     int16 mUpperValue;
     int16 mLowerValue;
     uint8 mMask;
