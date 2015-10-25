@@ -146,13 +146,9 @@ void Search::UpdateHistory(position_t& pos, SearchStack& ss, Thread& sthread, co
             index = historyIndex(pos.side, ss.hisMoves[i]);
             sthread.history[index] -= sthread.history[index] / (NEW_HISTORY - hisDepth);
         }
-        if (sthread.killer1[ss.ply] != ss.bestmove) {
-            sthread.killer2[ss.ply] = sthread.killer1[ss.ply];
-            sthread.killer1[ss.ply] = ss.bestmove;
-        }
-        if (pos.posStore.lastmove) {
-            index = historyIndex(pos.side, pos.posStore.lastmove);
-            sthread.refutation[index] = ss.bestmove;
+        if (sthread.ts[ss.ply].killer1 != ss.bestmove) {
+            sthread.ts[ss.ply].killer2 = sthread.ts[ss.ply].killer1;
+            sthread.ts[ss.ply].killer1 = ss.bestmove;
         }
     }
 }
@@ -213,11 +209,11 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
 
     ss.dcc = discoveredCheckCandidates(pos, pos.side);
     if (ssprev.moveGivesCheck) {
-        sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseEvasion, ss.ply, sthread);
+        sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseEvasion, sthread.ts[ss.ply]);
     }
     else {
-        if (inPv) sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_PVCHECK) ? MoveGenPhaseQuiescenceAndChecksPV : MoveGenPhaseQuiescence, ss.ply, sthread);
-        else sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_CHECK) ? MoveGenPhaseQuiescenceAndChecks : MoveGenPhaseQuiescence, ss.ply, sthread);
+        if (inPv) sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_PVCHECK) ? MoveGenPhaseQuiescenceAndChecksPV : MoveGenPhaseQuiescence, sthread.ts[ss.ply]);
+        else sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (depth > -Q_CHECK) ? MoveGenPhaseQuiescenceAndChecks : MoveGenPhaseQuiescence, sthread.ts[ss.ply]);
     }
     bool prunable = !ssprev.moveGivesCheck && !inPv && MinTwoBits(pos.color[pos.side ^ 1] & pos.pawns) && MinTwoBits(pos.color[pos.side ^ 1] & ~(pos.pawns | pos.kings));
     move_t* move;
@@ -385,7 +381,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 }
             }
             if (depth >= 5) { // if we have a no-brainer capture we should just do it
-                sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseQuiescence, ss.ply, sthread);
+                sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseQuiescence, sthread.ts[ss.ply]); //h109
                 move_t* move;
                 int target = beta + 200;
                 int minCapture = target - ss.staticEvalValue;
@@ -432,7 +428,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (inRoot) {
             ss = ssprev; // this is correct, ss.mvlist points to the ssprev.mvlist, at the same time, ssprev resets other member vars
             if (!mInfo.mvlist_initialized) {
-                sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseRoot, ss.ply, sthread);
+                sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseRoot, sthread.ts[ss.ply]);
             }
             else {
                 if (mInfo.multipvIdx > 0) {
@@ -446,10 +442,10 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         else {
             ss.dcc = discoveredCheckCandidates(pos, pos.side);
             if (inSingular) { //assumes singular only called when there is a bannedMove
-                sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ssprev.bannedMove, alpha, ss.evalvalue, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), ss.ply, sthread);
+                sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ssprev.bannedMove, alpha, ss.evalvalue, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), sthread.ts[ss.ply]);
                 sortNext(sp, mInfo, pos, *ss.mvlist, sthread);
             }
-            else sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), ss.ply, sthread);
+            else sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), sthread.ts[ss.ply]);
         }
     }
     int lateMove = LATE_PRUNE_MIN + (depth * depth);

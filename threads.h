@@ -85,6 +85,15 @@ struct SplitPoint {
     Spinlock movesplayedlock;
 };
 
+struct ThreadStack {
+    void Init() {
+        killer1 = EMPTY;
+        killer2 = EMPTY;
+    }
+    basic_move_t killer1;
+    basic_move_t killer2;
+};
+
 class ThreadBase {
 public:
     ThreadBase(int _thread_id) : thread_id(_thread_id) {
@@ -153,9 +162,7 @@ public:
 
     volatile int num_sp;
     SplitPoint *activeSplitPoint;
-    basic_move_t killer1[MAXPLY];
-    basic_move_t killer2[MAXPLY];
-    basic_move_t refutation[1024];
+    ThreadStack ts[MAXPLY];
     int32 evalgains[1024];
     int32 history[1024];
     PawnHashTable pt;

@@ -88,7 +88,6 @@ struct movelist_t {
     basic_move_t transmove;
     basic_move_t killer1;
     basic_move_t killer2;
-    basic_move_t refutationmove;
     int32 evalvalue;
     int32 scout;
     int32 depth;
