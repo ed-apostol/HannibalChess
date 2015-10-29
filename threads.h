@@ -175,11 +175,11 @@ private:
 
 class TimerThread : public ThreadBase {
 public:
-    TimerThread(std::function<void()> _cbfunc) : ThreadBase(0), CBFuncCheckTimer(_cbfunc) {
+    TimerThread(std::function<int64()> _cbfunc) : ThreadBase(0), CBFuncCheckTimer(_cbfunc) {
         Init();
         NativeThread() = std::thread(&TimerThread::IdleLoop, this);
     }
     void IdleLoop();
 private:
-    std::function<void()> CBFuncCheckTimer;
+    std::function<int64()> CBFuncCheckTimer;
 };

@@ -230,7 +230,7 @@ public:
     void RepopulateHash(position_t& pos, continuation_t& rootPV);
     void DisplayPV(continuation_t& pv, int multipvIdx, int depth, int alpha, int beta, int score);
     void TimeManagement(int depth);
-    void CheckTime();
+    int64 CheckTime();
     void SearchFromIdleLoop(SplitPoint& sp, Thread& sthread);
     void GetBestMove(Thread& sthread);
     void StartThinking(GoCmdData& data, position_t& pos);

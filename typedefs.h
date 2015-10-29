@@ -66,7 +66,7 @@ enum HashType {
 };
 
 enum HashMask {
-    MNoMoves = 1, MSingular = 2
+    MNoMoves = 1, MSingular = 2, MSkipSingular = 4
 };
 
 typedef uint32 basic_move_t;
@@ -145,6 +145,7 @@ struct SearchStack {
         reducedMove(false),
         moveGivesCheck(false),
         hashmoveIsSingular(false),
+        skipSingularSearch(false),
         playedMoves(0),
         hisCnt(0),
         evalvalue(-INF),
@@ -156,7 +157,7 @@ struct SearchStack {
         threatMove(EMPTY),
         bannedMove(EMPTY),
         hashMove(EMPTY),
-        hashDepth(-2),
+        hashDepth(0),
         ply(_ply),
         ssprev(prev),
         mvlist(&movelist),
@@ -170,6 +171,7 @@ struct SearchStack {
     bool reducedMove;
     bool moveGivesCheck;
     bool hashmoveIsSingular;
+    bool skipSingularSearch;
     int evalvalue;
     int staticEvalValue;
     uint64 dcc;

@@ -165,10 +165,15 @@ void Thread::SearchSplitPoint(position_t& pos, SearchStack* ss, SearchStack* ssp
 }
 
 void TimerThread::IdleLoop() {
+    using namespace std::chrono;
+    int64 interval = 50;
     while (!exit_flag) {
         std::unique_lock<std::mutex> lk(threadLock);
-        auto now = std::chrono::system_clock::now();
-        sleepCondition.wait_until(lk, stop ? now + std::chrono::hours(INT_MAX) : now + std::chrono::milliseconds(50));
-        if (!exit_flag && !stop) CBFuncCheckTimer();
+        system_clock::time_point now = system_clock::now();
+        sleepCondition.wait_until(lk, stop ? now + hours(INT_MAX) : now + milliseconds(interval));
+        if (!exit_flag && !stop) {
+            interval = CBFuncCheckTimer();
+            //PrintOutput() << "interval: " << interval;
+        }
     }
 }
