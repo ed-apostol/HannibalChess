@@ -448,7 +448,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             else sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), sthread.ts[ss.ply]);
         }
     }
-    int lateMove = LATE_PRUNE_MIN + (depth * depth);
+    int lateMove = LATE_PRUNE_MIN + (depth * depth)/2;
     move_t* move;
     basic_move_t singularMove = EMPTY;
     //	const bool noProgress = ss.ssprev && ss.ssprev->ssprev && (ss.staticEvalValue < ss.ssprev->ssprev->staticEvalValue);
@@ -624,7 +624,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove), ss.staticEvalValue);
                 mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply));
             }
-            mTransTable.StoreUpper(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, ss.ply), ss.staticEvalValue);
+            else mTransTable.StoreUpper(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, ss.ply), ss.staticEvalValue);
         }
     }
     return ss.bestvalue;
