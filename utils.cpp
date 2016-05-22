@@ -64,7 +64,7 @@ char *move2Str(basic_move_t m) {
         SQFILE(moveTo(m)) + 'a',
         '1' + SQRANK(moveTo(m)),
         promstr[movePromote(m)]
-        );
+    );
     return str;
 }
 
@@ -78,7 +78,7 @@ char *sq2Str(int sq) {
         SQFILE(sq) + 'a',
         '1' + SQRANK(sq),
         '\0'
-        );
+    );
     return str;
 }
 

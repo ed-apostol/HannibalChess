@@ -32,7 +32,7 @@
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
 const std::string Interface::year = "2015";
-const std::string Interface::version = "1.6.28";
+const std::string Interface::version = "1.6.29";
 const std::string Interface::arch = "x64";
 
 void Interface::Info() {
@@ -155,12 +155,16 @@ void Interface::Position(Engine& engine, position_t& pos, std::istringstream& st
         return;
     }
 
+    engine.mUndoStack.clear();
     setPosition(pos, fen.c_str());
     while (stream >> token) {
         movelist_t ml;
         genLegal(pos, ml, true);
-        m = parseMove(ml, token.c_str());
-        if (m) makeMove(pos, engine.UndoStack[sp++], m);
+        if (m = parseMove(ml, token.c_str())) {
+            size_t idx = engine.mUndoStack.size();
+            engine.mUndoStack.push_back(new pos_store_t());
+            makeMove(pos, *engine.mUndoStack[idx], m);
+        }
         else break;
     }
 }

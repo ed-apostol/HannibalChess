@@ -448,7 +448,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             else sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, (inCheck ? MoveGenPhaseEvasion : MoveGenPhaseStandard), sthread.ts[ss.ply]);
         }
     }
-    int lateMove = LATE_PRUNE_MIN + (depth * depth)/2;
+    int lateMove = LATE_PRUNE_MIN + (depth * depth) / 2;
     move_t* move;
     basic_move_t singularMove = EMPTY;
     //	const bool noProgress = ss.ssprev && ss.ssprev->ssprev && (ss.staticEvalValue < ss.ssprev->ssprev->staticEvalValue);
@@ -594,7 +594,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (!inSplitPoint && !inSingular && !sthread.stop && !inCheck && sthread.num_sp < mInfo.mMaxActiveSplitsPerThread
             && mEngine.ThreadNum() > 1 && depth >= mInfo.mMinSplitDepth
             && (!sthread.activeSplitPoint || !sthread.activeSplitPoint->workAvailable
-            || ((sthread.activeSplitPoint->depth - depth <= 1) && sthread.num_sp < 2))) {
+                || ((sthread.activeSplitPoint->depth - depth <= 1) && sthread.num_sp < 2))) {
             sthread.SearchSplitPoint(pos, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot);
             if (sthread.stop) return 0;
             break;
@@ -646,6 +646,7 @@ Engine::Engine() {
 }
 
 Engine::~Engine() {
+    mUndoStack.clear();
     delete search;
     SetNumThreads(0);
     delete mTimerThread;
@@ -766,7 +767,7 @@ void Engine::TimeManagement(int depth) {
         }
         bool easymovecutoff = false;
         bool extendcutoff = false;
-        if ((info.legalmoves < 3 || info.is_easymove) && timeElapsed >(info.start_time + (((info.time_limit_max - info.start_time) * EASYMOVE_TIME_CUTOFF) / 100))) easymovecutoff = true;
+        if ((info.legalmoves < 3 || info.is_easymove) && timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * EASYMOVE_TIME_CUTOFF) / 100))) easymovecutoff = true;
         else if (timeElapsed > (info.start_time + (((info.time_limit_max - info.start_time) * EXTEND_OR_STOP_TIME_CUTOFF) / 100))) extendcutoff = true;
         if (easymovecutoff || extendcutoff) {
             int64 addTime = 0;

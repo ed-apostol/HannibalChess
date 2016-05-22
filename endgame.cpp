@@ -132,9 +132,9 @@ void DrawnRookPawn(int attacker, const position_t& pos, int *draw, int32 mover) 
         // do draw when king trapped in front of own pawn
         else if ((bishop == 0) && ((SQFILE(pos.kpos[attacker]) == FileA &&
             (pos.kpos[defender] == pos.kpos[attacker] + 2 || (mover == defender && DISTANCE(pos.kpos[attacker] + 2, pos.kpos[defender]) == 1)
-            || (SQFILE(pos.kpos[defender]) == FileC && (DISTANCE(pos.kpos[defender], qs + 2) < DISTANCE(pos.kpos[attacker], qs)
-            || DISTANCE(pos.kpos[defender], PAWN_PROMOTE(SQFILE(pos.kpos[defender]), attacker)) - (mover == defender) <= 1)))) ||
-            (pos.kpos[defender] == qs + 2 && (KingMoves[qs] & pawns) == 0))) {
+                || (SQFILE(pos.kpos[defender]) == FileC && (DISTANCE(pos.kpos[defender], qs + 2) < DISTANCE(pos.kpos[attacker], qs)
+                    || DISTANCE(pos.kpos[defender], PAWN_PROMOTE(SQFILE(pos.kpos[defender]), attacker)) - (mover == defender) <= 1)))) ||
+                    (pos.kpos[defender] == qs + 2 && (KingMoves[qs] & pawns) == 0))) {
             *draw = MAX_DRAW;
         }
     }
@@ -149,9 +149,9 @@ void DrawnRookPawn(int attacker, const position_t& pos, int *draw, int32 mover) 
         }
         else if (bishop == 0 && ((SQFILE(pos.kpos[attacker]) == FileH &&
             (pos.kpos[defender] == pos.kpos[attacker] - 2 || (mover == defender && DISTANCE(pos.kpos[attacker] - 2, pos.kpos[defender]) == 1)
-            || (SQFILE(pos.kpos[defender]) == FileF && (DISTANCE(pos.kpos[defender], qs - 2) < DISTANCE(pos.kpos[attacker], qs)
-            || DISTANCE(pos.kpos[defender], PAWN_PROMOTE(SQFILE(pos.kpos[defender]), attacker)) - (mover == defender) <= 1)))) ||
-            (pos.kpos[defender] == qs - 2 && (KingMoves[qs] & pawns) == 0))) {
+                || (SQFILE(pos.kpos[defender]) == FileF && (DISTANCE(pos.kpos[defender], qs - 2) < DISTANCE(pos.kpos[attacker], qs)
+                    || DISTANCE(pos.kpos[defender], PAWN_PROMOTE(SQFILE(pos.kpos[defender]), attacker)) - (mover == defender) <= 1)))) ||
+                    (pos.kpos[defender] == qs - 2 && (KingMoves[qs] & pawns) == 0))) {
             *draw = MAX_DRAW;
         }
     }
@@ -373,7 +373,7 @@ void DrawnNP(int attacker, const position_t& pos, eval_info_t& ei, int *draw) {
     if (((pawn ^ BitMask[(PAWN_PROMOTE(FileA, attacker) - PAWN_MOVE_INC(attacker))]) == 0
         && DISTANCE(pos.kpos[defender], PAWN_PROMOTE(FileA, attacker)) <= 1) ||
         ((pawn ^ BitMask[(PAWN_PROMOTE(FileH, attacker) - PAWN_MOVE_INC(attacker))]) == 0
-        && DISTANCE(pos.kpos[defender], PAWN_PROMOTE(FileH, attacker)) <= 1))
+            && DISTANCE(pos.kpos[defender], PAWN_PROMOTE(FileH, attacker)) <= 1))
         *draw = MAX_DRAW;
     // if opponent king is in front and they have a piece, darn drawn
     if (ei.MLindex[defender] >= MLN) {
@@ -568,7 +568,7 @@ void QueenvPawn(int attacker, const position_t& pos, eval_info_t& ei, int *score
         // there is one position where this is wrong
         if ((dDist == 1 && DISTANCE(pSq, (int)GetOnlyBit(pos.queens)) > 1) ||
             ((ei.atkkings[defender] & Rank8ByColorBB[defender]) &&
-            dDist <= 2)) {
+                dDist <= 2)) {
             int eDist = DISTANCE(pos.kpos[attacker], pSq);
             *score /= 5;
             if (eDist < 3) *draw = DRAWISH + 5;
