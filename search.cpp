@@ -282,7 +282,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     SplitPoint* sp = nullptr;
     SearchStack ss(ssprev.ply + 1, &ssprev);
     pos_store_t undo;
-    bool skipSingularSearch = false;
     ASSERT(alpha < beta);
     ASSERT(depth >= 1);
     ASSERT(!inSingular || ssprev.bannedMove != 0);
@@ -323,8 +322,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (hmove != EMPTY && entry->LowerDepth() > ss.hashDepth) {
                     ss.hashMove = hmove;
                     ss.hashDepth = entry->LowerDepth();
-                    ss.hashmoveIsSingular = ((entry->Mask() & MSingular) != 0);
-                    skipSingularSearch = (entry->LowerDepth() >= depth - depth % 2);
                 }
                 if (entry->LowerDepth() > evalDepth) {
                     evalDepth = entry->LowerDepth();
@@ -383,7 +380,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             if (depth >= 5) { // if we have a no-brainer capture we should just do it
                 sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseQuiescence, sthread.ts[ss.ply]); //h109
                 move_t* move;
-                int target = beta + 200;
+                int target = beta + 200; // TODO: to be tuned
                 int minCapture = target - ss.staticEvalValue;
                 int newdepth = depth - 5;
                 while ((move = sortNext(nullptr, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
@@ -400,16 +397,14 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             }
         }
 
-        if (!inCheck && depth >= (inPvNode(nt) ? 6 : 8) /*&& (inPvNode(nt) || ss.staticEvalValue + 100 > beta)*/) { // IID
-            int newdepth = inPvNode(nt) ? depth - 2 : depth / 2;
-            if (ss.hashMove == EMPTY || ss.hashDepth < newdepth) {
-                int score = searchNode<false, false, false>(pos, alpha, beta, newdepth, ssprev, sthread, nt);
-                if (sthread.stop) return 0;
-                ss.evalvalue = score;
-                if (score > alpha) { //no need to adjust singular search here, since it would not research if conditions for skipping search were met
-                    ss.hashMove = ssprev.counterMove;
-                    ss.hashDepth = newdepth;
-                }
+        if (!inCheck && ss.hashMove == EMPTY && depth >= (inPvNode(nt) ? 6 : 8) && (inPvNode(nt) || ss.staticEvalValue + 100 > beta)) { // IID
+            int newdepth = inPvNode(nt) ? depth - 2 : depth / 2;            
+            int score = searchNode<false, false, false>(pos, alpha, beta, newdepth, ssprev, sthread, nt);
+            if (sthread.stop) return 0;
+            ss.evalvalue = score;
+            if (score > alpha) { //no need to adjust singular search here, since it would not research if conditions for skipping search were met
+                ss.hashMove = ssprev.counterMove;
+                ss.hashDepth = newdepth;
             }
         }
     }
@@ -479,27 +474,15 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             if (ss.bestvalue == -INF) {
                 if (!inRoot && !inSingular && !inSplitPoint) {
                     if (inCheck && ss.mvlist->size == 1) newdepth++;
-                    else if (ss.hashMove == move->m && depth >= (inPvNode(nt) ? 6 : 8)) {
-                        if (skipSingularSearch) {
-                            if (ss.hashmoveIsSingular) {
-                                singularMove = ss.hashMove;
-                                newdepth++;
-                            }
-                        }
-                        else {
-                            int exploreDepth = depth / 2;
-                            // if you have previously determined this should be extended, don't re-check as often
-                            if (ss.hashDepth >= exploreDepth) { //two reasons to extend are: a) tree is likely smaller than normal and/or b) tree is likely critical
-                                int targetScore = ss.evalvalue - EXPLORE_BASE_CUTOFF - depth * EXPLORE_MULT_CUTOFF;
-                                ssprev.bannedMove = ss.hashMove;
-                                int score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, exploreDepth, ssprev, sthread, nt);
-                                ssprev.bannedMove = EMPTY;
-                                if (sthread.stop) return 0;
-                                if (score <= targetScore) {
-                                    singularMove = ss.hashMove;
-                                    newdepth++;
-                                }
-                            }
+                    else if (ss.hashMove == move->m && ss.hashDepth >= depth / 2 && depth >= (inPvNode(nt) ? 6 : 8)) {
+                        int targetScore = ss.evalvalue - EXPLORE_BASE_CUTOFF - depth * EXPLORE_MULT_CUTOFF;
+                        ssprev.bannedMove = ss.hashMove;
+                        int score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, depth / 2, ssprev, sthread, nt);
+                        ssprev.bannedMove = EMPTY;
+                        if (sthread.stop) return 0;
+                        if (score <= targetScore) {
+                            singularMove = ss.hashMove;
+                            newdepth++;
                         }
                     }
                 }
