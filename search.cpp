@@ -348,7 +348,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             static const int MaxRazorDepth = 10;
             int rvalue;
             if (depth < MaxRazorDepth && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && beta <= MAXEVAL
-                && ss.evalvalue >(rvalue = beta + FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
+                && ss.evalvalue > (rvalue = beta + FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
                 return rvalue; //consider enforcing a max of MAXEVAL
             }
             if (depth < MaxRazorDepth && pos.posStore.lastmove != EMPTY
@@ -523,14 +523,8 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 ss.reducedMove = (newdepthclone < newdepth);
                 score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepthclone, ss, sthread, inCutNode(nt) ? AllNode : CutNode);
                 if (!sthread.stop && ss.reducedMove && score > alpha) {
-                    if (partialReduction >= 4) {
-                        newdepthclone = newdepth - partialReduction / 2;
-                        score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepthclone, ss, sthread, inCutNode(nt) ? AllNode : CutNode);
-                    }
-                    if (!sthread.stop && score > alpha) {
-                        ss.reducedMove = false;
-                        score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepth, ss, sthread, AllNode);
-                    }
+                    ss.reducedMove = false;
+                    score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepth, ss, sthread, AllNode);
                 }
                 if (inPvNode(nt) && !sthread.stop && score > alpha) {
                     if (inRoot) mInfo.research = 1;
