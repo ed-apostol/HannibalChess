@@ -165,35 +165,37 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     initNode(sthread);
     if (sthread.stop) return 0;
 
-    for (TransEntry *entry = mTransTable.Entry(pos.posStore.hash), *end = entry + mTransTable.BucketSize(); entry != end; ++entry) {
-        if (entry->HashLock() == LOCK(pos.posStore.hash)) {
-            basic_move_t hmove = entry->Move(pos);
-            entry->SetAge(mTransTable.Date());
-            if (!inPv) { // TODO: re-use values from here to evalvalue?
-                if (entry->LowerDepth() != 0) {
-                    int score = scoreFromTrans(entry->LowerValue(), ss.ply);
-                    if (score > alpha) {
-                        ssprev.counterMove = hmove;
-                        return score;
-                    }
-                }
-                if (entry->UpperDepth() != 0) {
-                    int score = scoreFromTrans(entry->UpperValue(), ss.ply);
-                    if (score < beta) return score;
-                }
-            }
-            if (hmove != EMPTY && entry->LowerDepth() > ss.hashDepth && moveIsTactical(hmove)) {
-                ss.hashDepth = entry->LowerDepth();
-                ss.hashMove = hmove;
-            }
-            ss.staticEvalValue = entry->EvalValue();
-            break;
+    TransEntry *entry = mTransTable.Probe(pos.posStore.hash);    
+    if (entry != nullptr) {
+        basic_move_t hmove = entry->Move(pos);
+        if (entry->Mask() & MNoMoves) {
+            if (ssprev.moveGivesCheck) return -INF + ss.ply;
+            else return DrawValue[pos.side];
         }
+        if (!inPv) { // TODO: re-use values from here to evalvalue?
+            if (entry->LowerDepth() != 0) {
+                int score = scoreFromTrans(entry->LowerValue(), ss.ply);
+                if (score > alpha) {
+                    ssprev.counterMove = hmove;
+                    return score;
+                }
+            }
+            if (entry->UpperDepth() != 0) {
+                int score = scoreFromTrans(entry->UpperValue(), ss.ply);
+                if (score < beta) return score;
+            }
+        }
+        if (hmove != EMPTY && moveIsTactical(hmove)) {
+            ss.hashDepth = entry->LowerDepth();
+            ss.hashMove = hmove;
+        }
+        ss.staticEvalValue = entry->EvalValue();
     }
+    
     if (ss.ply >= MAXPLY - 1) return eval(pos, sthread);
     if (!ssprev.moveGivesCheck) {
         if (ss.staticEvalValue == -INF) {
-            ss.staticEvalValue = eval(pos, sthread); //TODO consider hashing this
+            ss.staticEvalValue = eval(pos, sthread);
         }
         ss.evalvalue = ss.bestvalue = ss.staticEvalValue;
         updateEvalgains(pos, pos.posStore.lastmove, ssprev.staticEvalValue, ss.staticEvalValue, sthread);
@@ -247,7 +249,7 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     }
     if (ssprev.moveGivesCheck && ss.bestvalue == -INF) {
         ss.bestvalue = (-INF + ss.ply);
-        mTransTable.StoreNoMoves(pos.posStore.hash, -1, scoreToTrans(ss.bestvalue, ss.ply));
+        mTransTable.StoreNoMoves(pos.posStore.hash);
         return ss.bestvalue;
     }
     if (ss.bestvalue >= beta) {
@@ -290,54 +292,52 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     if (sthread.stop) return 0;
 
     if (!inRoot && !inSingular && !inSplitPoint) {
+        //int evalDepth = -2;
         int evalDepth = 0;
 
         alpha = MAX(-INF + ss.ply, alpha);
         beta = MIN(INF - ss.ply - 1, beta);
         if (alpha >= beta) return alpha;
 
-        for (TransEntry *entry = mTransTable.Entry(pos.posStore.hash), *end = entry + mTransTable.BucketSize(); entry != end; ++entry) {
-            if (entry->HashLock() == LOCK(pos.posStore.hash)) {
-                basic_move_t hmove = entry->Move(pos);
-                entry->SetAge(mTransTable.Date());
-                if (entry->Mask() & MNoMoves) {
-                    if (inCheck) return -INF + ss.ply;
-                    else return DrawValue[pos.side];
-                }
-                if (!inPvNode(nt)) {
-                    if (entry->LowerDepth() >= depth && (hmove != EMPTY || pos.posStore.lastmove == EMPTY)) {
-                        int score = scoreFromTrans(entry->LowerValue(), ss.ply);
-                        if (score > alpha) {
-                            ss.bestmove = ssprev.counterMove = hmove;
-                            UpdateHistory(pos, ss, sthread, depth);
-                            return score;
-                        }
-                    }
-                    if (entry->UpperDepth() >= depth) {
-                        int score = scoreFromTrans(entry->UpperValue(), ss.ply);
-                        ASSERT(valueIsOk(score));
-                        if (score < beta) return score;
-                    }
-                }
-                if (hmove != EMPTY && entry->LowerDepth() > ss.hashDepth) {
-                    ss.hashMove = hmove;
-                    ss.hashDepth = entry->LowerDepth();
-                }
-                if (entry->LowerDepth() > evalDepth) {
-                    evalDepth = entry->LowerDepth();
-                    ss.evalvalue = scoreFromTrans(entry->LowerValue(), ss.ply);
-                }
-                if (entry->UpperDepth() > evalDepth) {
-                    evalDepth = entry->UpperDepth();
-                    ss.evalvalue = scoreFromTrans(entry->UpperValue(), ss.ply);
-                }
-                ss.staticEvalValue = entry->EvalValue();
-                break;
+        TransEntry *entry = mTransTable.Probe(pos.posStore.hash);
+        if (entry != nullptr) {
+            basic_move_t hmove = entry->Move(pos);
+            if (entry->Mask() & MNoMoves) {
+                if (inCheck) return -INF + ss.ply;
+                else return DrawValue[pos.side];
             }
+            if (!inPvNode(nt)) {
+                if (entry->LowerDepth() >= depth && (hmove != EMPTY || pos.posStore.lastmove == EMPTY)) {
+                    int score = scoreFromTrans(entry->LowerValue(), ss.ply);
+                    if (score > alpha) {
+                        ss.bestmove = ssprev.counterMove = hmove;
+                        UpdateHistory(pos, ss, sthread, depth);
+                        return score;
+                    }
+                }
+                if (entry->UpperDepth() >= depth) {
+                    int score = scoreFromTrans(entry->UpperValue(), ss.ply);
+                    ASSERT(valueIsOk(score));
+                    if (score < beta) return score;
+                }
+            }
+            if (hmove != EMPTY) {
+                ss.hashMove = hmove;
+                ss.hashDepth = entry->LowerDepth();
+            }
+            if (entry->LowerDepth() > evalDepth) {
+                evalDepth = entry->LowerDepth();
+                ss.evalvalue = scoreFromTrans(entry->LowerValue(), ss.ply);
+            }
+            if (entry->UpperDepth() > evalDepth) {
+                evalDepth = entry->UpperDepth();
+                ss.evalvalue = scoreFromTrans(entry->UpperValue(), ss.ply);
+            }
+            ss.staticEvalValue = entry->EvalValue();
         }
         if (ss.staticEvalValue == -INF) {
             ss.staticEvalValue = eval(pos, sthread);
-            mTransTable.StoreLower(pos.posStore.hash, ss.hashMove, -1, ss.staticEvalValue, false, ss.staticEvalValue); //make sure we have Eval
+            mTransTable.StoreEval(pos.posStore.hash, ss.staticEvalValue);
         }
         if (ss.evalvalue == -INF) {
             ss.evalvalue = ss.staticEvalValue;
@@ -569,7 +569,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (ss.playedMoves == 0) {
             if (inCheck) ss.bestvalue = -INF + ss.ply;
             else ss.bestvalue = DrawValue[pos.side];
-            mTransTable.StoreNoMoves(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, ss.ply));
+            mTransTable.StoreNoMoves(pos.posStore.hash);
             return ss.bestvalue;
         }
         if (ss.bestvalue >= beta) {
@@ -700,7 +700,6 @@ void Engine::DisplayPV(continuation_t& pv, int multipvIdx, int depth, int alpha,
     log << " time " << time;
     sumnodes = ComputeNodes();
     log << " nodes " << sumnodes;
-    log << " hashfull " << (transtable.Used() * 1000) / transtable.HashSize();
     if (time > 10) log << " nps " << (sumnodes * 1000) / (time);
 
     if (multipvIdx > 0) log << " multipv " << multipvIdx + 1;
@@ -777,7 +776,6 @@ void Engine::CheckTime() {
             uint64 sumnodes = ComputeNodes();
             PrintOutput() << "info time " << time
                 << " nodes " << sumnodes
-                << " hashfull " << (transtable.Used() * 1000) / transtable.HashSize()
                 << " nps " << (sumnodes * 1000ULL) / (time);
         }
     }

@@ -41,17 +41,13 @@ public:
             mpTable = new Entity[mSize];
         }
     }
-    size_t HashSize() const {
-        return mSize;
-    }
-    uint64 BucketSize() const {
-        return mBucketSize;
-    }
+    size_t HashSize() const { return mSize; }
+    size_t BucketSize() const { return mBucketSize; }
 protected:
     Entity* mpTable;
     size_t mSize;
-    uint64 mMask;
-    uint64 mBucketSize;
+    size_t mMask;
+    size_t mBucketSize;
 };
 
 struct PvHashEntry {
@@ -62,42 +58,22 @@ public:
         mScore(0),
         mDepth(0),
         mAge(0) {}
-    inline uint32 pvHashLock() const {
-        return mHashlock;
-    }
-    inline basic_move_t pvMove() const {
-        return mMove;
-    }
-    inline int pvAge() const {
-        return mAge;
-    }
-    inline int pvDepth() const {
-        return mDepth;
-    }
-    inline int pvScore() const {
-        return mScore;
-    }
+    inline uint32 pvHashLock() const { return mHashlock; }
+    inline basic_move_t pvMove() const { return mMove; }
+    inline int pvAge() const { return mAge; }
+    inline int pvDepth() const { return mDepth; }
+    inline int pvScore() const { return mScore; }
 
-    inline void pvSetHashLock(const uint32 hashlock) {
-        mHashlock = hashlock;
-    }
-    inline void pvSetMove(const basic_move_t move) {
-        mMove = move;
-    }
-    inline void pvSetAge(const uint8 age) {
-        mAge = age;
-    }
-    inline void pvSetDepth(const int8 depth) {
-        mDepth = depth;
-    }
-    inline void pvSetValue(const int16 value) {
-        mScore = value;
-    }
+    inline void pvSetHashLock(const uint32 hashlock) { mHashlock = hashlock; }
+    inline void pvSetMove(const basic_move_t move) { mMove = move; }
+    inline void pvSetAge(const uint8 age) { mAge = age; }
+    inline void pvSetDepth(const int8 depth) { mDepth = depth; }
+    inline void pvSetValue(const int16 value) { mScore = value; }
 private:
     uint32 mHashlock;
     basic_move_t mMove;
     int16 mScore;
-    uint8 mDepth;
+    int8 mDepth;
     uint8 mAge;
 };
 
@@ -111,12 +87,8 @@ public:
     void pvStore(uint64 hash, basic_move_t move, int depth, int16 value);
     PvHashEntry *pvEntry(const uint64 hash) const;
     PvHashEntry *pvEntryFromMove(const uint64 hash, basic_move_t move) const;
-    int32 Date() const {
-        return mDate;
-    }
-    int32 Age(const int Idx) const {
-        return mAge[Idx];
-    }
+    int32 Date() const { return mDate; }
+    int32 Age(const int Idx) const { return mAge[Idx]; }
 private:
     int32 mDate;
     int32 mAge[DATESIZE];
@@ -159,9 +131,7 @@ public:
         mAge(0),
         mUpperDepth(0),
         mLowerDepth(0) {}
-    inline uint32 HashLock() const {
-        return mHashlock;
-    }
+    inline uint32 HashLock() const { return mHashlock; }
     inline basic_move_t Move(const position_t& pos) const {
         basic_move_t nm = EMPTY;
         if (mMove != EMPTY) {
@@ -178,30 +148,14 @@ public:
         }
         return nm;
     }
-    inline int Age() const {
-        return mAge;
-    }
-    inline int Mask() const {
-        return mMask;
-    }
-    inline int LowerDepth() const {
-        return mLowerDepth;
-    }
-    inline int UpperDepth() const {
-        return mUpperDepth;
-    }
-    inline int LowerValue() const {
-        return mLowerValue;
-    }
-    inline int UpperValue() const {
-        return mUpperValue;
-    }
-    inline int EvalValue() const {
-        return evalValue;
-    }
-    inline void SetHashLock(const uint32 hashlock) {
-        mHashlock = hashlock;
-    }
+    inline int Age() const { return mAge; }
+    inline int Mask() const { return mMask; }
+    inline int LowerDepth() const { return mLowerDepth; }
+    inline int UpperDepth() const { return mUpperDepth; }
+    inline int LowerValue() const { return mLowerValue; }
+    inline int UpperValue() const { return mUpperValue; }
+    inline int EvalValue() const { return evalValue; }
+    inline void SetHashLock(const uint32 hashlock) { mHashlock = hashlock; }
     inline void SetMove(const basic_move_t move) {
         mMove = move & 0xfff;
         switch ((move >> 15) & 0x3C7) {
@@ -214,33 +168,15 @@ public:
         case M_PROMQ:   mMove |= (H_PROMQ << 12);   break;
         }
     }
-    inline void SetAge(const uint8 date) {
-        mAge = date;
-    }
-    inline void SetMask(const uint8 mask) {
-        mMask |= mask;
-    }
-    inline void RemMask(const uint8 mask) {
-        mMask &= ~mask;
-    }
-    inline void ReplaceMask(const uint8 mask) {
-        mMask = mask;
-    }
-    inline void SetLowerDepth(const int8 lowerdepth) {
-        mLowerDepth = lowerdepth;
-    }
-    inline void SetUpperDepth(const int8 upperdepth) {
-        mUpperDepth = upperdepth;
-    }
-    inline void SetLowerValue(const int16 lowervalue) {
-        mLowerValue = lowervalue;
-    }
-    inline void SetUpperValue(const int16 uppervalue) {
-        mUpperValue = uppervalue;
-    }
-    inline void SetEvalValue(const int16 evalvalue) {
-        evalValue = evalvalue;
-    }
+    inline void SetAge(const uint8 date) { mAge = date; }
+    inline void SetMask(const uint8 mask) { mMask |= mask; }
+    inline void RemMask(const uint8 mask) { mMask &= ~mask; }
+    inline void ReplaceMask(const uint8 mask) { mMask = mask; }
+    inline void SetLowerDepth(const int8 lowerdepth) { mLowerDepth = lowerdepth; }
+    inline void SetUpperDepth(const int8 upperdepth) { mUpperDepth = upperdepth; }
+    inline void SetLowerValue(const int16 lowervalue) { mLowerValue = lowervalue; }
+    inline void SetUpperValue(const int16 uppervalue) { mUpperValue = uppervalue; }
+    inline void SetEvalValue(const int16 evalvalue) { evalValue = evalvalue; }
 private:
     enum {
         H_CASTLE = 1, H_PAWN2, H_EP, H_PROMN, H_PROMB, H_PROMR, H_PROMQ
@@ -266,23 +202,17 @@ public:
 
     virtual void Clear();
     void NewDate(int date);
+    TransEntry* Probe(const uint64 hash);
+    void StoreEval(const uint64 hash, const int staticEvalValue);
     void StoreLower(const uint64 hash, const basic_move_t move, const int depth, const int value, const bool singular, const int staticEvalValue);
     void StoreUpper(const uint64 hash, const int depth, const int value, const int staticEvalValue);
     void StoreExact(const uint64 hash, const basic_move_t move, const int depth, const int value, const bool singular, const int staticEvalValue);
-    void StoreNoMoves(const uint64 hash, const int depth, const int value);
+    void StoreNoMoves(const uint64 hash);
 
-    int32 Date() const {
-        return mDate;
-    }
-    uint64 Used() const {
-        return mUsed;
-    }
-    int32 Age(const int Idx) const {
-        return mAge[Idx];
-    }
+    int32 Date() const { return mDate; }
+    int32 Age(const int Idx) const { return mAge[Idx]; }
 private:
     int32 mDate;
-    uint64 mUsed;
     int32 mAge[DATESIZE];
 };
 
