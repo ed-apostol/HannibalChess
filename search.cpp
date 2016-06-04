@@ -351,6 +351,9 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 && ss.evalvalue > (rvalue = beta + FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
                 return rvalue; //consider enforcing a max of MAXEVAL
             }
+            if (depth <= 1 && pos.posStore.lastmove != EMPTY && ss.ssprev && ss.ssprev->ssprev
+                && ss.staticEvalValue > ss.ssprev->ssprev->staticEvalValue && (ss.staticEvalValue >= beta || ss.evalvalue >= beta)) 
+                return beta; //NEWSAM
             if (depth < MaxRazorDepth && pos.posStore.lastmove != EMPTY
                 && ss.evalvalue < (rvalue = beta - FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
                 if (depth <= 2) {
@@ -428,7 +431,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     int lateMove = LATE_PRUNE_MIN + (depth * depth) / 2;
     move_t* move;
     basic_move_t singularMove = EMPTY;
-    //	const bool noProgress = ss.ssprev && ss.ssprev->ssprev && (ss.staticEvalValue < ss.ssprev->ssprev->staticEvalValue);
     while ((move = sortNext(sp, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
         int score = -INF;
         int newdepth = depth - 1;
