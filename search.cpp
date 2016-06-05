@@ -348,9 +348,13 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             static const int MaxRazorDepth = 10;
             int rvalue;
             if (depth < MaxRazorDepth && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && beta <= MAXEVAL
-                && ss.evalvalue > (rvalue = beta + FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
+                && ss.evalvalue >(rvalue = beta + FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
                 return rvalue; //consider enforcing a max of MAXEVAL
             }
+            if (depth <= 1 && pos.posStore.lastmove != EMPTY && ss.ssprev && ss.ssprev->ssprev
+                && ss.staticEvalValue > ss.ssprev->ssprev->staticEvalValue && (ss.staticEvalValue >= beta || ss.evalvalue >= beta))
+                return beta; //NEWSAM
+
             if (depth < MaxRazorDepth && pos.posStore.lastmove != EMPTY
                 && ss.evalvalue < (rvalue = beta - FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
                 if (depth <= 2) {
@@ -380,7 +384,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         }
 
         if (!inCheck && ss.hashMove == EMPTY && depth >= (inPvNode(nt) ? 6 : 8) && (inPvNode(nt) || ss.staticEvalValue + 100 > beta)) { // IID
-            int newdepth = inPvNode(nt) ? depth - 2 : depth / 2;            
+            int newdepth = inPvNode(nt) ? depth - 2 : depth / 2;
             int score = searchNode<false, false, false>(pos, alpha, beta, newdepth, ssprev, sthread, nt);
             if (sthread.stop) return 0;
             ss.evalvalue = score;
@@ -956,7 +960,7 @@ void Engine::GetBestMove(Thread& sthread) {
         info.easymoves.Assign(info.rootPV);
 
     SendBestMove();
-}
+        }
 void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     WaitForThink();
     SetThinkStarted();
