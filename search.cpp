@@ -352,7 +352,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             if (depth <= 1 && pos.posStore.lastmove != EMPTY && ss.ssprev && ss.ssprev->ssprev
                 && ss.staticEvalValue > ss.ssprev->ssprev->staticEvalValue && (ss.staticEvalValue >= beta || ss.evalvalue >= beta))
                 return beta; //NEWSAM
-
             if (depth < MaxRazorDepth && pos.posStore.lastmove != EMPTY
                 && ss.evalvalue < (rvalue = beta - FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
                 if (depth <= 2) {
@@ -430,7 +429,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     int lateMove = LATE_PRUNE_MIN + (depth * depth) / 2;
     move_t* move;
     basic_move_t singularMove = EMPTY;
-    //	const bool noProgress = ss.ssprev && ss.ssprev->ssprev && (ss.staticEvalValue < ss.ssprev->ssprev->staticEvalValue);
     while ((move = sortNext(sp, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
         int score = -INF;
         int newdepth = depth - 1;
@@ -482,8 +480,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                         if (ss.playedMoves > lateMove) continue;
                         int const predictedDepth = MAX(0, newdepth - ReductionTable[1][MIN(depth, 63)][MIN(ss.playedMoves, 63)]);
                         int const gain = sthread.evalgains[historyIndex(pos.side, move->m)];
-                        int const scoreAprox = ss.staticEvalValue + FutilityMarginTable[MIN(predictedDepth, MAX_FUT_MARGIN)][MIN(ss.playedMoves, 63)]
-                            + gain;
+                        int const scoreAprox = ss.staticEvalValue + FutilityMarginTable[MIN(predictedDepth, MAX_FUT_MARGIN)][MIN(ss.playedMoves, 63)] + gain;
                         if (scoreAprox < beta) {
                             if (predictedDepth < 8) continue;
                             partialReduction++;
@@ -497,7 +494,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                         bool skipFutility = (inCheck || (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsDangerousPawn(pos, move->m));
                         int reduction = ReductionTable[(inPvNode(nt) ? 0 : 1)][MIN(depth, 63)][MIN(ss.playedMoves, 63)];
                         partialReduction += skipFutility ? (reduction + 1) / 2 : reduction;
-                        //						if (noProgress && partialReduction > 1) partialReduction++;
                     }
                 }
                 int newdepthclone = newdepth - partialReduction;
@@ -702,7 +698,6 @@ void Engine::DisplayPV(continuation_t& pv, int multipvIdx, int depth, int alpha,
     log << " time " << time;
     sumnodes = ComputeNodes();
     log << " nodes " << sumnodes;
-    log << " hashfull " << (transtable.Used() * 1000) / transtable.HashSize();
     if (time > 10) log << " nps " << (sumnodes * 1000) / (time);
 
     if (multipvIdx > 0) log << " multipv " << multipvIdx + 1;
@@ -779,7 +774,6 @@ void Engine::CheckTime() {
             uint64 sumnodes = ComputeNodes();
             PrintOutput() << "info time " << time
                 << " nodes " << sumnodes
-                << " hashfull " << (transtable.Used() * 1000) / transtable.HashSize()
                 << " nps " << (sumnodes * 1000ULL) / (time);
         }
     }

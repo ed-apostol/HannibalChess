@@ -198,7 +198,6 @@ void TranspositionTable::NewDate(int date) {
     for (date = 0; date < DATESIZE; date++) {
         mAge[date] = mDate - date + ((mDate < date) ? DATESIZE : 0);
     }
-    mUsed = 1;
 }
 
 void TranspositionTable::Clear() {

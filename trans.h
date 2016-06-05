@@ -204,11 +204,9 @@ public:
     void StoreNoMoves(uint64 hash);
 
     int32 Date() const { return mDate; }
-    uint64 Used() const { return mUsed; }
     int32 Age(const int Idx) const { return mAge[Idx]; }
 private:
     int32 mDate;
-    uint64 mUsed;
     int32 mAge[DATESIZE];
 };
 
