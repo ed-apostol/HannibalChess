@@ -241,20 +241,18 @@ public:
     void StoreLower(const uint64 hash, const basic_move_t move, const int depth, const int value, const bool singular, const int staticEvalValue);
     void StoreUpper(const uint64 hash, const int depth, const int value, const int staticEvalValue);
     void StoreExact(const uint64 hash, const basic_move_t move, const int depth, const int value, const bool singular, const int staticEvalValue);
-    void StoreNoMoves(const uint64 hash, const int depth, const int value);
+    void StoreNoMoves(const uint64 hash);
+	void TranspositionTable::StoreEval(uint64 hash, int staticEvalValue);
+	TransEntry* Probe(const uint64 hash);
 
     int32 Date() const {
         return mDate;
-    }
-    uint64 Used() const {
-        return mUsed;
     }
     int32 Age(const int Idx) const {
         return mAge[Idx];
     }
 private:
     int32 mDate;
-    uint64 mUsed;
     int32 mAge[DATESIZE];
 };
 
