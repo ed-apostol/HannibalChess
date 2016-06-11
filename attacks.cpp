@@ -154,7 +154,7 @@ bool moveIsLegal(const position_t& pos, uint32 move, uint64 pinned, bool incheck
         b = pos.occupied ^ BitMask[from] ^ BitMask[capsq] ^ BitMask[to];
         return
             (!(rookAttacksBB(ksq, b) & (pos.queens | pos.rooks) & pos.color[them]) &&
-            !(bishopAttacksBB(ksq, b) & (pos.queens | pos.bishops) & pos.color[them]));
+                !(bishopAttacksBB(ksq, b) & (pos.queens | pos.bishops) & pos.color[them]));
     }
     if (from == ksq) return !(isSqAtt(pos, pos.occupied ^ (pos.kings&pos.color[us]), to, them));
     if (!(pinned & BitMask[from])) return true;

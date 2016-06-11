@@ -429,7 +429,7 @@ void genEvasions(const position_t& pos, movelist_t& mvlist) {
             if (((bishopAttacksBB(ksq, temp) & (pos.queens | pos.bishops)
                 & pos.color[xside]) == EmptyBoardBB) &&
                 ((rookAttacksBB(ksq, temp) & (pos.queens | pos.rooks)
-                & pos.color[xside]) == EmptyBoardBB))
+                    & pos.color[xside]) == EmptyBoardBB))
                 mvlist.list[mvlist.size++].m = GenEnPassant(from, to);
         }
     }
@@ -637,7 +637,7 @@ bool genMoveIfLegal(const position_t& pos, uint32 move, uint64 pinned) {
                 int ksq = pos.kpos[me];
                 return
                     (!(rookAttacksBB(ksq, b) & (pos.queens | pos.rooks) & pos.color[opp]) &&
-                    !(bishopAttacksBB(ksq, b) & (pos.queens | pos.bishops) & pos.color[opp]));
+                        !(bishopAttacksBB(ksq, b) & (pos.queens | pos.bishops) & pos.color[opp]));
             }
         }
         else {
