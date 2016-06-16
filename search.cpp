@@ -66,23 +66,10 @@ public:
     template<bool inPv>
     int qSearch(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread);
     template <bool inRoot, bool inSplitPoint, bool inSingular>
-    int searchNode(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt);
+    int searchNode(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, bool inPv);
     template<bool inRoot, bool inSplitPoint, bool inCheck, bool inSingular>
-    int searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt);
+    int searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, bool inPv);
 private:
-    inline bool inPvNode(NodeType nt) {
-        return (nt == PVNode);
-    }
-    inline bool inCutNode(NodeType nt) {
-        return (nt == CutNode);
-    }
-    inline bool inAllNode(NodeType nt) {
-        return (nt == AllNode);
-    }
-    inline NodeType invertNode(NodeType nt) {
-        return ((nt == PVNode) ? PVNode : ((nt == CutNode) ? AllNode : CutNode));
-    }
-
     static const int EXPLORE_BASE_CUTOFF = 18;
     static const int EXPLORE_MULT_CUTOFF = 2;
     static const int Q_CHECK = 1; // implies 1 check
@@ -267,19 +254,19 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
 }
 
 template <bool inRoot, bool inSplitPoint, bool inSingular>
-int Search::searchNode(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt) {
+int Search::searchNode(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, bool inPv) {
     if (depth <= 0) {
-        if (inPvNode(nt)) return qSearch<true>(pos, alpha, beta, 0, ssprev, sthread);
+		if (inPv) return qSearch<true>(pos, alpha, beta, 0, ssprev, sthread);
         else return qSearch<false>(pos, alpha, beta, 0, ssprev, sthread);
     }
     else {
-        if (ssprev.moveGivesCheck) return searchGeneric<inRoot, inSplitPoint, true, inSingular>(pos, alpha, beta, depth, ssprev, sthread, nt);
-        else return searchGeneric<inRoot, inSplitPoint, false, inSingular>(pos, alpha, beta, depth, ssprev, sthread, nt);
+		if (ssprev.moveGivesCheck) return searchGeneric<inRoot, inSplitPoint, true, inSingular>(pos, alpha, beta, depth, ssprev, sthread, inPv);
+		else return searchGeneric<inRoot, inSplitPoint, false, inSingular>(pos, alpha, beta, depth, ssprev, sthread, inPv);
     }
 }
 
 template<bool inRoot, bool inSplitPoint, bool inCheck, bool inSingular>
-int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, NodeType nt) {
+int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth, SearchStack& ssprev, Thread& sthread, bool inPv) {
     SplitPoint* sp = nullptr;
     SearchStack ss(ssprev.ply + 1, &ssprev);
     pos_store_t undo;
@@ -304,7 +291,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (inCheck) return -INF + ss.ply;
                 else return DrawValue[pos.side];
             }
-            if (!inPvNode(nt)) {
+			if (!inPv) {
                 if (entry->LowerDepth() >= depth && (hmove != EMPTY || pos.posStore.lastmove == EMPTY)) {
                     int score = scoreFromTrans(entry->LowerValue(), ss.ply);
                     if (score > alpha) {
@@ -342,7 +329,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         }
         if (ss.ply >= MAXPLY - 1) return ss.evalvalue;
         updateEvalgains(pos, pos.posStore.lastmove, ssprev.staticEvalValue, ss.staticEvalValue, sthread);
-        if (!inPvNode(nt) && !inCheck) {
+		if (!inPv && !inCheck) {
             static const int MaxRazorDepth = 10;
             int rvalue;
             if (depth < MaxRazorDepth && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && beta <= MAXEVAL
@@ -355,9 +342,9 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             if (depth < MaxRazorDepth && pos.posStore.lastmove != EMPTY
                 && ss.evalvalue < (rvalue = beta - FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
                 if (depth <= 2) {
-                    return searchNode<false, false, false>(pos, alpha, beta, 0, ssprev, sthread, nt);
+                    return searchNode<false, false, false>(pos, alpha, beta, 0, ssprev, sthread, inPv);
                 }
-                int score = searchNode<false, false, false>(pos, rvalue - 1, rvalue, 0, ssprev, sthread, nt);
+                int score = searchNode<false, false, false>(pos, rvalue - 1, rvalue, 0, ssprev, sthread, inPv);
                 if (score < rvalue) {
                     return score;
                 }
@@ -367,13 +354,13 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
 
                 makeNullMove(pos, undo);
                 ++sthread.nodes;
-                int score = -searchNode<false, false, false>(pos, -beta, -beta + 1, nullDepth, ss, sthread, invertNode(nt)); //alpha = beta - 1 because not a PV node
+				int score = -searchNode<false, false, false>(pos, -beta, -beta + 1, nullDepth, ss, sthread, inPv); //alpha = beta - 1 because not a PV node
                 ss.threatMove = ss.counterMove;
                 unmakeNullMove(pos, undo);
                 if (sthread.stop) return 0;
                 if (score >= beta) {
                     if (depth < 12 && abs(score) <= MAXEVAL) return score;
-                    int score2 = searchNode<false, false, false>(pos, alpha, beta, nullDepth, ssprev, sthread, nt); //alpha = beta - 1 because not a PV node
+                    int score2 = searchNode<false, false, false>(pos, alpha, beta, nullDepth, ssprev, sthread, inPv); //alpha = beta - 1 because not a PV node
                     if (sthread.stop) return 0;
                     if (score2 >= beta) return score;
                 }
@@ -390,7 +377,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
 					ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
 					makeMove(pos, undo, move->m);
 					++sthread.nodes;
-					score = -searchNode<false, false, false>(pos, -target - 1, -target, newdepth, ss, sthread, inCutNode(nt) ? AllNode : CutNode);
+					score = -searchNode<false, false, false>(pos, -target - 1, -target, newdepth, ss, sthread, false);
 					unmakeMove(pos, undo);
 					if (sthread.stop) return 0;
 					if (score > target) return score;
@@ -398,9 +385,9 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
 			}
         }
 
-        if (!inCheck && ss.hashMove == EMPTY && depth >= (inPvNode(nt) ? 6 : 8) && (inPvNode(nt) || ss.staticEvalValue + 100 > beta)) { // IID
-            int newdepth = inPvNode(nt) ? depth - 2 : depth / 2;
-            int score = searchNode<false, false, false>(pos, alpha, beta, newdepth, ssprev, sthread, nt);
+		if (!inCheck && ss.hashMove == EMPTY && depth >= (inPv ? 6 : 8) && (inPv || ss.staticEvalValue + 100 > beta)) { // IID
+			int newdepth = inPv ? depth - 2 : depth / 2;
+            int score = searchNode<false, false, false>(pos, alpha, beta, newdepth, ssprev, sthread, inPv);
             if (sthread.stop) return 0;
             ss.evalvalue = score;
             if (score > alpha) { //no need to adjust singular search here, since it would not research if conditions for skipping search were met
@@ -474,10 +461,10 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             if (ss.bestvalue == -INF) {
                 if (!inRoot && !inSingular && !inSplitPoint) {
                     if (inCheck && ss.mvlist->size == 1) newdepth++;
-                    else if (ss.hashMove == move->m && ss.hashDepth >= depth / 2 && depth >= (inPvNode(nt) ? 6 : 8)) {
+					else if (ss.hashMove == move->m && ss.hashDepth >= depth / 2 && depth >= (inPv ? 6 : 8)) {
                         int targetScore = ss.evalvalue - EXPLORE_BASE_CUTOFF - depth * EXPLORE_MULT_CUTOFF;
                         ssprev.bannedMove = ss.hashMove;
-                        int score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, depth / 2, ssprev, sthread, nt);
+                        int score = searchNode<false, false, true>(pos, targetScore, targetScore + 1, depth / 2, ssprev, sthread, inPv);
                         ssprev.bannedMove = EMPTY;
                         if (sthread.stop) return 0;
                         if (score <= targetScore) {
@@ -488,13 +475,13 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 }
                 makeMove(pos, undo, move->m);
                 ++sthread.nodes;
-                score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, sthread, invertNode(nt));
+				score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, sthread, inPv);
             }
             else {
                 //only reduce or prune some types of moves
                 int partialReduction = 0;
                 if ((move->m != ss.mvlist->killer1) && (move->m != ss.mvlist->killer2) && !moveIsTactical(move->m) && !ss.moveGivesCheck) {
-                    if (!inRoot && !inPvNode(nt)) {
+					if (!inRoot && !inPv) {
                         if (ss.playedMoves > lateMove) continue;
                         int const predictedDepth = MAX(0, newdepth - ReductionTable[1][MIN(depth, 63)][MIN(ss.playedMoves, 63)]);
                         int const gain = sthread.evalgains[historyIndex(pos.side, move->m)];
@@ -510,7 +497,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     }
                     if (depth >= MIN_REDUCTION_DEPTH) {
                         bool skipFutility = (inCheck || (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsDangerousPawn(pos, move->m));
-                        int reduction = ReductionTable[(inPvNode(nt) ? 0 : 1)][MIN(depth, 63)][MIN(ss.playedMoves, 63)];
+						int reduction = ReductionTable[(inPv ? 0 : 1)][MIN(depth, 63)][MIN(ss.playedMoves, 63)];
                         partialReduction += skipFutility ? (reduction + 1) / 2 : reduction;
                     }
                 }
@@ -519,14 +506,14 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 ++sthread.nodes;
                 if (inSplitPoint) alpha = sp->alpha;
                 ss.reducedMove = (newdepthclone < newdepth);
-                score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepthclone, ss, sthread, inCutNode(nt) ? AllNode : CutNode);
+                score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepthclone, ss, sthread, false);
                 if (!sthread.stop && ss.reducedMove && score > alpha) {
                     ss.reducedMove = false;
-                    score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepth, ss, sthread, AllNode);
+                    score = -searchNode<false, false, false>(pos, -alpha - 1, -alpha, newdepth, ss, sthread, false);
                 }
-                if (inPvNode(nt) && !sthread.stop && score > alpha) {
+				if (inPv && !sthread.stop && score > alpha) {
                     if (inRoot) mInfo.research = 1;
-                    score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, sthread, PVNode);
+                    score = -searchNode<false, false, false>(pos, -beta, -alpha, newdepth, ss, sthread, true);
                 }
             }
             unmakeMove(pos, undo);
@@ -547,7 +534,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 }
                 if (inSplitPoint) sp->bestmove = move->m;
                 ss.bestmove = move->m;
-                if (inPvNode(nt) && ss.bestvalue < beta) {
+				if (inPv && ss.bestvalue < beta) {
                     if (inSplitPoint) sp->alpha = ss.bestvalue;
                     alpha = ss.bestvalue;
                 }
@@ -570,7 +557,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             && mEngine.ThreadNum() > 1 && depth >= mInfo.mMinSplitDepth
             && (!sthread.activeSplitPoint || !sthread.activeSplitPoint->workAvailable
                 || ((sthread.activeSplitPoint->depth - depth <= 1) && sthread.num_sp < 2))) {
-            sthread.SearchSplitPoint(pos, &ss, &ssprev, alpha, beta, nt, depth, inCheck, inRoot);
+            sthread.SearchSplitPoint(pos, &ss, &ssprev, alpha, beta, inPv, depth, inCheck, inRoot);
             if (sthread.stop) return 0;
             break;
         }
@@ -594,7 +581,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove), ss.staticEvalValue);
         }
         else {
-            if (inPvNode(nt) && ss.bestmove != EMPTY) {
+			if (inPv && ss.bestmove != EMPTY) {
                 ssprev.counterMove = ss.bestmove;
                 mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove), ss.staticEvalValue);
                 mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply));
@@ -639,8 +626,8 @@ void Engine::PonderHit() { //no pondering in tuning
 
 void Engine::SearchFromIdleLoop(SplitPoint& sp, Thread& sthread) {
     position_t pos = *sp.origpos;
-    if (sp.inRoot) search->searchNode<true, true, false>(pos, sp.alpha, sp.beta, sp.depth, *sp.ssprev, sthread, sp.nodeType);
-    else search->searchNode<false, true, false>(pos, sp.alpha, sp.beta, sp.depth, *sp.ssprev, sthread, sp.nodeType);
+    if (sp.inRoot) search->searchNode<true, true, false>(pos, sp.alpha, sp.beta, sp.depth, *sp.ssprev, sthread, true); //if in root, always inPv
+    else search->searchNode<false, true, false>(pos, sp.alpha, sp.beta, sp.depth, *sp.ssprev, sthread, sp.inPv);
 }
 
 // TODO: encapsulate
@@ -921,7 +908,7 @@ void Engine::GetBestMove(Thread& sthread) {
                 if (beta > QueenValue) beta = INF;
             }
             while (true) {
-                search->searchNode<true, false, false>(rootpos, alpha, beta, id, ss, sthread, PVNode);
+                search->searchNode<true, false, false>(rootpos, alpha, beta, id, ss, sthread, true);
 
                 if (!info.stop_search || info.best_value != -INF) {
                     if (info.best_value > alpha && info.best_value < beta) {
