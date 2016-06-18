@@ -122,11 +122,11 @@ private:
 };
 
 struct EasyMove {
-    void Assign(continuation_t& pv) {
-        if (pv.length >= 3) {
-            m[0] = pv.moves[0];
-            m[1] = pv.moves[1];
-            m[2] = pv.moves[2];
+    void Assign(std::vector<basic_move_t> &pv) {
+        if (pv.size() >= 3) {
+            m[0] = pv[0];
+            m[1] = pv[1];
+            m[2] = pv[2];
         }
         else Init();
     }
@@ -212,9 +212,9 @@ struct SearchInfo {
     int legalmoves;
     basic_move_t bestmove;
     EasyMove easymoves;
-    basic_move_t moves[MAXMOVES];
+    basic_move_t moves[MAXMOVES]; // TODO
     bool mvlist_initialized;
-    continuation_t rootPV;
+    std::vector<basic_move_t> rootPV;
 };
 
 class Search;
@@ -226,9 +226,9 @@ public:
     void StopSearch();
     void PonderHit();
     void SendBestMove();
-    void ExtractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_move_t move);
-    void RepopulateHash(position_t& pos, continuation_t& rootPV);
-    void DisplayPV(continuation_t& pv, int multipvIdx, int depth, int alpha, int beta, int score);
+    void ExtractPvMovesFromHash(position_t& pos, std::vector<basic_move_t> &pv, basic_move_t move);
+    void RepopulateHash(position_t& pos, std::vector<basic_move_t> &pv);
+    void DisplayPV(std::vector<basic_move_t> &pv, int multipvIdx, int depth, int alpha, int beta, int score);
     void TimeManagement(int depth);
     void CheckTime();
     void SearchFromIdleLoop(SplitPoint& sp, Thread& sthread);

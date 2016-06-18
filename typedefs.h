@@ -68,11 +68,6 @@ enum HashMask {
 typedef uint32 basic_move_t;
 typedef int32 EvalScore;
 
-struct continuation_t {
-    basic_move_t moves[MAXPLY + 1];
-    int length;
-};
-
 /* the move structure */
 struct move_t {
     basic_move_t m;
@@ -93,7 +88,7 @@ struct movelist_t {
     volatile int32 size;
     volatile int32 startBad;
     uint64 pinned; // TODO: move to SS
-    move_t list[MAXMOVES];
+    move_t list[MAXMOVES]; // TODO
 };
 
 /* the undo structure */
@@ -137,7 +132,7 @@ struct material_info_t {
 };
 
 struct SearchStack {
-    SearchStack(int _ply, SearchStack *prev) :
+    SearchStack(SearchStack *prev) :
         reducedMove(false),
         moveGivesCheck(false),
         playedMoves(0),
@@ -152,7 +147,7 @@ struct SearchStack {
         bannedMove(EMPTY),
         hashMove(EMPTY),
         hashDepth(-2),
-        ply(_ply),
+        ply(prev!=nullptr?prev->ply+1:-1),
         ssprev(prev),
         mvlist(&movelist),
         hisMoves(&hisTable[0]) {}
