@@ -42,7 +42,7 @@ struct SplitPoint {
         depth = 0;
         inCheck = false;
         inRoot = false;
-        nodeType = PVNode;
+        inPv = true;
         alpha = 0;
         beta = 0;
         bestvalue = 0;
@@ -69,7 +69,7 @@ struct SplitPoint {
     int depth;
     bool inCheck;
     bool inRoot;
-    NodeType nodeType;
+    bool inPv;
     volatile int alpha;
     volatile int beta;
     volatile int bestvalue;
@@ -153,7 +153,7 @@ public:
     void Init();
     void IdleLoop();
     void GetWork(SplitPoint* const master_sp);
-    void SearchSplitPoint(position_t& pos, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot);
+    void SearchSplitPoint(position_t& pos, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, bool inPv, int depth, bool inCheck, bool inRoot);
 
     uint64 numsplits;
     uint64 numsplitsjoined;

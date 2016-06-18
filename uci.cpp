@@ -31,8 +31,8 @@
 
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
-const std::string Interface::year = "2015";
-const std::string Interface::version = "1.6.39";
+const std::string Interface::year = "2016";
+const std::string Interface::version = "061516";
 const std::string Interface::arch = "x64";
 
 void Interface::Info() {
@@ -139,7 +139,6 @@ void Interface::Go(Engine& engine, position_t& pos, std::istringstream& stream) 
 void Interface::Position(Engine& engine, position_t& pos, std::istringstream& stream) {
     basic_move_t m;
     std::string token, fen;
-    int sp = 0;
 
     stream >> token;
     if (token == "startpos") {

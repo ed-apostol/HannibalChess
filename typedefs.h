@@ -57,10 +57,6 @@ typedef unsigned __int64	uint64;
 typedef unsigned int		uint;
 #endif
 
-enum NodeType {
-    CutNode = -1, PVNode = 0, AllNode
-};
-
 enum HashType {
     HTLower, HTUpper, HTCutUpper, HTAllLower, HTExact, HTNoMoves
 };
