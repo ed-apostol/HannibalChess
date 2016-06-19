@@ -182,14 +182,13 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     if (!ssprev.moveGivesCheck) {
         if (ss.staticEvalValue == -INF) {
             ss.staticEvalValue = eval(pos, sthread); //TODO consider hashing this
+            mTransTable.StoreEval(pos.posStore.hash, ss.staticEvalValue);
         }
         ss.evalvalue = ss.bestvalue = ss.staticEvalValue;
         updateEvalgains(pos, pos.posStore.lastmove, ssprev.staticEvalValue, ss.staticEvalValue, sthread);
         if (ss.bestvalue > alpha) {
-            if (ss.bestvalue >= beta) {
-                mTransTable.StoreLower(pos.posStore.hash, ss.hashMove, -1, scoreToTrans(ss.bestvalue, ss.ply), ss.staticEvalValue);
+            if (ss.bestvalue >= beta)
                 return ss.bestvalue;
-            }
             alpha = ss.bestvalue;
         }
     }
@@ -655,21 +654,6 @@ void Engine::ExtractPvMovesFromHash(position_t& pos, std::vector<basic_move_t> &
     }
 }
 
-void Engine::RepopulateHash(position_t& pos, std::vector<basic_move_t> &pv) {
-    int moveOn = 0;
-    pos_store_t undo[MAXPLY];
-    for (auto move : pv) {
-        if (!move) break;
-        PvHashEntry* entry = pvhashtable.pvEntryFromMove(pos.posStore.hash, move);
-        if (nullptr == entry) break;
-        transtable.StoreExact(pos.posStore.hash, entry->pvMove(), entry->pvDepth(), scoreToTrans(entry->pvScore(), moveOn), entry->pvScore());
-        makeMove(pos, undo[moveOn++], move);
-    }
-    for (moveOn = moveOn - 1; moveOn >= 0; moveOn--) {
-        unmakeMove(pos, undo[moveOn]);
-    }
-}
-
 void Engine::DisplayPV(std::vector<basic_move_t> &pv, int multipvIdx, int depth, int alpha, int beta, int score) {
     uint64 time;
     uint64 sumnodes = 0;
@@ -894,7 +878,6 @@ void Engine::GetBestMove(Thread& sthread) {
                 if (!info.stop_search || info.best_value != -INF) {
                     if (info.best_value > alpha && info.best_value < beta) {
                         ExtractPvMovesFromHash(rootpos, info.rootPV, info.bestmove);
-                        RepopulateHash(rootpos, info.rootPV);
                     }
                     if (SHOW_SEARCH && id >= 8) {
                         DisplayPV(info.rootPV, info.multipvIdx, id, alpha, beta, info.best_value);

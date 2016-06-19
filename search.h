@@ -227,7 +227,6 @@ public:
     void PonderHit();
     void SendBestMove();
     void ExtractPvMovesFromHash(position_t& pos, std::vector<basic_move_t> &pv, basic_move_t move);
-    void RepopulateHash(position_t& pos, std::vector<basic_move_t> &pv);
     void DisplayPV(std::vector<basic_move_t> &pv, int multipvIdx, int depth, int alpha, int beta, int score);
     void TimeManagement(int depth);
     void CheckTime();
