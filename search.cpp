@@ -188,7 +188,7 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
         if (ss.bestvalue > alpha) {
             if (ss.bestvalue >= beta) {
                 ASSERT(valueIsOk(ss.bestvalue));
-                mTransTable.StoreLower(pos.posStore.hash, ss.hashMove, -1, ss.bestvalue, false, ss.staticEvalValue);
+				mTransTable.StoreEval(pos.posStore.hash, ss.staticEvalValue); 
                 return ss.bestvalue;
             }
             alpha = ss.bestvalue;
@@ -270,6 +270,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
     SplitPoint* sp = nullptr;
     SearchStack ss(ssprev.ply + 1, &ssprev);
     pos_store_t undo;
+	bool progress = true;
     ASSERT(alpha < beta);
     ASSERT(depth >= 1);
     ASSERT(!inSingular || ssprev.bannedMove != 0);
@@ -336,9 +337,10 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 && ss.evalvalue >(rvalue = beta + FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
                 return rvalue; //consider enforcing a max of MAXEVAL
             }
-            if (depth <= 1 && pos.posStore.lastmove != EMPTY && ss.ssprev && ss.ssprev->ssprev
-                && ss.staticEvalValue > ss.ssprev->ssprev->staticEvalValue && (ss.staticEvalValue >= beta || ss.evalvalue >= beta))
-                return beta; //NEWSAM
+			progress = ss.ssprev && ss.ssprev->ssprev //added >= instead of =
+				&& ss.staticEvalValue > ss.ssprev->ssprev->staticEvalValue;
+			if (depth <= 1 && pos.posStore.lastmove != EMPTY && progress && (ss.staticEvalValue >= beta || ss.evalvalue >= beta))
+                return beta; 
             if (depth < MaxRazorDepth && pos.posStore.lastmove != EMPTY
                 && ss.evalvalue < (rvalue = beta - FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
                 if (depth <= 2) {
@@ -432,7 +434,9 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         }
     }
     int lateMove = LATE_PRUNE_MIN + (depth * depth) / 2;
-    move_t* move;
+//	int lateMove = LATE_PRUNE_MIN + (depth * depth) / (progress ? 1 : 2); //Hannibal0617
+//	int lateMove = LATE_PRUNE_MIN + (depth * depth) / (progress ? 1 : 3); //Hannibal0618
+	move_t* move;
     basic_move_t singularMove = EMPTY;
     while ((move = sortNext(sp, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
         int score = -INF;
@@ -496,9 +500,11 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                         }
                     }
                     if (depth >= MIN_REDUCTION_DEPTH) {
+						
                         bool skipFutility = (inCheck || (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsDangerousPawn(pos, move->m));
 						int reduction = ReductionTable[(inPv ? 0 : 1)][MIN(depth, 63)][MIN(ss.playedMoves, 63)];
                         partialReduction += skipFutility ? (reduction + 1) / 2 : reduction;
+//						if (sthread.history[historyIndex(pos.side, move->m)] > 64) partialReduction = MAX(0, partialReduction - 1); //NEWSAM
                     }
                 }
                 int newdepthclone = newdepth - partialReduction;
@@ -660,22 +666,6 @@ void Engine::ExtractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_m
     }
     for (ply = ply - 1; ply >= 0; --ply) {
         unmakeMove(pos, undo[ply]);
-    }
-}
-
-void Engine::RepopulateHash(position_t& pos, continuation_t& rootPV) {
-    int moveOn;
-    pos_store_t undo[MAXPLY];
-    for (moveOn = 0; moveOn + 1 <= rootPV.length; moveOn++) {
-        basic_move_t move = rootPV.moves[moveOn];
-        if (!move) break;
-        PvHashEntry* entry = pvhashtable.pvEntryFromMove(pos.posStore.hash, move);
-        if (nullptr == entry) break;
-        transtable.StoreExact(pos.posStore.hash, entry->pvMove(), entry->pvDepth(), entry->pvScore(), false, -INF);
-        makeMove(pos, undo[moveOn], move);
-    }
-    for (moveOn = moveOn - 1; moveOn >= 0; moveOn--) {
-        unmakeMove(pos, undo[moveOn]);
     }
 }
 
@@ -913,7 +903,6 @@ void Engine::GetBestMove(Thread& sthread) {
                 if (!info.stop_search || info.best_value != -INF) {
                     if (info.best_value > alpha && info.best_value < beta) {
                         ExtractPvMovesFromHash(rootpos, info.rootPV, info.bestmove);
-                        RepopulateHash(rootpos, info.rootPV);
                     }
                     if (SHOW_SEARCH && id >= 8) {
                         DisplayPV(info.rootPV, info.multipvIdx, id, alpha, beta, info.best_value);
