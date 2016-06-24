@@ -198,9 +198,9 @@ public:
     void NewDate(int date);
     TransEntry* Probe(uint64 hash);
     void StoreEval(uint64 hash, int staticEvalValue);
-    void StoreLower(uint64 hash, basic_move_t move, int depth, int value, int staticEvalValue);
+    void StoreLower(uint64 hash, basic_move_t move, int depth, int value, bool singular, int staticEvalValue);
     void StoreUpper(uint64 hash, int depth, int value, int staticEvalValue);
-    void StoreExact(uint64 hash, basic_move_t move, int depth, int value, int staticEvalValue);
+    void StoreExact(uint64 hash, basic_move_t move, int depth, int value, bool singular, int staticEvalValue);
     void StoreNoMoves(uint64 hash);
 
     int32 Date() const { return mDate; }
