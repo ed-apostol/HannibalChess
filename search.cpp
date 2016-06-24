@@ -181,7 +181,7 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     if (ss.ply >= MAXPLY - 1) return eval(pos, sthread);
     if (!ssprev.moveGivesCheck) {
         if (ss.staticEvalValue == -INF) {
-            ss.staticEvalValue = eval(pos, sthread); //TODO consider hashing this
+            ss.staticEvalValue = eval(pos, sthread); //this gets hashed in all cases
         }
         ss.evalvalue = ss.bestvalue = ss.staticEvalValue;
         updateEvalgains(pos, pos.posStore.lastmove, ssprev.staticEvalValue, ss.staticEvalValue, sthread);
@@ -337,7 +337,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 && ss.evalvalue >(rvalue = beta + FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
                 return rvalue; //consider enforcing a max of MAXEVAL
             }
-			progress = ss.ssprev && ss.ssprev->ssprev //added >= instead of =
+			progress = ss.ssprev && ss.ssprev->ssprev
 				&& ss.staticEvalValue > ss.ssprev->ssprev->staticEvalValue;
 			if (depth <= 1 && pos.posStore.lastmove != EMPTY && progress && (ss.staticEvalValue >= beta || ss.evalvalue >= beta))
                 return beta; 
@@ -368,7 +368,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 }
             }
 			if (depth >= 5) { // if we have a no-brainer capture we should just do it
-				sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseQuiescence, sthread.ts[ss.ply]); //h109
+				sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, alpha, ss.evalvalue, depth, MoveGenPhaseQuiescence, sthread.ts[ss.ply]); 
 				move_t* move;
 				int target = beta + 200;
 				int minCapture = target - ss.staticEvalValue;
@@ -434,8 +434,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         }
     }
     int lateMove = LATE_PRUNE_MIN + (depth * depth) / 2;
-//	int lateMove = LATE_PRUNE_MIN + (depth * depth) / (progress ? 1 : 2); //Hannibal0617
-//	int lateMove = LATE_PRUNE_MIN + (depth * depth) / (progress ? 1 : 3); //Hannibal0618
 	move_t* move;
     basic_move_t singularMove = EMPTY;
     while ((move = sortNext(sp, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
@@ -489,11 +487,18 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                         if (ss.playedMoves > lateMove) continue;
                         int const predictedDepth = MAX(0, newdepth - ReductionTable[1][MIN(depth, 63)][MIN(ss.playedMoves, 63)]);
                         int const gain = sthread.evalgains[historyIndex(pos.side, move->m)];
-                        int const scoreAprox = ss.staticEvalValue + FutilityMarginTable[MIN(predictedDepth, MAX_FUT_MARGIN)][MIN(ss.playedMoves, 63)] + gain;
-                        if (scoreAprox < beta) {
+                        int const scoreAprox = ss.staticEvalValue + gain;
+						if ((scoreAprox + FutilityMarginTable[MIN(predictedDepth, MAX_FUT_MARGIN)][MIN(ss.playedMoves, 63)] <= alpha)) {
                             if (predictedDepth < 8) continue;
                             partialReduction++;
                         }
+						/*
+						else if (ss.ssprev && scoreAprox <= alpha && scoreAprox < -ss.ssprev->staticEvalValue) //NEWSAM
+						{
+							if (predictedDepth < 2) continue;
+							partialReduction++;
+						}
+						*/
                         if (swap(pos, move->m) < 0) {
                             if (predictedDepth < 2) continue;
                             partialReduction++;
@@ -504,9 +509,15 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                         bool skipFutility = (inCheck || (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsDangerousPawn(pos, move->m));
 						int reduction = ReductionTable[(inPv ? 0 : 1)][MIN(depth, 63)][MIN(ss.playedMoves, 63)];
                         partialReduction += skipFutility ? (reduction + 1) / 2 : reduction;
-//						if (sthread.history[historyIndex(pos.side, move->m)] > 64) partialReduction = MAX(0, partialReduction - 1); //NEWSAM
                     }
                 }
+				/*
+				else if (!ss.moveGivesCheck && !inCheck && !moveIsDangerousPawn(pos, move->m)) { //NEWSAM
+					int const predictedDepth = MAX(0, newdepth - ReductionTable[1][MIN(depth, 63)][MIN(ss.playedMoves, 63)]);
+					if (ss.staticEvalValue + sthread.evalgains[historyIndex(pos.side, move->m)] +
+						FutilityMarginTable[MIN(predictedDepth, MAX_FUT_MARGIN)][MIN(ss.playedMoves, 63)] <= alpha &&
+						swap(pos, move->m) < 0) partialReduction++;
+				}*/
                 int newdepthclone = newdepth - partialReduction;
                 makeMove(pos, undo, move->m);
                 ++sthread.nodes;

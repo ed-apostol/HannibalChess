@@ -22,7 +22,7 @@
 #  define CACHE_LINE_ALIGNMENT  __attribute__ ((aligned(64)))
 #endif
 
-#define MAXPLY              128
+#define MAXPLY              127 //always keep in mind depth needs to fit into an 8 bit signed number, so be careful what this is set to
 #define MAXMOVES            256
 #define INF                 32500
 #define MAXEVAL             32000

@@ -563,7 +563,13 @@ void InitMaterial(void) {
                                                 }
                                                 if (bq == 0 && br == 0 && bb == 0 && bn == 1 && (wq + wr + wb + wn) >= 1 && block) {
                                                     bflag = MinorLock; //attacker has knight and lots of pawns, defender has non queen and lots of pawns
-                                                }
+												}
+												if (bq == 0 && br == 0 && bminors==2 && (wq + wr + wb + wn) >= 2 && block) { //NEWSAM
+													bflag = MinorLock; //attacker has two minors but it might be a locked position
+												}
+												if (wq == 0 && wr == 0 && wminors == 2 && (bq + br + bb + bn) >= 2 && wlock) { //NEWSAM
+													wflag = MinorLock; //attacker has two minors but it might be a locked position
+												}
                                                 if (wq == 1 && wr == 0 && wminors == 0 && wp == 1 && bq) {
                                                     wflag = QPvQEnd;
                                                 }
