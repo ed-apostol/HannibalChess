@@ -352,7 +352,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 }
             }
             if (depth >= 2 && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && ss.evalvalue >= beta) {
-                int nullDepth = depth - (4 + (depth / 5) + MIN(3, ((ss.evalvalue - beta) / PawnValue)));
+				int nullDepth = depth - (4 + (depth / 5) + MIN(3, (ss.evalvalue - beta) / PawnValue));
 
                 makeNullMove(pos, undo);
                 ++sthread.nodes;
@@ -462,7 +462,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             ss.moveGivesCheck = moveIsCheck(pos, move->m, ss.dcc);
             if (ss.bestvalue == -INF) {
                 if (!inRoot && !inSingular && !inSplitPoint) {
-                    if (inCheck && ss.mvlist->size == 1) newdepth++;
+					if (inCheck && ss.mvlist->size == 1) newdepth++;
 					else if (ss.hashMove == move->m && ss.hashDepth >= depth / 2 && depth >= (inPv ? 6 : 8)) {
                         int targetScore = ss.evalvalue - EXPLORE_BASE_CUTOFF - depth * EXPLORE_MULT_CUTOFF;
                         ssprev.bannedMove = ss.hashMove;
@@ -489,8 +489,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                         int const gain = sthread.evalgains[historyIndex(pos.side, move->m)];
                         int const scoreAprox = ss.staticEvalValue + gain;
 						if ((scoreAprox + FutilityMarginTable[MIN(predictedDepth, MAX_FUT_MARGIN)][MIN(ss.playedMoves, 63)] <= alpha)) {
-                            if (predictedDepth < 8) continue;
-                            partialReduction++;
+							continue;
                         }
 						/*
 						else if (ss.ssprev && scoreAprox <= alpha && scoreAprox < -ss.ssprev->staticEvalValue) //NEWSAM
