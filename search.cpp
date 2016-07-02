@@ -504,19 +504,17 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                         }
                     }
                     if (depth >= MIN_REDUCTION_DEPTH) {
-						
                         bool skipFutility = (inCheck || (ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove)) || moveIsDangerousPawn(pos, move->m));
 						int reduction = ReductionTable[(inPv ? 0 : 1)][MIN(depth, 63)][MIN(ss.playedMoves, 63)];
                         partialReduction += skipFutility ? (reduction + 1) / 2 : reduction;
                     }
                 }
-				/*
-				else if (!ss.moveGivesCheck && !inCheck && !moveIsDangerousPawn(pos, move->m)) { //NEWSAM
-					int const predictedDepth = MAX(0, newdepth - ReductionTable[1][MIN(depth, 63)][MIN(ss.playedMoves, 63)]);
-					if (ss.staticEvalValue + sthread.evalgains[historyIndex(pos.side, move->m)] +
-						FutilityMarginTable[MIN(predictedDepth, MAX_FUT_MARGIN)][MIN(ss.playedMoves, 63)] <= alpha &&
-						swap(pos, move->m) < 0) partialReduction++;
-				}*/
+				
+				else if (!ss.moveGivesCheck && !moveIsDangerousPawn(pos, move->m) && moveCapture(move->m) <= 1 && !(ss.threatMove && moveRefutesThreat(pos, move->m, ss.threatMove))
+					&& !inPv && swap(pos, move->m) < 0) { 
+					partialReduction++;
+				}
+
                 int newdepthclone = newdepth - partialReduction;
                 makeMove(pos, undo, move->m);
                 ++sthread.nodes;
