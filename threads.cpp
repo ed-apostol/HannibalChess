@@ -48,7 +48,7 @@ void Thread::IdleLoop() {
         if (!exit_flag && !doSleep && stop) {
             GetWork(master_sp);
         }
-        if (!exit_flag && !doSleep && !stop) {
+        if (!exit_flag && !doSleep && !stop && activeSplitPoint != nullptr) {
             SplitPoint* const sp = activeSplitPoint;
             CBSearchFromIdleLoop(*sp, *this);
             std::lock_guard<Spinlock> lck(sp->updatelock);

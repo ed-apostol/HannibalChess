@@ -364,6 +364,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 int target = beta + 200;
                 int minCapture = target - ss.staticEvalValue;
                 int newdepth = depth - 5;
+                ss.dcc = discoveredCheckCandidates(pos, pos.side);
                 while ((move = sortNext(nullptr, mInfo, pos, *ss.mvlist, sthread)) != nullptr) {
                     int score;
                     if (MaxPieceValue[moveCapture(move->m)] < minCapture || swap(pos, move->m) < minCapture) continue;
@@ -395,6 +396,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         // copy only necessary values
         ss.bestvalue = sp->sscurr->bestvalue;
         ss.evalvalue = sp->sscurr->evalvalue;
+        ss.staticEvalValue = sp->sscurr->staticEvalValue;
         ss.dcc = sp->sscurr->dcc;
         ss.threatMove = sp->sscurr->threatMove;
         ss.hisMoves = sp->sscurr->hisMoves;
@@ -546,10 +548,10 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             }
         }
         if (inSplitPoint) sp->updatelock.unlock();
-        if (!inSplitPoint && !inSingular && !sthread.stop && !ssprev.moveGivesCheck && sthread.num_sp < mInfo.mMaxActiveSplitsPerThread
-            && mEngine.ThreadNum() > 1 && depth >= mInfo.mMinSplitDepth
+        if (!inSplitPoint && !inSingular && !sthread.stop && sthread.num_sp < mInfo.mMaxActiveSplitsPerThread
+            && mEngine.ThreadNum() > 1 && (inRoot || inPv || (depth >= mInfo.mMinSplitDepth
             && (!sthread.activeSplitPoint || !sthread.activeSplitPoint->workAvailable
-                || ((sthread.activeSplitPoint->depth - depth <= 1) && sthread.num_sp < 2))) {
+                || ((sthread.activeSplitPoint->depth - depth <= 1) && sthread.num_sp < 2))))) {
             sthread.SearchSplitPoint(pos, &ss, &ssprev, alpha, beta, inPv, depth, ssprev.moveGivesCheck, inRoot);
             if (sthread.stop) return 0;
             break;
