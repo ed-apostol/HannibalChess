@@ -79,8 +79,6 @@ struct movelist_t {
     basic_move_t transmove;
     basic_move_t killer1;
     basic_move_t killer2;
-    int32 evalvalue;
-    int32 scout;
     int32 depth;
     int32 side;
     volatile uint32 phase;
