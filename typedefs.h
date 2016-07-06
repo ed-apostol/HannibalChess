@@ -93,12 +93,12 @@ struct movelist_t {
 struct pos_store_t {
     pos_store_t() : previous(nullptr) {}
     uint32 lastmove;
-    int castle;
-    int fifty;
-    int epsq;
-    int pliesFromNull;
+    int8 castle;
+    int8 fifty;
+    int8 epsq;
+    int8 pliesFromNull;
     EvalScore posScore[2];
-    int mat_summ[2];
+    int16 mat_summ[2];
     uint64 phash;
     uint64 hash;
     pos_store_t* previous;
@@ -114,10 +114,10 @@ struct position_t {
     uint64 kings;
     uint64 color[2];
     uint64 occupied;
-    int pieces[64];
-    int kpos[2];
+    int8 pieces[64];
+    int8 kpos[2];
     pos_store_t posStore;
-    int side;
+    int8 side;
 };
 
 typedef uint8 mflag_t;
