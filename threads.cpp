@@ -52,12 +52,12 @@ void Thread::IdleLoop() {
             SplitPoint* const sp = activeSplitPoint;
             CBSearchFromIdleLoop(*sp, *this);
             std::lock_guard<Spinlock> lck(sp->updatelock);
-            sp->workersBitMask &= ~((uint64)1 << thread_id);
+            sp->workersBitMask.reset(thread_id);
             sp->workAvailable = false;
             activeSplitPoint = nullptr;
             stop = true;
         }
-        if (master_sp != nullptr && (!master_sp->workersBitMask || doSleep)) return;
+        if (master_sp != nullptr && (master_sp->workersBitMask.count() < 1 || doSleep)) return;
     }
 }
 
@@ -78,7 +78,7 @@ void Thread::GetWork(SplitPoint* const master_sp) {
             continue;
         }
         // if this is a helpful master, only help splitpoints under helper threads still actively working for it
-        if (master_sp != nullptr && !(master_sp->workersBitMask & ((uint64)1 << th->thread_id))) continue;
+        if (master_sp != nullptr && !master_sp->workersBitMask.test(th->thread_id)) continue;
         for (int splitIdx = 0, num_splits = th->num_sp; splitIdx < num_splits; ++splitIdx) {
             SplitPoint* const sp = &th->sptable[splitIdx];
             // if it already has cutoff, no need to also check child splitpoints as they will return ASAP too
@@ -110,8 +110,8 @@ void Thread::GetWork(SplitPoint* const master_sp) {
             // check if all helper threads are still searching this splitpoint
             && best_split_point->workAvailable
             // check if this is a helpful master and if the helper thread is still working for it
-            && (master_sp == nullptr || (master_sp->workersBitMask & ((uint64)1 << thread_to_help->thread_id)))) {
-            best_split_point->workersBitMask |= ((uint64)1 << thread_id);
+            && (master_sp == nullptr || master_sp->workersBitMask.test(thread_to_help->thread_id))) {
+            best_split_point->workersBitMask.set(thread_id);
             activeSplitPoint = best_split_point;
             activeSplitPoint->joinedthreads += 1;
             stop = false;
@@ -137,7 +137,8 @@ void Thread::SearchSplitPoint(position_t& pos, SearchStack* ss, SearchStack* ssp
     active_sp->sscurr = ss;
     active_sp->ssprev = ssprev;
     active_sp->origpos = &pos;
-    active_sp->workersBitMask = ((uint64)1 << thread_id);
+    active_sp->workersBitMask.reset();
+    active_sp->workersBitMask.set(thread_id);
     active_sp->workAvailable = true;
     active_sp->joinedthreads = 1;
     activeSplitPoint = active_sp;

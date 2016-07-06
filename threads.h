@@ -13,6 +13,7 @@
 #include <thread>
 #include <atomic>
 #include <condition_variable>
+#include <bitset>
 #include "utils.h"
 #include "trans.h"
 
@@ -49,7 +50,7 @@ struct SplitPoint {
         played = 0;
         hisCount = 0;
         bestmove = EMPTY;
-        workersBitMask = 0;
+        workersBitMask.reset();
         workAvailable = false;
         cutoff = false;
         joinedthreads = 0;
@@ -76,10 +77,10 @@ struct SplitPoint {
     volatile int played;
     volatile int hisCount;
     volatile basic_move_t bestmove;
-    volatile uint64 workersBitMask;
     volatile bool workAvailable;
     volatile bool cutoff;
     volatile uint64 joinedthreads;
+    std::bitset<512> workersBitMask;
     Spinlock movelistlock;
     Spinlock updatelock;
     Spinlock movesplayedlock;

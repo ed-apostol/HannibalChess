@@ -39,7 +39,7 @@ static const int DefaultTimeBuffer = 1000;
 
 static const std::string ThreadsStr = "Threads";
 static const int MinThreads = 1;
-static const int MaxThreads = 64;
+static const int MaxThreads = 512;
 static const int DefaultThreads = 1;
 
 static const std::string MinSplitDepthStr = "Min Split Depth";
