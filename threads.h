@@ -41,7 +41,6 @@ struct SplitPoint {
         sscurr = nullptr;
         ssprev = nullptr;
         depth = 0;
-        inCheck = false;
         inRoot = false;
         inPv = true;
         alpha = 0;
@@ -68,7 +67,6 @@ struct SplitPoint {
     SearchStack* sscurr;
     SearchStack* ssprev;
     int depth;
-    bool inCheck;
     bool inRoot;
     bool inPv;
     volatile int alpha;
@@ -154,7 +152,7 @@ public:
     void Init();
     void IdleLoop();
     void GetWork(SplitPoint* const master_sp);
-    void SearchSplitPoint(position_t& pos, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, bool inPv, int depth, bool inCheck, bool inRoot);
+    void SearchSplitPoint(position_t& pos, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, bool inPv, int depth, bool inRoot);
 
     uint64 numsplits;
     uint64 numsplitsjoined;

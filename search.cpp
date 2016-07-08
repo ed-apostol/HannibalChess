@@ -551,7 +551,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (!inSplitPoint && !inSingular && !sthread.stop && sthread.num_sp < mInfo.mMaxActiveSplitsPerThread && mEngine.ThreadNum() > 1 
             && (inRoot || inPv || (depth >= mInfo.mMinSplitDepth && (!sthread.activeSplitPoint || !sthread.activeSplitPoint->workAvailable
                 || ((sthread.activeSplitPoint->depth - depth <= 1) && sthread.num_sp < 2))))) {
-            sthread.SearchSplitPoint(pos, &ss, &ssprev, alpha, beta, inPv, depth, ssprev.moveGivesCheck, inRoot);
+            sthread.SearchSplitPoint(pos, &ss, &ssprev, alpha, beta, inPv, depth, inRoot);
             if (sthread.stop) return 0;
             break;
         }
