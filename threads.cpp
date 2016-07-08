@@ -131,6 +131,7 @@ void Thread::SearchSplitPoint(position_t& pos, SearchStack* ss, SearchStack* ssp
     active_sp->bestvalue = ss->bestvalue;
     active_sp->bestmove = ss->bestmove;
     active_sp->played = ss->playedMoves;
+    active_sp->hisCount = ss->hisCnt;
     active_sp->inRoot = inRoot;
     active_sp->cutoff = false;
     active_sp->sscurr = ss;
