@@ -1,6 +1,6 @@
-# README #
+# Hannibal Chess Engine #
 
-This README would normally document whatever steps are necessary to get your application up and running.
+A state of the art chess playing engine.
 
 ### What is this repository for? ###
 
