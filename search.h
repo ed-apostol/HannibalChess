@@ -306,15 +306,12 @@ public:
             th->stop = true;
             th->doSleep = true;
         }
-        mTimerThread->stop = true;
     }
     void SetAllThreadsToWork() {
         for (Thread* th : mThreads) {
             if (th->thread_id != 0)
                 th->TriggerCondition(); // thread_id == 0 is triggered separately
         }
-        mTimerThread->stop = false;
-        mTimerThread->TriggerCondition();
     }
     Thread& ThreadFromIdx(int thread_id) {
         return *mThreads[thread_id];
@@ -389,7 +386,6 @@ private:
     TranspositionTable transtable;
     PvHashTable pvhashtable;
     std::vector<Thread*> mThreads;
-    TimerThread* mTimerThread;
     Book mPolyBook;
 };
 

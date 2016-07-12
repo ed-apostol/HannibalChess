@@ -25,7 +25,6 @@ TransEntry* TranspositionTable::Probe(const uint64 hash) {
     return nullptr;
 }
 
-
 void TranspositionTable::StoreEval(uint64 hash, int staticEvalValue) {
     int worst = -INF, t, score;
     TransEntry *replace, *entry;

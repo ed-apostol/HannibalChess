@@ -145,7 +145,7 @@ struct SearchStack {
         bannedMove(EMPTY),
         hashMove(EMPTY),
         hashDepth(-2),
-        ply(prev!=nullptr?prev->ply+1:-1),
+        ply(prev != nullptr ? prev->ply + 1 : -1),
         ssprev(prev),
         mvlist(&movelist),
         hisMoves(&hisTable[0]) {}

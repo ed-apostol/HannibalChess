@@ -87,10 +87,13 @@ void Search::initNode(Thread& sthread) {
         sthread.stop = true;
         return;
     }
-    if (mInfo.node_is_limited && mEngine.ComputeNodes() >= mInfo.node_limit) {
-        mEngine.StopSearch();
+    if (mInfo.node_is_limited) {
+        if (mEngine.ComputeNodes() >= mInfo.node_limit)
+            mEngine.StopSearch();
     }
+    else if (0 == sthread.thread_id && !(sthread.nodes & 4095)) mEngine.CheckTime();
 }
+
 bool Search::moveRefutesThreat(const position_t& pos, basic_move_t first, basic_move_t threat) {
     int m1from = moveFrom(first);
     int threatfrom = moveFrom(threat);
@@ -548,7 +551,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             }
         }
         if (inSplitPoint) sp->updatelock.unlock();
-        if (!inSplitPoint && !inSingular && !sthread.stop && sthread.num_sp < mInfo.mMaxActiveSplitsPerThread && mEngine.ThreadNum() > 1 
+        if (!inSplitPoint && !inSingular && !sthread.stop && sthread.num_sp < mInfo.mMaxActiveSplitsPerThread && mEngine.ThreadNum() > 1
             && (inRoot || inPv || (depth >= mInfo.mMinSplitDepth && (!sthread.activeSplitPoint || !sthread.activeSplitPoint->workAvailable
                 || ((sthread.activeSplitPoint->depth - depth <= 1) && sthread.num_sp < 2))))) {
             sthread.SearchSplitPoint(pos, &ss, &ssprev, alpha, beta, inPv, depth, inRoot);
@@ -592,7 +595,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
 Engine::Engine() {
     mThinking = false;
     search = new Search(*this, info, transtable, pvhashtable);
-    mTimerThread = new TimerThread(std::bind(&Engine::CheckTime, this));
 
     InitUCIOptions();
     SetNumThreads(uci_opt[ThreadsStr].GetInt());
@@ -605,7 +607,6 @@ Engine::~Engine() {
     mUndoStack.clear();
     delete search;
     SetNumThreads(0);
-    delete mTimerThread;
 }
 
 void Engine::StopSearch() {

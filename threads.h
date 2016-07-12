@@ -171,14 +171,3 @@ private:
     CBFuncThink CBGetBestMove;
     CBFuncSearch CBSearchFromIdleLoop;
 };
-
-class TimerThread : public ThreadBase {
-public:
-    TimerThread(std::function<void()> _cbfunc) : ThreadBase(0), CBFuncCheckTimer(_cbfunc) {
-        Init();
-        NativeThread() = std::thread(&TimerThread::IdleLoop, this);
-    }
-    void IdleLoop();
-private:
-    std::function<void()> CBFuncCheckTimer;
-};
