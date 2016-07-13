@@ -114,7 +114,7 @@ struct position_t {
     uint64 kings;
     uint64 color[2];
     uint64 occupied;
-    int pieces[64];
+    int8 pieces[64];
     int kpos[2];
     pos_store_t posStore;
     int side;
