@@ -521,11 +521,11 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (inRoot) {
             move->s = score;
         }
-        if (score > (inSplitPoint ? sp->bestvalue : ss.bestvalue)) {
+        if (score > (inSplitPoint ? sp->bestvalue.load() : ss.bestvalue)) {
             if (inRoot) mInfo.best_value = score;
             if (inSplitPoint) sp->bestvalue = score;
             ss.bestvalue = score;
-            if (ss.bestvalue > (inSplitPoint ? sp->alpha : alpha)) {
+            if (ss.bestvalue > (inSplitPoint ? sp->alpha.load() : alpha)) {
                 if (inRoot) {
                     if (mInfo.iteration > 1 && mInfo.bestmove != move->m) mInfo.change = 1;
                     mInfo.bestmove = move->m;
@@ -917,7 +917,7 @@ void Engine::GetBestMove(Thread& sthread) {
         }
         if (!info.stop_search) TimeManagement(id);
         if (info.stop_search) break;
-        if (info.best_value != -INF) info.last_value = info.best_value;
+        if (info.best_value != -INF) info.last_value = info.best_value.load();
     }
     if (!info.stop_search) {
         if ((info.depth_is_limited || info.time_is_limited) && info.thinking_status == THINKING) {
