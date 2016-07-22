@@ -91,7 +91,7 @@ void Search::initNode(Thread& sthread) {
         if (mEngine.ComputeNodes() >= mInfo.node_limit)
             mEngine.StopSearch();
     }
-    else if (0 == sthread.thread_id && !(sthread.nodes & 4095)) mEngine.CheckTime();
+    else if (0 == sthread.thread_id && !(sthread.nodes & 1023)) mEngine.CheckTime();
 }
 
 bool Search::moveRefutesThreat(const position_t& pos, basic_move_t first, basic_move_t threat) {
@@ -763,7 +763,8 @@ void Engine::CheckTime() {
         }
     }
     if (info.thinking_status == THINKING && info.time_is_limited) {
-        if (time2 > info.time_limit_max) {
+        if (time2 > info.time_limit_max && time2 - info.last_time2 > 50) { // at least 50 ms between checking
+            info.last_time2 = time2;
             if (time2 < info.time_limit_abs) {
                 if (!info.research && !info.change) {
                     bool gettingWorse = info.best_value != -INF && info.best_value + WORSE_SCORE_CUTOFF <= info.last_value;
@@ -917,7 +918,7 @@ void Engine::GetBestMove(Thread& sthread) {
         }
         if (!info.stop_search) TimeManagement(id);
         if (info.stop_search) break;
-        if (info.best_value != -INF) info.last_value = info.best_value.load();
+        if (info.best_value != -INF) info.last_value = info.best_value;
     }
     if (!info.stop_search) {
         if ((info.depth_is_limited || info.time_is_limited) && info.thinking_status == THINKING) {
@@ -936,7 +937,7 @@ void Engine::GetBestMove(Thread& sthread) {
         info.easymoves.Assign(info.rootPV);
 
     SendBestMove();
-}
+    }
 void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     WaitForThink();
     SetThinkStarted();
@@ -953,7 +954,7 @@ void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     int mytime = 0, t_inc = 0;
     if (data.infinite) {
         info.depth_is_limited = true;
-        info.depth_limit = MAXPLY;
+        info.depth_limit = MAXPLY - 1;
         LogInfo() << "info string Infinite";
     }
     if (data.depth > 0) {

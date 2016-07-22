@@ -25,11 +25,11 @@ void Thread::Init() {
     numsplitsjoined = 0;
     numworkers = 0;
     activeSplitPoint = nullptr;
-    for (int Idx = 0; Idx < MaxNumSplitPointsPerThread; ++Idx) {
-        sptable[Idx].Init();
+    for (int idx = 0; idx < MaxNumSplitPointsPerThread; ++idx) {
+        sptable[idx].Init();
     }
-    for (int Idx = 0; Idx < MAXPLY; ++Idx) {
-        ts[Idx].Init();
+    for (int idx = 0; idx < MAXPLY; ++idx) {
+        ts[idx].Init();
     }
     memset(history, 0, sizeof(history));
     memset(evalgains, 0, sizeof(evalgains));

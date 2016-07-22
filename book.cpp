@@ -30,10 +30,10 @@ bool equalMove(const basic_move_t m1, const basic_move_t m2) {
     return (moveTo(m1) == moveTo(m2) && moveFrom(m1) == moveFrom(m2));
 }
 
-bool move_in_list(const basic_move_t m, const movelist_t *ml) {
+bool move_in_list(const basic_move_t m, const movelist_t& ml) {
     int on;
-    for (on = 0; on < ml->size; on++) {
-        if (equalMove(ml->list[on].m, m)) return true;
+    for (on = 0; on < ml.size; on++) {
+        if (equalMove(ml.list[on].m, m)) return true;
     }
     return false;
 }
@@ -160,7 +160,7 @@ basic_move_t Book::getBookMove(position_t& pos) {
     movelist_t moves;
     genLegal(pos, moves, true);
     entries[numMoves] = entry;
-    if (move_in_list(entry.move, &moves)) {
+    if (move_in_list(entry.move, moves)) {
         totalWeight += entry.weight;
         numMoves++;
     }
@@ -173,7 +173,7 @@ basic_move_t Book::getBookMove(position_t& pos) {
         if (entry_from_polyglot_file(&entry, pos)) break;
         if (entry.key != key) break;
         entries[numMoves] = entry;
-        if (move_in_list(entry.move, &moves)) {
+        if (move_in_list(entry.move, moves)) {
             totalWeight += entry.weight;
             numMoves++;
         }

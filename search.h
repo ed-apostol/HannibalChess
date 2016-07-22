@@ -144,7 +144,7 @@ struct SearchInfo {
         pondering = false;
         stop_search = false;
         depth_is_limited = false;
-        depth_limit = MAXPLY;
+        depth_limit = MAXPLY - 1;
         moves_is_limited = false;
         time_is_limited = false;
         time_is_fixed = false;
@@ -152,7 +152,7 @@ struct SearchInfo {
         time_limit_abs = 0;
         node_is_limited = false;
         node_limit = 0;
-        start_time = last_time = getTime();
+        start_time = last_time2 = last_time = getTime();
         alloc_time = 0;
         best_value = -INF;
         last_value = -INF;
@@ -189,22 +189,23 @@ struct SearchInfo {
     bool time_is_limited;
     bool time_is_fixed;
 
-    std::atomic<int64> time_limit_max;
+    int64 time_limit_max;
     int64 time_limit_abs;
     bool node_is_limited;
     uint64 node_limit;
 
     int64 start_time;
-    std::atomic<int64> last_time;
+    int64 last_time;
+    int64 last_time2;
     int64 alloc_time;
 
-    std::atomic<int> last_value;
-    std::atomic<int> best_value;
+    int last_value;
+    int best_value;
 
     int mate_found;
     int currmovenumber;
-    std::atomic<int> change;
-    std::atomic<int> research;
+    int change;
+    int research;
     int iteration;
 
     int multipvIdx;

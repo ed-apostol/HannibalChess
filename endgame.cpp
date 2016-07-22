@@ -349,22 +349,38 @@ void BishopEnding(int attacker, const position_t& pos, eval_info_t& ei, int *sco
     }
     // same color bishop
     else {
-        int pNum = ei.MLindex[attacker] - MLB;
-        if (pNum == 1) {
-            int sq = GetOnlyBit(pos.pawns & pos.color[attacker]);
-            int defender = attacker ^ 1;
-            if (abs(SQFILE(pos.kpos[defender]) - SQFILE(sq)) <= 1 && IN_FRONT(SQRANK(pos.kpos[defender]), SQRANK(sq), attacker))
-                *draw = VERY_DRAWISH;
-            return;
+        //SAMNEW
+        //if you are blocking all the pawns and they are on the same row as you, you are golden
+        int defender = attacker ^ 1;
+        uint64 blockedSquares = (*FillPtr[defender])(BitMask[pos.kpos[defender]]);
+        if ((ei.pawns[attacker] & ~blockedSquares) == 0) {
+            *draw = MAX_DRAW;
         }
-        else if (pNum == 2 && ei.pawn_entry->passedbits == 0) {
-            const int defender = attacker ^ 1;
+        // otherwise if these is two or less pawns and no passed pawns
+        else if (ei.pawn_entry->passedbits == 0 && ei.MLindex[attacker] - MLB <= 2) {
             const int pawnSq = GetOnlyBit(pos.pawns & pos.color[defender]);
             if (abs(SQFILE(pos.kpos[defender]) - SQFILE(pawnSq)) <= 1 && IN_FRONT(SQRANK(pos.kpos[defender]), SQRANK(pawnSq), attacker)) {
                 if (SHOW_EVAL) PrintOutput() << "info string drawish bishop endgame\n";
                 *draw = DRAWISH;
             }
         }
+        /*
+    int pNum = ei.MLindex[attacker] - MLB;
+    if (pNum == 1) {
+        int sq = GetOnlyBit(pos.pawns & pos.color[attacker]);
+        int defender = attacker ^ 1;
+        if (abs(SQFILE(pos.kpos[defender]) - SQFILE(sq)) <= 1 && IN_FRONT(SQRANK(pos.kpos[defender]), SQRANK(sq), attacker))
+            *draw = VERY_DRAWISH;
+        return;
+    }
+    else if (pNum == 2 && ei.pawn_entry->passedbits == 0) {
+        const int defender = attacker ^ 1;
+        const int pawnSq = GetOnlyBit(pos.pawns & pos.color[defender]);
+        if (abs(SQFILE(pos.kpos[defender]) - SQFILE(pawnSq)) <= 1 && IN_FRONT(SQRANK(pos.kpos[defender]), SQRANK(pawnSq), attacker)) {
+            if (SHOW_EVAL) PrintOutput() << "info string drawish bishop endgame\n";
+            *draw = DRAWISH;
+        }
+    }*/
     }
 }
 void DrawnNP(int attacker, const position_t& pos, eval_info_t& ei, int *draw) {
@@ -740,20 +756,37 @@ inline uint64 shiftExpand(const uint64 pawns, const int color) {
     return (pawnAttackBB(pawns, color) | (ShiftPtr[color](pawns, 8)));
 }
 void BreakPawnReduction(const int color, const uint64 stopSquares, const position_t& pos, eval_info_t& ei, const bool fullLock, int *draw) {
-    const uint64 passed = ei.pawn_entry->passedbits & pos.color[color];
+    //    const uint64 passed = ei.pawn_entry->passedbits & pos.color[color];
     const uint64 targets = (ShiftPtr[color ^ 1](ei.potentialPawnAttack[color ^ 1], 8));
-    const uint64 potBreakPawns = ei.pawns[color] & ~(ShiftPtr[color ^ 1](stopSquares | pos.pawns | pos.color[color ^ 1], 8)); //pawn not blocked
+    const uint64 stoppers = (((stopSquares | pos.color[color ^ 1]) & ~ei.potentialPawnAttack[color]) | (pos.pawns & targets));
+    const uint64 repressed = (*FillPtr[color ^ 1])(stoppers);
+    const uint64 potBreakPawns = ~repressed;
+    const uint64 pieces = pos.color[color] & ~(pos.pawns | pos.kings);
+    const int complications = bitCnt((ei.pawn_entry->passedbits & pos.color[color]) | pieces);
     if (SHOW_EVAL) {
         PrintOutput() << "info string targets\n";
         PrintBitBoard(targets);
+        PrintOutput() << "info string stoppers\n";
+        PrintBitBoard(stoppers);
         PrintOutput() << "info string potbreak Pawns\n";
         PrintBitBoard(potBreakPawns);
     }
-    int numBreaks = bitCnt((potBreakPawns & targets) | passed);
+    int numBreaks = bitCnt(ei.pawns[color] & potBreakPawns & targets);
+    if (numBreaks) numBreaks += complications;
     int score = fullLock ? MAX(PARTIAL_LOCK_DRAW, LOCK_DRAW * 2 / (numBreaks + 2))
         : MAX(MIN_DRAW_EFFECT, PARTIAL_LOCK_DRAW * 2 / (numBreaks + 2));
-    if ((pos.color[color] & ~(pos.pawns | pos.kings)) != 0) score /= numBreaks + 1;
-    *draw += score;
+    //minor decrements
+    score -= 10 * complications;
+    *draw += MAX(0, score);
+    if (SHOW_EVAL) {
+        if (fullLock) PrintOutput() << "info string full lock";
+        else PrintOutput() << "info string partial lock";
+
+        PrintOutput() << "info string num breaks ";
+        PrintOutput() << numBreaks;
+        PrintOutput() << "info string score ";
+        PrintOutput() << score;
+    }
 }
 
 void LockedPawns(int attacker, const position_t& pos, eval_info_t& ei, int *draw) {
@@ -765,8 +798,8 @@ void LockedPawns(int attacker, const position_t& pos, eval_info_t& ei, int *draw
         uint64 squashSquares = doublePawnAttackBB(ei.pawns[defender], defender);
         squashSquares |= (ei.atkpawns[defender] & ~ei.atkall[attacker]);
         squashSquares &= boardSide[attacker];
-        squashSquares |= (*ShiftPtr[defender])(squashSquares & ~ei.potentialPawnAttack[attacker], 8);
-        const uint64 stopSquares = squashSquares | (pieceStopper & ~ei.atkall[attacker]);
+        //        squashSquares |= (*ShiftPtr[defender])(squashSquares & ~ei.potentialPawnAttack[attacker], 8);
+        const uint64 stopSquares = (squashSquares | (pieceStopper & ~ei.atkall[attacker]));
         if (SHOW_EVAL) {
             PrintOutput() << "info string squash Squares\n";
             PrintBitBoard(squashSquares);
@@ -789,7 +822,7 @@ void LockedPawns(int attacker, const position_t& pos, eval_info_t& ei, int *draw
             if (wall6missing == 0) {
                 if ((enemyKing & (Rank1BB | Rank2BB | wall3missing | wall4missing | wall5missing | wall6missing)) == 0) {
                     if (SHOW_EVAL) PrintOutput() << "info string WHITE DRAW WALL\n";
-                    BreakPawnReduction(attacker, stopSquares, pos, ei, false, draw);
+                    BreakPawnReduction(attacker, stopSquares, pos, ei, true, draw);
                 }
                 else if (SHOW_EVAL) PrintOutput() << "info string WHITE DRAW WALL king penetrated\n";
             }
