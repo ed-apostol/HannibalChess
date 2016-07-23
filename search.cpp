@@ -617,6 +617,7 @@ void Engine::StopSearch() {
 void Engine::PonderHit() { //no pondering in tuning
     info.thinking_status = THINKING;
     LogInfo() << "info string Switch from pondering to thinking";
+	if (info.is_easymove == true && info.easyPonderMove == info.bestmove) StopSearch();
 }
 
 void Engine::SearchFromIdleLoop(SplitPoint& sp, Thread& sthread) {
@@ -844,17 +845,21 @@ void Engine::GetBestMove(Thread& sthread) {
                 }
             }
         }
-        if (info.is_easymove && info.thinking_status == THINKING && info.time_is_limited &&
+        if (info.is_easymove && info.time_is_limited &&
             info.easymoves.m[1] == rootpos.posStore.lastmove && info.easymoves.m[2] == ss.hashMove) {
-            info.bestmove = ss.hashMove;
-            info.best_value = entry->pvScore();
-            info.easymoves.Init();
-            ExtractPvMovesFromHash(rootpos, info.rootPV, ss.hashMove);
-            DisplayPV(info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
-            StopSearch();
-            SendBestMove();
-            return;
+			info.easyPonderMove = ss.hashMove;
+			if (info.thinking_status == THINKING) {
+				info.bestmove = ss.hashMove;
+				info.best_value = entry->pvScore();
+				info.easymoves.Init();
+				ExtractPvMovesFromHash(rootpos, info.rootPV, ss.hashMove);
+				DisplayPV(info.rootPV, info.multipvIdx, entry->pvDepth(), -INF, INF, info.best_value);
+				StopSearch();
+				SendBestMove();
+				return;
+			}
         }
+		else info.easyPonderMove = 0;
     }
 
     // extend time when there is no hashmove from hashtable, this is useful when just out of the book
