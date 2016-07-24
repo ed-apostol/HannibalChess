@@ -142,7 +142,7 @@ struct SearchInfo {
         thinking_status = THINKING;
         is_easymove = false;
         pondering = false;
-		easyPonderMove = 0;
+        easyPonderMove = EMPTY;
         stop_search = false;
         depth_is_limited = false;
         depth_limit = MAXPLY - 1;
@@ -177,7 +177,7 @@ struct SearchInfo {
     std::atomic<bool> stop_search; // TODO: replace with sthread.stop?
     bool pondering;
     bool is_easymove;
-	basic_move_t easyPonderMove;
+    basic_move_t easyPonderMove;
 
     int time_buffer;
     int contempt;
