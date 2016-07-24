@@ -184,14 +184,16 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     if (ss.ply >= MAXPLY - 1) return eval(pos, sthread);
     if (!ssprev.moveGivesCheck) {
         if (ss.staticEvalValue == -INF) {
-            ss.staticEvalValue = eval(pos, sthread); //TODO consider hashing this
-            mTransTable.StoreEval(pos.posStore.hash, ss.staticEvalValue);
+            ss.staticEvalValue = eval(pos, sthread);
         }
         ss.evalvalue = ss.bestvalue = ss.staticEvalValue;
         updateEvalgains(pos, pos.posStore.lastmove, ssprev.staticEvalValue, ss.staticEvalValue, sthread);
         if (ss.bestvalue > alpha) {
-            if (ss.bestvalue >= beta)
-                return ss.bestvalue;
+			if (ss.bestvalue >= beta)
+			{
+				mTransTable.StoreEval(pos.posStore.hash, ss.staticEvalValue);
+				return ss.bestvalue;
+			}
             alpha = ss.bestvalue;
         }
     }
@@ -328,7 +330,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (!inPv && !ssprev.moveGivesCheck) {
             static const int MaxRazorDepth = 10;
             int rvalue;
-            if (depth < MaxRazorDepth && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && beta <= MAXEVAL
+            if (depth < MaxRazorDepth && (pos.color[pos.side] & ~(pos.pawns | pos.kings))
                 && ss.evalvalue >(rvalue = beta + FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
                 return rvalue; //consider enforcing a max of MAXEVAL
             }
