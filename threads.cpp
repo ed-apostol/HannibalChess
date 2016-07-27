@@ -39,10 +39,11 @@ void Thread::IdleLoop() {
     SplitPoint* const master_sp = activeSplitPoint;
     while (!exit_flag) {
         if (!exit_flag && master_sp == nullptr && doSleep) {
+            LogInfo() << "Thread " << thread_id << " sleeping!";
             SleepAndWaitForCondition();
+            LogInfo() << "Thread " << thread_id << " waking up!";
         }
         if (!exit_flag && !doSleep && master_sp == nullptr && thread_id == 0) {
-            LogInfo() << "IdleLoop: Main thread waking up to start searching!";
             CBGetBestMove(*this);
         }
         if (!exit_flag && !doSleep && stop) {

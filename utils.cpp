@@ -167,14 +167,13 @@ bool anyRepNoMove(const position_t& pos, const int m) {
     if (pos.posStore.fifty >= 99) return true;
 
     uint64 compareTo = pos.posStore.hash ^ ZobColor ^ ZobPiece[pos.side][movePiece(m)][moveFrom(m)] ^ ZobPiece[pos.side][movePiece(m)][moveTo(m)];
-    pos_store_t* psp;
-    if (!pos.posStore.previous) return false;
-    psp = pos.posStore.previous;
+    pos_store_t* psp = pos.posStore.previous;
 
-    for (int plyForRep = 3, pliesToCheck = MIN(pos.posStore.pliesFromNull, pos.posStore.fifty); plyForRep <= pliesToCheck; plyForRep += 2) {
-        if (!psp->previous || !psp->previous->previous) return false;
+    for (int plyForRep = 3, pliesToCheck = MIN(pos.posStore.pliesFromNull, pos.posStore.fifty); psp && plyForRep <= pliesToCheck; plyForRep += 2) {
+        if (!psp->previous) return false;
+        else if (!psp->previous->previous) return false;
         psp = psp->previous->previous;
-        if (psp->hash == compareTo) return true;
+        if (psp && psp->hash == compareTo) return true;
     }
     return false;
 }

@@ -184,7 +184,7 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     if (ss.ply >= MAXPLY - 1) return eval(pos, sthread);
     if (!ssprev.moveGivesCheck) {
         if (ss.staticEvalValue == -INF) {
-            ss.staticEvalValue = eval(pos, sthread); //TODO consider hashing this
+            ss.staticEvalValue = eval(pos, sthread);
             mTransTable.StoreEval(pos.posStore.hash, ss.staticEvalValue);
         }
         ss.evalvalue = ss.bestvalue = ss.staticEvalValue;
@@ -328,14 +328,14 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (!inPv && !ssprev.moveGivesCheck) {
             static const int MaxRazorDepth = 10;
             int rvalue;
-            if (depth < MaxRazorDepth && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && beta <= MAXEVAL
+            if (depth < MaxRazorDepth && (pos.color[pos.side] & ~(pos.pawns | pos.kings))
                 && ss.evalvalue >(rvalue = beta + FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
                 return rvalue; //consider enforcing a max of MAXEVAL
             }
             if (depth <= 1 && pos.posStore.lastmove != EMPTY && ss.ssprev && ss.ssprev->ssprev
                 && ss.staticEvalValue > ss.ssprev->ssprev->staticEvalValue && (ss.staticEvalValue >= beta || ss.evalvalue >= beta))
                 return beta; //NEWSAM
-            if (depth < MaxRazorDepth && pos.posStore.lastmove != EMPTY
+            if (depth < MaxRazorDepth && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && pos.posStore.lastmove != EMPTY
                 && ss.evalvalue < (rvalue = beta - FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
                 if (depth <= 2) {
                     return searchNode<false, inPv, false, false>(pos, alpha, beta, 0, ssprev, sthread);
@@ -616,10 +616,10 @@ void Engine::StopSearch() {
 
 void Engine::PonderHit() { //no pondering in tuning
     info.thinking_status = THINKING;
-    LogInfo() << "info string Switch from pondering to thinking";
+    LogInfo() << "Switch from pondering to thinking";
     if (info.is_easymove == true && info.easyPonderMove == info.bestmove) {
         StopSearch();
-        LogInfo() << "info string Aborting search: easy move on ponderhit!";
+        LogInfo() << "Aborting search: easy move on ponderhit!";
     }
 }
 
@@ -706,7 +706,7 @@ void Engine::TimeManagement(int depth) {
         if (info.legalmoves == 1 || info.mate_found >= 3) {
             if (depth >= 8) {
                 StopSearch();
-                LogInfo() << "info string Aborting search: legalmove/mate found depth >= 8";
+                LogInfo() << "Aborting search: legalmove/mate found depth >= 8";
                 return;
             }
         }
@@ -720,25 +720,22 @@ void Engine::TimeManagement(int depth) {
                 if ((info.best_value + WORSE_SCORE_CUTOFF) <= info.last_value) {
                     int amountWorse = info.last_value - info.best_value;
                     addTime += ((amountWorse - (WORSE_SCORE_CUTOFF - 10)) * info.alloc_time) / WORSE_TIME_BONUS;
-                    LogInfo() << "info string Extending time (root gettingWorse): " << addTime;
+                    LogInfo() << "Extending time (root gettingWorse): " << addTime;
                 }
                 if (info.change) {
                     addTime += (info.alloc_time * CHANGE_TIME_BONUS) / 100;
-                    LogInfo() << "info string Extending time (root change): " << addTime;
+                    LogInfo() << "Extending time (root change): " << addTime;
                 }
             }
             if (addTime <= 0) { // if we are unlikely to get deeper, save our time
                 StopSearch();
                 if (easymovecutoff) {
-                    LogAndPrintOutput() << "info string Aborting search: Easymove: " << timeElapsed - info.start_time;
+                    LogAndPrintOutput() << "Aborting search: Easymove: " << timeElapsed - info.start_time;
                 }
-                else LogInfo() << "info string Aborting search: root time limit 1: " << timeElapsed - info.start_time;
+                else LogInfo() << "Aborting search: root time limit 1: " << timeElapsed - info.start_time;
                 return;
             }
             else {
-                // TODO: consider adding this back
-                //if (easymovecutoff)
-                //    info.is_easymove = false;
                 if (extendcutoff) {
                     info.time_limit_max += addTime;
                     if (info.time_limit_max > info.time_limit_abs)
@@ -749,7 +746,7 @@ void Engine::TimeManagement(int depth) {
     }
     if (info.depth_is_limited && depth >= info.depth_limit) {
         StopSearch();
-        LogInfo() << "info string Aborting search: depth limit: " << depth;
+        LogInfo() << "Aborting search: depth limit: " << depth;
         return;
     }
 }
@@ -774,35 +771,30 @@ void Engine::CheckTime() {
                     bool gettingWorse = info.best_value != -INF && info.best_value + WORSE_SCORE_CUTOFF <= info.last_value;
                     if (!gettingWorse) {
                         StopSearch();
-                        LogInfo() << "info string Aborting search: time limit 2: " << time2 - info.start_time;
+                        LogInfo() << "Aborting search: time limit 2: " << time2 - info.start_time;
                     }
                 }
             }
             else {
                 StopSearch();
-                LogInfo() << "info string Aborting search: time limit 1: " << time2 - info.start_time;
+                LogInfo() << "Aborting search: time limit 1: " << time2 - info.start_time;
             }
         }
     }
     if (info.thinking_status == THINKING && info.time_is_fixed) {
         if (time2 > info.time_limit_max) {
             StopSearch();
-            LogInfo() << "info string Aborting search: fixed time: " << time2 - info.start_time;
+            LogInfo() << "Aborting search: fixed time: " << time2 - info.start_time;
         }
     }
 }
 
 void Engine::SendBestMove() {
-    if (!info.bestmove) {
-        LogAndPrintOutput() << "info string No legal move found. Start a new game.";
-    }
-    else {
-        LogAndPrintOutput log;
-        log << "bestmove " << move2Str(info.bestmove);
-        if (info.rootPV.size() > 1 && info.rootPV[0] == info.bestmove && info.rootPV[1])
-            log << " ponder " << move2Str(info.rootPV[1]);
-    }
-    //PrintThreadStats();
+    LogAndPrintOutput log;
+    log << "bestmove " << move2Str(info.bestmove);
+    if (info.rootPV.size() > 1 && info.rootPV[0] == info.bestmove && info.rootPV[1])
+        log << " ponder " << move2Str(info.rootPV[1]);
+    if (ThreadNum() > 1) PrintThreadStats();
     SetThinkFinished();
 }
 
@@ -829,7 +821,7 @@ void Engine::GetBestMove(Thread& sthread) {
     SHOW_EVAL = true;
     int tscore = eval(rootpos, sthread);
     SHOW_EVAL = false;
-    PrintOutput() << "info string score = " << tscore << "\n";
+    PrintOutput() << "score = " << tscore << "\n";
 #endif
     PvHashEntry *entry = pvhashtable.pvEntry(rootpos.posStore.hash);
     if (nullptr != entry && entry->pvMove() && isLegal(rootpos, entry->pvMove(), ss.moveGivesCheck)) {
@@ -930,12 +922,12 @@ void Engine::GetBestMove(Thread& sthread) {
     }
     if (!info.stop_search) {
         if ((info.depth_is_limited || info.time_is_limited) && info.thinking_status == THINKING) {
-            LogInfo() << "info string Aborting search: end of GetBestMove: id = " << id << ", best_value = " << info.best_value << " ply = " << ss.ply;
+            LogInfo() << "Aborting search: end of GetBestMove: id = " << id << ", best_value = " << info.best_value << " ply = " << ss.ply;
         }
         else {
-            LogAndPrintInfo() << "info string Waiting for stop, quit, or PonderHit";
+            LogInfo() << "Waiting for stop, quit, or PonderHit";
             while (!info.stop_search && info.thinking_status != THINKING);
-            LogInfo() << "info string Aborting search: end of waiting for stop/quit/PonderHit";
+            LogInfo() << "Aborting search: end of waiting for stop/quit/PonderHit";
         }
         StopSearch();
     }
@@ -945,7 +937,8 @@ void Engine::GetBestMove(Thread& sthread) {
         info.easymoves.Assign(info.rootPV);
 
     SendBestMove();
-    }
+}
+
 void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     WaitForThink();
     SetThinkStarted();
@@ -963,26 +956,26 @@ void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     if (data.infinite) {
         info.depth_is_limited = true;
         info.depth_limit = MAXPLY - 1;
-        LogInfo() << "info string Infinite";
+        LogInfo() << "Infinite";
     }
     if (data.depth > 0) {
         info.depth_is_limited = true;
         info.depth_limit = data.depth;
-        LogInfo() << "info string Depth is limited to " << info.depth_limit << " half moves";
+        LogInfo() << "Depth is limited to " << info.depth_limit << " half moves";
     }
     if (data.mate > 0) {
         info.depth_is_limited = true;
         info.depth_limit = data.mate * 2 - 1;
-        LogInfo() << "info string Mate in " << info.depth_limit << " half moves";
+        LogInfo() << "Mate in " << info.depth_limit << " half moves";
     }
     if (data.nodes > 0) {
         info.node_is_limited = true;
         info.node_limit = data.nodes;
-        LogInfo() << "info string Nodes is limited to " << info.node_limit << " positions";
+        LogInfo() << "Nodes is limited to " << info.node_limit << " positions";
     }
     if (info.moves[0]) {
         info.moves_is_limited = true;
-        LogInfo() << "info string Moves is limited";
+        LogInfo() << "Moves is limited";
     }
 
     if (data.movetime > 0) {
@@ -990,7 +983,7 @@ void Engine::StartThinking(GoCmdData& data, position_t& pos) {
         info.alloc_time = data.movetime;
         info.time_limit_max = info.start_time + data.movetime;
         info.time_limit_abs = info.start_time + data.movetime;
-        LogInfo() << "info string Fixed time per move: " << data.movetime << " ms";
+        LogInfo() << "Fixed time per move: " << data.movetime << " ms";
     }
     if (rootpos.side == WHITE) {
         mytime = data.wtime;
@@ -1019,24 +1012,25 @@ void Engine::StartThinking(GoCmdData& data, position_t& pos) {
         if (info.time_limit_max < 2) info.time_limit_max = 2;
         if (info.time_limit_abs < 2) info.time_limit_abs = 2;
 
-        LogInfo() << "info string Time is limited: ";
-        LogInfo() << "max = " << info.time_limit_max;
-        LogInfo() << "abs = " << info.time_limit_abs;
+        LogInfo()
+            << "Time is limited:"
+            << " max = " << info.time_limit_max
+            << " abs = " << info.time_limit_abs;
         info.alloc_time = info.time_limit_max;
         info.time_limit_max += info.start_time;
         info.time_limit_abs += info.start_time;
     }
     if (data.infinite) {
         info.thinking_status = ANALYSING;
-        LogInfo() << "info string Search status is ANALYSING";
+        LogInfo() << "Search status is ANALYSING";
     }
     else if (data.ponder) {
         info.thinking_status = PONDERING;
-        LogInfo() << "info string Search status is PONDERING";
+        LogInfo() << "Search status is PONDERING";
     }
     else {
         info.thinking_status = THINKING;
-        LogInfo() << "info string Search status is THINKING";
+        LogInfo() << "Search status is THINKING";
     }
     int phase;
     if (pos.posStore.mat_summ[WHITE] < MAX_MATERIAL && pos.posStore.mat_summ[BLACK] < MAX_MATERIAL) {

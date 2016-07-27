@@ -32,7 +32,7 @@
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
 const std::string Interface::year = "2016";
-const std::string Interface::version = "1.6.54";
+const std::string Interface::version = "1.6.57";
 const std::string Interface::arch = "x64";
 
 void Interface::Info() {
@@ -56,7 +56,7 @@ Interface::Interface() {
 void Interface::Run() {
     std::string line;
     while (getline(std::cin, line)) {
-        LogInfo() << line;
+        LogInput() << line;
         std::istringstream ss(line);
         if (!Input(ss)) break;
     }
@@ -89,7 +89,7 @@ bool Interface::Input(std::istringstream& stream) {
 void Interface::Quit(Engine& engine) {
     engine.StopSearch();
     engine.WaitForThink();
-    LogInfo() << "Interface quit";
+    LogInfo() << "Engine quitting";
 }
 
 void Interface::Id(Engine& engine) {
@@ -101,7 +101,7 @@ void Interface::Id(Engine& engine) {
 
 void Interface::Stop(Engine& engine) {
     engine.StopSearch();
-    LogInfo() << "info string Aborting search: stop";
+    LogInfo() << "Aborting search: stop";
 }
 
 void Interface::PonderHit(Engine& engine) {
@@ -150,7 +150,7 @@ void Interface::Position(Engine& engine, position_t& pos, std::istringstream& st
             fen += token + " ";
     }
     else {
-        LogWarning() << "Invalid position!";
+        LogAndPrintError() << "Invalid position!";
         return;
     }
 

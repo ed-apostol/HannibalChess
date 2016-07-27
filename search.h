@@ -283,15 +283,15 @@ public:
         InitPawnHash(uci_opt[PawnHashStr].GetInt());
     }
     void PrintThreadStats() {
-        LogAndPrintOutput() << "================================================================";
+        LogInfo() << "================================================================================";
         for (Thread* th : mThreads) {
-            LogAndPrintOutput() << "thread_id: " << th->thread_id
+            LogInfo() << "thread_id: " << th->thread_id
                 << " nodes: " << th->nodes
                 << " splits: " << double(th->numsplits * 100.0) / double(th->nodes)
                 << " joined: " << double(th->numsplitsjoined * 100.0) / double(th->numsplits)
                 << " threads: " << double(th->numworkers) / double(th->numsplitsjoined);
         }
-        LogAndPrintOutput() << "================================================================";
+        LogInfo() << "================================================================================";
     }
     void WaitForThink() {
         while (mThinking) {
