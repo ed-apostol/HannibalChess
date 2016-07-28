@@ -66,22 +66,27 @@ bool Interface::Input(std::istringstream& stream) {
     std::string command;
     stream >> command;
 
-    if (command == "stop") Stop(cEngine);
-    else if (command == "ponderhit") PonderHit(cEngine);
-    else if (command == "go") Go(cEngine, input_pos, stream);
-    else if (command == "position") Position(cEngine, input_pos, stream);
-    else if (command == "setoption") SetOption(cEngine, stream);
-    else if (command == "ucinewgame") NewGame(cEngine);
-    else if (command == "isready") IsReady(cEngine);
-    else if (command == "uci") Id(cEngine);
+    if (command == "isready") IsReady(cEngine);
     else if (command == "quit") { Quit(cEngine); return false; }
+    else if (cEngine.mThinking) {
+        if (command == "stop") Stop(cEngine);
+        else if (command == "ponderhit") PonderHit(cEngine);
+        else LogAndPrintError() << "Engine thinking! Ignored: " << command;
+    }
+    else {
+        if (command == "go") Go(cEngine, input_pos, stream);
+        else if (command == "position") Position(cEngine, input_pos, stream);
+        else if (command == "setoption") SetOption(cEngine, stream);
+        else if (command == "ucinewgame") NewGame(cEngine);
+        else if (command == "uci") Id(cEngine);
 #ifndef SMALL_FOOTPRINT
-    else if (command == "speedup") CheckSpeedup(stream);
-    else if (command == "split") CheckBestSplit(stream);
-    else if (command == "maxsplit") CheckMaxSplit(stream);
-    else if (command == "speedtest") CheckSpeed();
+        else if (command == "speedup") CheckSpeedup(stream);
+        else if (command == "split") CheckBestSplit(stream);
+        else if (command == "maxsplit") CheckMaxSplit(stream);
+        else if (command == "speedtest") CheckSpeed();
 #endif
-    else LogAndPrintError() << "Unknown UCI command: " << command;
+        else LogAndPrintError() << "Invalid command: " << command;
+    }
 
     return true;
 }
@@ -100,8 +105,9 @@ void Interface::Id(Engine& engine) {
 }
 
 void Interface::Stop(Engine& engine) {
-    engine.StopSearch();
     LogInfo() << "Aborting search: stop";
+    engine.StopSearch();
+    engine.WaitForThink();
 }
 
 void Interface::PonderHit(Engine& engine) {
@@ -183,6 +189,7 @@ void Interface::NewGame(Engine& engine) {
     engine.ClearPVTTHash();
 }
 Interface::~Interface() {}
+
 #ifndef SMALL_FOOTPRINT
 void Interface::CheckSpeed() {
     std::istringstream streamcmd;

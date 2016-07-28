@@ -790,11 +790,12 @@ void Engine::CheckTime() {
 }
 
 void Engine::SendBestMove() {
-    LogAndPrintOutput log;
+    LogAndPrintOutput log; //will print and log at function exit
     log << "bestmove " << move2Str(info.bestmove);
     if (info.rootPV.size() > 1 && info.rootPV[0] == info.bestmove && info.rootPV[1])
         log << " ponder " << move2Str(info.rootPV[1]);
-    if (ThreadNum() > 1) PrintThreadStats();
+    if (ThreadNum() > 1)
+        PrintThreadStats();
     SetThinkFinished();
 }
 
@@ -937,7 +938,7 @@ void Engine::GetBestMove(Thread& sthread) {
         info.easymoves.Assign(info.rootPV);
 
     SendBestMove();
-}
+    }
 
 void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     WaitForThink();

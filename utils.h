@@ -33,7 +33,11 @@ enum LogLevel {
 };
 
 struct LogToFile : public std::ofstream {
-    LogToFile(const std::string& f = "log.txt") : std::ofstream(f.c_str(), std::ios::out | std::ios::app) {}
+    static LogToFile& Inst() {
+        static LogToFile logger;
+        return logger;
+    }
+    LogToFile(const std::string& f = "log.txt") : std::ofstream(f.c_str(), std::ios::app) {}
     ~LogToFile() {
         if (is_open()) close();
     }
@@ -52,15 +56,15 @@ public:
     ~Log() {
         if (level > logNONE && level <= ClearanceLevel) {
             static const std::string LevelText[7] = { "", "->", "<-", "!!", "??", "==", "||" };
-            _buffer << std::endl;
+            _buffer << "\n";
             if (out) {
                 if (level == logOUT) std::cout << _buffer.str();
-                else std::cout << LevelText[level] << ": " << _buffer.str();
+                else std::cout << LevelText[level] << " " << _buffer.str();
             }
             if (logtofile) {
                 static Spinlock splck;
                 std::lock_guard<Spinlock> lock(splck);
-                LogToFile() << getTime() << " " << LevelText[level] << " " << _buffer.str();
+                LogToFile::Inst() << getTime() << " " << LevelText[level] << " " << _buffer.str();
             }
         }
     }

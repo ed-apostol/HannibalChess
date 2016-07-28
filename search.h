@@ -287,8 +287,8 @@ public:
         for (Thread* th : mThreads) {
             LogInfo() << "thread_id: " << th->thread_id
                 << " nodes: " << th->nodes
-                << " splits: " << double(th->numsplits * 100.0) / double(th->nodes)
-                << " joined: " << double(th->numsplitsjoined * 100.0) / double(th->numsplits)
+                << " splits%: " << double(th->numsplits * 100.0) / double(th->nodes)
+                << " joined%: " << double(th->numsplitsjoined * 100.0) / double(th->numsplits)
                 << " threads: " << double(th->numworkers) / double(th->numsplitsjoined);
         }
         LogInfo() << "================================================================================";
@@ -379,10 +379,9 @@ public:
 
     UCIOptions uci_opt;
     std::vector<pos_store_t*> mUndoStack;
+    std::atomic<bool> mThinking;
 private:
     static const int WORSE_SCORE_CUTOFF = 20;
-
-    std::atomic<bool> mThinking;
     position_t rootpos;
     SearchInfo info;
     Search* search;
