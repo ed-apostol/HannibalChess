@@ -185,13 +185,15 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     if (!ssprev.moveGivesCheck) {
         if (ss.staticEvalValue == -INF) {
             ss.staticEvalValue = eval(pos, sthread);
-            mTransTable.StoreEval(pos.posStore.hash, ss.staticEvalValue);
+ //           mTransTable.StoreEval(pos.posStore.hash, ss.staticEvalValue);
         }
         ss.evalvalue = ss.bestvalue = ss.staticEvalValue;
         updateEvalgains(pos, pos.posStore.lastmove, ssprev.staticEvalValue, ss.staticEvalValue, sthread);
         if (ss.bestvalue > alpha) {
-            if (ss.bestvalue >= beta)
-                return ss.bestvalue;
+			if (ss.bestvalue >= beta) {
+				mTransTable.StoreEval(pos.posStore.hash, ss.staticEvalValue);
+				return ss.bestvalue;
+			}
             alpha = ss.bestvalue;
         }
     }
@@ -241,15 +243,15 @@ int Search::qSearch(position_t& pos, int alpha, int beta, const int depth, Searc
     }
     if (ss.bestvalue >= beta) {
         ssprev.counterMove = ss.bestmove;
-        mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, ss.ply), false, ss.staticEvalValue);
+        mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, ss.ply), false, ss.staticEvalValue,inPv);
     }
     else {
         if (inPv && ss.bestmove != EMPTY) {
             ssprev.counterMove = ss.bestmove;
-            mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, ss.ply), false, ss.staticEvalValue);
+			mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, ss.ply), false, ss.staticEvalValue, inPv);
             mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, -1, scoreToTrans(ss.bestvalue, ss.ply));
         }
-        else mTransTable.StoreUpper(pos.posStore.hash, -1, scoreToTrans(ss.bestvalue, ss.ply), ss.staticEvalValue);
+		else mTransTable.StoreUpper(pos.posStore.hash, -1, scoreToTrans(ss.bestvalue, ss.ply), ss.staticEvalValue, inPv);
     }
     return ss.bestvalue;
 }
@@ -288,7 +290,23 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 if (ssprev.moveGivesCheck) return -INF + ss.ply;
                 else return DrawValue[pos.side];
             }
-            if (!inPv) {
+			if (inPv) {
+				if (hmove && (entry->Mask() & MPV)) {
+					if (entry->LowerDepth() >= depth) {
+						int score = scoreFromTrans(entry->LowerValue(), ss.ply);
+						if (score >= beta && isLegal(pos, hmove, ssprev.moveGivesCheck)) {
+							ss.bestmove = ssprev.counterMove = ss.hashMove;
+							UpdateHistory(pos, ss, sthread, depth);
+							return score;
+						}
+					}
+					if (entry->UpperDepth() >= depth) {
+						int score = scoreFromTrans(entry->UpperValue(), ss.ply);
+						if (score <= alpha && isLegal(pos, hmove, ssprev.moveGivesCheck)) return score;
+					}
+				}
+			}
+			else {
                 if (entry->LowerDepth() >= depth && (hmove != EMPTY || pos.posStore.lastmove == EMPTY)) {
                     int score = scoreFromTrans(entry->LowerValue(), ss.ply);
                     if (score > alpha) {
@@ -334,7 +352,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
             }
             if (depth <= 1 && pos.posStore.lastmove != EMPTY && ss.ssprev && ss.ssprev->ssprev
                 && ss.staticEvalValue > ss.ssprev->ssprev->staticEvalValue && (ss.staticEvalValue >= beta || ss.evalvalue >= beta))
-                return beta; //NEWSAM
+                return beta; 
             if (depth < MaxRazorDepth && (pos.color[pos.side] & ~(pos.pawns | pos.kings)) && pos.posStore.lastmove != EMPTY
                 && ss.evalvalue < (rvalue = beta - FutilityMarginTable[depth][MIN(ssprev.playedMoves, 63)])) {
                 if (depth <= 2) {
@@ -354,12 +372,20 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 ss.threatMove = ss.counterMove;
                 unmakeNullMove(pos, undo);
                 if (sthread.stop) return 0;
+				if (score >= beta) {
+					if (score >= MAXEVAL) score = beta;
+					if (depth < 12 && abs(beta) < MAXEVAL) return score;
+					int score2 = searchNode<false, inPv, false, false>(pos, alpha, beta, nullDepth, ssprev, sthread); //alpha = beta - 1 because not a PV node
+					if (sthread.stop) return 0;
+					if (score2 >= beta) return score;
+				}
+				/*
                 if (score >= beta) {
                     if (depth < 12 && abs(score) <= MAXEVAL) return score;
                     int score2 = searchNode<false, inPv, false, false>(pos, alpha, beta, nullDepth, ssprev, sthread); //alpha = beta - 1 because not a PV node
                     if (sthread.stop) return 0;
                     if (score2 >= beta) return score;
-                }
+                }*/
             }
             if (depth >= 5) { // if we have a no-brainer capture we should just do it
                 sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, depth, MoveGenPhaseQuiescence, sthread.ts[ss.ply]); //h109
@@ -479,7 +505,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 //only reduce or prune some types of moves
                 int partialReduction = 0;
                 if ((move->m != ss.mvlist->killer1) && (move->m != ss.mvlist->killer2) && !moveIsTactical(move->m) && !ss.moveGivesCheck) {
-                    if (!inRoot && !inPv) {
+					if (!inRoot && !inPv && ss.bestvalue > -MAXEVAL) {
                         if (ss.playedMoves > lateMove) continue;
                         int const predictedDepth = MAX(0, newdepth - ReductionTable[1][MIN(depth, 63)][MIN(ss.playedMoves, 63)]);
                         int const gain = sthread.evalgains[historyIndex(pos.side, move->m)];
@@ -575,15 +601,15 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (ss.bestvalue >= beta) {
             ssprev.counterMove = ss.bestmove;
             UpdateHistory(pos, ss, sthread, depth);
-            mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove), ss.staticEvalValue);
+			mTransTable.StoreLower(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove), ss.staticEvalValue, inPv);
         }
         else {
             if (inPv && ss.bestmove != EMPTY) {
                 ssprev.counterMove = ss.bestmove;
-                mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove), ss.staticEvalValue);
+				mTransTable.StoreExact(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply), bool(singularMove == ss.bestmove), ss.staticEvalValue, inPv);
                 mPVHashTable.pvStore(pos.posStore.hash, ss.bestmove, depth, scoreToTrans(ss.bestvalue, ss.ply));
             }
-            else mTransTable.StoreUpper(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, ss.ply), ss.staticEvalValue);
+			else mTransTable.StoreUpper(pos.posStore.hash, depth, scoreToTrans(ss.bestvalue, ss.ply), ss.staticEvalValue, inPv);
         }
     }
     return ss.bestvalue;

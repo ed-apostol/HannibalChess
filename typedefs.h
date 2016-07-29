@@ -62,7 +62,7 @@ enum HashType {
 };
 
 enum HashMask {
-    MNoMoves = 1, MSingular = 2
+    MNoMoves = 1, MSingular = 2, MPV = 4
 };
 
 typedef uint32 basic_move_t;
