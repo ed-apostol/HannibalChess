@@ -616,7 +616,7 @@ void Engine::StopSearch() {
 
 void Engine::PonderHit() { //no pondering in tuning
     info.thinking_status = THINKING;
-    LogInfo() << "Switch from pondering to thinking";
+    LogInfo() << "Switch from pondering to thinking: " << info.thinking_status;
     if (info.is_easymove == true && info.easyPonderMove == info.bestmove) {
         StopSearch();
         LogInfo() << "Aborting search: easy move on ponderhit!";
@@ -994,7 +994,7 @@ void Engine::StartThinking(GoCmdData& data, position_t& pos) {
         mytime = data.btime;
         t_inc = data.binc;
     }
-    if (mytime > 0) {
+    if (mytime > 0 || t_inc > 0) {
         info.time_is_limited = true;
         mytime -= info.time_buffer;
         if (mytime < 0) mytime = 0;
@@ -1023,15 +1023,15 @@ void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     }
     if (data.infinite) {
         info.thinking_status = ANALYSING;
-        LogInfo() << "Search status is ANALYSING";
+        LogInfo() << "Search status is ANALYSING " << info.thinking_status;
     }
     else if (data.ponder) {
         info.thinking_status = PONDERING;
-        LogInfo() << "Search status is PONDERING";
+        LogInfo() << "Search status is PONDERING: " << info.thinking_status;
     }
     else {
         info.thinking_status = THINKING;
-        LogInfo() << "Search status is THINKING";
+        LogInfo() << "Search status is THINKING " << info.thinking_status;
     }
     int phase;
     if (pos.posStore.mat_summ[WHITE] < MAX_MATERIAL && pos.posStore.mat_summ[BLACK] < MAX_MATERIAL) {
