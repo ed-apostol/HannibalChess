@@ -289,7 +289,7 @@ public:
                 << " nodes: " << th->nodes
                 << " splits%: " << double(th->numsplits * 100.0) / double(th->nodes)
                 << " joined%: " << double(th->numsplitsjoined * 100.0) / double(th->numsplits)
-                << " threads: " << double(th->numworkers) / double(th->numsplitsjoined);
+                << " threads#: " << double(th->numworkers) / double(th->numsplitsjoined);
         }
         LogInfo() << "================================================================================";
     }

@@ -91,7 +91,7 @@ void Search::initNode(Thread& sthread) {
         if (mEngine.ComputeNodes() >= mInfo.node_limit)
             mEngine.StopSearch();
     }
-    else if (0 == sthread.thread_id && !(sthread.nodes & 1023)) mEngine.CheckTime();
+    else if (0 == sthread.thread_id && !(sthread.nodes & 4095)) mEngine.CheckTime();
 }
 
 bool Search::moveRefutesThreat(const position_t& pos, basic_move_t first, basic_move_t threat) {
@@ -938,7 +938,7 @@ void Engine::GetBestMove(Thread& sthread) {
         info.easymoves.Assign(info.rootPV);
 
     SendBestMove();
-    }
+}
 
 void Engine::StartThinking(GoCmdData& data, position_t& pos) {
     WaitForThink();

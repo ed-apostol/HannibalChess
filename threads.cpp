@@ -19,10 +19,10 @@
 
 void Thread::Init() {
     ThreadBase::Init();
-    nodes = 0;
+    nodes = 1;
+    numsplits = 1;
+    numsplitsjoined = 1;
     num_sp = 0;
-    numsplits = 0;
-    numsplitsjoined = 0;
     numworkers = 0;
     activeSplitPoint = nullptr;
     for (int idx = 0; idx < MaxNumSplitPointsPerThread; ++idx) {
@@ -39,9 +39,7 @@ void Thread::IdleLoop() {
     SplitPoint* const master_sp = activeSplitPoint;
     while (!exit_flag) {
         if (!exit_flag && doSleep && master_sp == nullptr) {
-            LogInfo() << "Thread " << thread_id << " sleeping...";
             SleepAndWaitForCondition();
-            LogInfo() << "Thread " << thread_id << " waking up...";
         }
         if (!exit_flag && !doSleep && master_sp == nullptr && thread_id == 0) {
             CBGetBestMove(*this);
