@@ -161,7 +161,6 @@ struct SearchInfo {
         research = 0;
         iteration = 0;
         bestmove = EMPTY;
-        mate_found = 0;
         currmovenumber = 0;
         multipvIdx = 0;
         legalmoves = 0;
@@ -204,7 +203,6 @@ struct SearchInfo {
     int last_value;
     int best_value;
 
-    int mate_found;
     int currmovenumber;
     int change;
     int research;
