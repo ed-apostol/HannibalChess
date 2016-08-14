@@ -27,13 +27,12 @@ struct eval_info_t {
     uint64 kingadj[2];
     uint64 potentialPawnAttack[2];
     uint64 pawns[2];
-    int mid_score[2];
-    int end_score[2];
+    EvalScore posScore[2];
     int draw[2];
     int atkcntpcs[2];
     int phase;
     int MLindex[2];
-    int flags;
+    bool oppBishops;
     bool queening;
     uint8 endFlags[2];
     PawnEntry* pawn_entry;

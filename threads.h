@@ -13,6 +13,7 @@
 #include <thread>
 #include <atomic>
 #include <condition_variable>
+#include <bitset>
 #include "utils.h"
 #include "trans.h"
 
@@ -40,17 +41,18 @@ struct SplitPoint {
         sscurr = nullptr;
         ssprev = nullptr;
         depth = 0;
-        inCheck = false;
         inRoot = false;
-        nodeType = PVNode;
+        inPv = true;
         alpha = 0;
         beta = 0;
         bestvalue = 0;
         played = 0;
+        hisCount = 0;
         bestmove = EMPTY;
-        workersBitMask = 0;
-        allWorkersBitMask = 0;
+        workersBitMask.reset();
+        workAvailable = false;
         cutoff = false;
+        joinedthreads = 0;
     }
     bool cutoffOccurred() {
         if (cutoff) return true;
@@ -60,24 +62,26 @@ struct SplitPoint {
         }
         return false;
     }
-    position_t origpos;
+    position_t* origpos;
     SplitPoint* parent;
     SearchStack* sscurr;
     SearchStack* ssprev;
     int depth;
-    bool inCheck;
     bool inRoot;
-    NodeType nodeType;
-    volatile int alpha;
-    volatile int beta;
-    volatile int bestvalue;
-    volatile int played;
-    volatile basic_move_t bestmove;
-    volatile uint64 workersBitMask;
-    volatile uint64 allWorkersBitMask;
-    volatile bool cutoff;
+    bool inPv;
+    std::atomic<int> alpha;
+    std::atomic<int> beta;
+    std::atomic<int> bestvalue;
+    std::atomic<int> played;
+    std::atomic<int> hisCount;
+    std::atomic<basic_move_t> bestmove;
+    std::atomic<bool> workAvailable;
+    std::atomic<bool> cutoff;
+    std::atomic<int> joinedthreads;
+    std::bitset<512> workersBitMask;
     Spinlock movelistlock;
     Spinlock updatelock;
+    Spinlock movesplayedlock;
 };
 
 struct ThreadStack {
@@ -119,9 +123,9 @@ public:
     }
 
     int thread_id;
-    volatile bool stop;
-    volatile bool doSleep;
-    volatile bool exit_flag;
+    std::atomic<bool> stop;
+    std::atomic<bool> doSleep;
+    std::atomic<bool> exit_flag;
 protected:
     std::thread nativeThread;
     std::condition_variable sleepCondition;
@@ -148,34 +152,23 @@ public:
     void Init();
     void IdleLoop();
     void GetWork(SplitPoint* const master_sp);
-    void SearchSplitPoint(const position_t& pos, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, NodeType nt, int depth, bool inCheck, bool inRoot);
+    void SearchSplitPoint(position_t& pos, SearchStack* ss, SearchStack* ssprev, int alpha, int beta, bool inPv, int depth, bool inRoot);
 
-    uint64 numsplits; // DEBUG
-    uint64 numsplits2; // DEBUG
-    uint64 workers2; // DEBUG
-    uint64 nodes;
+    uint64 numsplits;
+    uint64 numsplitsjoined;
+    uint64 numworkers;
 
-    volatile int num_sp;
+    std::atomic<uint64> nodes;
+    std::atomic<int> num_sp;
+
     SplitPoint *activeSplitPoint;
     ThreadStack ts[MAXPLY];
     int32 evalgains[1024];
     int32 history[1024];
-    EvalHashTable et;
     PawnHashTable pt;
 private:
     SplitPoint sptable[MaxNumSplitPointsPerThread];
     std::vector<Thread*>& mThreadGroup;
     CBFuncThink CBGetBestMove;
     CBFuncSearch CBSearchFromIdleLoop;
-};
-
-class TimerThread : public ThreadBase {
-public:
-    TimerThread(std::function<void()> _cbfunc) : ThreadBase(0), CBFuncCheckTimer(_cbfunc) {
-        Init();
-        NativeThread() = std::thread(&TimerThread::IdleLoop, this);
-    }
-    void IdleLoop();
-private:
-    std::function<void()> CBFuncCheckTimer;
 };

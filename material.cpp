@@ -69,8 +69,6 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
     int wminors = wn + wb;
     int bminors = bn + bb;
     int drawn = 0;
-    SetPhase(wn + wb + bn + bb, wr + br, wq + bq);
-
     // now lets deal with no pawns left situations
     if (wp == 0) {
         // 1 or less pieces is drawn
@@ -85,9 +83,11 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
         else if (wq == 0 && wr == 0 && wminors == 2) {
             if (wn == 2) {
                 if (bp == 0 || bminors || br || bq) drawn += DRAWN;
-                else drawn += DRAWN1;
+                else drawn += (DRAWN + DRAWN1) / 2;
             }
-            else if (wb == 2 && bq == 0 && br == 0 && bn == 1) drawn += DRAWN8;
+            else if (wb == 2 && bq == 0 && br == 0 && bn == 1) {
+                drawn += DRAWN8 + 20 * bp;
+            }
             else if (bq || br || bminors) drawn += DRAWN1;
         }
         // R and N against R (RB vs. R already taken care of
@@ -162,10 +162,12 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
         }
         if (br) {
             if (wr) {
-                int pGone;
-                if (wr > 1 || br > 1) pGone = Drawish(wp, bp, wn, bn, wb, bb, wr - 1, br - 1, wq, bq, 0) - 5;
-                else pGone = Drawish(wp, bp, wn, bn, wb, bb, wr - 1, br - 1, wq, bq, 0) - 8;
-                if (pGone > drawn) drawn = pGone;
+                if (wminors - bminors < 2 && wr <= br && wq <= bq) {
+                    int pGone;
+                    if (wr > 1 || br > 1) pGone = Drawish(wp, bp, wn, bn, wb, bb, wr - 1, br - 1, wq, bq, 0) - 5;
+                    else pGone = Drawish(wp, bp, wn, bn, wb, bb, wr - 1, br - 1, wq, bq, 0) - 8;
+                    if (pGone > drawn) drawn = pGone;
+                }
             }
             else if (wb) {
                 int pGone = Drawish(wp, bp, wn, bn, wb - 1, bb, wr, br - 1, wq, bq, 0) - 10;
@@ -194,7 +196,7 @@ int Drawish(int wp, int bp, int wn, int bn, int wb, int bb, int wr, int br, int 
                 if (pGone > drawn) drawn = pGone;
             }
         }
-        if (bn) {
+        if (bn && (br || bb || bq || wb < 2)) {
             if (wb) {
                 int pGone;
                 if (wminors > 1 || bminors > 1) {
@@ -264,306 +266,330 @@ void InitMaterial(void) {
                                 for (bn = 0; bn <= 2; bn++)
                                     for (wp = 0; wp <= 8; wp++)
                                         for (bp = 0; bp <= 8; bp++) {
-        int wminors = wn + wb;
-        int bminors = bn + bb;
-        int wnonQ = wminors + wr;
-        int bnonQ = bminors + br;
+                                            int wminors = wn + wb;
+                                            int bminors = bn + bb;
+                                            int wnonQ = wminors + wr;
+                                            int bnonQ = bminors + br;
+                                            mflag_t wflag = NoEnd;
+                                            mflag_t bflag = NoEnd;
 
-        mflag_t wflag = 0;
-        mflag_t bflag = 0;
+                                            windex = wp * MatSummValue[PAWN] + wn * MatSummValue[KNIGHT] + wb * MatSummValue[BISHOP] +
+                                                wr * MatSummValue[ROOK] + wq * MatSummValue[QUEEN];
+                                            bindex = bp * MatSummValue[PAWN] + bn * MatSummValue[KNIGHT] + bb * MatSummValue[BISHOP] +
+                                                br * MatSummValue[ROOK] + bq * MatSummValue[QUEEN];
+                                            if (wp*MLP + wn*MLN + wb*MLN + wr*MLR + wq*MLQ >
+                                                bp + bn*MLN + bb*MLN + br*MLR + bq*MLQ ||
+                                                (wp + wn*MLN + wb*MLN + wr*MLR + wq*MLQ ==
+                                                    wp + wn*MLN + wb*MLN + wr*MLR + wq*MLQ && windex >= bindex)) {
+                                                phase = SetPhase(wn + wb + bn + bb, wr + br, wq + bq);
+                                                //                                                if (wq && bq) PrintOutput() << wn + wb + bn + bb << " minors " << wr + br << " rooks " << wq + bq << " queens: " << phase << "\n";
+                                                openscore =
+                                                    ((wq - bq) * QueenValueOpen)
+                                                    + ((wr - br) * RookValueOpen)
+                                                    + ((wb - bb) * BishopValueOpen)
+                                                    + ((wn - bn) * KnightValueOpen)
+                                                    + ((wp - bp) * PawnValueOpen)
+                                                    + ((wb >= 2) * BishopPairBonusOpen)
+                                                    - ((bb >= 2) * BishopPairBonusOpen)
+                                                    + ((wp - 5) * wn * 0) - ((bp - 5) * bn * 0)
+                                                    - ((wp - 5) * wr * 5) + ((bp - 5) * br * 5)
+                                                    ;
 
-        windex = wp * MatSummValue[PAWN] + wn * MatSummValue[KNIGHT] + wb * MatSummValue[BISHOP] +
-            wr * MatSummValue[ROOK] + wq * MatSummValue[QUEEN];
-        bindex = bp * MatSummValue[PAWN] + bn * MatSummValue[KNIGHT] + bb * MatSummValue[BISHOP] +
-            br * MatSummValue[ROOK] + bq * MatSummValue[QUEEN];
-        if (wp*MLP + wn*MLN + wb*MLN + wr*MLR + wq*MLQ >
-            bp + bn*MLN + bb*MLN + br*MLR + bq*MLQ ||
-            (wp + wn*MLN + wb*MLN + wr*MLR + wq*MLQ ==
-            wp + wn*MLN + wb*MLN + wr*MLR + wq*MLQ && windex >= bindex)) {
-            phase = SetPhase(wn + wb + bn + bb, wr + br, wq + bq);
-            openscore =
-                ((wq - bq) * QueenValueOpen)
-                + ((wr - br) * RookValueOpen)
-                + ((wb - bb) * BishopValueOpen)
-                + ((wn - bn) * KnightValueOpen)
-                + ((wp - bp) * PawnValueOpen)
-                + ((wb >= 2) * BishopPairBonusOpen)
-                - ((bb >= 2) * BishopPairBonusOpen)
-                + ((wp - 5) * wn * 0) - ((bp - 5) * bn * 0)
-                - ((wp - 5) * wr * 5) + ((bp - 5) * br * 5)
-                //            - ((wr==2) * (16-3)) + ((br==2) * (16-3))
-                //            - ((wq+wr>2) * 8) + ((bq+br>2) * 8)
-                ;
+                                                midscore1 =
+                                                    ((wq - bq) * QueenValueMid1)
+                                                    + ((wr - br) * RookValueMid1)
+                                                    + ((wb - bb) * BishopValueMid1)
+                                                    + ((wn - bn) * KnightValueMid1)
+                                                    + ((wp - bp) * PawnValueMid1)
+                                                    + ((wb >= 2) * BishopPairBonusMid1)
+                                                    - ((bb >= 2) * BishopPairBonusMid1)
+                                                    + ((wp - 5) * wn * 2) - ((bp - 5) * bn * 2)
+                                                    - ((wp - 5) * wr * 4) + ((bp - 5) * br * 4)
+                                                    ;
 
-            midscore1 =
-                ((wq - bq) * QueenValueMid1)
-                + ((wr - br) * RookValueMid1)
-                + ((wb - bb) * BishopValueMid1)
-                + ((wn - bn) * KnightValueMid1)
-                + ((wp - bp) * PawnValueMid1)
-                + ((wb >= 2) * BishopPairBonusMid1)
-                - ((bb >= 2) * BishopPairBonusMid1)
-                + ((wp - 5) * wn * 2) - ((bp - 5) * bn * 2)
-                - ((wp - 5) * wr * 4) + ((bp - 5) * br * 4)
-                //            - ((wr==2) * (20-6)) + ((br==2) * (20-6))
-                //            - ((wq+wr>2) * 10) + ((bq+br>2) * 10)
-                ;
+                                                midscore2 =
+                                                    ((wq - bq) * QueenValueMid2)
+                                                    + ((wr - br) * RookValueMid2)
+                                                    + ((wb - bb) * BishopValueMid2)
+                                                    + ((wn - bn) * KnightValueMid2)
+                                                    + ((wp - bp) * (PawnValueMid2
 
-            midscore2 =
-                ((wq - bq) * QueenValueMid2)
-                + ((wr - br) * RookValueMid2)
-                + ((wb - bb) * BishopValueMid2)
-                + ((wn - bn) * KnightValueMid2)
-                + ((wp - bp) * (PawnValueMid2
+                                                        )) + ((wb >= 2) * BishopPairBonusMid2)
+                                                    - ((bb >= 2) * BishopPairBonusMid2)
+                                                    + ((wp - 5) * wn * 4) - ((bp - 5) * bn * 4)
+                                                    - ((wp - 5) * wr * 2) + ((bp - 5) * br * 2)
+                                                    - ((wr == 2) * (32 - 10)) + ((br == 2) * (32 - 10))
+                                                    - ((wq + wr > 2) * 32) + ((bq + br > 2) * 32)
+                                                    ;
 
-                )) + ((wb >= 2) * BishopPairBonusMid2)
-                - ((bb >= 2) * BishopPairBonusMid2)
-                + ((wp - 5) * wn * 4) - ((bp - 5) * bn * 4)
-                - ((wp - 5) * wr * 2) + ((bp - 5) * br * 2)
-                - ((wr == 2) * (32 - 10)) + ((br == 2) * (32 - 10))
-                - ((wq + wr > 2) * 32) + ((bq + br > 2) * 32)
-                ;
+                                                endscore =
+                                                    ((wq - bq) * QueenValueEnd)
+                                                    + ((wr - br) * RookValueEnd)
+                                                    + ((wb - bb) * BishopValueEnd)
+                                                    + ((wn - bn) * KnightValueEnd)
+                                                    + ((wp - bp) * (PawnValueEnd
 
-            endscore =
-                ((wq - bq) * QueenValueEnd)
-                + ((wr - br) * RookValueEnd)
-                + ((wb - bb) * BishopValueEnd)
-                + ((wn - bn) * KnightValueEnd)
-                + ((wp - bp) * (PawnValueEnd
+                                                        )) + ((wb >= 2) * BishopPairBonusEnd)
+                                                    - ((bb >= 2) * BishopPairBonusEnd)
+                                                    + ((wp - 5) * wn * 5) - ((bp - 5) * bn * 5)
+                                                    - ((wp - 5) * wr * 0) + ((bp - 5) * br * 0)
+                                                    - ((wr == 2) * (48 - 12)) + ((br == 2) * (48 - 12))
+                                                    - ((wq + wr > 2) * 48) + ((bq + br > 2) * 48)
+                                                    ;
 
-                )) + ((wb >= 2) * BishopPairBonusEnd)
-                - ((bb >= 2) * BishopPairBonusEnd)
-                + ((wp - 5) * wn * 5) - ((bp - 5) * bn * 5)
-                - ((wp - 5) * wr * 0) + ((bp - 5) * br * 0)
-                - ((wr == 2) * (48 - 12)) + ((br == 2) * (48 - 12))
-                - ((wq + wr > 2) * 48) + ((bq + br > 2) * 48)
-                ;
+                                                // SAM ADJUSTMENTS
+                                                // it is good to have a rook when your opponent does not
+                                                // though 2 bishops counteracts this a bit
+                                                /* SM (simple material edit this out */
+                                                if (br && !wr && !wq && wb < 2) {
+                                                    openscore -= 3;
+                                                    midscore1 -= 6;
+                                                    midscore2 -= 10;
+                                                    endscore -= 12;
+                                                }
+                                                if (wr && !br && !bq && bb < 2) {
+                                                    openscore += 3;
+                                                    midscore1 += 6;
+                                                    midscore2 += 10;
+                                                    endscore += 12;
+                                                }
+                                                //2 pieces work well against a rook even in endgame if one is a bishop
+                                                if (wr == br + 1 && bq >= wq && wminors <= bminors - 2 && bb) {
+                                                    midscore2 -= 20;
+                                                    endscore -= 20;
+                                                }
+                                                if (br == wr + 1 && wq >= bq && bminors <= wminors - 2 && wb) {
+                                                    midscore2 += 20;
+                                                    endscore += 20;
+                                                }
+                                                //N2BN 2 bishops works particularly well against 2 knights
+                                                if (wb == 2 && wn == 0 && bb == 0 && bn == 2 && wr == br && wq == bq) {
+                                                    openscore += 10;
+                                                    midscore1 += 10;
+                                                    midscore2 += 10;
+                                                    endscore += 10;
+                                                }
+                                                if (wb == 0 && wn == 2 && bb == 2 && bn == 0 && wr == br && wq == bq) {
+                                                    openscore -= 10;
+                                                    midscore1 -= 10;
+                                                    midscore2 -= 10;
+                                                    endscore -= 10;
+                                                }
 
-            // SAM ADJUSTMENTS
-            // it is good to have a rook when your opponent does not
-            // though 2 bishops counteracts this a bit
-            /* SM (simple material edit this out */
-            if (br && !wr && !wq && wb < 2) {
-                openscore -= 3;
-                midscore1 -= 6;
-                midscore2 -= 10;
-                endscore -= 12;
-            }
-            if (wr && !br && !bq && bb < 2) {
-                openscore += 3;
-                midscore1 += 6;
-                midscore2 += 10;
-                endscore += 12;
-            }
-            //2 pieces work well against a rook even in endgame if one is a bishop
-            if (wr == br + 1 && bq >= wq && wminors <= bminors - 2 && bb) {
-                midscore2 -= 20;
-                endscore -= 20;
-            }
-            if (br == wr + 1 && wq >= bq && bminors <= wminors - 2 && wb) {
-                midscore2 += 20;
-                endscore += 20;
-            }
-            //N2BN 2 bishops works particularly well against 2 knights
-            if (wb == 2 && wn == 0 && bb == 0 && bn == 2 && wr == br && wq == bq) {
-                openscore += 10;
-                midscore1 += 10;
-                midscore2 += 10;
-                endscore += 10;
-            }
-            if (wb == 0 && wn == 2 && bb == 2 && bn == 0 && wr == br && wq == bq) {
-                openscore -= 10;
-                midscore1 -= 10;
-                midscore2 -= 10;
-                endscore -= 10;
-            }
+                                                // 3 pieces are great against a queen because it can grab pawns and escort own pawn to victory
+                                                if (wq == 1 && bq == 0 && bnonQ >= wnonQ + 3 && br >= wr && wp && bp) {
+                                                    if (br > wr) {
+                                                        openscore -= 25;
+                                                        midscore1 -= 25;
+                                                        midscore2 -= 25;
+                                                        endscore -= 25;
+                                                    }
+                                                    else {
+                                                        openscore -= 19;
+                                                        midscore1 -= 16;
+                                                        midscore2 -= 13;
+                                                        endscore -= 10;
+                                                    }
+                                                }
 
-            // 3 pieces are great against a queen because it can grab pawns and escort own pawn to victory
-            if (wq == 1 && bq == 0 && bnonQ >= wnonQ + 3 && br >= wr && wp && bp) {
-                if (br > wr) {
-                    openscore -= 25;
-                    midscore1 -= 25;
-                    midscore2 -= 25;
-                    endscore -= 25;
-                }
-                else {
-                    openscore -= 19;
-                    midscore1 -= 16;
-                    midscore2 -= 13;
-                    endscore -= 10;
-                }
-            }
+                                                // a single rook can often wipe up non-advanced pawns
+                                                // if advanced this is countered by high passed pawn scores
+                                                if ((wr || wq) && bq == 0 && bnonQ == 0) {
+                                                    openscore += 50;
+                                                    midscore1 += 50;
+                                                    midscore2 += 50;
+                                                    endscore += 50;
+                                                }
+                                                //8_11_10 moved
+                                                // its really nice to be up a piece or a rook
+                                                if (wminors >= bminors && wq >= bq && wr > br) {
+                                                    openscore += 20;
+                                                    midscore1 += 20;
+                                                    midscore2 += 20;
+                                                    endscore += 20;
+                                                }
+                                                if (wminors > bminors && wq >= bq && wr >= br) {
+                                                    openscore += 20;
+                                                    midscore1 += 15;
+                                                    midscore2 += 10;
+                                                    endscore += 5;
+                                                }
+                                                if (phase < 8) {
+                                                    endscore *= 8 - phase;
+                                                    midscore2 *= phase;
+                                                    win = (midscore2 + endscore) / 8;
+                                                }
+                                                else if (phase < 24) {
+                                                    midscore2 *= 24 - phase;
+                                                    midscore1 *= phase - 8;
+                                                    win = (midscore1 + midscore2) / 16;
+                                                }
+                                                else {
+                                                    midscore1 *= 32 - phase;
+                                                    openscore *= phase - 24;
+                                                    win = (openscore + midscore1) / 8;
+                                                }
+                                                // now adjust draw
 
-            // a single rook can often wipe up non-advanced pawns
-            // if advanced this is countered by high passed pawn scores
-            if ((wr || wq) && bq == 0 && bnonQ == 0) {
-                openscore += 50;
-                midscore1 += 50;
-                midscore2 += 50;
-                endscore += 50;
-            }
-            //8_11_10 moved
-            // its really nice to be up a piece or a rook
-            if (wminors >= bminors && wq >= bq && wr > br) {
-                openscore += 20;
-                midscore1 += 20;
-                midscore2 += 20;
-                endscore += 20;
-            }
-            if (wminors > bminors && wq >= bq && wr >= br) {
-                openscore += 20;
-                midscore1 += 15;
-                midscore2 += 10;
-                endscore += 5;
-            }
+                                                wdraw = 0;
+                                                bdraw = 0;
 
-            // END OF SAM ADJUSTMENTS TO GENERAL RULES
+                                                // material less important in queen or rook endgames
+                                                if (wq == 1 && wr == 0 && wminors == 0 && bq == 1 && br == 0 && bminors == 0) win = (win * 9) / 10; //Q
+                                                if (wq == 0 && wr == 1 && wminors == 0 && bq == 0 && br == 1 && bminors == 0) win = (win * 9) / 10; //R
+                                                // if you do not have winning material, devalue your material
 
-            if (phase < 8) {
-                endscore *= 8 - phase;
-                midscore2 *= phase;
-                win = (midscore2 + endscore) / 8;
-            }
-            else if (phase < 24) {
-                midscore2 *= 24 - phase;
-                midscore1 *= phase - 8;
-                win = (midscore1 + midscore2) / 16;
-            }
-            else {
-                midscore1 *= 32 - phase;
-                openscore *= phase - 24;
-                win = (openscore + midscore1) / 8;
-            }
-            // now adjust draw
+                                                // reduce piece value if we are winning but mating is tough or impossible
+                                                if (wq == 0 && wr == 0 && wminors == 1 && wp == 0 && bq == 0 && br == 0 && bminors == 0) win -= KnightValueEnd / 2; //only 1 piece
+                                                if (wq == 0 && wr == 0 && wb == 0 && wn == 2 && wp == 0 && bq == 0 && br == 0 && win > 0) {
+                                                    win = MAX(0, (win - KnightValueEnd / 2)) / 2; // 2 knights
+                                                }
+                                                if (wp == 0 && win > 0 && ((wq - bq) * 9 + (wr - br) * 5 + (wminors - bminors) * 3) <= 3) win /= 2; //max of a piece up
+                                                if (bp == 0 && win < 0 && ((bq - wq) * 9 + (br - wr) * 5 + (bminors - wminors) * 3) <= 3) win /= 2; //max of a piece up
 
-            wdraw = 0;
-            bdraw = 0;
+                                                // reverse order, least material first
+                                                wdraw = Drawish(wp, bp, wn, bn, wb, bb, wr, br, wq, bq, wdraw);
+                                                bdraw = Drawish(bp, wp, bn, wn, bb, wb, br, wr, bq, wq, bdraw);
 
-            // material less important in queen or rook endgames
-            if (wq == 1 && wr == 0 && wminors == 0 && bq == 1 && br == 0 && bminors == 0) win = (win * 9) / 10; //Q
-            if (wq == 0 && wr == 1 && wminors == 0 && bq == 0 && br == 1 && bminors == 0) win = (win * 9) / 10; //R
-            // if you do not have winning material, devalue your material
+                                                if (wdraw < 0) wdraw = 0;
+                                                if (wdraw > MAX_DRAW) wdraw = MAX_DRAW;
+                                                if (bdraw < 0) bdraw = 0;
+                                                if (bdraw > MAX_DRAW) bdraw = MAX_DRAW;
+                                                if (wdraw == MAX_DRAW && bdraw < MAX_DRAW && win > -10) win = -10;
+                                                if (bdraw == MAX_DRAW && wdraw < MAX_DRAW && win < 10) win = 10;
 
-            // reduce piece value if we are winning but mating is tough or impossible
-            if (wq == 0 && wr == 0 && wminors == 1 && wp == 0 && bq == 0 && br == 0 && bminors == 0) win -= KnightValueEnd / 2; //only 1 piece
-            if (wq == 0 && wr == 0 && wb == 0 && wn == 2 && wp == 0 && bq == 0 && br == 0 && win > 0) win = MAX(0, (win - KnightValueEnd) / 2); // 2 knights
-            if (wp == 0 && win > 0 && ((wq - bq) * 9 + (wr - br) * 5 + (wminors - bminors) * 3) <= 3) win /= 2; //max of a piece up
-            if (bp == 0 && win < 0 && ((bq - wq) * 9 + (br - wr) * 5 + (bminors - wminors) * 3) <= 3) win /= 2; //max of a piece up
+                                                MaterialTable[windex][bindex].value = win; //SCALE CHANGES
+                                                MaterialTable[windex][bindex].phase = phase;
+                                                MaterialTable[windex][bindex].draw[WHITE] = wdraw;
+                                                MaterialTable[windex][bindex].draw[BLACK] = bdraw;
+                                                // reverse things to make sure everything is nice and symmetrical
+                                                MaterialTable[bindex][windex].value = -win;
+                                                MaterialTable[bindex][windex].phase = phase;
+                                                MaterialTable[bindex][windex].draw[WHITE] = bdraw;
+                                                MaterialTable[bindex][windex].draw[BLACK] = wdraw;
+                                                bool wlock = (wp >= 4 && bp >= 3);
+                                                bool block = (bp >= 4 && wp >= 3);
+                                                //FLAGS are set from the attackers perspective (so the other side is trying to draw)
+                                                if (windex == MLP) wflag = SinglePawnEnd;
+                                                if (bindex == MLP) bflag = SinglePawnEnd;
+                                                if (wr == 1 && wq == 0 && wminors == 0 && wp && br == 1 && bq == 0 && bminors == 0) {
+                                                    wflag = (wp == 1) ? RPvREnd : RvREnd;
+                                                }
+                                                if (wr == 1 && wq == 0 && wminors == 0 && bp && br == 1 && bq == 0 && bminors == 0) {
+                                                    bflag = (bp == 1) ? RPvREnd : RvREnd;
+                                                }
+                                                if (wb == 1 && bb == 1 && wr == 0 && br == 0 && wq == 0 && bq == 0 && wn == 0 && bn == 0) {
+                                                    wflag = wlock ? BvBLockEnd : BvBEnd;
+                                                    bflag = block ? BvBLockEnd : BvBEnd;
+                                                }
+                                                if (wr == 1 && wq == 0 && wminors == 0 && wp == 0 && bq == 0 && bp && bnonQ == 0) {
+                                                    wflag = RvPEnd;
+                                                }
 
-            // reverse order, least material first
-            wdraw = Drawish(wp, bp, wn, bn, wb, bb, wr, br, wq, bq, wdraw);
-            bdraw = Drawish(bp, wp, bn, wn, bb, wb, br, wr, bq, wq, bdraw);
-
-            if (wdraw < 0) wdraw = 0;
-            if (wdraw > MAX_DRAW) wdraw = MAX_DRAW;
-            if (bdraw < 0) bdraw = 0;
-            if (bdraw > MAX_DRAW) bdraw = MAX_DRAW;
-
-            if (wdraw == MAX_DRAW && bdraw < MAX_DRAW && win > -10) win = -10;
-            if (bdraw == MAX_DRAW && wdraw < MAX_DRAW && win < 10) win = 10;
-
-            MaterialTable[windex][bindex].value = win; //SCALE CHANGES
-            MaterialTable[windex][bindex].phase = phase;
-            MaterialTable[windex][bindex].draw[WHITE] = wdraw;
-            MaterialTable[windex][bindex].draw[BLACK] = bdraw;
-            // reverse things to make sure everything is nice and symmetrical
-            MaterialTable[bindex][windex].value = -win;
-            MaterialTable[bindex][windex].phase = phase;
-            MaterialTable[bindex][windex].draw[WHITE] = bdraw;
-            MaterialTable[bindex][windex].draw[BLACK] = wdraw;
-
-            if (windex == MLP) wflag = 1;
-            if (bindex == MLP) bflag = 1;
-
-            if (wr == 1 && wq == 0 && wminors == 0 && wp && br == 1 && bq == 0 && bminors == 0) {
-                wflag = 2;
-            }
-            if (wr == 1 && wq == 0 && wminors == 0 && bp && br == 1 && bq == 0 && bminors == 0) {
-                bflag = 2;
-            }
-            if (wb == 1 && bb == 1 && wr == 0 && br == 0 && wq == 0 && bq == 0 && wn == 0 && bn == 0) {
-                wflag = 3;
-                bflag = 3;
-            }
-            if (wr == 1 && wq == 0 && wminors == 0 && wp == 0 && bq == 0 && bp && bnonQ == 0) {
-                wflag = 4;
-            }
-
-            if (br == 1 && bq == 0 && bminors == 0 && bp == 0 && wq == 0 && wp && wnonQ == 0) {
-                bflag = 4;
-            }
-            if (wp == 1 && wn == 1 && wb == 0 && wr == 0 && wq == 0) {
-                wflag = 5;
-            }
-            if (bp == 1 && bn == 1 && bb == 0 && br == 0 && bq == 0) {
-                bflag = 5;
-            }
-            if (wq == 1 && wnonQ == 0 && wp == 0 && br == 1 && bq == 0 && bminors == 0 && bp) {
-                wflag = 6;
-            }
-            if (bq == 1 && bnonQ == 0 && bp == 0 && wr == 1 && wq == 0 && wminors == 0 && wp) {
-                bflag = 6;
-            }
-            if (windex == MLN + MLB && bindex == 0) wflag = 7;
-            if (wq == 0 && bq == 0 && wn == 0 && bn == 0 && wr == br && wb == 1 && bb == 1 && wr) {
-                wflag = 8;
-                bflag = 8;
-            }
-            if (wflag == 0 && wp && wq == 0) {
-                if (wnonQ == 1 && wnonQ == wb) {
-                    wflag = 9;
-                }
-                if (wnonQ == 0 && wp > 1) {
-                    wflag = 10;
-                }
-            }
-            if (bflag == 0 && bp && bq == 0) {
-                if (bnonQ == 1 && bnonQ == bb) {
-                    bflag = 9;
-                }
-                if (bnonQ == 0 && bp > 1) {
-                    bflag = 10;
-                }
-            }
-            if (wq == 0 && wminors == 0 && wr == 1 && bq == 0 && br == 0 && bb == 0 && bn == 1 && wp == 0 && bp == 0) {
-                wflag = 11;
-            }
-            if (wq == 1 && bq == 0 && wnonQ == 0 && bnonQ == 0 && wp == 0 && bp == 1) {
-                wflag = 12;
-            }
-            if (wr == 1 && wq == 0 && wp == 1 && wminors == 0 && bb == 1 && bn == 0 && bq == 0 && br == 0 && bp == 0) {
-                wflag = 14;
-            }
-            /*
-            if (wq == 0 && wr == 0 && wb == 1 && wn == 0 && wp == 1 && bq == 0 && br == 0 && bb == 0 && bn == 1) {
-                wflag = 15;
-            }
-            if (wq == 0 && wr == 0 && wb == 0 && wn == 1 && wp == 1 && bq == 0 && br == 0 && bb == 0 && bn == 1) {
-                wflag = 15;
-            }
-            if (bq == 0 && br == 0 && bb == 0 && bn == 1 && bp == 1 && wq == 0 && wr == 0 && wb == 1 && wn == 0) {
-                bflag = 15;
-            }
-            if (wq == 0 && wr == 0 && wb == 1 && wn == 0 && wp == 2 && bq == 0 && br == 0 && bb == 0 && bn == 1 && bp== 1) {
-                wflag = 16;
-            }
-            if (wq == 0 && wr == 0 && wb == 0 && wn == 1 && wp == 2 && bq == 0 && br == 0 && bb == 0 && bn == 1 && bp == 1) {
-                wflag = 16;
-            }
-            if (bq == 0 && br == 0 && bb == 0 && bn == 1 && bp == 2 && wq == 0 && wr == 0 && wb == 1 && wn == 0 && wp == 1) {
-                bflag = 16;
-            }*/
-            if (wflag == 0 && win > 40 && wp == 0 && wdraw < MAX_DRAW) {
-                wflag = 13; // try to mate with no pawns (do not supercede other things like NB v. King)
-            }
-            if (bflag == 0 && win < -40 && bp == 0 && bdraw < MAX_DRAW) {
-                bflag = 13; // try to mate with no pawns (do not supercede other things like NB v. King)
-            }
-
-            MaterialTable[windex][bindex].flags[WHITE] = wflag;
-            MaterialTable[windex][bindex].flags[BLACK] = bflag;
-            MaterialTable[bindex][windex].flags[WHITE] = bflag;
-            MaterialTable[bindex][windex].flags[BLACK] = wflag;
-        }
-    }
+                                                if (br == 1 && bq == 0 && bminors == 0 && bp == 0 && wq == 0 && wp && wnonQ == 0) {
+                                                    bflag = RvPEnd;
+                                                }
+                                                if (wp == 1 && wn == 1 && wb == 0 && wr == 0 && wq == 0) {
+                                                    wflag = NPEnd;
+                                                }
+                                                if (bp == 1 && bn == 1 && bb == 0 && br == 0 && bq == 0) {
+                                                    bflag = NPEnd;
+                                                }
+                                                if (wq == 1 && wnonQ == 0 && wp == 0 && br == 1 && bq == 0 && bminors == 0 && bp) {
+                                                    wflag = QvREnd;
+                                                }
+                                                if (bq == 1 && bnonQ == 0 && bp == 0 && wr == 1 && wq == 0 && wminors == 0 && wp) {
+                                                    bflag = QvREnd;
+                                                }
+                                                if (windex == MLN + MLB && bindex == 0) wflag = BNEnd;
+                                                if (wq == 0 && bq == 0 && wn == 0 && bn == 0 && wr == br && wb == 1 && bb == 1 && wr) {
+                                                    wflag = RBvRB;
+                                                    bflag = RBvRB;
+                                                }
+                                                if (wflag == 0 && wp && wq == 0) {
+                                                    if (wnonQ == 1 && wnonQ == wb) { //pawn endgames and bishop endgames
+                                                        wflag = BPEnd;
+                                                    }
+                                                    if (wnonQ == 0 && wp > 1) { //pawn endgames (not single pawn)
+                                                        wflag = wlock ? BLockEnd : BEnd;
+                                                    }
+                                                }
+                                                if (bflag == 0 && bp && bq == 0) {
+                                                    if (bnonQ == 1 && bnonQ == bb) {
+                                                        bflag = BPEnd;
+                                                    }
+                                                    if (bnonQ == 0 && bp > 1) {
+                                                        bflag = block ? BLockEnd : BEnd;
+                                                    }
+                                                }
+                                                if (wq == 0 && wminors == 0 && wr == 1 && bq == 0 && br == 0 && bb == 0 && bn == 1 && wp == 0 && bp == 0) {
+                                                    wflag = RvNEnd;
+                                                }
+                                                if (wq == 1 && bq == 0 && wnonQ == 0 && bnonQ == 0 && wp == 0 && bp == 1) {
+                                                    wflag = QvPEnd;
+                                                }
+                                                if (wr == 1 && wq == 0 && wp == 1 && wminors == 0 && bb == 1 && bn == 0 && bq == 0 && br == 0 && bp == 0) {
+                                                    wflag = RPvBEnd;
+                                                }
+                                                if (wq == 0 && wr == 0 && wb == 1 && wn == 0 && wp == 1 && bq == 0 && br == 0 && bb == 0 && bn == 1) {
+                                                    wflag = BPvNEnd;
+                                                }
+                                                if (wq == 0 && wr == 0 && wb == 0 && wn == 1 && wp == 1 && bq == 0 && br == 0 && bb == 0 && bn == 1) {
+                                                    wflag = BPvMEnd;
+                                                }
+                                                if (bq == 0 && br == 0 && bb == 0 && bn == 1 && bp == 1 && wq == 0 && wr == 0 && wb == 1 && wn == 0) {
+                                                    bflag = BPvMEnd;
+                                                }
+                                                if (wq == 0 && wr == 0 && wb == 1 && wn == 0 && wp == 2 && bq == 0 && br == 0 && bb == 0 && bn == 1 && bp >= 1) {
+                                                    wflag = MPPvMPEnd;
+                                                }
+                                                if (wq == 0 && wr == 0 && wb == 0 && wn == 1 && wp == 2 && bq == 0 && br == 0 && bb == 0 && bn == 1 && bp >= 1) {
+                                                    wflag = MPPvMPEnd;
+                                                }
+                                                if (bq == 0 && br == 0 && bb == 1 && bn == 0 && bp == 2 && wq == 0 && wr == 0 && wb == 0 && wn == 1 && wp >= 1) {
+                                                    bflag = MPPvMPEnd;
+                                                }
+                                                if (bq == 0 && br == 0 && bb == 0 && bn == 1 && bp == 2 && wq == 0 && wr == 0 && wb == 0 && wn == 1 && wp >= 1) {
+                                                    bflag = MPPvMPEnd;
+                                                }
+                                                if (wq == 0 && wr == 0 && wb == 1 && wn == 0 && (bq + br + bn) >= 1 && wlock) {
+                                                    wflag = MinorLock; //attacker has bishop and lots of pawns, defender has non queen and lots of pawns
+                                                }
+                                                if (wq == 0 && wr == 0 && wb == 0 && wn == 1 && (bq + br + bb + bn) >= 1 && wlock) {
+                                                    wflag = MinorLock; //attacker has knight and lots of pawns, defender has non queen and lots of pawns
+                                                }
+                                                if (bq == 0 && br == 0 && bb == 1 && bn == 0 && (wq + wr + wn) >= 1 && block) {
+                                                    bflag = MinorLock; //attacker has bishop and lots of pawns, defender has non queen and lots of pawns
+                                                }
+                                                if (bq == 0 && br == 0 && bb == 0 && bn == 1 && (wq + wr + wb + wn) >= 1 && block) {
+                                                    bflag = MinorLock; //attacker has knight and lots of pawns, defender has non queen and lots of pawns
+                                                }
+                                                if (bq == 0 && br == 0 && bminors == 2 && (wq + wr + wb + wn) >= 2 && block) { //NEWSAM
+                                                    bflag = MinorLock; //attacker has two minors but it might be a locked position
+                                                }
+                                                if (wq == 0 && wr == 0 && wminors == 2 && (bq + br + bb + bn) >= 2 && wlock) { //NEWSAM
+                                                    wflag = MinorLock; //attacker has two minors but it might be a locked position
+                                                }
+                                                if (wq == 1 && wr == 0 && wminors == 0 && wp == 1 && bq) {
+                                                    wflag = QPvQEnd;
+                                                }
+                                                if (bq == 1 && br == 0 && bminors == 0 && bp == 1 && wq) {
+                                                    bflag = QPvQEnd;
+                                                }
+                                                if (wn == 2 && wb == 0 && wp == 0 && wr == 0 && wq == 0 && bp && bn == 0 && bb == 0 && br == 0 && bq == 0) {
+                                                    wflag = NNvPEnd;
+                                                }
+                                                //TODO consider expanding to include more pieces (rook, queen, more minors, etc.
+                                                if (wflag == NoEnd && win > 40 && wp == 0 && wdraw < MAX_DRAW) {
+                                                    wflag = NoPawnEnd; // try to mate with no pawns (do not supercede other things like NB v. King)
+                                                }
+                                                if (bflag == NoEnd && win < -40 && bp == 0 && bdraw < MAX_DRAW) {
+                                                    bflag = NoPawnEnd; // try to mate with no pawns (do not supercede other things like NB v. King)
+                                                }
+                                                MaterialTable[windex][bindex].flags[WHITE] = wflag;
+                                                MaterialTable[windex][bindex].flags[BLACK] = bflag;
+                                                MaterialTable[bindex][windex].flags[WHITE] = bflag;
+                                                MaterialTable[bindex][windex].flags[BLACK] = wflag;
+                                            }
+                                        }
 }

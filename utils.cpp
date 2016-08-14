@@ -27,7 +27,14 @@ bit 3: dumpfile
 int fr_square(int f, int r) {
     return ((r << 3) | f);
 }
-
+void PrintBitBoard(uint64 n) {
+    PrintOutput() << "info string ";
+    while (n) {
+        int sq = popFirstBit(&n);
+        PrintOutput() << (char)(SQFILE(sq) + 'a') << (char)('1' + SQRANK(sq)) << ' ';
+    }
+    PrintOutput() << "\n";
+}
 /* a utility to convert large int to hex string*/
 char *bit2Str(uint64 n) {
     static char s[19];
@@ -57,7 +64,7 @@ char *move2Str(basic_move_t m) {
         SQFILE(moveTo(m)) + 'a',
         '1' + SQRANK(moveTo(m)),
         promstr[movePromote(m)]
-        );
+    );
     return str;
 }
 
@@ -71,7 +78,7 @@ char *sq2Str(int sq) {
         SQFILE(sq) + 'a',
         '1' + SQRANK(sq),
         '\0'
-        );
+    );
     return str;
 }
 
@@ -160,14 +167,11 @@ bool anyRepNoMove(const position_t& pos, const int m) {
     if (pos.posStore.fifty >= 99) return true;
 
     uint64 compareTo = pos.posStore.hash ^ ZobColor ^ ZobPiece[pos.side][movePiece(m)][moveFrom(m)] ^ ZobPiece[pos.side][movePiece(m)][moveTo(m)];
-    pos_store_t* psp;
-    if (!pos.posStore.previous) return false;
-    psp = pos.posStore.previous;
+    int plyForRep = 3, pliesToCheck = MIN(pos.posStore.pliesFromNull, pos.posStore.fifty);
 
-    for (int plyForRep = 3, pliesToCheck = MIN(pos.posStore.pliesFromNull, pos.posStore.fifty); plyForRep <= pliesToCheck; plyForRep += 2) {
-        if (!psp->previous || !psp->previous->previous) return false;
-        psp = psp->previous->previous;
-        if (psp->hash == compareTo) return true;
+    for (pos_store_t* psp = pos.posStore.previous; psp && plyForRep <= pliesToCheck; plyForRep += 2) {
+        if (!psp->previous) return false;
+        else if ((psp = psp->previous->previous) && psp->hash == compareTo) return true;
     }
     return false;
 }

@@ -30,10 +30,10 @@ bool equalMove(const basic_move_t m1, const basic_move_t m2) {
     return (moveTo(m1) == moveTo(m2) && moveFrom(m1) == moveFrom(m2));
 }
 
-bool move_in_list(const basic_move_t m, const movelist_t *ml) {
+bool move_in_list(const basic_move_t m, const movelist_t& ml) {
     int on;
-    for (on = 0; on < ml->size; on++) {
-        if (equalMove(ml->list[on].m, m)) return true;
+    for (on = 0; on < ml.size; on++) {
+        if (equalMove(ml.list[on].m, m)) return true;
     }
     return false;
 }
@@ -71,10 +71,10 @@ basic_move_t polyglot_move_to_move(uint16 move, position_t& pos) {
         }
     }
     if (movedPiece == KING) {
-        if (from == E1 && to == H1) return GenWhiteOO();
-        if (from == E1 && to == A1) return GenWhiteOOO();
-        if (from == E8 && to == H8) return GenBlackOO();
-        if (from == E8 && to == A8) return  GenBlackOOO();
+        if (from == e1 && to == h1) return GenWhiteOO();
+        if (from == e1 && to == a1) return GenWhiteOOO();
+        if (from == e8 && to == h8) return GenBlackOO();
+        if (from == e8 && to == a8) return  GenBlackOOO();
     }
     if (movedPiece == PAWN && to == pos.posStore.epsq) return GenEnPassant(from, to);
     return GenBasicMove(from, to, movedPiece, capturedPiece);
@@ -160,7 +160,7 @@ basic_move_t Book::getBookMove(position_t& pos) {
     movelist_t moves;
     genLegal(pos, moves, true);
     entries[numMoves] = entry;
-    if (move_in_list(entry.move, &moves)) {
+    if (move_in_list(entry.move, moves)) {
         totalWeight += entry.weight;
         numMoves++;
     }
@@ -173,7 +173,7 @@ basic_move_t Book::getBookMove(position_t& pos) {
         if (entry_from_polyglot_file(&entry, pos)) break;
         if (entry.key != key) break;
         entries[numMoves] = entry;
-        if (move_in_list(entry.move, &moves)) {
+        if (move_in_list(entry.move, moves)) {
             totalWeight += entry.weight;
             numMoves++;
         }

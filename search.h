@@ -24,12 +24,8 @@ static const int DefaultHash = 128;
 static const std::string PawnHashStr = "Pawn Hash";
 static const int MinPHash = 1;
 static const int MaxPHash = 1024;
-static const int DefaultPHash = 32;
-
-static const std::string EvalCacheStr = "Eval Cache";
-static const int MinEvalCache = 1;
-static const int MaxEvalCache = 1024;
-static const int DefaultEvalCache = 64;
+static const int DefaultPHash = 64; //TCEC
+//static const int DefaultPHash = 32;
 
 static const std::string MultiPVStr = "MultiPV";
 static const int MinMultiPV = 1;
@@ -43,11 +39,11 @@ static const int DefaultTimeBuffer = 1000;
 
 static const std::string ThreadsStr = "Threads";
 static const int MinThreads = 1;
-static const int MaxThreads = 64;
+static const int MaxThreads = 512;
 static const int DefaultThreads = 1;
 
 static const std::string MinSplitDepthStr = "Min Split Depth";
-static const int MinSplitDepth = 2;
+static const int MinSplitDepth = 1;
 static const int MaxSplitDepth = 8;
 static const int DefaultSplitDepth = 4;
 
@@ -125,29 +121,45 @@ private:
     std::vector<std::string> mKeys;
 };
 
+struct EasyMove {
+    void Assign(std::vector<basic_move_t> &pv) {
+        if (pv.size() >= 3) {
+            m[0] = pv[0];
+            m[1] = pv[1];
+            m[2] = pv[2];
+        }
+        else Init();
+    }
+    void Init() {
+        m[0] = m[1] = m[2] = EMPTY;
+    }
+    basic_move_t m[3];
+};
+
 /* the search data structure */
 struct SearchInfo {
     void Init() {
         thinking_status = THINKING;
+        is_easymove = false;
+        easyPonderMove = EMPTY;
         stop_search = false;
         depth_is_limited = false;
-        depth_limit = MAXPLY;
+        depth_limit = MAXPLY - 1;
         moves_is_limited = false;
         time_is_limited = false;
+        time_is_fixed = false;
         time_limit_max = 0;
         time_limit_abs = 0;
         node_is_limited = false;
         node_limit = 0;
-        start_time = last_time = getTime();
+        start_time = last_time2 = last_time = getTime();
         alloc_time = 0;
         best_value = -INF;
         last_value = -INF;
         change = 0;
         research = 0;
         iteration = 0;
-        bestmove = 0;
-        pondermove = 0;
-        mate_found = 0;
+        bestmove = EMPTY;
         currmovenumber = 0;
         multipvIdx = 0;
         legalmoves = 0;
@@ -159,8 +171,10 @@ struct SearchInfo {
         mMinSplitDepth = 0;
         mMaxActiveSplitsPerThread = 0;
     }
-    volatile int thinking_status;
-    volatile bool stop_search; // TODO: replace with sthread.stop?
+    std::atomic<int> thinking_status;
+    std::atomic<bool> stop_search; // TODO: replace with sthread.stop?
+    bool is_easymove;
+    basic_move_t easyPonderMove;
 
     int time_buffer;
     int contempt;
@@ -172,34 +186,34 @@ struct SearchInfo {
     int depth_limit;
     bool moves_is_limited;
     bool time_is_limited;
+    bool time_is_fixed;
 
-    volatile int64 time_limit_max;
+    int64 time_limit_max;
     int64 time_limit_abs;
     bool node_is_limited;
     uint64 node_limit;
 
     int64 start_time;
-    volatile int64 last_time;
     int64 alloc_time;
+    std::atomic<int64> last_time;
+    std::atomic<int64> last_time2;
 
-    volatile int last_value;
-    volatile int best_value;
+    int last_value;
+    int best_value;
 
-    int mate_found;
     int currmovenumber;
-    volatile int change;
-    volatile int research;
+    int change;
+    int research;
     int iteration;
 
     int multipvIdx;
 
     int legalmoves;
     basic_move_t bestmove;
-    basic_move_t pondermove;
-
-    basic_move_t moves[MAXMOVES];
+    EasyMove easymoves;
+    basic_move_t moves[MAXMOVES]; // TODO
     bool mvlist_initialized;
-    continuation_t rootPV;
+    std::vector<basic_move_t> rootPV;
 };
 
 class Search;
@@ -211,9 +225,8 @@ public:
     void StopSearch();
     void PonderHit();
     void SendBestMove();
-    void ExtractPvMovesFromHash(position_t& pos, continuation_t& pv, basic_move_t move);
-    void RepopulateHash(position_t& pos, continuation_t& rootPV);
-    void DisplayPV(continuation_t& pv, int multipvIdx, int depth, int alpha, int beta, int score);
+    void ExtractPvMovesFromHash(position_t& pos, std::vector<basic_move_t> &pv, basic_move_t move);
+    void DisplayPV(std::vector<basic_move_t> &pv, int multipvIdx, int depth, int alpha, int beta, int score);
     void TimeManagement(int depth);
     void CheckTime();
     void SearchFromIdleLoop(SplitPoint& sp, Thread& sthread);
@@ -221,17 +234,14 @@ public:
     void StartThinking(GoCmdData& data, position_t& pos);
 
     // hash
-    void InitTTHash(int size) {
+    void InitTTHash(size_t size) {
         transtable.Init(size, transtable.BUCKET);
     }
-    void InitPVTTHash(int size) {
+    void InitPVTTHash(size_t size) {
         pvhashtable.Init(size, pvhashtable.BUCKET);
     }
-    void InitPawnHash(int size) {
+    void InitPawnHash(size_t size) {
         for (Thread* th : mThreads) th->pt.Init(size, th->pt.BUCKET);
-    }
-    void InitEvalHash(int size) {
-        for (Thread* th : mThreads) th->et.Init(size, th->et.BUCKET);
     }
     void ClearTTHash() {
         transtable.Clear();
@@ -241,9 +251,6 @@ public:
     }
     void ClearPawnHash() {
         for (Thread* th : mThreads) th->pt.Clear();
-    }
-    void ClearEvalHash() {
-        for (Thread* th : mThreads) th->et.Clear();
     }
 
     // threads
@@ -262,46 +269,48 @@ public:
         while (mThreads.size() < num) {
             using namespace std::placeholders;
             int id = (int)mThreads.size();
-            mThreads.push_back(new Thread(id, mThreads, std::bind(&Engine::GetBestMove, this, _1), std::bind(&Engine::SearchFromIdleLoop, this, _1, _2)));
+            mThreads.push_back(new Thread(id, mThreads, std::bind(&Engine::GetBestMove, this, _1),
+                std::bind(&Engine::SearchFromIdleLoop, this, _1, _2)));
         }
         while (mThreads.size() > num) {
             delete mThreads.back();
             mThreads.pop_back();
         }
         InitPawnHash(uci_opt[PawnHashStr].GetInt());
-        InitEvalHash(uci_opt[EvalCacheStr].GetInt());
     }
     void PrintThreadStats() {
-        LogInfo() << "================================================================";
+        LogInfo() << "================================================================================";
         for (Thread* th : mThreads) {
             LogInfo() << "thread_id: " << th->thread_id
                 << " nodes: " << th->nodes
-                << " joined_split: " << double(th->numsplits2 * 100.0) / double(th->numsplits)
-                << " threads_per_split: " << double(th->workers2) / double(th->numsplits2);
+                << " splits%: " << double(th->numsplits * 100.0) / double(th->nodes)
+                << " joined%: " << double(th->numsplitsjoined * 100.0) / double(th->numsplits)
+                << " threads#: " << double(th->numworkers) / double(th->numsplitsjoined);
         }
-        LogInfo() << "================================================================";
+        LogInfo() << "================================================================================";
     }
-    void WaitForThinkFinished() {
-        while (mThinking.test_and_set(std::memory_order_acquire)) {
-            std::this_thread::yield();
+    void WaitForThink() {
+        while (mThinking) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
+    }
+    void SetThinkStarted() {
+        mThinking = true;
     }
     void SetThinkFinished() {
-        mThinking.clear(std::memory_order_release);
+        mThinking = false;
     }
     void SetAllThreadsToStop() {
         for (Thread* th : mThreads) {
             th->stop = true;
             th->doSleep = true;
         }
-        mTimerThread->stop = true;
     }
     void SetAllThreadsToWork() {
         for (Thread* th : mThreads) {
-            if (th->thread_id != 0) th->TriggerCondition(); // thread_id == 0 is triggered separately
+            if (th->thread_id != 0)
+                th->TriggerCondition(); // thread_id == 0 is triggered separately
         }
-        mTimerThread->stop = false;
-        mTimerThread->TriggerCondition();
     }
     Thread& ThreadFromIdx(int thread_id) {
         return *mThreads[thread_id];
@@ -313,7 +322,6 @@ public:
     // UCI options
     void OnClearHash() {
         ClearPawnHash();
-        ClearEvalHash();
         ClearTTHash();
         ClearPVTTHash();
     }
@@ -322,9 +330,6 @@ public:
     }
     void OnPawnHashChange() {
         InitPawnHash(uci_opt[PawnHashStr].GetInt());
-    }
-    void OnEvalCacheChange() {
-        InitEvalHash(uci_opt[EvalCacheStr].GetInt());
     }
     void OnMultiPvChange() {
         info.multipv = uci_opt[MultiPVStr].GetInt();
@@ -352,7 +357,6 @@ public:
     void InitUCIOptions() {
         uci_opt[HashStr] = Options(DefaultHash, MinHash, MaxHash, std::bind(&Engine::OnHashChange, this));
         uci_opt[PawnHashStr] = Options(DefaultPHash, MinPHash, MaxPHash, std::bind(&Engine::OnPawnHashChange, this));
-        uci_opt[EvalCacheStr] = Options(DefaultEvalCache, MinEvalCache, MaxEvalCache, std::bind(&Engine::OnEvalCacheChange, this));
         uci_opt[MultiPVStr] = Options(DefaultMultiPV, MinMultiPV, MaxMultiPV, std::bind(&Engine::OnMultiPvChange, this));
         uci_opt[ClearHashStr] = Options(std::bind(&Engine::OnClearHash, this));
         uci_opt[OwnBookStr] = Options(false, std::bind(&Engine::OnDummyChange, this));
@@ -370,17 +374,16 @@ public:
     }
 
     UCIOptions uci_opt;
+    std::vector<pos_store_t*> mUndoStack;
+    std::atomic<bool> mThinking;
 private:
     static const int WORSE_SCORE_CUTOFF = 20;
-
-    std::atomic_flag mThinking;
     position_t rootpos;
     SearchInfo info;
     Search* search;
     TranspositionTable transtable;
     PvHashTable pvhashtable;
     std::vector<Thread*> mThreads;
-    TimerThread* mTimerThread;
     Book mPolyBook;
 };
 

@@ -20,16 +20,13 @@
 extern bool moveIsTactical(uint32 m);
 extern int historyIndex(uint32 side, uint32 move);
 
-void sortInit(const position_t& pos, movelist_t& mvlist, uint64 pinned, uint32 hashmove, int scout, int eval, int depth, int type, Thread& sthread) {
+void sortInit(const position_t& pos, movelist_t& mvlist, uint64 pinned, uint32 hashmove, int depth, int type, ThreadStack& ts) {
     mvlist.transmove = hashmove;
-    mvlist.killer1 = sthread.ts[pos.ply].killer1;
-    mvlist.killer2 = sthread.ts[pos.ply].killer2;
-    mvlist.evalvalue = eval;
+    mvlist.killer1 = ts.killer1;
+    mvlist.killer2 = ts.killer2;
     mvlist.pos = 0;
     mvlist.size = 0;
     mvlist.pinned = pinned;
-    mvlist.scout = scout;
-    mvlist.ply = pos.ply;
     mvlist.side = pos.side;
     mvlist.depth = depth;
     mvlist.phase = type;
@@ -52,15 +49,9 @@ move_t* getMove(movelist_t& mvlist) {
     *best = *temp;
     return start;
 }
-inline int scoreNonTactical(uint32 side, uint32 move, Thread& sthread) {
-    int score = sthread.history[historyIndex(side, move)];
+inline int scoreNonTactical(const uint32 side, const int32 move, Thread& sthread) {
+    int score = sthread.history[historyIndex(side, move)] + sthread.evalgains[historyIndex(side, move)];
     return score;
-}
-bool moveIsPassedPawn(const position_t& pos, uint32 move) {
-    if (movePiece(move) == PAWN && !((*FillPtr[pos.side])(BitMask[moveTo(move)]) & pos.pawns)) {
-        if (!(pos.pawns & pos.color[pos.side ^ 1] & PassedMask[pos.side][moveTo(move)])) return true;
-    }
-    return false;
 }
 
 bool captureIsGood(const position_t& pos, const basic_move_t m) {
@@ -81,24 +72,13 @@ bool captureIsGood(const position_t& pos, const basic_move_t m) {
 
 void scoreCapturesPure(movelist_t& mvlist) {
     move_t *m;
-
     for (m = &mvlist.list[mvlist.pos]; m < &mvlist.list[mvlist.size]; m++) {
         m->s = (moveCapture(m->m) * 6) + movePromote(m->m) - movePiece(m->m);
-    }
-}
-
-void scoreCaptures(movelist_t& mvlist) {
-    move_t *m;
-
-    for (m = &mvlist.list[mvlist.pos]; m < &mvlist.list[mvlist.size]; m++) {
-        m->s = (moveCapture(m->m) * 6) + movePromote(m->m) - movePiece(m->m);
-        if (m->m == mvlist.transmove) m->s += MAXHIST;
     }
 }
 
 void scoreNonCaptures(movelist_t& mvlist, Thread& sthread) {
     move_t *m;
-
     for (m = &mvlist.list[mvlist.pos]; m < &mvlist.list[mvlist.size]; m++) {
         m->s = scoreNonTactical(mvlist.side, m->m, sthread);
     }
@@ -140,10 +120,9 @@ void scoreRoot(movelist_t& mvlist) {
     }
 }
 
-move_t* sortNext(SplitPoint* sp, SearchInfo& info, position_t& pos, movelist_t& mvlist, int& phase, Thread& sthread) {
+move_t* sortNext(SplitPoint* sp, SearchInfo& info, position_t& pos, movelist_t& mvlist, Thread& sthread) {
     move_t* move;
     if (sp != nullptr) sp->movelistlock.lock();
-    phase = mvlist.phase;
     if (MoveGenPhase[mvlist.phase] == PH_END) {  // SMP hack
         if (sp != nullptr) sp->movelistlock.unlock();
         return nullptr;
@@ -211,10 +190,7 @@ move_t* sortNext(SplitPoint* sp, SearchInfo& info, position_t& pos, movelist_t& 
             if (sp != nullptr) sp->movelistlock.unlock();
             return move;
         }
-
         mvlist.phase++;
-        phase = mvlist.phase;
-
         switch (MoveGenPhase[mvlist.phase]) {
         case PH_ROOT:
             if (info.mvlist_initialized) break;
@@ -272,7 +248,7 @@ move_t* sortNext(SplitPoint* sp, SearchInfo& info, position_t& pos, movelist_t& 
             break;
         case PH_QUIET_MOVES:
             genNonCaptures(pos, mvlist);
-            scoreNonCaptures( mvlist, sthread);
+            scoreNonCaptures(mvlist, sthread);
             break;
         case PH_NONTACTICAL_CHECKS:
         case PH_NONTACTICAL_CHECKS_WIN:

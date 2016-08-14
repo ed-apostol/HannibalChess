@@ -57,26 +57,18 @@ typedef unsigned __int64	uint64;
 typedef unsigned int		uint;
 #endif
 
-enum NodeType {
-    CutNode = -1, PVNode = 0, AllNode
-};
-
 enum HashType {
     HTLower, HTUpper, HTCutUpper, HTAllLower, HTExact, HTNoMoves
 };
 
 enum HashMask {
-    MLower = 1, MUpper = 2, MCutUpper = 4, MAllLower = 8, MExact = 16, MNoMoves = 32, MClear = 255
+    MNoMoves = 1, MSingular = 2, MPV = 4
 };
 
 typedef uint32 basic_move_t;
+typedef int32 EvalScore;
 
-struct continuation_t {
-    basic_move_t moves[MAXPLY + 1];
-    int length;
-};
-
-///* the move structure */
+/* the move structure */
 struct move_t {
     basic_move_t m;
     int32 s;
@@ -87,29 +79,26 @@ struct movelist_t {
     basic_move_t transmove;
     basic_move_t killer1;
     basic_move_t killer2;
-    int32 evalvalue;
-    int32 scout;
-    int32 ply;
     int32 depth;
     int32 side;
     volatile uint32 phase;
     volatile int32 pos;
     volatile int32 size;
     volatile int32 startBad;
-    uint64 pinned;
-    move_t list[MAXMOVES];
+    uint64 pinned; // TODO: move to SS
+    move_t list[MAXMOVES]; // TODO
 };
 
 /* the undo structure */
 struct pos_store_t {
+    pos_store_t() : previous(nullptr) {}
     uint32 lastmove;
     int castle;
     int fifty;
     int epsq;
     int pliesFromNull;
-    int open[2];
-    int end[2];
-    int mat_summ[2];
+    EvalScore posScore[2];
+    int16 mat_summ[2];
     uint64 phash;
     uint64 hash;
     pos_store_t* previous;
@@ -125,17 +114,13 @@ struct position_t {
     uint64 kings;
     uint64 color[2];
     uint64 occupied;
-    int pieces[64];
-    int kpos[2];
+    int8 pieces[64];
+    int8 kpos[2];
     pos_store_t posStore;
-
-    int side;
-    int ply;
-    int sp;
+    int8 side;
 };
 
 typedef uint8 mflag_t;
-
 /* the material info structure */
 struct material_info_t {
     int16 value;
@@ -145,13 +130,13 @@ struct material_info_t {
 };
 
 struct SearchStack {
-    SearchStack() :
-        firstExtend(false),
+    SearchStack(SearchStack *prev) :
         reducedMove(false),
         moveGivesCheck(false),
         playedMoves(0),
         hisCnt(0),
         evalvalue(-INF),
+        staticEvalValue(-INF),
         bestvalue(-INF),
         bestmove(EMPTY),
         dcc(0),
@@ -160,28 +145,31 @@ struct SearchStack {
         bannedMove(EMPTY),
         hashMove(EMPTY),
         hashDepth(-2),
+        ply(prev != nullptr ? prev->ply + 1 : -1),
+        ssprev(prev),
         mvlist(&movelist),
-        mvlist_phase(0) {}
-    int playedMoves;
-    int hisCnt;
-    basic_move_t hisMoves[64];
-    int bestvalue;
-    basic_move_t bestmove;
-
-    bool firstExtend;
+        hisMoves(&hisTable[0]) {}
     bool reducedMove;
     bool moveGivesCheck;
+    int playedMoves;
+    int hisCnt;
     int evalvalue;
+    int staticEvalValue;
+    int bestvalue;
+    basic_move_t bestmove;
     uint64 dcc;
     basic_move_t counterMove;
     basic_move_t threatMove;
     basic_move_t bannedMove;
     basic_move_t hashMove;
     int hashDepth;
-
-    movelist_t movelist;
+    int ply;
+    SearchStack *ssprev;
     movelist_t* mvlist;
-    int mvlist_phase;
+    basic_move_t* hisMoves;
+
+    basic_move_t hisTable[64];
+    movelist_t movelist;
 };
 
 struct GoCmdData {
@@ -191,7 +179,6 @@ struct GoCmdData {
         winc = 0;
         binc = 0;
         movestogo = 0;
-        ponder = 0;
         depth = 0;
         movetime = 0;
         mate = 0;

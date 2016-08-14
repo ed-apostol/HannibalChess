@@ -11,7 +11,7 @@
 
 #ifdef DEBUG
 #define ASSERT(a) { if (!(a)) \
-    Print(4, "file \"%s\", line %d, assertion \"" #a "\" failed\n", __FILE__, __LINE__); }
+    Print(4, "file \"%s\", line %d, assertion \"" #a "\" failed\n", __FILE__, __LINE__); } //TODO fix this
 #else
 #define ASSERT(a)
 #endif
@@ -23,19 +23,13 @@
 #endif
 
 #define MAXPLY              128
-#define MAX_HASH_STORE      1024
 #define MAXMOVES            256
 #define INF                 32500
 #define MAXEVAL             32000
 #define MAXHIST             32500
-//#define INF                 16000
-//#define MAXEVAL             14000
-//#define MAXHIST             16384
 
 #define WHITE               0
 #define BLACK               1
-#define LEFT                0
-#define RIGHT               1
 
 enum PieceTypes {
     EMPTY = 0,
@@ -75,8 +69,8 @@ enum PieceTypes {
 #else
 #define DISTANCE(a,b)             MAX((ABS((SQRANK(a))-(SQRANK(b)))),(ABS((SQFILE(a))-(SQFILE(b)))))
 #endif
-#define PAWN_RANK(f,c)           (((c)==BLACK)?(7-SQRANK(f)):(SQRANK(f)))
-#define Q_DIST(f,c)              (((c)==WHITE)?(7-SQRANK(f)):(SQRANK(f)))
+#define PAWN_RANK(sq,c)           (((c)==BLACK)?(7-SQRANK(sq)):(SQRANK(sq)))
+#define Q_DIST(sq,c)              (((c)==WHITE)?(7-SQRANK(sq)):(SQRANK(sq)))
 #define PAWN_MOVE_INC(c)         ((c)?-8:8)
 //#define PAWN_PROMOTE(sq,c)       (SQFILE(sq) + ((c==BLACK)?0:56))
 
@@ -90,17 +84,14 @@ enum PieceTypes {
 #define MAX_MATERIAL             (2*3*3*3*9)
 #define U64(u)					 (u##ULL)
 
-#define PST(c,p,s,l)    (PcSqTb[(((c)<<10)|((p)<<7)|((s)<<1)|(l))])
-#define MIDGAME 0
-#define ENDGAME 1
+#define COMP(s1,s2) ((s1)+((s2) << 16))
+#define PST(c,p,s) (PieceSquareTable[c][p-1][s])
 
 enum ThinkingStatus {
     THINKING = 0,
     PONDERING,
     ANALYSING
 };
-
-#define REDUCED             4
 
 #define LOCK(x)             (uint32)((x)>>32)
 #define KEY(x)              (uint32)(x)

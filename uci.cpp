@@ -7,10 +7,10 @@
 /*  Description: A chess playing program.         */
 /**************************************************/
 /*
-/GS- /GL /W4 /Gy /Zc:wchar_t /Zi /Gm /O2 /Ob2 /sdl- /Fd"x64\Release\vc120.pdb" /fp:fast /D "_MBCS" 
+/GS- /GL /W4 /Gy /Zc:wchar_t /Zi /Gm /O2 /Ob2 /sdl- /Fd"x64\Release\vc120.pdb" /fp:fast /D "_MBCS"
 /errorReport:prompt /GT /WX- /Zc:forScope /Gd /Oy /Oi /MT /Fa"x64\Release\" /EHsc /nologo /Fo"x64\Release\" /Ot /Fp"x64\Release\HannibalBitBucket.pch"
 */
-
+#define SMALL_FOOTPRINT true
 
 #include "typedefs.h"
 #include "data.h"
@@ -31,11 +31,9 @@
 
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
-const std::string Interface::year = "2015";
-const std::string Interface::version = "1.5";
+const std::string Interface::year = "2016";
+const std::string Interface::version = "1.7";
 const std::string Interface::arch = "x64";
-
-// TODO: add Engine class parameters to UCI commands
 
 void Interface::Info() {
     LogAndPrintOutput() << name << " " << version << " " << arch;
@@ -49,17 +47,16 @@ Interface::Interface() {
 
     initArr();
     initPST();
-    InitTrapped();
     InitMaterial();
     InitMateBoost();
-//    InitMobility();
+    InitEval();
     setPosition(input_pos, STARTPOS);
 }
 
 void Interface::Run() {
     std::string line;
     while (getline(std::cin, line)) {
-        LogInfo() << line;
+        LogInput() << line;
         std::istringstream ss(line);
         if (!Input(ss)) break;
     }
@@ -69,45 +66,59 @@ bool Interface::Input(std::istringstream& stream) {
     std::string command;
     stream >> command;
 
-    if (command == "stop") Stop();
-    else if (command == "ponderhit") PonderHit();
-    else if (command == "go") Go(stream);
-    else if (command == "position") Position(stream);
-    else if (command == "setoption") SetOption(stream);
-    else if (command == "ucinewgame") NewGame();
-    else if (command == "isready") LogAndPrintOutput() << "readyok";
-    else if (command == "uci") Id();
-    else if (command == "quit") { Quit(); return false; }
-    else if (command == "speedup") CheckSpeedup(stream);
-    else if (command == "split") CheckBestSplit(stream);
-    else LogAndPrintError() << "Unknown UCI command: " << command;
+    if (command == "isready") IsReady(cEngine);
+    else if (command == "quit") { Quit(cEngine); return false; }
+    else if (cEngine.mThinking) {
+        if (command == "stop") Stop(cEngine);
+        else if (command == "ponderhit") PonderHit(cEngine);
+        else LogAndPrintError() << "Engine thinking! Ignored: " << command;
+    }
+    else {
+        if (command == "go") Go(cEngine, input_pos, stream);
+        else if (command == "position") Position(cEngine, input_pos, stream);
+        else if (command == "setoption") SetOption(cEngine, stream);
+        else if (command == "ucinewgame") NewGame(cEngine);
+        else if (command == "uci") Id(cEngine);
+#ifndef SMALL_FOOTPRINT
+        else if (command == "speedup") CheckSpeedup(stream);
+        else if (command == "split") CheckBestSplit(stream);
+        else if (command == "maxsplit") CheckMaxSplit(stream);
+        else if (command == "speedtest") CheckSpeed();
+#endif
+        else LogAndPrintError() << "Invalid command: " << command;
+    }
 
     return true;
 }
 
-void Interface::Quit() {
-    cEngine.StopSearch();
-    cEngine.WaitForThinkFinished();
-    LogInfo() << "Interface quit";
+void Interface::Quit(Engine& engine) {
+    engine.StopSearch();
+    engine.WaitForThink();
+    LogInfo() << "Engine quitting";
 }
 
-void Interface::Id() {
+void Interface::Id(Engine& engine) {
     LogAndPrintOutput() << "id name " << name << " " << version << " " << arch;
     LogAndPrintOutput() << "id author " << author;
-    cEngine.PrintUCIOptions();
+    engine.PrintUCIOptions();
     LogAndPrintOutput() << "uciok";
 }
 
-void Interface::Stop() {
-    cEngine.StopSearch();
-    LogInfo() << "info string Aborting search: stop";
+void Interface::Stop(Engine& engine) {
+    LogInfo() << "Aborting search: stop";
+    engine.StopSearch();
+    engine.WaitForThink();
 }
 
-void Interface::PonderHit() {
-    cEngine.PonderHit();
+void Interface::PonderHit(Engine& engine) {
+    engine.PonderHit();
 }
 
-void Interface::Go(std::istringstream& stream) {
+void Interface::IsReady(Engine& engine) {
+    LogAndPrintOutput() << "readyok";
+}
+
+void Interface::Go(Engine& engine, position_t& pos, std::istringstream& stream) {
     std::string command;
     GoCmdData data;
 
@@ -128,10 +139,10 @@ void Interface::Go(std::istringstream& stream) {
         command = "";
         stream >> command;
     }
-    cEngine.StartThinking(data, input_pos);
+    engine.StartThinking(data, pos);
 }
 
-void Interface::Position(std::istringstream& stream) {
+void Interface::Position(Engine& engine, position_t& pos, std::istringstream& stream) {
     basic_move_t m;
     std::string token, fen;
 
@@ -145,40 +156,86 @@ void Interface::Position(std::istringstream& stream) {
             fen += token + " ";
     }
     else {
-        LogWarning() << "Invalid position!";
+        LogAndPrintError() << "Invalid position!";
         return;
     }
 
-    setPosition(input_pos, fen.c_str());
+    engine.mUndoStack.clear();
+    setPosition(pos, fen.c_str());
     while (stream >> token) {
         movelist_t ml;
-        genLegal(input_pos, ml, true);
-        m = parseMove(ml, token.c_str());
-        if (m) makeMove(input_pos, UndoStack[input_pos.sp], m);
+        genLegal(pos, ml, true);
+        if (m = parseMove(ml, token.c_str())) {
+            size_t idx = engine.mUndoStack.size();
+            engine.mUndoStack.push_back(new pos_store_t());
+            makeMove(pos, *engine.mUndoStack[idx], m);
+        }
         else break;
-        if (input_pos.posStore.fifty == 0) input_pos.sp = 0;
     }
-    input_pos.ply = 0;
 }
 
-void Interface::SetOption(std::istringstream& stream) {
+void Interface::SetOption(Engine& engine, std::istringstream& stream) {
     std::string token, name, value;
     stream >> token;
     while (stream >> token && token != "value") name += std::string(" ", !name.empty()) + token;
     while (stream >> token) value += std::string(" ", !value.empty()) + token;
-    if (cEngine.uci_opt.count(name)) cEngine.uci_opt[name] = value;
+    if (engine.uci_opt.count(name)) engine.uci_opt[name] = value;
     else LogAndPrintOutput() << "No such option: " << name;
 }
 
-void Interface::NewGame() {
-    cEngine.ClearPawnHash();
-    cEngine.ClearEvalHash();
-    cEngine.ClearTTHash();
-    cEngine.ClearPVTTHash();
+void Interface::NewGame(Engine& engine) {
+    engine.ClearPawnHash();
+    engine.ClearTTHash();
+    engine.ClearPVTTHash();
 }
-
 Interface::~Interface() {}
 
+#ifndef SMALL_FOOTPRINT
+void Interface::CheckSpeed() {
+    std::istringstream streamcmd;
+    std::vector<std::string> fenPos;
+    std::vector<uint64> targetNodes; //when you want to compare speeds of two different implementations first you should enter # nodes for each position to ensure the two implementations are really equivalent
+    std::vector<int> targetDepth;
+    fenPos.push_back("q4rk1/1bp1bpp1/1pn1pn1p/r2pN3/p2P1PP1/1P1BPN1Q/PBP4P/R5RK b - -1 16");
+    targetDepth.push_back(20);
+    targetNodes.push_back(48136806);
+    fenPos.push_back("6k1/R4p2/1r1pp2p/6p1/8/2P1P1PP/6PK/8 b - -0 38");
+    targetDepth.push_back(27);
+    targetNodes.push_back(5156468);
+    fenPos.push_back("r3k2r/pbpnqp2/1p1ppn1p/6p1/2PP4/2PBPNB1/P4PPP/R2Q1RK1 w kq - 2 12");
+    targetDepth.push_back(21);
+    targetNodes.push_back(9462598);
+    fenPos.push_back("2kr3r/pbpn1pq1/1p3n2/3p1R2/3P3p/2P2Q2/P1BN2PP/R3B2K w - - 4 22");
+    targetDepth.push_back(21);
+    targetNodes.push_back(19872130);
+    fenPos.push_back("r2n1rk1/1pq2ppp/p2pbn2/8/P3Pp2/2PBB2P/2PNQ1P1/1R3RK1 w - - 0 17");
+    targetDepth.push_back(20);
+    targetNodes.push_back(7376246);
+    fenPos.push_back("1r2r2k/1p4qp/p3bp2/4p2R/n3P3/2PB4/2PB1QPK/1R6 w - - 1 32");
+    targetDepth.push_back(21);
+    targetNodes.push_back(3004666);
+    fenPos.push_back("1b3r1k/rb1q3p/pp2pppP/3n1n2/1P2N3/P2B1NPQ/1B3P2/2R1R1K1 b - - 1 32");
+    targetDepth.push_back(20);
+    targetNodes.push_back(20830203);
+    int64 startTime = getTime();
+    for (int idxpos = 0; idxpos < fenPos.size(); ++idxpos) {
+        LogAndPrintOutput() << fenPos[idxpos] << " starting\n";
+        NewGame(cEngine);
+        streamcmd = std::istringstream("fen " + fenPos[idxpos]);
+        Position(cEngine, input_pos, streamcmd);
+        streamcmd = std::istringstream("depth " + std::to_string(targetDepth[idxpos]));
+        Go(cEngine, input_pos, streamcmd);
+        cEngine.WaitForThink();
+        uint64 nodes = cEngine.ComputeNodes();
+        if (nodes != targetNodes[idxpos]) {
+            LogAndPrintOutput() << "ERROR DETECTED: node count wrong " << nodes << " != " << targetNodes[idxpos] << "\n";
+            //            break;
+        }
+        LogAndPrintOutput() << nodes << " nodes\n";
+    }
+    int64 spentTime = getTime() - startTime;
+    LogAndPrintOutput() << spentTime << " total time\n";
+}
 void Interface::CheckSpeedup(std::istringstream& stream) {
     std::istringstream streamcmd;
     std::vector<std::string> fenPos;
@@ -201,19 +258,18 @@ void Interface::CheckSpeedup(std::istringstream& stream) {
         uint64 spentTime1 = 0;
         for (int idxthread = 0; idxthread < threads.size(); ++idxthread) {
             streamcmd = std::istringstream("name Threads value " + std::to_string(threads[idxthread]));
-            SetOption(streamcmd);
-            NewGame();
+            SetOption(cEngine, streamcmd);
+            NewGame(cEngine);
 
             streamcmd = std::istringstream("fen " + fenPos[idxpos]);
-            Position(streamcmd);
+            Position(cEngine, input_pos, streamcmd);
 
             int64 startTime = getTime();
 
             streamcmd = std::istringstream("depth " + std::to_string(depth));
-            Go(streamcmd);
+            Go(cEngine, input_pos, streamcmd);
 
-            cEngine.WaitForThinkFinished();
-            cEngine.SetThinkFinished();
+            cEngine.WaitForThink();
 
             double timeSpeedUp;
             double nodesSpeedup;
@@ -268,25 +324,24 @@ void Interface::CheckBestSplit(std::istringstream& stream) {
     nodesSum.resize(splits.size(), 0.0);
 
     streamcmd = std::istringstream("name Threads value " + std::to_string(threads));
-    SetOption(streamcmd);
+    SetOption(cEngine, streamcmd);
 
     for (int idxpos = 0; idxpos < fenPos.size(); ++idxpos) {
         LogAndPrintOutput() << "\n\nPos#" << idxpos + 1 << ": " << fenPos[idxpos];
         for (int idxsplit = 0; idxsplit < splits.size(); ++idxsplit) {
             streamcmd = std::istringstream("name Min Split Depth value " + std::to_string(splits[idxsplit]));
-            SetOption(streamcmd);
-            NewGame();
+            SetOption(cEngine, streamcmd);
+            NewGame(cEngine);
 
             streamcmd = std::istringstream("fen " + fenPos[idxpos]);
-            Position(streamcmd);
+            Position(cEngine, input_pos, streamcmd);
 
             int64 startTime = getTime();
 
             streamcmd = std::istringstream("depth " + std::to_string(depth));
-            Go(streamcmd);
+            Go(cEngine, input_pos, streamcmd);
 
-            cEngine.WaitForThinkFinished();
-            cEngine.SetThinkFinished();
+            cEngine.WaitForThink();
 
             int64 spentTime = getTime() - startTime;
             uint64 nodes = cEngine.ComputeNodes() / spentTime;
@@ -311,3 +366,70 @@ void Interface::CheckBestSplit(std::istringstream& stream) {
     LogAndPrintOutput() << "\n\nThe best splitdepth is:\n";
     LogAndPrintOutput() << "splitdepth: " << splits[bestIdx] << " time: " << timeSum[bestIdx] / (fenPos.size() * 1000.0) << "s knps: " << nodesSum[bestIdx] / fenPos.size() << " ratio: " << nodesSum[bestIdx] / timeSum[bestIdx] << "\n";
 }
+
+void Interface::CheckMaxSplit(std::istringstream& stream) {
+    std::istringstream streamcmd;
+    std::vector<std::string> fenPos;
+    fenPos.push_back("r3k2r/pbpnqp2/1p1ppn1p/6p1/2PP4/2PBPNB1/P4PPP/R2Q1RK1 w kq - 2 12");
+    fenPos.push_back("2kr3r/pbpn1pq1/1p3n2/3p1R2/3P3p/2P2Q2/P1BN2PP/R3B2K w - - 4 22");
+    fenPos.push_back("r2n1rk1/1pq2ppp/p2pbn2/8/P3Pp2/2PBB2P/2PNQ1P1/1R3RK1 w - - 0 17");
+    fenPos.push_back("1r2r2k/1p4qp/p3bp2/4p2R/n3P3/2PB4/2PB1QPK/1R6 w - - 1 32");
+    fenPos.push_back("1b3r1k/rb1q3p/pp2pppP/3n1n2/1P2N3/P2B1NPQ/1B3P2/2R1R1K1 b - - 1 32");
+    std::vector<double> timeSum;
+    std::vector<double> nodesSum;
+    std::vector<int> splits;
+    int threads = 1;
+    int depth = 12;
+
+    stream >> threads;
+    stream >> depth;
+
+    for (int i = MinActiveSplit; i <= MaxActiveSplit; ++i) splits.push_back(i);
+
+    timeSum.resize(splits.size(), 0.0);
+    nodesSum.resize(splits.size(), 0.0);
+
+    streamcmd = std::istringstream("name Threads value " + std::to_string(threads));
+    SetOption(cEngine, streamcmd);
+
+    for (int idxpos = 0; idxpos < fenPos.size(); ++idxpos) {
+        LogAndPrintOutput() << "\n\nPos#" << idxpos + 1 << ": " << fenPos[idxpos];
+        for (int idxsplit = 0; idxsplit < splits.size(); ++idxsplit) {
+            streamcmd = std::istringstream("name Max Active Splits/Thread value " + std::to_string(splits[idxsplit]));
+            SetOption(cEngine, streamcmd);
+            NewGame(cEngine);
+
+            streamcmd = std::istringstream("fen " + fenPos[idxpos]);
+            Position(cEngine, input_pos, streamcmd);
+
+            int64 startTime = getTime();
+
+            streamcmd = std::istringstream("depth " + std::to_string(depth));
+            Go(cEngine, input_pos, streamcmd);
+
+            cEngine.WaitForThink();
+
+            int64 spentTime = getTime() - startTime;
+            uint64 nodes = cEngine.ComputeNodes() / spentTime;
+
+            timeSum[idxsplit] += spentTime;
+            nodesSum[idxsplit] += nodes;
+
+            LogAndPrintOutput() << "\nPos#" << idxpos + 1 << " active splits: " << splits[idxsplit] << " time: " << (double)spentTime / 1000.0 << "s knps: " << nodes << "\n";
+        }
+    }
+
+    int bestIdx = 0;
+    double bestSplit = double(nodesSum[bestIdx]) / double(timeSum[bestIdx]);
+    LogAndPrintOutput() << "\n\nAverage Statistics (threads: " << threads << " depth: " << depth << ")\n";
+    for (int i = 0; i < splits.size(); ++i) {
+        if (double(nodesSum[i]) / double(timeSum[i]) > bestSplit) {
+            bestSplit = double(nodesSum[i]) / double(timeSum[i]);
+            bestIdx = i;
+        }
+        LogAndPrintOutput() << "active splits: " << splits[i] << " time: " << timeSum[i] / (fenPos.size() * 1000.0) << "s knps: " << nodesSum[i] / fenPos.size() << " ratio: " << nodesSum[i] / timeSum[i];
+    }
+    LogAndPrintOutput() << "\n\nThe best active splits is:\n";
+    LogAndPrintOutput() << "active splits: " << splits[bestIdx] << " time: " << timeSum[bestIdx] / (fenPos.size() * 1000.0) << "s knps: " << nodesSum[bestIdx] / fenPos.size() << " ratio: " << nodesSum[bestIdx] / timeSum[bestIdx] << "\n";
+}
+#endif

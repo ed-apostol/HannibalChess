@@ -25,22 +25,22 @@
 static INLINE unsigned char _BitScanForward64(unsigned int* const Index, const U64 Mask) {
     U64 Ret;
     __asm__
-        (
+    (
         "bsfq %[Mask], %[Ret]"
         :[Ret] "=r" (Ret)
         : [Mask] "mr" (Mask)
-        );
+    );
     *Index = (unsigned int)Ret;
     return Mask ? 1 : 0;
 }
 static INLINE unsigned char _BitScanReverse64(unsigned int* const Index, const U64 Mask) {
     U64 Ret;
     __asm__
-        (
+    (
         "bsrq %[Mask], %[Ret]"
         :[Ret] "=r" (Ret)
         : [Mask] "mr" (Mask)
-        );
+    );
     *Index = (unsigned int)Ret;
     return Mask ? 1 : 0;
 }
@@ -159,3 +159,21 @@ uint64 shiftLeft(uint64 b, uint32 i) {
 uint64 shiftRight(uint64 b, uint32 i) {
     return (b >> i);
 }
+inline uint64 adjacent(const uint64 BB) {
+    return (BB & (shiftLeft(BB & ~FileHBB, 1) | shiftRight(BB & ~FileABB, 1)));
+}
+inline uint64 pawnAttackBB(const uint64 pawns, const int color) {
+    static const int Shift[] = { 9, 7 };
+    const uint64 pawnAttackLeft = (*ShiftPtr[color])(pawns, Shift[color ^ 1]) & ~FileHBB;
+    const uint64 pawnAttackright = (*ShiftPtr[color])(pawns, Shift[color]) & ~FileABB;
+    return (pawnAttackLeft | pawnAttackright);
+}
+inline uint64 doublePawnAttackBB(const uint64 pawns, const int color) {
+    static const int Shift[] = { 9, 7 };
+    const uint64 pawnAttackLeft = (*ShiftPtr[color])(pawns, Shift[color ^ 1]) & ~FileHBB;
+    const uint64 pawnAttackright = (*ShiftPtr[color])(pawns, Shift[color]) & ~FileABB;
+    return (pawnAttackLeft & pawnAttackright);
+}
+inline EvalScore ComposeEvalScore(int16 s1, int16 s2) { return COMP(s1, s2); }
+inline int16 GetOpening(EvalScore s1) { return ((int16)(s1 & 0xFFFF)); }
+inline int16 GetEndgame(EvalScore s1) { return (((s1 >> 15) & 1) + (int16)(s1 >> 16)); }

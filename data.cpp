@@ -25,9 +25,6 @@ uint64 PawnMoves[64][2];
 uint64 PawnMoves2[64][2];
 
 uint64 MagicAttacks[107648];
-
-uint64 bewareTrapped[2];
-
 /* the precomputed material values table and the flags table */
 material_info_t MaterialTable[MAX_MATERIAL][MAX_MATERIAL];
 
@@ -51,7 +48,6 @@ const int MoveGenPhase[] = {
     PH_NONE, PH_TRANS, PH_ALL_CAPTURES, PH_NONTACTICAL_CHECKS_PURE, PH_END, //MoveGenPhaseQuiescenceAndChecksPV
     PH_NONE, PH_TRANS, PH_GOOD_CAPTURES_PURE, PH_END, //MoveGenPhaseQuiescence
     PH_NONE, PH_TRANS, PH_GOOD_CAPTURES_PURE, PH_NONTACTICAL_CHECKS_WIN, PH_END, //MoveGenPhaseQuiescenceAndChecks
-    PH_NONE, PH_TRANS, PH_GOOD_CAPTURES_PURE, PH_END, //MoveGenPhaseQuiescencePV
     PH_NONE, PH_ROOT, PH_END, //MoveGenPhaseRoot
 };
 
@@ -60,20 +56,10 @@ zero otherwise */
 int DirFromTo[64][64];
 
 /* used for pre-computed piece-square table */
-int PcSqTb[2048];
-int OutpostValue[2][64];
+EvalScore PieceSquareTable[2][KING][64];
 /* used in updating the castle status of the position */
 int CastleMask[64];
-/* used as initial king penalty */
-int KingPosPenalty[2][64];
-
-pos_store_t UndoStack[MAX_HASH_STORE];
-
 int DrawValue[2];
-/* this is used for pawn shelter and pawn storm */
-uint64 PassedMask[2][64];
-uint64 kingShelter[2][64]; // provides good shelter for king SAM1 added static
-uint64 kingIndirectShelter[2][64]; // provides ok shelter for king SAM1 added static
 
 // used in setting up the position and eval symmetry
 const char *FenString[] = {
