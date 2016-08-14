@@ -73,7 +73,7 @@ void TranspositionTable::StoreLower(uint64 hash, basic_move_t move, int depth, i
             entry->SetLowerValue(value);
             entry->SetEvalValue(staticEvalValue);
             entry->RemMask(MSingular | MPV);
-			entry->SetMask((singular ? MSingular : 0) | (pv ? MPV : 0));
+            entry->SetMask((singular ? MSingular : 0) | (pv ? MPV : 0));
             return;
         }
         score = (mAge[entry->Age()] * 256) - MAX(entry->UpperDepth(), entry->LowerDepth());
@@ -91,7 +91,7 @@ void TranspositionTable::StoreLower(uint64 hash, basic_move_t move, int depth, i
     replace->SetLowerDepth(depth);
     replace->SetLowerValue(value);
     replace->SetEvalValue(staticEvalValue);
-	replace->ReplaceMask((singular ? MSingular : 0) | (pv ? MPV : 0));
+    replace->ReplaceMask((singular ? MSingular : 0) | (pv ? MPV : 0));
 }
 
 void TranspositionTable::StoreUpper(uint64 hash, int depth, int value, int staticEvalValue, bool pv) {
@@ -108,7 +108,7 @@ void TranspositionTable::StoreUpper(uint64 hash, int depth, int value, int stati
             entry->SetUpperDepth(depth);
             entry->SetUpperValue(value);
             entry->SetEvalValue(staticEvalValue);
-			entry->SetMask(pv ? MPV : 0);
+            entry->SetMask(pv ? MPV : 0);
             return;
         }
         score = (mAge[entry->Age()] * 256) - MAX(entry->UpperDepth(), entry->LowerDepth());
@@ -164,7 +164,7 @@ void TranspositionTable::StoreExact(uint64 hash, basic_move_t move, int depth, i
     replace->SetLowerDepth(depth);
     replace->SetLowerValue(value);
     replace->SetEvalValue(staticEvalValue);
-	replace->ReplaceMask((singular ? MSingular : 0) | (pv ? MPV : 0));
+    replace->ReplaceMask((singular ? MSingular : 0) | (pv ? MPV : 0));
 }
 
 void TranspositionTable::StoreNoMoves(uint64 hash) {

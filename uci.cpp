@@ -32,7 +32,7 @@
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
 const std::string Interface::year = "2016";
-const std::string Interface::version = "1.6.57";
+const std::string Interface::version = "1.7";
 const std::string Interface::arch = "x64";
 
 void Interface::Info() {
@@ -201,16 +201,16 @@ void Interface::CheckSpeed() {
     targetNodes.push_back(48136806);
     fenPos.push_back("6k1/R4p2/1r1pp2p/6p1/8/2P1P1PP/6PK/8 b - -0 38");
     targetDepth.push_back(27);
-	targetNodes.push_back(5156468);
+    targetNodes.push_back(5156468);
     fenPos.push_back("r3k2r/pbpnqp2/1p1ppn1p/6p1/2PP4/2PBPNB1/P4PPP/R2Q1RK1 w kq - 2 12");
     targetDepth.push_back(21);
-	targetNodes.push_back(9462598);
+    targetNodes.push_back(9462598);
     fenPos.push_back("2kr3r/pbpn1pq1/1p3n2/3p1R2/3P3p/2P2Q2/P1BN2PP/R3B2K w - - 4 22");
     targetDepth.push_back(21);
-	targetNodes.push_back(19872130);
+    targetNodes.push_back(19872130);
     fenPos.push_back("r2n1rk1/1pq2ppp/p2pbn2/8/P3Pp2/2PBB2P/2PNQ1P1/1R3RK1 w - - 0 17");
     targetDepth.push_back(20);
-	targetNodes.push_back(7376246);
+    targetNodes.push_back(7376246);
     fenPos.push_back("1r2r2k/1p4qp/p3bp2/4p2R/n3P3/2PB4/2PB1QPK/1R6 w - - 1 32");
     targetDepth.push_back(21);
     targetNodes.push_back(3004666);

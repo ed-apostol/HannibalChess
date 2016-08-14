@@ -149,26 +149,26 @@ struct SearchStack {
         ssprev(prev),
         mvlist(&movelist),
         hisMoves(&hisTable[0]) {}
-	bool reducedMove;
-	bool moveGivesCheck;
-	int playedMoves;
-	int hisCnt;
-	int evalvalue;
-	int staticEvalValue;
-	int bestvalue;
-	basic_move_t bestmove;
-	uint64 dcc;
-	basic_move_t counterMove;
-	basic_move_t threatMove;
-	basic_move_t bannedMove;
-	basic_move_t hashMove;
-	int hashDepth;
-	int ply;
-	SearchStack *ssprev;
-	movelist_t* mvlist;
-	basic_move_t* hisMoves;
+    bool reducedMove;
+    bool moveGivesCheck;
+    int playedMoves;
+    int hisCnt;
+    int evalvalue;
+    int staticEvalValue;
+    int bestvalue;
+    basic_move_t bestmove;
+    uint64 dcc;
+    basic_move_t counterMove;
+    basic_move_t threatMove;
+    basic_move_t bannedMove;
+    basic_move_t hashMove;
+    int hashDepth;
+    int ply;
+    SearchStack *ssprev;
+    movelist_t* mvlist;
+    basic_move_t* hisMoves;
 
-	basic_move_t hisTable[64];
+    basic_move_t hisTable[64];
     movelist_t movelist;
 };
 

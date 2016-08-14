@@ -141,7 +141,6 @@ struct SearchInfo {
     void Init() {
         thinking_status = THINKING;
         is_easymove = false;
-        pondering = false;
         easyPonderMove = EMPTY;
         stop_search = false;
         depth_is_limited = false;
@@ -174,7 +173,6 @@ struct SearchInfo {
     }
     std::atomic<int> thinking_status;
     std::atomic<bool> stop_search; // TODO: replace with sthread.stop?
-    bool pondering;
     bool is_easymove;
     basic_move_t easyPonderMove;
 
@@ -196,9 +194,9 @@ struct SearchInfo {
     uint64 node_limit;
 
     int64 start_time;
-    int64 last_time;
-    int64 last_time2;
     int64 alloc_time;
+    std::atomic<int64> last_time;
+    std::atomic<int64> last_time2;
 
     int last_value;
     int best_value;
@@ -287,7 +285,7 @@ public:
                 << " nodes: " << th->nodes
                 << " splits%: " << double(th->numsplits * 100.0) / double(th->nodes)
                 << " joined%: " << double(th->numsplitsjoined * 100.0) / double(th->numsplits)
-                << " threads: " << double(th->numworkers) / double(th->numsplitsjoined);
+                << " threads#: " << double(th->numworkers) / double(th->numsplitsjoined);
         }
         LogInfo() << "================================================================================";
     }
