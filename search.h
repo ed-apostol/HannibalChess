@@ -171,8 +171,8 @@ struct SearchInfo {
         mMinSplitDepth = 0;
         mMaxActiveSplitsPerThread = 0;
     }
-    std::atomic<int> thinking_status;
-    std::atomic<bool> stop_search; // TODO: replace with sthread.stop?
+    volatile int thinking_status;
+    volatile bool stop_search; // TODO: replace with sthread.stop?
     bool is_easymove;
     basic_move_t easyPonderMove;
 
@@ -188,22 +188,23 @@ struct SearchInfo {
     bool time_is_limited;
     bool time_is_fixed;
 
-    int64 time_limit_max;
+    volatile int64 time_limit_max;
     int64 time_limit_abs;
     bool node_is_limited;
     uint64 node_limit;
 
     int64 start_time;
+    volatile int64 last_time;
+    volatile int64 last_time2;
     int64 alloc_time;
-    std::atomic<int64> last_time;
-    std::atomic<int64> last_time2;
 
-    int last_value;
-    int best_value;
+    volatile int last_value;
+    volatile int best_value;
 
+    int mate_found;
     int currmovenumber;
-    int change;
-    int research;
+    volatile int change;
+    volatile int research;
     int iteration;
 
     int multipvIdx;

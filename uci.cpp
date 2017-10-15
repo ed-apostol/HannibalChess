@@ -31,8 +31,8 @@
 
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
-const std::string Interface::year = "2016";
-const std::string Interface::version = "1.7";
+const std::string Interface::year = "2017";
+const std::string Interface::version = "20171012";
 const std::string Interface::arch = "x64";
 
 void Interface::Info() {
