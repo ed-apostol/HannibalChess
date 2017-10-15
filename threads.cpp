@@ -37,6 +37,10 @@ void Thread::Init() {
 
 void Thread::IdleLoop() {
     SplitPoint* const master_sp = activeSplitPoint;
+    if (!init_done) {
+        Init();
+        init_done = true;
+    }
     while (!exit_flag) {
         if (!exit_flag && doSleep && master_sp == nullptr) {
             SleepAndWaitForCondition();

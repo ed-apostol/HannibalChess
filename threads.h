@@ -144,8 +144,8 @@ public:
         ThreadBase(_thread_id),
         mThreadGroup(_thread_group),
         CBGetBestMove(_getbest),
-        CBSearchFromIdleLoop(_searchfromidle) {
-        Init();
+        CBSearchFromIdleLoop(_searchfromidle),
+        init_done(false) {
         NativeThread() = std::thread(&Thread::IdleLoop, this);
     }
 
@@ -158,6 +158,7 @@ public:
     uint64 numsplitsjoined;
     uint64 numworkers;
     uint64 nodes;
+    bool init_done;
 
     volatile int num_sp;
     SplitPoint *activeSplitPoint;
