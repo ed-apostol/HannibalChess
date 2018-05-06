@@ -31,8 +31,8 @@
 
 const std::string Interface::name = "Hannibal";
 const std::string Interface::author = "Sam Hamilton & Edsel Apostol";
-const std::string Interface::year = "2017";
-const std::string Interface::version = "20171012";
+const std::string Interface::year = "2018";
+const std::string Interface::version = "20180506";
 const std::string Interface::arch = "x64";
 
 void Interface::Info() {
@@ -66,7 +66,7 @@ bool Interface::Input(std::istringstream& stream) {
     std::string command;
     stream >> command;
 
-    if (command == "isready") IsReady(cEngine);
+    if (command == "isready") IsReady();
     else if (command == "quit") { Quit(cEngine); return false; }
     else if (cEngine.mThinking) {
         if (command == "stop") Stop(cEngine);
@@ -114,7 +114,7 @@ void Interface::PonderHit(Engine& engine) {
     engine.PonderHit();
 }
 
-void Interface::IsReady(Engine& engine) {
+void Interface::IsReady() {
     LogAndPrintOutput() << "readyok";
 }
 
@@ -175,12 +175,12 @@ void Interface::Position(Engine& engine, position_t& pos, std::istringstream& st
 }
 
 void Interface::SetOption(Engine& engine, std::istringstream& stream) {
-    std::string token, name, value;
+    std::string token, lname, value;
     stream >> token;
-    while (stream >> token && token != "value") name += std::string(" ", !name.empty()) + token;
+    while (stream >> token && token != "value") lname += std::string(" ", !lname.empty()) + token;
     while (stream >> token) value += std::string(" ", !value.empty()) + token;
-    if (engine.uci_opt.count(name)) engine.uci_opt[name] = value;
-    else LogAndPrintOutput() << "No such option: " << name;
+    if (engine.uci_opt.count(lname)) engine.uci_opt[lname] = value;
+    else LogAndPrintOutput() << "No such option: " << lname;
 }
 
 void Interface::NewGame(Engine& engine) {

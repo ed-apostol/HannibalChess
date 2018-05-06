@@ -489,7 +489,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     else if (ss.hashMove == move->m && ss.hashDepth >= depth / 2 && depth >= (inPv ? 6 : 8)) {
                         int targetScore = ss.evalvalue - EXPLORE_BASE_CUTOFF - depth * EXPLORE_MULT_CUTOFF;
                         ssprev.bannedMove = ss.hashMove;
-                        int score = searchNode<false, inPv, false, true>(pos, targetScore, targetScore + 1, depth / 2, ssprev, sthread);
+                        score = searchNode<false, inPv, false, true>(pos, targetScore, targetScore + 1, depth / 2, ssprev, sthread);
                         ssprev.bannedMove = EMPTY;
                         if (sthread.stop) return 0;
                         if (score <= targetScore) {

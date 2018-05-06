@@ -24,8 +24,7 @@ static const int DefaultHash = 128;
 static const std::string PawnHashStr = "Pawn Hash";
 static const int MinPHash = 1;
 static const int MaxPHash = 1024;
-static const int DefaultPHash = 64; //TCEC
-//static const int DefaultPHash = 32;
+static const int DefaultPHash = 32;
 
 static const std::string MultiPVStr = "MultiPV";
 static const int MinMultiPV = 1;

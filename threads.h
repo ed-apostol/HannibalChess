@@ -115,7 +115,6 @@ public:
     }
     void TriggerCondition() {
         doSleep = false;
-        std::unique_lock<std::mutex>(threadLock);
         sleepCondition.notify_one();
     }
     std::thread& NativeThread() {

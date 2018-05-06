@@ -25,7 +25,7 @@ private:
     bool Input(std::istringstream& stream);
     void Stop(Engine& engine);
     void PonderHit(Engine& engine);
-    void IsReady(Engine& engine);
+    void IsReady();
     void Go(Engine& engine, position_t& pos, std::istringstream& stream);
     void Position(Engine& engine, position_t& pos, std::istringstream& stream);
     void SetOption(Engine& engine, std::istringstream& stream);
