@@ -548,7 +548,7 @@ void RookEnding(int attacker, const position_t& pos, eval_info_t& ei, int *score
             if (*draw < 0) *draw = 0;
         }
     }
-    else if (ei.MLindex[attacker] - ei.MLindex[defender] <= MLP  && passedA == 0) {  // if no more than one pawn down
+    else if (ei.MLindex[attacker] - ei.MLindex[defender] <= MLP && passedA == 0) {  // if no more than one pawn down
         uint64 pawnking = pos.color[defender] & ~pos.rooks;
         // no passed pawn is drawish
         *draw += 10;

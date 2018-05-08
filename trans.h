@@ -38,7 +38,7 @@ public:
     size_t HashSize() const { return mSize; }
     size_t BucketSize() const { return mBucketSize; }
 protected:
-    Entity* mpTable;
+    Entity * mpTable;
     size_t mSize;
     size_t mMask;
     size_t mBucketSize;

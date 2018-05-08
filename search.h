@@ -94,7 +94,7 @@ typedef std::map<std::string, Options> UCIOptionsBasic;
 
 class UCIOptions : public UCIOptionsBasic {
 public:
-    Options& operator[] (std::string const& key) {
+    Options & operator[] (std::string const& key) {
         UCIOptionsBasic::iterator opt = find(key);
         if (opt != end()) {
             return opt->second;

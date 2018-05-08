@@ -30,7 +30,7 @@ int SetPhase(int minors, int rooks, int queens) {
     lm += lr;
 
     if (lm) {
-        p -= NP_M1*lm;
+        p -= NP_M1 * lm;
         if (lm > 2) p -= NP_M2 * (lm - 2);
         if (lm > 4) p -= NP_M3 * (lm - 4);
         if (lm > 6) p -= NP_M4 * (lm - 6);
@@ -38,21 +38,21 @@ int SetPhase(int minors, int rooks, int queens) {
         if (lm > 10) p -= NP_M6 * (lm - 10);
     }
     if (lr) {
-        p -= NP_R1*lr;
+        p -= NP_R1 * lr;
         if (lr > 2) p -= NP_R2 * (lr - 2);
     }
     if (lq) {
-        p -= NP_Q*lq;
+        p -= NP_Q * lq;
         if (lq > 1) {
             if (lm - 2) {
-                p -= NP_QM1*lm;
+                p -= NP_QM1 * lm;
                 if (lm > 4) p -= NP_QM2 * (lm - 4);
                 if (lm > 6) p -= NP_QM3 * (lm - 6);
                 if (lm > 8) p -= NP_QM4 * (lm - 8);
                 if (lm > 10) p -= NP_QM5 * (lm - 10);
             }
             if (lr - 2) {
-                p -= NP_QR1*lr;
+                p -= NP_QR1 * lr;
                 if (lr > 4) p -= NP_QR2 * (lr - 4);
             }
         }
@@ -277,10 +277,10 @@ void InitMaterial(void) {
                                                 wr * MatSummValue[ROOK] + wq * MatSummValue[QUEEN];
                                             bindex = bp * MatSummValue[PAWN] + bn * MatSummValue[KNIGHT] + bb * MatSummValue[BISHOP] +
                                                 br * MatSummValue[ROOK] + bq * MatSummValue[QUEEN];
-                                            if (wp*MLP + wn*MLN + wb*MLN + wr*MLR + wq*MLQ >
-                                                bp + bn*MLN + bb*MLN + br*MLR + bq*MLQ ||
-                                                (wp + wn*MLN + wb*MLN + wr*MLR + wq*MLQ ==
-                                                    wp + wn*MLN + wb*MLN + wr*MLR + wq*MLQ && windex >= bindex)) {
+                                            if (wp*MLP + wn * MLN + wb * MLN + wr * MLR + wq * MLQ >
+                                                bp + bn * MLN + bb * MLN + br * MLR + bq * MLQ ||
+                                                (wp + wn * MLN + wb * MLN + wr * MLR + wq * MLQ ==
+                                                    wp + wn * MLN + wb * MLN + wr * MLR + wq * MLQ && windex >= bindex)) {
                                                 phase = SetPhase(wn + wb + bn + bb, wr + br, wq + bq);
                                                 //                                                if (wq && bq) PrintOutput() << wn + wb + bn + bb << " minors " << wr + br << " rooks " << wq + bq << " queens: " << phase << "\n";
                                                 openscore =
