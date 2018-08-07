@@ -9,7 +9,7 @@
 
 #pragma once
 #include <functional>
-#include <map>
+#include <unordered_map>
 #include "typedefs.h"
 #include "threads.h"
 #include "trans.h"
@@ -72,7 +72,7 @@ struct Options {
     }
     Options(CallbackFunc f) : mType("button"), mMin(0), mMax(0), OnChange(f) {}
     Options(int v, int minv, int maxv, CallbackFunc f) : mType("spin"), mMin(minv), mMax(maxv), OnChange(f) {
-        std::ostringstream ss; ss << v; mDefVal = mCurVal = ss.str();
+        mDefVal = mCurVal = std::to_string(v);
     }
     int GetInt() const {
         return (mType == "spin" ? atoi(mCurVal.c_str()) : mCurVal == "true");
@@ -90,34 +90,24 @@ struct Options {
     CallbackFunc OnChange;
 };
 
-typedef std::map<std::string, Options> UCIOptionsBasic;
-
-class UCIOptions : public UCIOptionsBasic {
+class UCIOptions : public std::unordered_map<std::string, Options> {
 public:
     Options & operator[] (std::string const& key) {
-        UCIOptionsBasic::iterator opt = find(key);
-        if (opt != end()) {
+        auto opt = find(key);
+        if (opt != end())
             return opt->second;
-        }
-        else {
-            mKeys.push_back(key);
+        else
             return (insert(std::make_pair(key, Options())).first)->second;
-        }
     }
     void Print() const {
-        for (int idx = 0; idx < mKeys.size(); ++idx) {
-            UCIOptionsBasic::const_iterator itr = find(mKeys[idx]);
-            if (itr != end()) {
-                const Options& opt = itr->second;
-                LogAndPrintOutput log;
-                log << "option name " << mKeys[idx] << " type " << opt.mType;
-                if (opt.mType != "button") log << " default " << opt.mDefVal;
-                if (opt.mType == "spin") log << " min " << opt.mMin << " max " << opt.mMax;
-            }
+        for (auto itr = begin(); itr != end(); ++itr) {
+            const Options& opt = itr->second;
+            LogAndPrintOutput log;
+            log << "option name " << itr->first << " type " << opt.mType;
+            if (opt.mType != "button") log << " default " << opt.mDefVal;
+            if (opt.mType == "spin") log << " min " << opt.mMin << " max " << opt.mMax;
         }
     }
-private:
-    std::vector<std::string> mKeys;
 };
 
 struct EasyMove {
