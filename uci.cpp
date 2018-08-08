@@ -145,6 +145,7 @@ void Interface::Go(Engine& engine, position_t& pos, std::istringstream& stream) 
 void Interface::Position(Engine& engine, position_t& pos, std::istringstream& stream) {
     basic_move_t m;
     std::string token, fen;
+    int idx = 0;
 
     stream >> token;
     if (token == "startpos") {
@@ -160,17 +161,14 @@ void Interface::Position(Engine& engine, position_t& pos, std::istringstream& st
         return;
     }
 
-    engine.mUndoStack.clear();
     setPosition(pos, fen.c_str());
     while (stream >> token) {
         movelist_t ml;
         genLegal(pos, ml, true);
-        if (m = parseMove(ml, token.c_str())) {
-            size_t idx = engine.mUndoStack.size();
-            engine.mUndoStack.push_back(new pos_store_t());
-            makeMove(pos, *engine.mUndoStack[idx], m);
-        }
-        else break;
+        if (m = parseMove(ml, token.c_str()))
+            makeMove(pos, engine.mUndoStack[idx++], m);
+        else 
+            break;
     }
 }
 

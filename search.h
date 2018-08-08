@@ -364,7 +364,7 @@ public:
     }
 
     UCIOptions uci_opt;
-    std::vector<pos_store_t*> mUndoStack;
+    std::vector<pos_store_t> mUndoStack;
     std::atomic<bool> mThinking;
 private:
     static const int WORSE_SCORE_CUTOFF = 20;
