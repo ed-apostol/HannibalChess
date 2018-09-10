@@ -10,7 +10,6 @@
 /GS- /GL /W4 /Gy /Zc:wchar_t /Zi /Gm /O2 /Ob2 /sdl- /Fd"x64\Release\vc120.pdb" /fp:fast /D "_MBCS"
 /errorReport:prompt /GT /WX- /Zc:forScope /Gd /Oy /Oi /MT /Fa"x64\Release\" /EHsc /nologo /Fo"x64\Release\" /Ot /Fp"x64\Release\HannibalBitBucket.pch"
 */
-#define SMALL_FOOTPRINT true
 
 #include "typedefs.h"
 #include "data.h"
@@ -188,7 +187,6 @@ void Interface::NewGame(Engine& engine) {
 }
 Interface::~Interface() {}
 
-#ifndef SMALL_FOOTPRINT
 void Interface::CheckSpeed() {
 	std::istringstream streamcmd;
 	std::vector<std::string> fenPos;
@@ -236,19 +234,27 @@ void Interface::CheckSpeed() {
 }
 void Interface::CheckSpeedup(std::istringstream& stream) {
 	std::istringstream streamcmd;
-	std::vector<std::string> fenPos;
-	fenPos.push_back("r3k2r/pbpnqp2/1p1ppn1p/6p1/2PP4/2PBPNB1/P4PPP/R2Q1RK1 w kq - 2 12");
-	fenPos.push_back("2kr3r/pbpn1pq1/1p3n2/3p1R2/3P3p/2P2Q2/P1BN2PP/R3B2K w - - 4 22");
-	fenPos.push_back("r2n1rk1/1pq2ppp/p2pbn2/8/P3Pp2/2PBB2P/2PNQ1P1/1R3RK1 w - - 0 17");
-	fenPos.push_back("1r2r2k/1p4qp/p3bp2/4p2R/n3P3/2PB4/2PB1QPK/1R6 w - - 1 32");
-	fenPos.push_back("1b3r1k/rb1q3p/pp2pppP/3n1n2/1P2N3/P2B1NPQ/1B3P2/2R1R1K1 b - - 1 32");
-	std::vector<double> timeSpeedupSum(2, 0.0);
-	std::vector<double> nodesSpeedupSum(2, 0.0);
-	std::vector<int> threads(2, 1);
-	int depth = 12;
+	std::vector<std::string> fenPos = {
+		"r3k2r/pbpnqp2/1p1ppn1p/6p1/2PP4/2PBPNB1/P4PPP/R2Q1RK1 w kq - 2 12",
+		"2kr3r/pbpn1pq1/1p3n2/3p1R2/3P3p/2P2Q2/P1BN2PP/R3B2K w - - 4 22",
+		"r2n1rk1/1pq2ppp/p2pbn2/8/P3Pp2/2PBB2P/2PNQ1P1/1R3RK1 w - - 0 17",
+		"1r2r2k/1p4qp/p3bp2/4p2R/n3P3/2PB4/2PB1QPK/1R6 w - - 1 32",
+		"1b3r1k/rb1q3p/pp2pppP/3n1n2/1P2N3/P2B1NPQ/1B3P2/2R1R1K1 b - - 1 32",
+		"1r1r1qk1/pn1p2p1/1pp1npBp/8/2PB2QP/4R1P1/P4PK1/3R4 w - - 0 1",
+		"3rr1k1/1b2nnpp/1p1q1p2/pP1p1P2/P1pP2P1/2N1P1QP/3N1RB1/2R3K1 w - - 0 1",
+		"r1bqk1nr/ppp2pbp/2n1p1p1/7P/3Pp3/2N2N2/PPP2PP1/R1BQKB1R w KQkq - 0 7",
+		"1r3rk1/3bb1pp/1qn1p3/3pP3/3P1N2/2Q2N2/2P3PP/R1BR3K w - - 0 1",
+		"rn1q1rk1/2pbb3/pn2p3/1p1pPpp1/3P4/1PNBBN2/P1P1Q1PP/R4R1K w - - 0 1"
+	};
 
-	stream >> threads[1];
+	std::vector<int> threads;
+	int depth;
+
 	stream >> depth;
+	for (int temp; stream >> temp; threads.push_back(temp));
+
+	std::vector<double> timeSpeedupSum(threads.size(), 0.0);
+	std::vector<double> nodesSpeedupSum(threads.size(), 0.0);
 
 	for (int idxpos = 0; idxpos < fenPos.size(); ++idxpos) {
 		LogAndPrintOutput() << "\n\nPos#" << idxpos + 1 << ": " << fenPos[idxpos];
@@ -281,21 +287,27 @@ void Interface::CheckSpeedup(std::istringstream& stream) {
 				timeSpeedupSum[idxthread] += timeSpeedUp;
 				nodesSpeedup = (double)nodes;
 				nodesSpeedupSum[idxthread] += nodesSpeedup;
-				LogAndPrintOutput() << "\nBase: " << std::to_string(timeSpeedUp) << "s " << std::to_string(nodes) << "knps\n";
+				LogAndPrintOutput() << "\nPos#" << idxpos + 1 << " Threads: " << std::to_string(threads[idxthread]) << " time: " << std::to_string(timeSpeedUp)
+					<< "s, " << std::to_string(nodes) << "knps\n";
 			}
 			else {
 				timeSpeedUp = (double)spentTime1 / (double)spentTime;
 				timeSpeedupSum[idxthread] += timeSpeedUp;
 				nodesSpeedup = (double)nodes / (double)nodes1;
 				nodesSpeedupSum[idxthread] += nodesSpeedup;
-				LogAndPrintOutput() << "\nThread: " << std::to_string(threads[idxthread]) << " time: " << std::to_string(timeSpeedUp) << " nodes: " << std::to_string(nodesSpeedup) << "\n";
+				LogAndPrintOutput() << "\nPos#" << idxpos + 1 << " Threads: " << std::to_string(threads[idxthread]) << " time: " << std::to_string(timeSpeedUp)
+					<< " nodes: " << std::to_string(nodesSpeedup) << "\n";
 			}
 		}
 	}
 
 	LogAndPrintOutput() << "\n\n";
-	LogAndPrintOutput() << "\n\nAvg Base: " << std::to_string(timeSpeedupSum[0] / fenPos.size()) << "s " << std::to_string(nodesSpeedupSum[0] / fenPos.size()) << "knps\n";
-	LogAndPrintOutput() << "Threads: " << std::to_string(threads[1]) << " time: " << std::to_string(timeSpeedupSum[1] / fenPos.size()) << " nodes: " << std::to_string(nodesSpeedupSum[1] / fenPos.size()) << "\n";
+	LogAndPrintOutput() << "Threads: " << std::to_string(threads[0]) << " time: " << std::to_string(timeSpeedupSum[0] / fenPos.size()) << "s, "
+		<< std::to_string(nodesSpeedupSum[0] / fenPos.size()) << "knps";
+	for (int idxthread = 1; idxthread < threads.size(); ++idxthread) {
+		LogAndPrintOutput() << "Threads: " << std::to_string(threads[idxthread])
+			<< " time: " << std::to_string(timeSpeedupSum[idxthread] / fenPos.size()) << " nodes: " << std::to_string(nodesSpeedupSum[idxthread] / fenPos.size());
+	}
 	LogAndPrintOutput() << "\n\n";
 }
 
@@ -430,4 +442,3 @@ void Interface::CheckMaxSplit(std::istringstream& stream) {
 	LogAndPrintOutput() << "\n\nThe best active splits is:\n";
 	LogAndPrintOutput() << "active splits: " << splits[bestIdx] << " time: " << timeSum[bestIdx] / (fenPos.size() * 1000.0) << "s knps: " << nodesSum[bestIdx] / fenPos.size() << " ratio: " << nodesSum[bestIdx] / timeSum[bestIdx] << "\n";
 }
-#endif

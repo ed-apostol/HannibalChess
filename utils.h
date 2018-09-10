@@ -27,6 +27,7 @@ extern uint32 parseMove(movelist_t& mvlist, std::string);
 extern int getDirIndex(int d);
 extern bool anyRep(const position_t& pos);
 extern bool anyRepNoMove(const position_t& pos, const int m);
+extern void bindThisThread(int index);
 
 enum LogLevel {
 	logNONE = 0, logIN, logOUT, logERROR, logWARNING, logINFO, logDEBUG

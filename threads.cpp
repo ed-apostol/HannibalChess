@@ -44,6 +44,7 @@ void Thread::IdleLoop() {
 	while (!exit_flag) {
 		if (!exit_flag && doSleep && master_sp == nullptr) {
 			SleepAndWaitForCondition();
+			if (thread_id > 8) bindThisThread(thread_id); // NUMA
 		}
 		if (!exit_flag && !doSleep && master_sp == nullptr && thread_id == 0) {
 			CBGetBestMove(*this);

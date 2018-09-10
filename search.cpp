@@ -621,7 +621,6 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
 
 Engine::Engine() {
 	mThinking = false;
-	mUndoStack.resize(1024);
 	search = new Search(*this, info, transtable, pvhashtable);
 
 	InitUCIOptions();
@@ -632,7 +631,6 @@ Engine::Engine() {
 }
 
 Engine::~Engine() {
-	mUndoStack.clear();
 	delete search;
 	SetNumThreads(0);
 }
