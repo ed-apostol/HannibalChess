@@ -260,9 +260,6 @@ public:
 		return nodes;
 	}
 	void InitVars() {
-		for (Thread* th : mThreads) {
-			th->Init();
-		}
 		mThreads[0]->stop = false;
 	}
 	void SetNumThreads(int num) {

@@ -96,7 +96,8 @@ struct ThreadStack {
 class ThreadBase {
 public:
 	ThreadBase(int _thread_id) : thread_id(_thread_id) {
-		Init();
+		stop = true;
+		exit_flag = false;
 		doSleep = true;
 	}
 	~ThreadBase() {
@@ -104,10 +105,6 @@ public:
 		exit_flag = true;
 		TriggerCondition();
 		nativeThread.join();
-	}
-	virtual void Init() {
-		stop = true;
-		exit_flag = false;
 	}
 	void SleepAndWaitForCondition() {
 		std::unique_lock<std::mutex> lk(threadLock);
@@ -144,7 +141,7 @@ public:
 		mThreadGroup(_thread_group),
 		CBGetBestMove(_getbest),
 		CBSearchFromIdleLoop(_searchfromidle),
-		init_done(false) {
+		activeSplitPoint(nullptr) {
 		NativeThread() = std::thread(&Thread::IdleLoop, this);
 	}
 
@@ -157,7 +154,6 @@ public:
 	uint64 numsplitsjoined;
 	uint64 numworkers;
 	uint64 nodes;
-	bool init_done;
 
 	volatile int num_sp;
 	SplitPoint *activeSplitPoint;

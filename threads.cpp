@@ -18,13 +18,11 @@
 #include "uci.h"
 
 void Thread::Init() {
-	ThreadBase::Init();
 	nodes = 1;
 	numsplits = 1;
 	numsplitsjoined = 1;
 	num_sp = 0;
 	numworkers = 0;
-	activeSplitPoint = nullptr;
 	for (int idx = 0; idx < MaxNumSplitPointsPerThread; ++idx) {
 		sptable[idx].Init();
 	}
@@ -36,15 +34,12 @@ void Thread::Init() {
 }
 
 void Thread::IdleLoop() {
-	if (!init_done) {
-		Init();
-		init_done = true;
-	}
 	SplitPoint* const master_sp = activeSplitPoint;
 	while (!exit_flag) {
 		if (!exit_flag && doSleep && master_sp == nullptr) {
 			SleepAndWaitForCondition();
 			if (thread_id > 8) bindThisThread(thread_id); // NUMA
+			Init();
 		}
 		if (!exit_flag && !doSleep && master_sp == nullptr && thread_id == 0) {
 			CBGetBestMove(*this);
