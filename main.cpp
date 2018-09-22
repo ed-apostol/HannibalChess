@@ -10,9 +10,9 @@
 #include "uci.h"
 
 int main(void) {
-	Interface eng;
-	eng.Info();
-	eng.Run();
+    Interface eng;
+    eng.Info();
+    eng.Run();
 
-	return 0;
+    return 0;
 }

@@ -30,47 +30,47 @@ extern bool anyRepNoMove(const position_t& pos, const int m);
 extern void bindThisThread(int index);
 
 enum LogLevel {
-	logNONE = 0, logIN, logOUT, logERROR, logWARNING, logINFO, logDEBUG
+    logNONE = 0, logIN, logOUT, logERROR, logWARNING, logINFO, logDEBUG
 };
 
 struct LogToFile : public std::ofstream {
-	static LogToFile& Inst() {
-		static LogToFile logger;
-		return logger;
-	}
-	LogToFile(const std::string& f = "log.txt") : std::ofstream(f.c_str(), std::ios::app) {}
-	~LogToFile() {
-		if (is_open()) close();
-	}
+    static LogToFile& Inst() {
+        static LogToFile logger;
+        return logger;
+    }
+    LogToFile(const std::string& f = "log.txt") : std::ofstream(f.c_str(), std::ios::app) {}
+    ~LogToFile() {
+        if (is_open()) close();
+    }
 };
 
 template <LogLevel level, bool out = true, bool logtofile = false>
 class Log {
 public:
-	static const LogLevel ClearanceLevel = logINFO;
-	Log() {}
-	template <typename T>
-	Log& operator << (const T& object) {
-		if (level > logNONE && level <= ClearanceLevel) _buffer << object;
-		return *this;
-	}
-	~Log() {
-		if (level > logNONE && level <= ClearanceLevel) {
-			static const std::string LevelText[7] = { "", "->", "<-", "!!", "??", "==", "||" };
-			_buffer << "\n";
-			if (out) {
-				if (level == logOUT) std::cout << _buffer.str();
-				else std::cout << LevelText[level] << " " << _buffer.str();
-			}
-			if (logtofile) {
-				static Spinlock splck;
-				std::lock_guard<Spinlock> lock(splck);
-				LogToFile::Inst() << getTime() << " " << LevelText[level] << " " << _buffer.str();
-			}
-		}
-	}
+    static const LogLevel ClearanceLevel = logINFO;
+    Log() {}
+    template <typename T>
+    Log& operator << (const T& object) {
+        if (level > logNONE && level <= ClearanceLevel) _buffer << object;
+        return *this;
+    }
+    ~Log() {
+        if (level > logNONE && level <= ClearanceLevel) {
+            static const std::string LevelText[7] = { "", "->", "<-", "!!", "??", "==", "||" };
+            _buffer << "\n";
+            if (out) {
+                if (level == logOUT) std::cout << _buffer.str();
+                else std::cout << LevelText[level] << " " << _buffer.str();
+            }
+            if (logtofile) {
+                static Spinlock splck;
+                std::lock_guard<Spinlock> lock(splck);
+                LogToFile::Inst() << getTime() << " " << LevelText[level] << " " << _buffer.str();
+            }
+        }
+    }
 private:
-	std::ostringstream _buffer;
+    std::ostringstream _buffer;
 };
 
 typedef Log<logIN> PrinInput;

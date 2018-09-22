@@ -32,13 +32,13 @@
 #define BLACK               1
 
 enum PieceTypes {
-	EMPTY = 0,
-	PAWN,
-	KNIGHT,
-	BISHOP,
-	ROOK,
-	QUEEN,
-	KING,
+    EMPTY = 0,
+    PAWN,
+    KNIGHT,
+    BISHOP,
+    ROOK,
+    QUEEN,
+    KING,
 };
 
 #define CASTLE              14
@@ -88,9 +88,9 @@ enum PieceTypes {
 #define PST(c,p,s) (PieceSquareTable[c][p-1][s])
 
 enum ThinkingStatus {
-	THINKING = 0,
-	PONDERING,
-	ANALYSING
+    THINKING = 0,
+    PONDERING,
+    ANALYSING
 };
 
 #define LOCK(x)             (uint32)((x)>>32)

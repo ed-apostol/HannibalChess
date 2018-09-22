@@ -12,25 +12,25 @@
 #include<string>
 
 struct PolyglotBookEntry {
-	uint64 key;
-	basic_move_t move;
-	uint16 weight;
-	uint32 learn;
+    uint64 key;
+    basic_move_t move;
+    uint16 weight;
+    uint32 learn;
 };
 
 class Book {
 public:
-	Book() : bookFile(nullptr) {}
-	~Book() {
-		if (bookFile) fclose(bookFile);
-	}
+    Book() : bookFile(nullptr) {}
+    ~Book() {
+        if (bookFile) fclose(bookFile);
+    }
 
-	void initBook(std::string book_name);
-	int Book::entry_from_polyglot_file(PolyglotBookEntry *entry, position_t& pos);
-	long Book::find_polyglot_key(uint64 key, PolyglotBookEntry *entry, position_t& pos);
-	basic_move_t getBookMove(position_t& pos);
+    void initBook(std::string book_name);
+    int Book::entry_from_polyglot_file(PolyglotBookEntry *entry, position_t& pos);
+    long Book::find_polyglot_key(uint64 key, PolyglotBookEntry *entry, position_t& pos);
+    basic_move_t getBookMove(position_t& pos);
 private:
-	FILE * bookFile;
-	int64 size;
-	std::string name;
+    FILE * bookFile;
+    int64 size;
+    std::string name;
 };
