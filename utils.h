@@ -16,17 +16,18 @@
 
 extern void PrintBitBoard(uint64 n);
 extern char *bit2Str(uint64 n);
-extern char *move2Str(basic_move_t m);
+extern std::string move2Str(basic_move_t m);
 extern char *sq2Str(int sq);
 extern void displayBoard(const position_t& pos, int x);
 extern int getPiece(const position_t& pos, uint32 sq);
 extern int getColor(const position_t& pos, uint32 sq);
 extern int DiffColor(const position_t& pos, uint32 sq, int color);
 extern uint64 getTime(void);
-extern uint32 parseMove(movelist_t& mvlist, const char *s);
+extern uint32 parseMove(movelist_t& mvlist, std::string);
 extern int getDirIndex(int d);
 extern bool anyRep(const position_t& pos);
 extern bool anyRepNoMove(const position_t& pos, const int m);
+extern void bindThisThread(int index);
 
 enum LogLevel {
     logNONE = 0, logIN, logOUT, logERROR, logWARNING, logINFO, logDEBUG

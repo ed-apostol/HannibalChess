@@ -24,8 +24,7 @@ static const int DefaultHash = 128;
 static const std::string PawnHashStr = "Pawn Hash";
 static const int MinPHash = 1;
 static const int MaxPHash = 1024;
-static const int DefaultPHash = 64; //TCEC
-//static const int DefaultPHash = 32;
+static const int DefaultPHash = 32;
 
 static const std::string MultiPVStr = "MultiPV";
 static const int MinMultiPV = 1;
@@ -95,7 +94,7 @@ typedef std::map<std::string, Options> UCIOptionsBasic;
 
 class UCIOptions : public UCIOptionsBasic {
 public:
-    Options& operator[] (std::string const& key) {
+    Options & operator[] (std::string const& key) {
         UCIOptionsBasic::iterator opt = find(key);
         if (opt != end()) {
             return opt->second;
@@ -171,8 +170,8 @@ struct SearchInfo {
         mMinSplitDepth = 0;
         mMaxActiveSplitsPerThread = 0;
     }
-    std::atomic<int> thinking_status;
-    std::atomic<bool> stop_search; // TODO: replace with sthread.stop?
+    volatile int thinking_status;
+    volatile bool stop_search; // TODO: replace with sthread.stop?
     bool is_easymove;
     basic_move_t easyPonderMove;
 
@@ -188,22 +187,23 @@ struct SearchInfo {
     bool time_is_limited;
     bool time_is_fixed;
 
-    int64 time_limit_max;
+    volatile int64 time_limit_max;
     int64 time_limit_abs;
     bool node_is_limited;
     uint64 node_limit;
 
     int64 start_time;
+    volatile int64 last_time;
+    volatile int64 last_time2;
     int64 alloc_time;
-    std::atomic<int64> last_time;
-    std::atomic<int64> last_time2;
 
-    int last_value;
-    int best_value;
+    volatile int last_value;
+    volatile int best_value;
 
+    int mate_found;
     int currmovenumber;
-    int change;
-    int research;
+    volatile int change;
+    volatile int research;
     int iteration;
 
     int multipvIdx;
@@ -260,9 +260,6 @@ public:
         return nodes;
     }
     void InitVars() {
-        for (Thread* th : mThreads) {
-            th->Init();
-        }
         mThreads[0]->stop = false;
     }
     void SetNumThreads(int num) {
@@ -374,7 +371,7 @@ public:
     }
 
     UCIOptions uci_opt;
-    std::vector<pos_store_t*> mUndoStack;
+    pos_store_t mUndoStack[1600];
     std::atomic<bool> mThinking;
 private:
     static const int WORSE_SCORE_CUTOFF = 20;

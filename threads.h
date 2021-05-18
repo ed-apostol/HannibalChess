@@ -69,15 +69,15 @@ struct SplitPoint {
     int depth;
     bool inRoot;
     bool inPv;
-    std::atomic<int> alpha;
-    std::atomic<int> beta;
-    std::atomic<int> bestvalue;
-    std::atomic<int> played;
-    std::atomic<int> hisCount;
-    std::atomic<basic_move_t> bestmove;
-    std::atomic<bool> workAvailable;
-    std::atomic<bool> cutoff;
-    std::atomic<int> joinedthreads;
+    volatile int alpha;
+    volatile int beta;
+    volatile int bestvalue;
+    volatile int played;
+    volatile int hisCount;
+    volatile basic_move_t bestmove;
+    volatile bool workAvailable;
+    volatile bool cutoff;
+    volatile uint64 joinedthreads;
     std::bitset<512> workersBitMask;
     Spinlock movelistlock;
     Spinlock updatelock;
@@ -96,7 +96,8 @@ struct ThreadStack {
 class ThreadBase {
 public:
     ThreadBase(int _thread_id) : thread_id(_thread_id) {
-        Init();
+        stop = true;
+        exit_flag = false;
         doSleep = true;
     }
     ~ThreadBase() {
@@ -105,17 +106,12 @@ public:
         TriggerCondition();
         nativeThread.join();
     }
-    virtual void Init() {
-        stop = true;
-        exit_flag = false;
-    }
     void SleepAndWaitForCondition() {
         std::unique_lock<std::mutex> lk(threadLock);
         sleepCondition.wait(lk);
     }
     void TriggerCondition() {
         doSleep = false;
-        std::unique_lock<std::mutex>(threadLock);
         sleepCondition.notify_one();
     }
     std::thread& NativeThread() {
@@ -123,9 +119,9 @@ public:
     }
 
     int thread_id;
-    std::atomic<bool> stop;
-    std::atomic<bool> doSleep;
-    std::atomic<bool> exit_flag;
+    volatile bool stop;
+    volatile bool doSleep;
+    volatile bool exit_flag;
 protected:
     std::thread nativeThread;
     std::condition_variable sleepCondition;
@@ -144,8 +140,8 @@ public:
         ThreadBase(_thread_id),
         mThreadGroup(_thread_group),
         CBGetBestMove(_getbest),
-        CBSearchFromIdleLoop(_searchfromidle) {
-        Init();
+        CBSearchFromIdleLoop(_searchfromidle),
+        activeSplitPoint(nullptr) {
         NativeThread() = std::thread(&Thread::IdleLoop, this);
     }
 
@@ -157,10 +153,9 @@ public:
     uint64 numsplits;
     uint64 numsplitsjoined;
     uint64 numworkers;
+    uint64 nodes;
 
-    std::atomic<uint64> nodes;
-    std::atomic<int> num_sp;
-
+    volatile int num_sp;
     SplitPoint *activeSplitPoint;
     ThreadStack ts[MAXPLY];
     int32 evalgains[1024];

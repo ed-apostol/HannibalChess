@@ -8,6 +8,7 @@
 /**************************************************/
 
 #include <chrono>
+#include <windows.h>
 #include "typedefs.h"
 #include "data.h"
 #include "constants.h"
@@ -51,20 +52,18 @@ char *bit2Str(uint64 n) {
 }
 
 /* a utility to convert int move to string */
-char *move2Str(basic_move_t m) {
-    static char promstr[] = "\0pnbrqk";
-    static char str[6];
+std::string move2Str(basic_move_t m) {
+    const std::string promstr = "0pnbrqk";
+    std::string str;
 
-    /* ASSERT(moveIsOk(m)); */
-
-    if (m == 0) sprintf_s(str, "%c%c%c%c%c", '0', '0', '0', '0', '\0');
-    else sprintf_s(str, "%c%c%c%c%c",
-        SQFILE(moveFrom(m)) + 'a',
-        '1' + SQRANK(moveFrom(m)),
-        SQFILE(moveTo(m)) + 'a',
-        '1' + SQRANK(moveTo(m)),
-        promstr[movePromote(m)]
-    );
+    if (m == 0) str = "0000";
+    else {
+        str = (SQFILE(moveFrom(m)) + 'a');
+        str += ('1' + SQRANK(moveFrom(m)));
+        str += (SQFILE(moveTo(m)) + 'a');
+        str += ('1' + SQRANK(moveTo(m)));
+        if (movePromote(m) != EMPTY) str += promstr[movePromote(m)];
+    }
     return str;
 }
 
@@ -114,37 +113,11 @@ uint64 getTime(void) {
 /* parse the move from string and returns a move from the
 move list of generated moves if the move string matched
 one of them */
-uint32 parseMove(movelist_t& mvlist, const char *s) {
-    uint32 m;
-    uint32 from, to, p;
-
-    from = (s[0] - 'a') + (8 * (s[1] - '1'));
-    to = (s[2] - 'a') + (8 * (s[3] - '1'));
-    m = (from) | (to << 6);
+uint32 parseMove(movelist_t& mvlist, std::string s) {
+    for (auto& a : s) a = tolower(a);
     for (mvlist.pos = 0; mvlist.pos < mvlist.size; mvlist.pos++) {
-        if (m == (mvlist.list[mvlist.pos].m & 0xfff)) {
-            p = EMPTY;
-            if (movePromote(mvlist.list[mvlist.pos].m)) {
-                switch (s[4]) {
-                case 'n':
-                case 'N':
-                    p = KNIGHT;
-                    break;
-                case 'b':
-                case 'B':
-                    p = BISHOP;
-                    break;
-                case 'r':
-                case 'R':
-                    p = ROOK;
-                    break;
-                default:
-                    p = QUEEN;
-                    break;
-                }
-            }
-            if (p == movePromote(mvlist.list[mvlist.pos].m)) return mvlist.list[mvlist.pos].m;
-        }
+        if (move2Str(mvlist.list[mvlist.pos].m) == s)
+            return mvlist.list[mvlist.pos].m;
     }
     return 0;
 }
@@ -174,4 +147,58 @@ bool anyRepNoMove(const position_t& pos, const int m) {
         else if ((psp = psp->previous->previous) && psp->hash == compareTo) return true;
     }
     return false;
+}
+
+typedef int(*fun1_t) (LOGICAL_PROCESSOR_RELATIONSHIP, PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX, PDWORD);
+typedef int(*fun2_t) (USHORT, PGROUP_AFFINITY);
+typedef int(*fun3_t) (HANDLE, CONST GROUP_AFFINITY*, PGROUP_AFFINITY);
+
+int bestGroup(int index) {
+    int groupSize = 0, groups[2048];
+    int nodes = 0, cores = 0, threads = 0;
+    DWORD returnLength = 0, byteOffset = 0;
+
+    HMODULE k32 = GetModuleHandle("Kernel32.dll");
+    fun1_t fun1 = (fun1_t)GetProcAddress(k32, "GetLogicalProcessorInformationEx");
+    if (!fun1) return -1;
+
+    if (fun1(RelationAll, NULL, &returnLength)) return -1;
+
+    SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *buffer, *ptr;
+    ptr = buffer = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)malloc(returnLength);
+    if (!fun1(RelationAll, buffer, &returnLength)) {
+        free(buffer);
+        return -1;
+    }
+
+    while (ptr->Size > 0 && byteOffset + ptr->Size <= returnLength) {
+        if (ptr->Relationship == RelationNumaNode) nodes++;
+        else if (ptr->Relationship == RelationProcessorCore) {
+            cores++;
+            threads += (ptr->Processor.Flags == LTP_PC_SMT) ? 2 : 1;
+        }
+        byteOffset += ptr->Size;
+        ptr = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)(((char*)ptr) + ptr->Size);
+    }
+    free(buffer);
+
+    for (int n = 0; n < nodes; n++)
+        for (int i = 0; i < cores / nodes; i++)
+            groups[groupSize++] = n;
+    for (int t = 0; t < threads - cores; t++)
+        groups[groupSize++] = t % nodes;
+    return index < groupSize ? groups[index] : -1;
+}
+
+void bindThisThread(int index) {
+    int group;
+    if ((group = bestGroup(index)) == -1) return;
+
+    HMODULE k32 = GetModuleHandle("Kernel32.dll");
+    fun2_t fun2 = (fun2_t)GetProcAddress(k32, "GetNumaNodeProcessorMaskEx");
+    fun3_t fun3 = (fun3_t)GetProcAddress(k32, "SetThreadGroupAffinity");
+    if (!fun2 || !fun3) return;
+
+    GROUP_AFFINITY affinity;
+    if (fun2(group, &affinity)) fun3(GetCurrentThread(), &affinity, NULL);
 }

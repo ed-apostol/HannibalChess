@@ -30,7 +30,7 @@ public:
     long Book::find_polyglot_key(uint64 key, PolyglotBookEntry *entry, position_t& pos);
     basic_move_t getBookMove(position_t& pos);
 private:
-    FILE *bookFile;
+    FILE * bookFile;
     int64 size;
     std::string name;
 };

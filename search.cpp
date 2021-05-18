@@ -489,7 +489,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                     else if (ss.hashMove == move->m && ss.hashDepth >= depth / 2 && depth >= (inPv ? 6 : 8)) {
                         int targetScore = ss.evalvalue - EXPLORE_BASE_CUTOFF - depth * EXPLORE_MULT_CUTOFF;
                         ssprev.bannedMove = ss.hashMove;
-                        int score = searchNode<false, inPv, false, true>(pos, targetScore, targetScore + 1, depth / 2, ssprev, sthread);
+                        score = searchNode<false, inPv, false, true>(pos, targetScore, targetScore + 1, depth / 2, ssprev, sthread);
                         ssprev.bannedMove = EMPTY;
                         if (sthread.stop) return 0;
                         if (score <= targetScore) {
@@ -548,11 +548,11 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (inRoot) {
             move->s = score;
         }
-        if (score > (inSplitPoint ? sp->bestvalue.load() : ss.bestvalue)) {
+        if (score > (inSplitPoint ? sp->bestvalue : ss.bestvalue)) {
             if (inRoot) mInfo.best_value = score;
             if (inSplitPoint) sp->bestvalue = score;
             ss.bestvalue = score;
-            if (ss.bestvalue > (inSplitPoint ? sp->alpha.load() : alpha)) {
+            if (ss.bestvalue > (inSplitPoint ? sp->alpha : alpha)) {
                 if (inRoot) {
                     if (mInfo.iteration > 1 && mInfo.bestmove != move->m) mInfo.change = 1;
                     mInfo.bestmove = move->m;
@@ -579,8 +579,11 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         }
         if (inSplitPoint) sp->updatelock.unlock();
         if (!inSplitPoint && !inSingular && !sthread.stop && sthread.num_sp < mInfo.mMaxActiveSplitsPerThread && mEngine.ThreadNum() > 1
-            && (inRoot || inPv || (depth >= mInfo.mMinSplitDepth && (!sthread.activeSplitPoint || !sthread.activeSplitPoint->workAvailable
-                || ((sthread.activeSplitPoint->depth - depth <= 1) && sthread.num_sp < 2))))) {
+            && depth >= mInfo.mMinSplitDepth
+            && (inRoot || inPv
+                || (sthread.activeSplitPoint == nullptr)
+                || (sthread.activeSplitPoint != nullptr && !sthread.activeSplitPoint->workAvailable)
+                || (sthread.activeSplitPoint != nullptr && sthread.activeSplitPoint->depth - depth <= 1))) {
             sthread.SearchSplitPoint(pos, &ss, &ssprev, alpha, beta, inPv, depth, inRoot);
             if (sthread.stop) return 0;
             break;
@@ -631,7 +634,6 @@ Engine::Engine() {
 }
 
 Engine::~Engine() {
-    mUndoStack.clear();
     delete search;
     SetNumThreads(0);
 }
@@ -900,14 +902,14 @@ void Engine::GetBestMove(Thread& sthread) {
     InitVars();
     SetAllThreadsToWork();
     for (id = 1; id < MAXPLY; id++) {
-        const int AspirationWindow = 12;
+        const int AspirationWindow = 20;
         int faillow = 0, failhigh = 0;
         info.iteration = id;
         info.best_value = -INF;
         info.change = 0;
         info.research = 0;
         for (info.multipvIdx = 0; info.multipvIdx < info.multipv; ++info.multipvIdx) {
-            if (id < 6) {
+            if (id < 4) {
                 alpha = -INF;
                 beta = INF;
             }

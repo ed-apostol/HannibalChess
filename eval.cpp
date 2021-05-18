@@ -171,30 +171,30 @@ int computeMaterial(eval_info_t& ei) {
     ei.phase = 0;
 
     wq = whiteM / MLQ;
-    whiteM -= wq*MLQ;
+    whiteM -= wq * MLQ;
     bq = blackM / MLQ;
-    blackM -= bq*MLQ;
+    blackM -= bq * MLQ;
     score += (wq - bq) * ((QueenValueMid1 + QueenValueMid2) / 2);
     ei.phase += (wq + bq) * 6;
 
     wr = whiteM / MLR;
-    whiteM -= wr*MLR;
+    whiteM -= wr * MLR;
     br = blackM / MLR;
-    blackM -= br*MLR;
+    blackM -= br * MLR;
     score += (wr - br) * ((RookValueMid1 + RookValueMid2) / 2);
     ei.phase += (wr + br) * 3;
 
     wb = whiteM / MLB;
-    whiteM -= wb*MLB;
+    whiteM -= wb * MLB;
     bb = blackM / MLB;
-    blackM -= bb*MLB;
+    blackM -= bb * MLB;
     score += (wb - bb) * ((BishopValueMid1 + BishopValueMid2) / 2);
     ei.phase += (wb + bb);
 
     wn = whiteM / MLN;
-    whiteM -= wn*MLN;
+    whiteM -= wn * MLN;
     bn = blackM / MLN;
-    blackM -= bn*MLN;
+    blackM -= bn * MLN;
     score += (wn - bn) * ((KnightValueMid1 + KnightValueMid2) / 2);
     ei.phase += (wn + bn);
 
@@ -974,7 +974,7 @@ int eval(const position_t& pos, Thread& sthread) {
             }
             score = ((score * (MAX_DRAW - draw)) + (DrawValue[WHITE] * draw)) / MAX_DRAW;
         }
-        score = score*sign[pos.side];
+        score = score * sign[pos.side];
         if (score < -MAXEVAL) score = -MAXEVAL;
         else if (score > MAXEVAL) score = MAXEVAL;
     }
