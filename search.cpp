@@ -7,6 +7,8 @@
 /*  Description: A chess playing program.         */
 /**************************************************/
 
+#include <thread>
+#include <chrono>
 #include "typedefs.h"
 #include "data.h"
 #include "constants.h"
@@ -24,41 +26,22 @@
 #include "eval.h"
 #include "book.h"
 #include "init.h"
-/*
-void prefetch(char* addr) { //stockfish
-#  if defined(__INTEL_COMPILER)
-// This hack prevents prefetches from being optimized away by
-// Intel compiler. Both MSVC and gcc seem not be affected by this.
-__asm__("");
-#  endif
 
-#  if defined(__INTEL_COMPILER) || defined(_MSC_VER)
-_mm_prefetch(addr, _MM_HINT_T0);
-#  else
-__builtin_prefetch(addr);
-#  endif
-}
-*/
-bool moveIsTactical(const uint32 m) { // TODO
-    ASSERT(moveIsOk(m));
-    return (m & 0x01fe0000UL) != 0;
-}
+// moveIsTactical and historyIndex are defined inline in search.h.
 
 bool moveIsDangerousPawn(const position_t& pos, const uint32 move) {
     return (movePiece(move) == PAWN && Q_DIST(moveTo(move), pos.side) <= 2);
 }
 
-int historyIndex(const uint32 side, const uint32 move) { // TODO
-    return ((((side) << 9) + ((movePiece(move)) << 6) + (moveTo(move))) & 0x3ff);
-}
+bool isLegal(const position_t& pos, const basic_move_t move, const bool inCheck);
 
 class Search {
 public:
     Search(Engine& _engine, SearchInfo& _info, TranspositionTable& _tt, PvHashTable& _pvt) :
-        mEngine(_engine),
         mInfo(_info),
         mTransTable(_tt),
-        mPVHashTable(_pvt) {}
+        mPVHashTable(_pvt),
+        mEngine(_engine) {}
     void initNode(Thread& sthread);
     bool moveRefutesThreat(const position_t& pos, basic_move_t first, basic_move_t second);
     void updateEvalgains(const position_t& pos, uint32 move, int before, int after, Thread& sthread);
@@ -310,7 +293,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
                 {
                     ss.bestmove = ssprev.counterMove = hmove;
                     UpdateHistory(pos, ss, sthread, depth);
-                    return scoreFromTrans(scoreFromTrans(entry->LowerValue(), ss.ply), ss.ply);
+                    return scoreFromTrans(entry->LowerValue(), ss.ply);
                 }
             }
             else {
@@ -436,7 +419,7 @@ int Search::searchGeneric(position_t& pos, int alpha, int beta, const int depth,
         if (inRoot) {
             ss = ssprev; // this is correct, ss.mvlist points to the ssprev.mvlist, at the same time, ssprev resets other member vars
             if (!mInfo.mvlist_initialized) {
-                sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, depth, MoveGenPhaseRoot, sthread.ts[ss.ply]);
+                sortInit(pos, *ss.mvlist, pinnedPieces(pos, pos.side), ss.hashMove, depth, MoveGenPhaseRoot, sthread.ts[0]); // root: ss.ply is -1 here, and root move ordering ignores killers
             }
             else {
                 if (mInfo.multipvIdx > 0) {
@@ -957,7 +940,8 @@ void Engine::GetBestMove(Thread& sthread) {
         }
         else {
             LogInfo() << "Waiting for stop, quit, or PonderHit";
-            while (!info.stop_search && info.thinking_status != THINKING);
+            while (!info.stop_search && info.thinking_status != THINKING)
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             LogInfo() << "Aborting search: end of waiting for stop/quit/PonderHit";
         }
         StopSearch();

@@ -26,8 +26,8 @@ public:
     }
 
     void initBook(std::string book_name);
-    int Book::entry_from_polyglot_file(PolyglotBookEntry *entry, position_t& pos);
-    long Book::find_polyglot_key(uint64 key, PolyglotBookEntry *entry, position_t& pos);
+    int entry_from_polyglot_file(PolyglotBookEntry *entry, position_t& pos);
+    long find_polyglot_key(uint64 key, PolyglotBookEntry *entry, position_t& pos);
     basic_move_t getBookMove(position_t& pos);
 private:
     FILE * bookFile;

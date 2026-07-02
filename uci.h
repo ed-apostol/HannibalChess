@@ -36,7 +36,7 @@ private:
     void CheckSpeed();
     void CheckSpeedup(std::istringstream& stream);
     void CheckBestSplit(std::istringstream& stream);
-    void Interface::CheckMaxSplit(std::istringstream& stream);
+    void CheckMaxSplit(std::istringstream& stream);
 
     static const std::string name;
     static const std::string author;

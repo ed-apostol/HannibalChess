@@ -17,8 +17,7 @@
 #include "search.h"
 #include "movepicker.h"
 
-extern bool moveIsTactical(uint32 m);
-extern int historyIndex(uint32 side, uint32 move);
+// moveIsTactical / historyIndex are provided inline by search.h
 
 void sortInit(const position_t& pos, movelist_t& mvlist, uint64 pinned, uint32 hashmove, int depth, int type, ThreadStack& ts) {
     mvlist.transmove = hashmove;
@@ -88,7 +87,6 @@ template<bool isQuiesc>
 void scoreEvasion(const position_t& pos, movelist_t& mvlist, Thread& sthread) {
     move_t *m;
 
-    ASSERT(mvlist != NULL);
     for (m = &mvlist.list[mvlist.pos]; m < &mvlist.list[mvlist.size]; m++) {
         if (m->m == mvlist.transmove) m->s = MAXHIST * 3; //need trans to go first since there is no trans phase
         else {

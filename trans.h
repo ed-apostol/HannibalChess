@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include <cstring>
+
 template <typename Entity>
 class BaseHashTable {
 public:

@@ -10,8 +10,9 @@
 #pragma once
 
 #ifdef DEBUG
+#include <cstdio>
 #define ASSERT(a) { if (!(a)) \
-    Print(4, "file \"%s\", line %d, assertion \"" #a "\" failed\n", __FILE__, __LINE__); } //TODO fix this
+    fprintf(stderr, "file \"%s\", line %d, assertion \"" #a "\" failed\n", __FILE__, __LINE__); }
 #else
 #define ASSERT(a)
 #endif

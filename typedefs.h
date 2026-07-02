@@ -316,3 +316,11 @@ INLINE basic_move_t GenBlackOOO(void) {
 INLINE basic_move_t GenBasicMove(uint f, uint t, int pieceType, uint c) {
     return ((f) | ((t) << 6) | (pieceType << 12) | ((c) << 18));
 }
+
+/* sanity-check helpers used by ASSERT() in DEBUG builds (compiled out in release) */
+inline bool squareIsOk(int sq) { return sq >= a1 && sq <= h8; }
+inline bool colorIsOk(int c) { return c == WHITE || c == BLACK; }
+inline bool valueIsOk(int v) { return v >= -INF && v <= INF; }
+inline bool moveIsOk(basic_move_t m) {
+    return m != EMPTY && moveFrom(m) != moveTo(m) && squareIsOk(moveFrom(m)) && squareIsOk(moveTo(m));
+}

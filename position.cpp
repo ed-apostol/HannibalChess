@@ -15,6 +15,26 @@
 #include "utils.h"
 #include "bitutils.h"
 
+#if defined(DEBUG)
+/* consistency check of the internal position representation (DEBUG builds only) */
+static bool positionIsOk(const position_t& pos) {
+    if (!squareIsOk(pos.kpos[WHITE]) || !squareIsOk(pos.kpos[BLACK])) return false;
+    if (pos.pieces[pos.kpos[WHITE]] != KING || pos.pieces[pos.kpos[BLACK]] != KING) return false;
+    if ((pos.color[WHITE] & pos.color[BLACK]) != EmptyBoardBB) return false;
+    if (pos.occupied != (pos.color[WHITE] | pos.color[BLACK])) return false;
+    if (pos.occupied != (pos.pawns | pos.knights | pos.bishops | pos.rooks | pos.queens | pos.kings)) return false;
+    if (bitCnt(pos.kings & pos.color[WHITE]) != 1 || bitCnt(pos.kings & pos.color[BLACK]) != 1) return false;
+    return true;
+}
+#endif
+
+#if defined(DEBUG_INDEPTH) || defined(EVAL_DEBUG)
+/* placeholder for the eval-symmetry check (see git history for the full version) */
+static bool evalSymmetryIsOk(const position_t&) {
+    return true;
+}
+#endif
+
 /* this undos the null move done */
 void unmakeNullMove(position_t& pos, pos_store_t& undo) {
     pos.side ^= 1;
@@ -418,7 +438,7 @@ void makeMove(position_t& pos, pos_store_t& undo, basic_move_t m) {
     pos.occupied = pos.color[side] | pos.color[xside];
     pos.side = xside;
 #ifdef DEBUG
-    positionIsOk(pos);
+    ASSERT(positionIsOk(pos));
 #endif
 #ifdef DEBUG_INDEPTH
     ASSERT(evalSymmetryIsOk(pos));
@@ -630,7 +650,7 @@ void setPosition(position_t& pos, const char *fen) {
     pos.posStore.phash ^= ZobCastle[pos.posStore.castle];
 
 #ifdef DEBUG
-    positionIsOk(pos);
+    ASSERT(positionIsOk(pos));
 #endif
 #ifdef EVAL_DEBUG
     ASSERT(evalSymmetryIsOk(pos));
@@ -639,7 +659,8 @@ void setPosition(position_t& pos, const char *fen) {
 
 char *positionToFEN(const position_t& pos) {
     static char pcstr[] = ".PNBRQK.pnbrqk";
-    static char fen[64];
+    // board (up to 71) + side/castle/ep fields; 92 leaves headroom (note: not reentrant)
+    static char fen[92];
     int rank, file, sq, empty, pc, color, c = 0;
 
     for (rank = 56; rank >= 0; rank -= 8) {

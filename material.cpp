@@ -278,9 +278,9 @@ void InitMaterial(void) {
                                             bindex = bp * MatSummValue[PAWN] + bn * MatSummValue[KNIGHT] + bb * MatSummValue[BISHOP] +
                                                 br * MatSummValue[ROOK] + bq * MatSummValue[QUEEN];
                                             if (wp*MLP + wn * MLN + wb * MLN + wr * MLR + wq * MLQ >
-                                                bp + bn * MLN + bb * MLN + br * MLR + bq * MLQ ||
-                                                (wp + wn * MLN + wb * MLN + wr * MLR + wq * MLQ ==
-                                                    wp + wn * MLN + wb * MLN + wr * MLR + wq * MLQ && windex >= bindex)) {
+                                                bp * MLP + bn * MLN + bb * MLN + br * MLR + bq * MLQ ||
+                                                (wp * MLP + wn * MLN + wb * MLN + wr * MLR + wq * MLQ ==
+                                                    bp * MLP + bn * MLN + bb * MLN + br * MLR + bq * MLQ && windex >= bindex)) {
                                                 phase = SetPhase(wn + wb + bn + bb, wr + br, wq + bq);
                                                 //                                                if (wq && bq) PrintOutput() << wn + wb + bn + bb << " minors " << wr + br << " rooks " << wq + bq << " queens: " << phase << "\n";
                                                 openscore =

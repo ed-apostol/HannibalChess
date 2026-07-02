@@ -13,30 +13,8 @@
 #include "constants.h"
 #include "attacks.h"
 
-/* the following routines returns a 64 bit xray attacks of pieces
-on the From square with the limiting Occupied bits */
-inline uint64 bishopAttacksBBX(const uint32 from, const uint64 occ) {
-    return bishopAttacksBB(from, occ & ~(bishopAttacksBB(from, occ) & occ));
-}
-
-inline uint64 rookAttacksBBX(const uint32 from, const uint64 occ) {
-    return rookAttacksBB(from, occ & ~(rookAttacksBB(from, occ) & occ));
-}
-
-/* the following routines returns a 64 bit attacks of pieces
-on the From square with the limiting Occupied bits */
-inline uint64 bishopAttacksBB(const uint32 from, const uint64 occ) {
-    return MagicAttacks[BOffset[from] + (((BMagicMask[from] & (occ)) * BMagic[from]) >> BShift[from])];
-}
-
-inline uint64 rookAttacksBB(const uint32 from, const uint64 occ) {
-    return MagicAttacks[ROffset[from] + (((RMagicMask[from] & (occ)) * RMagic[from]) >> RShift[from])];
-}
-
-inline uint64 queenAttacksBB(const uint32 from, const uint64 occ) {
-    return (MagicAttacks[BOffset[from] + (((BMagicMask[from] & (occ)) * BMagic[from]) >> BShift[from])]
-        | MagicAttacks[ROffset[from] + (((RMagicMask[from] & (occ)) * RMagic[from]) >> RShift[from])]);
-}
+/* bishopAttacksBB/rookAttacksBB/queenAttacksBB and their X-ray variants are now
+   defined inline in attacks.h (so they inline across translation units). */
 
 /* this is the attack routine, capable of multiple targets,
 can be used to determine if the bits on the 64 bit parameter
@@ -78,10 +56,7 @@ uint64 pieceAttacksFromBB(const position_t& pos, const int pc, const int sq, con
     return 0;
 }
 
-/* this determines if the side to move is in check */
-inline bool kingIsInCheck(const position_t& pos) {
-    return isSqAtt(pos, pos.occupied, pos.kpos[pos.side], pos.side ^ 1);
-}
+/* kingIsInCheck is defined inline in attacks.h. */
 /* this returns the pinned pieces to the King of the side Color */
 uint64 pinnedPieces(const position_t& pos, uint32 c) { //SAM TODO this could be done more efficiently I think?
     uint64 b, pin, pinners;
@@ -303,91 +278,6 @@ int swap(const position_t& pos, uint32 m) {
     attack |= bishopAttacksBB(to, occ) & (pos.bishops | pos.queens);
     attack |= rookAttacksBB(to, occ) & (pos.rooks | pos.queens);
     attack &= occ;
-
-    while (attack) {
-        if (attack & pos.pawns & pos.color[c]) {
-            slist[n] = -slist[n - 1] + lastvalue + promBonus;
-            if (lastvalue == PcValSEE[KING]) break;
-            lastvalue = PcValSEE[PAWN] + promBonus;
-            lsb = getFirstBit(attack & pos.pawns & pos.color[c]);
-            dir = DirFromTo[to][lsb];
-            attack |= behindFigure(pos, lsb, dir);
-        }
-        else if (attack & pos.knights & pos.color[c]) {
-            slist[n] = -slist[n - 1] + lastvalue;
-            if (lastvalue == PcValSEE[KING]) break;
-            lastvalue = PcValSEE[KNIGHT];
-
-            lsb = getFirstBit(attack & pos.knights & pos.color[c]);
-        }
-        else if (attack & pos.bishops & pos.color[c]) {
-            slist[n] = -slist[n - 1] + lastvalue;
-            if (lastvalue == PcValSEE[KING]) break;
-            lastvalue = PcValSEE[BISHOP];
-
-            lsb = getFirstBit(attack & pos.bishops & pos.color[c]);
-            dir = DirFromTo[to][lsb];
-            attack |= behindFigure(pos, lsb, dir);
-        }
-        else if (attack & pos.rooks & pos.color[c]) {
-            slist[n] = -slist[n - 1] + lastvalue;
-            if (lastvalue == PcValSEE[KING]) break;
-            lastvalue = PcValSEE[ROOK];
-
-            lsb = getFirstBit(attack & pos.rooks & pos.color[c]);
-            dir = DirFromTo[to][lsb];
-            attack |= behindFigure(pos, lsb, dir);
-        }
-        else if (attack & pos.queens & pos.color[c]) {
-            slist[n] = -slist[n - 1] + lastvalue;
-            if (lastvalue == PcValSEE[KING]) break;
-            lastvalue = PcValSEE[QUEEN];
-            lsb = getFirstBit(attack & pos.queens & pos.color[c]);
-            dir = DirFromTo[to][lsb];
-            attack |= behindFigure(pos, lsb, dir);
-        }
-        else if (attack & pos.kings & pos.color[c]) {
-            slist[n] = -slist[n - 1] + lastvalue;
-            if (lastvalue == PcValSEE[KING]) break;
-            lastvalue = PcValSEE[KING];
-            lsb = getFirstBit(attack & pos.kings & pos.color[c]);
-        }
-        else break;
-
-        attack ^= BitMask[lsb];
-        n++;
-        c ^= 1;
-    }
-    while (--n) {
-        if (slist[n] > -slist[n - 1])
-            slist[n - 1] = -slist[n];
-    }
-    return slist[0];
-}
-int swapSquare(const position_t& pos, uint32 m) {
-    int to = moveFrom(m);
-    int pc = movePiece(m);
-    int lastvalue = PcValSEE[pc]; // consider PcValSEE[QUEEN]
-    int n = 1;
-    int lsb;
-    int c = pos.side ^ 1;
-    int dir;
-    int slist[32];
-    int promBonus = (to >= a8 || to <= h1)*(PcValSEE[QUEEN] - PcValSEE[PAWN]);
-    uint64 attack;
-
-    ASSERT(moveIsOk(m));
-
-    //attack = attackingPiecesAll(pos, pos.occupied,to);
-    attack = PawnCaps[to][BLACK] & pos.pawns & pos.color[WHITE];
-    attack |= PawnCaps[to][WHITE] & pos.pawns & pos.color[BLACK];
-    attack |= KnightMoves[to] & pos.knights;
-    attack |= KingMoves[to] & pos.kings;
-    attack |= bishopAttacksBB(to, pos.occupied) & (pos.bishops | pos.queens);
-    attack |= rookAttacksBB(to, pos.occupied) & (pos.rooks | pos.queens);
-
-    // promotion is important for first move, not sure about rest
-    slist[0] = 0;
 
     while (attack) {
         if (attack & pos.pawns & pos.color[c]) {

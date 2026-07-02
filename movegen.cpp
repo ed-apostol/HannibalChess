@@ -30,8 +30,6 @@
 // 11111110 00000000 00000000 00000000 = reserve bits    = bits 26-32
 */
 
-extern int historyIndex(uint32 side, uint32 move);
-
 /* the move generator, this generates all legal moves*/
 void genLegal(const position_t& pos, movelist_t& mvlist, int promoteAll) {
     movelist_t mlt;

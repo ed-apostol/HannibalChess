@@ -182,7 +182,9 @@ basic_move_t Book::getBookMove(position_t& pos) {
         return  NO_MOVE;
     }
     // chose here the move from the array and verify if it exists in the movelist
-    uint64 bookRandom = rand() % totalWeight; //TODO do a real randomization
+    static bool seeded = false;
+    if (!seeded) { srand((unsigned)getTime()); seeded = true; }
+    uint64 bookRandom = rand() % totalWeight;
     uint64 bookIndex = 0;
     for (int i = 0; i < numMoves; i++) {
         bookIndex += entries[i].weight;

@@ -29,7 +29,7 @@ void TranspositionTable::StoreEval(uint64 hash, int staticEvalValue) {
     int worst = -INF, t, score;
     TransEntry *replace, *entry;
 
-    ASSERT(valueIsOk(value));
+    ASSERT(valueIsOk(staticEvalValue));
 
     replace = entry = Entry(hash);
 
@@ -170,8 +170,6 @@ void TranspositionTable::StoreExact(uint64 hash, basic_move_t move, int depth, i
 void TranspositionTable::StoreNoMoves(uint64 hash) {
     int worst = -INF, t, score;
     TransEntry *replace, *entry;
-
-    ASSERT(valueIsOk(value));
 
     replace = entry = Entry(hash);
 

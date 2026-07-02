@@ -962,6 +962,7 @@ void evalEndgame(const int attacker, const position_t& pos, eval_info_t& ei, int
     case QPvQEnd: // queen and pawn vs. queen endgame
         QueenPawnvQueen(attacker, pos, draw);
         if (SHOW_EVAL) PrintOutput() << "info string queen and pawn vs. queen\n";
+        break;
     case NNvPEnd: //two knights against pawn(s)
         TwoKnightsvPawn(attacker, pos, draw);
         MateNoPawn(attacker, pos, score);

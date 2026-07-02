@@ -1,0 +1,43 @@
+# Build output directories (Visual Studio C++)
+[Xx]64/
+[Ww]in32/
+[Dd]ebug/
+[Rr]elease/
+build/
+bin/
+obj/
+
+# Visual Studio local / cache files
+.vs/
+*.user
+*.suo
+*.aps
+*.opendb
+*.VC.db
+*.VC.opendb
+
+# Compiler / linker intermediates
+*.obj
+*.o
+*.pch
+*.pdb
+*.idb
+*.ipch
+*.ilk
+*.iobj
+*.ipdb
+*.exp
+*.lib
+*.tlog
+*.lastbuildstate
+*.recipe
+*.exe.recipe
+*.FileListAbsolute.txt
+
+# Build logs / engine runtime output
+*.log
+log.txt
+
+# Binaries
+*.exe
+*.dll

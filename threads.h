@@ -12,9 +12,11 @@
 #include <vector>
 #include <thread>
 #include <atomic>
+#include <mutex>
+#include <functional>
 #include <condition_variable>
 #include <bitset>
-#include "utils.h"
+#include "typedefs.h"
 #include "trans.h"
 
 class Spinlock {

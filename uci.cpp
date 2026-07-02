@@ -161,7 +161,9 @@ void Interface::Position(Engine& engine, position_t& pos, std::istringstream& st
     }
 
     setPosition(pos, fen.c_str());
+    const int maxUndo = (int)(sizeof(engine.mUndoStack) / sizeof(engine.mUndoStack[0]));
     while (stream >> token) {
+        if (idx >= maxUndo) break; // guard against overflowing the undo stack on very long move lists
         movelist_t ml;
         genLegal(pos, ml, true);
         if (m = parseMove(ml, token.c_str()))
@@ -278,6 +280,7 @@ void Interface::CheckSpeedup(std::istringstream& stream) {
             double timeSpeedUp;
             double nodesSpeedup;
             int64 spentTime = getTime() - startTime;
+            if (spentTime < 1) spentTime = 1; // avoid divide-by-zero on sub-millisecond searches
             uint64 nodes = cEngine.ComputeNodes() / spentTime;
 
             if (0 == idxthread) {
@@ -354,6 +357,7 @@ void Interface::CheckBestSplit(std::istringstream& stream) {
             cEngine.WaitForThink();
 
             int64 spentTime = getTime() - startTime;
+            if (spentTime < 1) spentTime = 1; // avoid divide-by-zero on sub-millisecond searches
             uint64 nodes = cEngine.ComputeNodes() / spentTime;
 
             timeSum[idxsplit] += spentTime;
@@ -420,6 +424,7 @@ void Interface::CheckMaxSplit(std::istringstream& stream) {
             cEngine.WaitForThink();
 
             int64 spentTime = getTime() - startTime;
+            if (spentTime < 1) spentTime = 1; // avoid divide-by-zero on sub-millisecond searches
             uint64 nodes = cEngine.ComputeNodes() / spentTime;
 
             timeSum[idxsplit] += spentTime;

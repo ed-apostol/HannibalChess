@@ -10,6 +10,7 @@
 #pragma once
 #include <functional>
 #include <map>
+#include <cstring>
 #include "typedefs.h"
 #include "threads.h"
 #include "trans.h"
@@ -200,7 +201,6 @@ struct SearchInfo {
     volatile int last_value;
     volatile int best_value;
 
-    int mate_found;
     int currmovenumber;
     volatile int change;
     volatile int research;
@@ -384,5 +384,10 @@ private:
     Book mPolyBook;
 };
 
-extern inline bool moveIsTactical(uint32 m);
-extern inline int historyIndex(uint32 side, uint32 move);
+inline bool moveIsTactical(const uint32 m) {
+    ASSERT(moveIsOk(m));
+    return (m & 0x01fe0000UL) != 0;
+}
+inline int historyIndex(const uint32 side, const uint32 move) {
+    return ((((side) << 9) + ((movePiece(move)) << 6) + (moveTo(move))) & 0x3ff);
+}
